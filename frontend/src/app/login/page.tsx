@@ -126,26 +126,9 @@ export default function LoginPage() {
 
           <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading}>
             <KeyRound size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} /> 
-            {loading ? 'Authenticating...' : 'Decrypt & Access Terminal'}
+            {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
-
-        <div className="divider-text">Or Sign In with Organization Accounts</div>
-
-        <div className="auth-social" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn btn-secondary btn-full" onClick={handleUniversityLogin} disabled={loading}>
-            <School size={18} style={{ marginRight: '8px' }} /> HTU Academic Account
-          </button>
-          <button 
-            type="button" 
-            className="btn btn-outline btn-full" 
-            onClick={handleAdminLogin} 
-            disabled={loading}
-            style={{ borderColor: 'rgba(124, 58, 237, 0.3)', color: 'var(--color-purple)' }}
-          >
-            <Fingerprint size={18} style={{ marginRight: '8px' }} /> System Administrator Portal
-          </button>
-        </div>
 
         <div className="auth-security-badge" style={{ marginTop: 'var(--space-6)' }}>
           <ShieldCheck size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} /> 

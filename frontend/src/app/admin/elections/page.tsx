@@ -34,6 +34,8 @@ export default function AdminElectionsPage() {
   const [formDescription, setFormDescription] = useState('');
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
+  const [formType, setFormType] = useState('src');
+  const [formDepartment, setFormDepartment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -59,11 +61,13 @@ export default function AdminElectionsPage() {
         description: formDescription,
         startDate: formStartDate,
         endDate: formEndDate,
+        type: formType,
+        department: formType === 'departmental' ? formDepartment : '',
       });
       if (res.status === 'success') {
         setElections(prev => [...prev, res.data]);
         setIsModalOpen(false);
-        setFormTitle(''); setFormDescription(''); setFormStartDate(''); setFormEndDate('');
+        setFormTitle(''); setFormDescription(''); setFormStartDate(''); setFormEndDate(''); setFormType('src'); setFormDepartment('');
       }
     } catch (err) {
       console.error('Error creating election:', err);
@@ -160,6 +164,27 @@ export default function AdminElectionsPage() {
                   <label className="form-label" htmlFor="el-desc">Description</label>
                   <textarea id="el-desc" className="form-input" placeholder="Describe the purpose of this election..." style={{ minHeight: '80px' }} value={formDescription} onChange={e => setFormDescription(e.target.value)} />
                 </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="el-type">Election Type</label>
+                  <select id="el-type" className="form-input" value={formType} onChange={e => setFormType(e.target.value)}>
+                    <option value="src">SRC / University Wide</option>
+                    <option value="departmental">Departmental</option>
+                  </select>
+                </div>
+                {formType === 'departmental' && (
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="el-dept">Department</label>
+                    <select id="el-dept" className="form-input" required value={formDepartment} onChange={e => setFormDepartment(e.target.value)}>
+                      <option value="">Select a Department</option>
+                      <option value="computer_science">Computer Science</option>
+                      <option value="engineering">Engineering</option>
+                      <option value="business_administration">Business Administration</option>
+                      <option value="nursing">Nursing</option>
+                      <option value="arts">Arts and Humanities</option>
+                      <option value="applied_sciences">Applied Sciences</option>
+                    </select>
+                  </div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
                   <div className="form-group">
                     <label className="form-label" htmlFor="el-start">Start Date</label>

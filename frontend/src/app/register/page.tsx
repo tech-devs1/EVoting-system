@@ -229,7 +229,7 @@ export default function RegisterPage() {
               <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
                 <button type="button" className="btn btn-secondary btn-full" onClick={() => setCurrentStep(2)} disabled={loading}>Back</button>
                 <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-                  {loading ? 'Registering...' : 'Generate Digital Signature'}
+                  {loading ? 'Registering...' : 'Register'}
                 </button>
               </div>
             </form>

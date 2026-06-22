@@ -98,7 +98,7 @@ router.get('/:id', async (req, res) => {
 // Create new election (Admin only)
 router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const { title, description, startDate, endDate, organizationId } = req.body;
+    const { title, description, startDate, endDate, organizationId, type, department } = req.body;
     
     if (!title || !startDate || !endDate) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
@@ -110,6 +110,8 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       startDate,
       endDate,
       organizationId: organizationId || 'default',
+      type: type || 'src',
+      department: department || '',
       status: 'draft', // draft, active, completed
       createdAt: Date.now()
     };

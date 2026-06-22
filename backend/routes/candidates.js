@@ -91,7 +91,7 @@ router.get('/election/:electionId', async (req, res) => {
 // Add a new candidate (Admin only)
 router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const { name, manifesto, electionId, position, photoUrl } = req.body;
+    const { name, manifesto, manifestoUrl, electionId, position, photoUrl } = req.body;
     
     if (!name || !electionId) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
@@ -100,6 +100,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
     const newCandidate = {
       name,
       manifesto: manifesto || '',
+      manifestoUrl: manifestoUrl || '',
       electionId,
       position: position || 'General',
       photoUrl: photoUrl || '',

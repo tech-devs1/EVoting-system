@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
 import { Plus, ArrowLeft, Trash, AlertTriangle, Users } from 'lucide-react';
+import { storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface Candidate {
   id: string;
@@ -28,6 +30,8 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   const [formName, setFormName] = useState('');
   const [formPos, setFormPos] = useState('');
   const [formManifesto, setFormManifesto] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [manifestoFile, setManifestoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Unwrap params
@@ -57,16 +61,34 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
     e.preventDefault();
     setSubmitting(true);
     try {
+      let photoUrl = '';
+      let manifestoUrl = '';
+      
+      if (photoFile) {
+        const photoRef = ref(storage, `candidates/photos/${Date.now()}_${photoFile.name}`);
+        await uploadBytes(photoRef, photoFile);
+        photoUrl = await getDownloadURL(photoRef);
+      }
+      
+      if (manifestoFile) {
+        const manRef = ref(storage, `candidates/manifestos/${Date.now()}_${manifestoFile.name}`);
+        await uploadBytes(manRef, manifestoFile);
+        manifestoUrl = await getDownloadURL(manRef);
+      }
+
       const res = await apiRequest<{ status: string; data: Candidate }>('/candidates', 'POST', {
         name: formName,
         position: formPos,
         manifesto: formManifesto,
+        photoUrl,
+        manifestoUrl,
         electionId
       });
       if (res.status === 'success') {
         setCandidates(prev => [...prev, res.data]);
         setIsModalOpen(false);
         setFormName(''); setFormPos(''); setFormManifesto('');
+        setPhotoFile(null); setManifestoFile(null);
       }
     } catch (err) {
       console.error('Error adding candidate:', err);
@@ -110,9 +132,14 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               />
               <h4 className="candidate-name">{cand.name}</h4>
               <span className="candidate-position">{cand.position}</span>
-              <p className="candidate-manifesto line-clamp-3" style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-xs)' }}>
+              <p className="candidate-manifesto line-clamp-3" style={{ marginBottom: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
                 {cand.manifesto}
               </p>
+              {cand.manifestoUrl && (
+                <a href={cand.manifestoUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', fontSize: '11px', color: 'var(--color-primary)', marginBottom: 'var(--space-2)' }}>
+                  📄 View PDF Manifesto
+                </a>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                   Votes: <strong style={{ color: 'var(--text-primary)' }}>{cand.votes || 0}</strong>
@@ -149,8 +176,16 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                   <input type="text" id="cand-pos" className="form-input" placeholder="e.g. President" required value={formPos} onChange={e => setFormPos(e.target.value)} />
                 </div>
                 <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-                  <label className="form-label" htmlFor="cand-man">Manifesto</label>
-                  <textarea id="cand-man" className="form-input" placeholder="Enter manifesto text details..." style={{ minHeight: '80px' }} required value={formManifesto} onChange={e => setFormManifesto(e.target.value)} />
+                  <label className="form-label" htmlFor="cand-man">Short Description</label>
+                  <textarea id="cand-man" className="form-input" placeholder="Brief summary of manifesto..." style={{ minHeight: '60px' }} required value={formManifesto} onChange={e => setFormManifesto(e.target.value)} />
+                </div>
+                <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+                  <label className="form-label" htmlFor="cand-photo">Candidate Photo (Image)</label>
+                  <input type="file" id="cand-photo" accept="image/*" className="form-input" onChange={e => e.target.files && setPhotoFile(e.target.files[0])} />
+                </div>
+                <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+                  <label className="form-label" htmlFor="cand-man-file">Manifesto Document (PDF)</label>
+                  <input type="file" id="cand-man-file" accept=".pdf" className="form-input" onChange={e => e.target.files && setManifestoFile(e.target.files[0])} />
                 </div>
               </div>
               <div className="modal-footer">
