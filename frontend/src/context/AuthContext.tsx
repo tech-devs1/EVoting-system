@@ -72,10 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push('/admin/dashboard');
       } else {
         // Strict Student Login
-        const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password })
-        });
+        const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/login', 'POST', { email, password });
 
         if (res.status === 'success' && res.token) {
           localStorage.setItem('votetrust_token', `Bearer ${res.token}`);
@@ -97,10 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       // Hit our new strict backend register endpoint
-      const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ studentId, email, name, password })
-      });
+      const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/register', 'POST', { studentId, email, name, password });
 
       if (res.status === 'success' && res.token) {
         localStorage.setItem('votetrust_token', `Bearer ${res.token}`);
