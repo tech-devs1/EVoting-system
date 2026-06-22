@@ -54,8 +54,8 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      // Registers user in mock/Express backend and logs them in
-      await register(email, name, 'voter');
+      // Registers user in backend and issues token securely
+      await register(studentId, email, name, password);
       setCurrentStep(4);
     } catch (err: any) {
       setError(err.message || 'Registration failed');

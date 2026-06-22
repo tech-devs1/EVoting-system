@@ -19,7 +19,7 @@ export default function LoginPage() {
     try {
       // Determine if logging in as admin or voter based on email
       const role = email.includes('admin') ? 'admin' : 'voter';
-      await login(email, role);
+      await login(email, password, role);
     } catch (err: any) {
       setError(err.message || 'Login failed. Please verify credentials.');
     } finally {
@@ -31,7 +31,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login('alex.mercer@htu.edu', 'voter');
+      await login(email, password, 'voter');
     } catch (err: any) {
       setError(err.message || 'Login failed.');
     } finally {
@@ -43,7 +43,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login('admin@votetrust.ai', 'admin');
+      await login('admin@votetrust.ai', 'admin-pass', 'admin');
     } catch (err: any) {
       setError(err.message || 'Login failed.');
     } finally {

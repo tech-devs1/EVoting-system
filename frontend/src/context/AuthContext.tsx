@@ -16,8 +16,8 @@ export interface UserProfile {
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
-  login: (email: string, role?: 'voter' | 'admin') => Promise<void>;
-  register: (email: string, name: string, role?: 'voter' | 'admin') => Promise<void>;
+  login: (email: string, password?: string, role?: 'voter' | 'admin') => Promise<void>;
+  register: (studentId: string, email: string, name: string, password?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -51,71 +51,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, []);
 
-  const login = async (email: string, role: 'voter' | 'admin' = 'voter') => {
+  const login = async (email: string, password?: string, role: 'voter' | 'admin' = 'voter') => {
     setLoading(true);
     try {
-      // Create a mock client-side uid based on email
-      const uid = `uid_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      const mockToken = `MOCK_${uid}`;
-      
-      // Store mock token
-      localStorage.setItem('votetrust_token', mockToken);
-
-      // Register or update profile in backend db
-      try {
-        await apiRequest('/auth/register', 'POST', {
+      // If admin, we keep the previous mock logic for now since admin login isn't strictly defined,
+      // but for voter we hit our new strict backend login endpoint.
+      if (role === 'admin') {
+        const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const mockToken = `MOCK_${uid}`;
+        localStorage.setItem('votetrust_token', mockToken);
+        
+        setUser({
           uid,
           email,
-          name: email.split('@')[0],
-          role
+          name: 'System Administrator',
+          role: 'admin',
+          status: 'active'
         });
-      } catch (e) {
-        // User may already be registered, swallow error
-        console.log('Register check on login:', e);
-      }
-
-      // Fetch user profile
-      const res = await apiRequest<{ status: string; data: UserProfile }>('/auth/me');
-      setUser(res.data);
-
-      if (res.data.role === 'admin') {
+        
         router.push('/admin/dashboard');
       } else {
-        router.push('/voter/dashboard');
+        // Strict Student Login
+        const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+
+        if (res.status === 'success' && res.token) {
+          localStorage.setItem('votetrust_token', `Bearer ${res.token}`);
+          setUser(res.data);
+          router.push('/voter/dashboard');
+        } else {
+          throw new Error('Invalid response from server during authentication.');
+        }
       }
-    } catch (e) {
-      localStorage.removeItem('votetrust_token');
-      throw e;
+    } catch (error: any) {
+      console.error('Login error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (email: string, name: string, role: 'voter' | 'admin' = 'voter') => {
+  const register = async (studentId: string, email: string, name: string, password?: string) => {
     setLoading(true);
     try {
-      const uid = `uid_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      const mockToken = `MOCK_${uid}`;
-      localStorage.setItem('votetrust_token', mockToken);
-
-      await apiRequest('/auth/register', 'POST', {
-        uid,
-        email,
-        name,
-        role
+      // Hit our new strict backend register endpoint
+      const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ studentId, email, name, password })
       });
 
-      const res = await apiRequest<{ status: string; data: UserProfile }>('/auth/me');
-      setUser(res.data);
-
-      if (res.data.role === 'admin') {
-        router.push('/admin/dashboard');
+      if (res.status === 'success' && res.token) {
+        localStorage.setItem('votetrust_token', `Bearer ${res.token}`);
+        setUser(res.data);
       } else {
-        router.push('/voter/dashboard');
+        throw new Error('Registration failed due to server error.');
       }
-    } catch (e) {
-      localStorage.removeItem('votetrust_token');
-      throw e;
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
