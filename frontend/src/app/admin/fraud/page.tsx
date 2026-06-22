@@ -12,18 +12,9 @@ interface Alert {
   status: string;
 }
 
-const DEFAULT_ALERTS: Alert[] = [
-  { id: 'al-1', type: 'critical', message: 'Threat Level Spike: Multiple failed login attempts on student ID HTU-2026-3392 within 5 seconds.', timestamp: Date.now() - 60000, status: 'unresolved' },
-  { id: 'al-2', type: 'high', message: 'Security Warning: Voter IP mismatch. Single voter session accessed from 2 geographical endpoints.', timestamp: Date.now() - 120000, status: 'unresolved' },
-  { id: 'al-3', type: 'medium', message: 'System Event: Bulk registration attempts flagged from browser user agent with spoof signatures.', timestamp: Date.now() - 300000, status: 'unresolved' },
-  { id: 'al-4', type: 'low', message: 'General Alert: Rapid vote sequence detected in Room 420 Computer Cluster terminal session.', timestamp: Date.now() - 600000, status: 'unresolved' },
-];
+const DEFAULT_ALERTS: Alert[] = [];
 
-const MOCK_STREAMING_ALERTS = [
-  { type: 'low' as const, message: 'SSO Connection Token refreshed for terminal segment.' },
-  { type: 'medium' as const, message: 'Anomaly Warning: Browser fingerprint query mismatch registered for voter alex.mercer.' },
-  { type: 'high' as const, message: 'Access Warning: Admin portal login attempt from unrecognized IP 196.30.221.12.' },
-];
+const MOCK_STREAMING_ALERTS: { type: 'critical' | 'high' | 'medium' | 'low'; message: string; }[] = [];
 
 export default function AdminFraudPage() {
   const [alerts, setAlerts] = useState<Alert[]>(DEFAULT_ALERTS);
@@ -45,25 +36,7 @@ export default function AdminFraudPage() {
     }
     fetchAlerts();
 
-    // Simulate live streaming alerts every 4 seconds
-    intervalRef.current = setInterval(() => {
-      const random = MOCK_STREAMING_ALERTS[Math.floor(Math.random() * MOCK_STREAMING_ALERTS.length)];
-      const newAlert: Alert = {
-        id: Date.now().toString(),
-        ...random,
-        timestamp: Date.now(),
-        status: 'unresolved',
-      };
-      setAlerts(prev => {
-        const updated = [newAlert, ...prev];
-        if (updated.length > 10) updated.pop();
-        return updated;
-      });
-    }, 4000);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    // No more simulated live streaming alerts since MOCK_STREAMING_ALERTS is empty.
   }, []);
 
   const getBadgeStyle = (type: string) => {

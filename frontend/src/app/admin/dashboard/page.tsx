@@ -46,13 +46,13 @@ interface KPIStats {
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<KPIStats>({
-    totalElections: 4,
-    totalVoters: 2840,
-    totalVotesCast: 2085,
+    totalElections: 0,
+    totalVoters: 0,
+    totalVotesCast: 0,
     activeAlerts: 0
   });
   const [loading, setLoading] = useState(true);
-  const [activeElectionsCount, setActiveElectionsCount] = useState(2);
+  const [activeElectionsCount, setActiveElectionsCount] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -62,9 +62,9 @@ export default function AdminDashboardPage() {
           // If mock DB is empty, use defaults
           const s = res.data;
           setStats({
-            totalElections: s.totalElections || 4,
-            totalVoters: s.totalVoters || 2840,
-            totalVotesCast: s.totalVotesCast || 2085,
+            totalElections: s.totalElections || 0,
+            totalVoters: s.totalVoters || 0,
+            totalVotesCast: s.totalVotesCast || 0,
             activeAlerts: s.activeAlerts || 0
           });
         }
@@ -88,7 +88,7 @@ export default function AdminDashboardPage() {
     labels: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00'],
     datasets: [{
       label: 'Votes Cast / Hour',
-      data: [120, 240, 480, 520, 310, 450, 610],
+      data: [0, 0, 0, 0, 0, 0, 0],
       borderColor: '#2563EB',
       backgroundColor: 'rgba(37, 99, 235, 0.1)',
       tension: 0.4,

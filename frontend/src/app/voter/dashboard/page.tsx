@@ -84,7 +84,7 @@ export default function VoterDashboard() {
           const parsed = JSON.parse(storedVotes);
           setTotalVotes(parsed.length);
         } else {
-          setTotalVotes(1); // default mock stat
+          setTotalVotes(0); // default to 0 for empty database
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -96,8 +96,8 @@ export default function VoterDashboard() {
     fetchData();
   }, []);
 
-  const userName = user?.name || "Alex Mercer";
-  const voterCode = user?.uid?.substring(0, 12) || "HTU-2026-8849";
+  const userName = user?.name || "";
+  const voterCode = user?.uid ? user.uid.substring(0, 12) : "";
 
   return (
     <div className="dashboard-grid animate-page-enter">

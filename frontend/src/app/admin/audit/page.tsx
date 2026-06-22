@@ -14,26 +14,12 @@ interface AuditNode {
 
 const DEFAULT_NODES: AuditNode[] = [
   {
-    id: 'VT-2026-HN918A',
-    currentHash: '9e7d3cf2a1b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1',
-    previousHash: 'GENESIS_HASH',
-    timestamp: new Date('2026-06-20T11:40:12Z').getTime(),
+    id: 'GENESIS_BLOCK',
+    currentHash: '0000000000000000000000000000000000000000000000000000000000000000',
+    previousHash: 'NONE',
+    timestamp: Date.now(),
     status: 'valid'
-  },
-  {
-    id: 'VT-2026-PX742D',
-    currentHash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
-    previousHash: '9e7d3cf2a1b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1',
-    timestamp: new Date('2026-06-20T11:42:55Z').getTime(),
-    status: 'valid'
-  },
-  {
-    id: 'VT-2026-WM295K',
-    currentHash: 'f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a4f5e6d7c8b9a0f1e2',
-    previousHash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
-    timestamp: new Date('2026-06-20T11:44:03Z').getTime(),
-    status: 'valid'
-  },
+  }
 ];
 
 export default function AdminAuditPage() {
