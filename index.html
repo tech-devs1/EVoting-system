@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoteTrust AI - Secure Digital Elections & Cryptographic Verification</title>
+  <meta name="description" content="Secure, digital, and end-to-end verifiable e-voting for organizations. Audit-trail verified elections using SHA-256 with real-time AI security diagnostics.">
+  
+  <!-- CSS Library Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/pages/landing.css">
+  <link rel="stylesheet" href="css/pages/auth.css">
+  <link rel="stylesheet" href="css/pages/voter.css">
+  <link rel="stylesheet" href="css/pages/admin.css">
+
+  <!-- External Typography & Icon CDNs -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Skiplink for accessibility -->
+  <a href="#content-area" class="skip-link">Skip to main content</a>
+
+  <!-- Application Container Shell -->
+  <div class="app-shell" id="app-shell">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="#/landing" class="sidebar-logo">
+          <i data-lucide="shield-check"></i>
+          <span>VoteTrust <strong style="color: var(--color-primary);">AI</strong></span>
+        </a>
+      </div>
+      <nav class="sidebar-nav" id="sidebar-menu">
+        <!-- Rendered dynamically depending on route state -->
+      </nav>
+      <div class="sidebar-footer" id="sidebar-profile-box">
+        <!-- Rendered dynamically -->
+      </div>
+    </aside>
+
+    <!-- Main Content Frame -->
+    <div class="main-wrapper">
+      <header class="topbar" id="topbar">
+        <div class="page-title-section">
+          <h2 class="page-title" id="page-title-header">VoteTrust AI</h2>
+          <span class="page-subtitle" id="page-subtitle-header">Secure Voting Terminal</span>
+        </div>
+        <div class="topbar-actions">
+          <button class="theme-toggle-btn" aria-label="Toggle Light/Dark Theme">
+            <i data-lucide="sun" class="sun-icon"></i>
+            <i data-lucide="moon" class="moon-icon"></i>
+          </button>
+          <div id="topbar-user-section"></div>
+        </div>
+      </header>
+
+      <!-- Main Router Container -->
+      <main class="content-area" id="content-area" tabindex="-1">
+        <!-- SPA subviews are loaded here -->
+      </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-nav" id="mobile-navigation-bar">
+      <!-- Rendered dynamically depending on voter vs public session -->
+    </nav>
+  </div>
+
+  <!-- Loading State Core modules -->
+  <script src="js/core/store.js"></script>
+  <script src="js/core/theme.js"></script>
+  <script src="js/core/router.js"></script>
+
+  <!-- Page Components Controllers -->
+  <script src="js/pages/public/landing.js"></script>
+  <script src="js/pages/public/login.js"></script>
+  <script src="js/pages/public/register.js"></script>
+  
+  <script src="js/pages/voter/dashboard.js"></script>
+  <script src="js/pages/voter/elections.js"></script>
+  <script src="js/pages/voter/candidates.js"></script>
+  <script src="js/pages/voter/vote-confirm.js"></script>
+  <script src="js/pages/voter/vote-success.js"></script>
+  <script src="js/pages/voter/verify.js"></script>
+
+  <script src="js/pages/admin/dashboard.js"></script>
+  <script src="js/pages/admin/elections.js"></script>
+  <script src="js/pages/admin/candidates.js"></script>
+  <script src="js/pages/admin/results.js"></script>
+  <script src="js/pages/admin/fraud.js"></script>
+  <script src="js/pages/admin/audit.js"></script>
+  <script src="js/pages/admin/analytics.js"></script>
+
+  <!-- Shell Bootstrap Initializer -->
+  <script src="js/app.js"></script>
+</body>
+</html>
