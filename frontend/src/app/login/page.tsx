@@ -90,7 +90,7 @@ export default function LoginPage() {
                 type="email" 
                 id="login-email" 
                 className="form-input form-input-with-icon" 
-                placeholder="alex.mercer@htu.edu" 
+                placeholder="student@htu.edu.gh" 
                 required 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
