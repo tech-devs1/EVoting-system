@@ -57,6 +57,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // If admin, we keep the previous mock logic for now since admin login isn't strictly defined,
       // but for voter we hit our new strict backend login endpoint.
       if (role === 'admin') {
+        if (email !== 'admin@htu.edu.gh' || password !== 'admin080') {
+          throw new Error('Invalid administrator credentials.');
+        }
+        
         const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
         const mockToken = `MOCK_${uid}`;
         localStorage.setItem('votetrust_token', mockToken);

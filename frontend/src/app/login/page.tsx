@@ -7,8 +7,8 @@ import { ShieldCheck, Mail, Lock, KeyRound, School, Fingerprint } from 'lucide-r
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('alex.mercer@htu.edu');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
