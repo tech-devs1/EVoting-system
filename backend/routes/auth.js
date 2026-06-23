@@ -109,4 +109,95 @@ router.get('/me', verifyAuth, async (req, res) => {
   }
 });
 
+// Forgot Password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ status: 'error', message: 'Email is required' });
+
+    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
+    if (usersSnapshot.empty) {
+      return res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
+    }
+
+    const userDoc = usersSnapshot.docs[0];
+    const userData = userDoc.data();
+
+    // Generate 6-digit code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    await db.collection('users').doc(userDoc.id).update({
+      resetCode,
+      resetCodeExpiry: expiry
+    });
+
+    // Send Email via EmailJS API
+    const emailJsPayload = {
+      service_id: process.env.EMAILJS_SERVICE_ID,
+      template_id: process.env.EMAILJS_TEMPLATE_ID,
+      user_id: process.env.EMAILJS_PUBLIC_KEY,
+      accessToken: process.env.EMAILJS_PRIVATE_KEY,
+      template_params: {
+        to_name: userData.name || 'Student',
+        to_email: email,
+        reset_code: resetCode
+      }
+    };
+
+    const emailRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(emailJsPayload)
+    });
+
+    if (!emailRes.ok) {
+      const errText = await emailRes.text();
+      console.error('EmailJS Error:', errText);
+      return res.status(500).json({ status: 'error', message: 'Failed to send reset email' });
+    }
+
+    res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
+  } catch (error) {
+    console.error('Error in forgot-password:', error);
+    res.status(500).json({ status: 'error', message: 'Server error' });
+  }
+});
+
+// Reset Password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ status: 'error', message: 'Missing required fields' });
+    }
+
+    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
+    if (usersSnapshot.empty) {
+      return res.status(400).json({ status: 'error', message: 'Invalid or expired code.' });
+    }
+
+    const userDoc = usersSnapshot.docs[0];
+    const userData = userDoc.data();
+
+    if (userData.resetCode !== code || Date.now() > userData.resetCodeExpiry) {
+      return res.status(400).json({ status: 'error', message: 'Invalid or expired code.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Update password and invalidate code
+    await db.collection('users').doc(userDoc.id).update({
+      password: hashedPassword,
+      resetCode: null,
+      resetCodeExpiry: null
+    });
+
+    res.status(200).json({ status: 'success', message: 'Password has been reset successfully.' });
+  } catch (error) {
+    console.error('Error in reset-password:', error);
+    res.status(500).json({ status: 'error', message: 'Server error' });
+  }
+});
+
 module.exports = router;

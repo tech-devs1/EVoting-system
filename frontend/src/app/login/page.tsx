@@ -121,7 +121,7 @@ export default function LoginPage() {
               <input type="checkbox" className="form-checkbox" defaultChecked />
               <span style={{ fontSize: 'var(--text-sm)' }}>Remember this session</span>
             </label>
-            <Link href="/login" style={{ fontSize: 'var(--text-sm)' }}>Forgot Key?</Link>
+            <Link href="/forgot-password" style={{ fontSize: 'var(--text-sm)' }}>Forgot Key?</Link>
           </div>
 
           <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading}>
