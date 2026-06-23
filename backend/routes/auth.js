@@ -7,6 +7,40 @@ const { verifyAuth } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 
+// Verify student ID and fetch details before registration
+router.post('/verify-student', async (req, res) => {
+  try {
+    const { studentId } = req.body;
+    if (!studentId) {
+      return res.status(400).json({ status: 'error', message: 'Student ID is required' });
+    }
+
+    const studentDocRef = db.collection('users').doc(studentId);
+    const studentDoc = await studentDocRef.get();
+
+    if (!studentDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Student ID not found in school records.' });
+    }
+
+    const studentData = studentDoc.data();
+    
+    if (studentData.isRegistered) {
+      return res.status(403).json({ status: 'error', message: 'This student ID has already been registered.' });
+    }
+
+    return res.status(200).json({ 
+      status: 'success', 
+      data: { 
+        name: studentData.name, 
+        email: studentData.email 
+      } 
+    });
+  } catch (error) {
+    console.error('Error verifying student:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to verify student' });
+  }
+});
+
 // Register a user securely
 router.post('/register', async (req, res) => {
   try {

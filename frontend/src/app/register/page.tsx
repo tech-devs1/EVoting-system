@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { apiRequest } from '@/lib/api';
 import { 
   ShieldCheck, 
   Hash, 
@@ -25,14 +26,26 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleStep1Submit = (e: React.FormEvent) => {
+  const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentId) {
       setError('Student ID is required');
       return;
     }
     setError('');
-    setCurrentStep(2);
+    setLoading(true);
+    try {
+      const res = await apiRequest<{ status: string; data: { name: string; email: string } }>('/auth/verify-student', 'POST', { studentId });
+      if (res.status === 'success') {
+        setName(res.data.name);
+        setEmail(res.data.email);
+        setCurrentStep(2);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to verify student ID.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStep2Submit = (e: React.FormEvent) => {
@@ -147,8 +160,8 @@ export default function RegisterPage() {
                   />
                 </div>
               </div>
-              <button type="submit" className="btn btn-primary btn-full hover-lift" style={{ marginTop: 'var(--space-4)' }}>
-                Verify Student Record <ArrowRight size={18} style={{ marginLeft: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
+              <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading} style={{ marginTop: 'var(--space-4)' }}>
+                {loading ? 'Verifying...' : 'Verify Student Record'} <ArrowRight size={18} style={{ marginLeft: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
               </button>
             </form>
           )}
@@ -165,6 +178,7 @@ export default function RegisterPage() {
                     className="form-input form-input-with-icon" 
                     placeholder="Alex Mercer" 
                     required 
+                    readOnly
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
@@ -178,8 +192,9 @@ export default function RegisterPage() {
                     type="email" 
                     id="reg-email" 
                     className="form-input form-input-with-icon" 
-                    placeholder="alex.mercer@htu.edu" 
+                    placeholder="id@htu.edu.gh" 
                     required 
+                    readOnly
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
