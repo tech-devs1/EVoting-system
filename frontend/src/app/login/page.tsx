@@ -130,6 +130,13 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Don't have an account? </span>
+          <Link href="/register" style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 'bold' }}>
+            Register Account
+          </Link>
+        </div>
+
         <div className="auth-security-badge" style={{ marginTop: 'var(--space-6)' }}>
           <ShieldCheck size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} /> 
           Protected by VoteTrust AI Security

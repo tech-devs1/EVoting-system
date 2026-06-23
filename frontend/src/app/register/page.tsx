@@ -250,9 +250,9 @@ export default function RegisterPage() {
               }}>
                 <MailCheck size={32} />
               </div>
-              <h3 className="auth-title">Registration Verified</h3>
+              <h3 className="auth-title">Account Created Successfully</h3>
               <p className="auth-subtitle" style={{ marginBottom: 'var(--space-6)' }}>
-                An email verification challenge was sent. Tap the confirmation link in your institutional inbox to activate key verification.
+                Your account has been registered securely. Please proceed to the login terminal to authenticate with your new passphrase.
               </p>
               <Link href="/login" className="btn btn-primary btn-full hover-lift">Proceed to Login Terminal</Link>
             </div>

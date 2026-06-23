@@ -96,9 +96,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Hit our new strict backend register endpoint
       const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/register', 'POST', { studentId, email, name, password });
 
-      if (res.status === 'success' && res.token) {
-        localStorage.setItem('votetrust_token', `Bearer ${res.token}`);
-        setUser(res.data);
+      if (res.status === 'success') {
+        // Do not auto login. The user will be requested to login again.
+        return;
       } else {
         throw new Error('Registration failed due to server error.');
       }
