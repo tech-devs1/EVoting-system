@@ -12,6 +12,7 @@ interface Candidate {
   name: string;
   position: string;
   manifesto: string;
+  manifestoUrl?: string;
   photoUrl: string;
   votes: number;
 }
