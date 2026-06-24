@@ -1,6 +1,7 @@
-﻿import { auth } from './firebase';
+import { auth } from './firebase';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+// Use relative /api in production (Vercel routes it to backend), localhost for local dev
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
