@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
         <div className="auth-header">
           <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
-            <span style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold' }}>VoteTrust AI</span>
+            <span style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold' }}>Votick ✓</span>
           </div>
           <h2 className="auth-title">Password Recovery</h2>
           <p className="auth-subtitle">Securely reset your terminal access key.</p>

@@ -62,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="sidebar-header">
           <Link href="/admin/dashboard" className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} />
-            <span>VoteTrust <strong style={{ color: 'var(--color-primary)' }}>AI</strong></span>
+            <span style={{ fontWeight: 700, letterSpacing: '-0.5px' }}>Votick <span style={{ color: 'var(--color-primary)' }}>✓</span></span>
           </Link>
         </div>
         <nav className="sidebar-nav" style={{ flexGrow: 1 }}>

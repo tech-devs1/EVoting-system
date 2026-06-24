@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { use } from 'react';
 import Link from 'next/link';
@@ -30,12 +30,12 @@ export default function VoteSuccessPage({ params }: { params: Promise<{ id: stri
   };
 
   const handleDownloadReceipt = () => {
-    const text = `VOTETRUST AI DIGITAL BALLOT RECEIPT\n==================================\nVerification ID: ${verificationId}\nStatus: HASH_VERIFIED\nTimestamp: ${new Date().toISOString()}\n==================================`;
+    const text = `Votick ✓ DIGITAL BALLOT RECEIPT\n==================================\nVerification ID: ${verificationId}\nStatus: HASH_VERIFIED\nTimestamp: ${new Date().toISOString()}\n==================================`;
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `VoteTrust-Receipt-${verificationId}.txt`;
+    a.download = `Votick-Receipt-${verificationId}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };

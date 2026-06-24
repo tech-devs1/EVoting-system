@@ -1,4 +1,4 @@
-import { auth } from './firebase';
+﻿import { auth } from './firebase';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -17,7 +17,7 @@ async function getAuthHeaders(): Promise<HeadersInit> {
   }
 
   // Fallback to local storage mock token if user is signed in but no Firebase auth token exists
-  const localToken = typeof window !== 'undefined' ? localStorage.getItem('votetrust_token') : null;
+  const localToken = typeof window !== 'undefined' ? localStorage.getItem('Votick_token') : null;
   if (localToken) {
     return {
       'Authorization': `Bearer ${localToken}`,

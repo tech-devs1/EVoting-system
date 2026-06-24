@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -54,7 +54,7 @@ export default function LandingPage() {
         <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
           <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} />
           <span style={{ fontWeight: 600, fontSize: 'var(--text-lg)', color: 'var(--text-primary)' }}>
-            VoteTrust <strong style={{ color: 'var(--color-primary)' }}>AI</strong>
+            Votick <span style={{ color: 'var(--color-primary)' }}>✓</span>
           </span>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
@@ -265,7 +265,7 @@ export default function LandingPage() {
             <div className="testimonial-slide">
               <div className="glass-card text-center" style={{ maxWidth: '600px', margin: '0 auto' }}>
                 <p style={{ fontSize: 'var(--text-base)', fontStyle: 'italic', marginBottom: 'var(--space-4)' }}>
-                  &ldquo;VoteTrust AI redefined our student elections. Over 88% voter turnout was achieved with absolute confidence in election integrity.&rdquo;
+                  &ldquo;Votick ✓ redefined our student elections. Over 88% voter turnout was achieved with absolute confidence in election integrity.&rdquo;
                 </p>
                 <h4 style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-1)' }}>Prof. Evelyn Carter</h4>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Dean of Student Affairs, HTU</span>
@@ -281,7 +281,7 @@ export default function LandingPage() {
           <div className="footer-brand">
             <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} />
-              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>VoteTrust AI</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Votick ✓</span>
             </div>
             <p className="footer-desc">
               Next-generation secure, transparent digital voting technology built for institutions worldwide.
@@ -313,7 +313,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="container footer-bottom">
-          <span>&copy; 2026 VoteTrust AI. All rights reserved.</span>
+          <span>&copy; 2026 Votick ✓. All rights reserved.</span>
           <span>Protected by AES-256 & SHA-256 Cryptography</span>
         </div>
       </footer>

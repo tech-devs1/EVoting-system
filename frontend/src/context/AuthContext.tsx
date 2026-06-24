@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Load user from local storage or check backend
   useEffect(() => {
     async function loadUser() {
-      const mockToken = localStorage.getItem('votetrust_token');
+      const mockToken = localStorage.getItem('Votick_token');
       if (mockToken) {
         try {
           // If we have a mock token, let's fetch current user info from backend
@@ -39,11 +39,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (res.status === 'success') {
             setUser(res.data);
           } else {
-            localStorage.removeItem('votetrust_token');
+            localStorage.removeItem('Votick_token');
           }
         } catch (e) {
           console.error('Failed to restore session from token', e);
-          localStorage.removeItem('votetrust_token');
+          localStorage.removeItem('Votick_token');
         }
       }
       setLoading(false);
@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
         const mockToken = `MOCK_${uid}`;
-        localStorage.setItem('votetrust_token', mockToken);
+        localStorage.setItem('Votick_token', mockToken);
         
         setUser({
           uid,
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/login', 'POST', { email, password });
 
         if (res.status === 'success' && res.token) {
-          localStorage.setItem('votetrust_token', `Bearer ${res.token}`);
+          localStorage.setItem('Votick_token', `Bearer ${res.token}`);
           setUser(res.data);
           router.push('/voter/dashboard');
         } else {
@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('votetrust_token');
+    localStorage.removeItem('Votick_token');
     setUser(null);
     router.push('/login');
   };

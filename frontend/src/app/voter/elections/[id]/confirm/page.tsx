@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
@@ -92,7 +92,7 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
         const verificationId = res.data.verificationId;
         
         // Save to local storage voter votes history
-        const storedVotes = localStorage.getItem('votetrust_voter_votes') || '[]';
+        const storedVotes = localStorage.getItem('Votick_voter_votes') || '[]';
         const parsed = JSON.parse(storedVotes);
         parsed.push({
           id: verificationId,
@@ -100,7 +100,7 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
           electionName: election.title,
           timestamp: new Date().toISOString()
         });
-        localStorage.setItem('votetrust_voter_votes', JSON.stringify(parsed));
+        localStorage.setItem('Votick_voter_votes', JSON.stringify(parsed));
 
         // Redirect to success screen
         router.push(`/voter/elections/${electionId}/success?verificationId=${verificationId}`);

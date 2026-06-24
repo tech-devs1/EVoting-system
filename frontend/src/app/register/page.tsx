@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -101,7 +101,7 @@ export default function RegisterPage() {
           <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
             <span style={{ fontWeight: 600, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
-              VoteTrust <strong style={{ color: 'var(--color-primary)' }}>AI</strong>
+              Votick <span style={{ color: 'var(--color-primary)' }}>✓</span>
             </span>
           </div>
           <h2 className="auth-title" style={{ marginTop: 'var(--space-4)' }}>Voter Registration</h2>
@@ -276,7 +276,7 @@ export default function RegisterPage() {
 
         <div className="auth-security-badge" style={{ marginTop: 'var(--space-6)' }}>
           <ShieldCheck size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} /> 
-          Protected by VoteTrust AI Security
+          Protected by Votick ✓ Security
         </div>
       </div>
     </div>

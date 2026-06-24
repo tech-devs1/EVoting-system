@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -43,7 +43,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login('admin@votetrust.ai', 'admin-pass', 'admin');
+      await login('admin@Votick.ai', 'admin-pass', 'admin');
     } catch (err: any) {
       setError(err.message || 'Login failed.');
     } finally {
@@ -60,7 +60,7 @@ export default function LoginPage() {
           <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
             <span style={{ fontWeight: 600, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
-              VoteTrust <strong style={{ color: 'var(--color-primary)' }}>AI</strong>
+              Votick <span style={{ color: 'var(--color-primary)' }}>✓</span>
             </span>
           </div>
           <h2 className="auth-title" style={{ marginTop: 'var(--space-4)' }}>Voter & Admin Portal</h2>
@@ -139,7 +139,7 @@ export default function LoginPage() {
 
         <div className="auth-security-badge" style={{ marginTop: 'var(--space-6)' }}>
           <ShieldCheck size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} /> 
-          Protected by VoteTrust AI Security
+          Protected by Votick ✓ Security
         </div>
       </div>
     </div>
