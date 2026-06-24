@@ -1,6 +1,7 @@
 import { auth } from './firebase';
 
-// Use relative /api in production (Vercel routes it to backend), localhost for local dev
+// Use relative /api path — Next.js rewrites in next.config.ts forward it to the Express backend
+// NEXT_PUBLIC_API_URL can override this (e.g. for direct backend access during local dev)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 async function getAuthHeaders(): Promise<HeadersInit> {
