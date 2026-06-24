@@ -1,17 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    // In production (Vercel), BACKEND_URL should be set to the Express backend's URL
-    // In local development, it falls back to localhost:5000
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${backendUrl}/api/:path*`,
-      },
-    ];
-  },
+  // API proxy is handled via src/app/api/[...path]/route.ts
+  // which forwards all /api/* calls to the Express backend (BACKEND_URL env var)
 };
 
 export default nextConfig;

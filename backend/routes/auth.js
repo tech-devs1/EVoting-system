@@ -7,6 +7,39 @@ const { verifyAuth } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 
+// Shared helper: send OTP via EmailJS
+async function sendOtpViaEmailJS(email, name, otp) {
+  const payload = {
+    service_id: process.env.EMAILJS_SERVICE_ID,
+    template_id: process.env.EMAILJS_TEMPLATE_ID,
+    user_id: process.env.EMAILJS_PUBLIC_KEY,
+    accessToken: process.env.EMAILJS_PRIVATE_KEY,
+    template_params: {
+      to_name: name || 'Student',
+      to_email: email,
+      reset_code: otp
+    }
+  };
+  const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error('EmailJS error: ' + err);
+  }
+}
+
+// Generate and store OTP for a user doc, then email it
+async function generateAndSendOtp(userDocRef, email, name) {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+  await userDocRef.update({ otp, otpExpiry: expiry });
+  await sendOtpViaEmailJS(email, name, otp);
+  return otp;
+}
+
 // Verify student ID and fetch details before registration
 router.post('/verify-student', async (req, res) => {
   try {
@@ -73,14 +106,14 @@ router.post('/register', async (req, res) => {
     await studentDocRef.update({
       isRegistered: true,
       password: hashedPassword,
-      name: name || studentData.name, // update name if provided
+      name: name || studentData.name,
       uid: studentId
     });
 
-    // Generate JWT token
-    const token = jwt.sign({ uid: studentId, email: studentData.email, role: studentData.role }, JWT_SECRET, { expiresIn: '24h' });
+    // Send OTP instead of issuing token immediately
+    await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
 
-    res.status(201).json({ status: 'success', data: { uid: studentId, email: studentData.email }, token });
+    res.status(201).json({ status: 'otp_required', email: studentData.email, message: 'OTP sent to your school email. Please verify.' });
   } catch (error) {
     console.error('Error registering user:', error);
     res.status(500).json({ status: 'error', message: 'Failed to register user' });
@@ -114,12 +147,79 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
     }
 
-    const token = jwt.sign({ uid: userDoc.id, email: userData.email, role: userData.role }, JWT_SECRET, { expiresIn: '24h' });
-    
-    res.status(200).json({ status: 'success', data: { uid: userDoc.id, email: userData.email, role: userData.role }, token });
+    // Send OTP — token is issued only after OTP verification
+    await generateAndSendOtp(db.collection('users').doc(userDoc.id), userData.email, userData.name);
+
+    res.status(200).json({ status: 'otp_required', email: userData.email, message: 'OTP sent to your school email. Please verify.' });
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ status: 'error', message: 'Failed to authenticate user.' });
+  }
+});
+
+// Verify OTP and issue JWT token
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ status: 'error', message: 'Email and OTP are required.' });
+    }
+
+    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
+    if (usersSnapshot.empty) {
+      return res.status(400).json({ status: 'error', message: 'Invalid request.' });
+    }
+
+    const userDoc = usersSnapshot.docs[0];
+    const userData = userDoc.data();
+
+    if (!userData.otp || userData.otp !== otp) {
+      return res.status(400).json({ status: 'error', message: 'Invalid OTP code.' });
+    }
+
+    if (Date.now() > userData.otpExpiry) {
+      return res.status(400).json({ status: 'error', message: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Invalidate OTP and issue JWT
+    await db.collection('users').doc(userDoc.id).update({ otp: null, otpExpiry: null });
+
+    const token = jwt.sign(
+      { uid: userDoc.id, email: userData.email, role: userData.role || 'voter' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: { uid: userDoc.id, email: userData.email, role: userData.role || 'voter' },
+      token
+    });
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to verify OTP.' });
+  }
+});
+
+// Resend OTP
+router.post('/resend-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ status: 'error', message: 'Email is required.' });
+
+    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
+    if (usersSnapshot.empty) {
+      return res.status(200).json({ status: 'success', message: 'If the email exists, a new OTP was sent.' });
+    }
+
+    const userDoc = usersSnapshot.docs[0];
+    const userData = userDoc.data();
+    await generateAndSendOtp(db.collection('users').doc(userDoc.id), userData.email, userData.name);
+
+    res.status(200).json({ status: 'success', message: 'A new OTP has been sent to your email.' });
+  } catch (error) {
+    console.error('Error resending OTP:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to resend OTP.' });
   }
 });
 

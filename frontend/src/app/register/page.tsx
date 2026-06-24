@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
@@ -12,7 +12,8 @@ import {
   Mail, 
   Lock, 
   MailCheck, 
-  Check 
+  Check,
+  CheckCircle2
 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -25,6 +26,10 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [resendMsg, setResendMsg] = useState('');
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,13 +72,68 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      // Registers user in backend and issues token securely
-      await register(studentId, email, name, password);
-      setCurrentStep(4);
+      const result = await register(studentId, email, name, password);
+      if (result?.otpRequired && result.email) {
+        setOtpEmail(result.email);
+        setCurrentStep(4); // OTP verification step
+      } else {
+        setCurrentStep(5); // success
+      }
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
+    if (value && index < 5) otpRefs.current[index + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus();
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const newOtp = [...otp];
+    pasted.split('').forEach((char, i) => { newOtp[i] = char; });
+    setOtp(newOtp);
+    otpRefs.current[Math.min(pasted.length, 5)]?.focus();
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const otpCode = otp.join('');
+    if (otpCode.length !== 6) { setError('Please enter the full 6-digit code.'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      const res = await apiRequest<{ status: string; token: string; data: any }>('/auth/verify-otp', 'POST', { email: otpEmail, otp: otpCode });
+      if (res.status === 'success') {
+        setCurrentStep(5); // success screen
+      }
+    } catch (err: any) {
+      setError(err.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResendMsg('');
+    try {
+      await apiRequest('/auth/resend-otp', 'POST', { email: otpEmail });
+      setResendMsg('A new code has been sent to your email.');
+      setOtp(['', '', '', '', '', '']);
+      otpRefs.current[0]?.focus();
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend.');
     }
   };
 
@@ -112,7 +172,7 @@ export default function RegisterPage() {
           <div 
             className="reg-progress-bar" 
             style={{ 
-              width: `${((currentStep - 1) / 3) * 100}%`,
+              width: `${((currentStep - 1) / 4) * 100}%`,
               height: '2px',
               background: 'var(--color-primary)',
               position: 'absolute',
@@ -126,6 +186,7 @@ export default function RegisterPage() {
           {renderStepNumber(2)}
           {renderStepNumber(3)}
           {renderStepNumber(4)}
+          {renderStepNumber(5)}
         </div>
 
         {error && (
@@ -251,23 +312,84 @@ export default function RegisterPage() {
           )}
 
           {currentStep === 4 && (
+            <form onSubmit={handleOtpSubmit}>
+              <div style={{ textAlign: 'center', marginBottom: 'var(--space-5)' }}>
+                <div style={{
+                  width: '60px', height: '60px', borderRadius: '50%',
+                  background: 'var(--color-primary-100)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto var(--space-3) auto'
+                }}>
+                  <CheckCircle2 size={30} style={{ color: 'var(--color-primary)' }} />
+                </div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                  A 6-digit code was sent to <strong>{otpEmail}</strong>.<br />Enter it below to verify your account.
+                </p>
+              </div>
+
+              {resendMsg && (
+                <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)', fontSize: 'var(--text-sm)', background: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
+                  {resendMsg}
+                </div>
+              )}
+
+              {/* 6-digit OTP boxes */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: 'var(--space-6)' }}>
+                {otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={el => { otpRefs.current[i] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={e => handleOtpChange(i, e.target.value)}
+                    onKeyDown={e => handleOtpKeyDown(i, e)}
+                    onPaste={i === 0 ? handleOtpPaste : undefined}
+                    style={{
+                      width: '48px', height: '54px',
+                      textAlign: 'center',
+                      fontSize: '1.4rem',
+                      fontWeight: 700,
+                      border: `2px solid ${digit ? 'var(--color-primary)' : 'var(--border-color)'}`,
+                      borderRadius: 'var(--radius-md)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-primary)',
+                      outline: 'none',
+                      transition: 'border-color 0.2s',
+                    }}
+                    disabled={loading}
+                  />
+                ))}
+              </div>
+
+              <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading}>
+                <ShieldCheck size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
+                {loading ? 'Verifying...' : 'Verify & Complete Registration'}
+              </button>
+
+              <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Didn't get the code? </span>
+                <button type="button" onClick={handleResend} style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 'bold', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  Resend Code
+                </button>
+              </div>
+            </form>
+          )}
+
+          {currentStep === 5 && (
             <div className="success-screen" style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
               <div className="success-icon-wrapper" style={{ 
-                width: '64px', 
-                height: '64px', 
-                borderRadius: '50%', 
-                background: 'var(--color-success-bg)', 
-                color: 'var(--color-success)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+                width: '64px', height: '64px', borderRadius: '50%', 
+                background: 'var(--color-success-bg)', color: 'var(--color-success)', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', 
                 margin: '0 auto var(--space-4) auto' 
               }}>
                 <MailCheck size={32} />
               </div>
-              <h3 className="auth-title">Account Created Successfully</h3>
+              <h3 className="auth-title">Account Verified & Created!</h3>
               <p className="auth-subtitle" style={{ marginBottom: 'var(--space-6)' }}>
-                Your account has been registered securely. Please proceed to the login terminal to authenticate with your new passphrase.
+                Your identity has been confirmed. Please proceed to the login terminal to authenticate with your new passphrase.
               </p>
               <Link href="/login" className="btn btn-primary btn-full hover-lift">Proceed to Login Terminal</Link>
             </div>

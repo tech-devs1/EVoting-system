@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -16,8 +16,9 @@ export interface UserProfile {
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
-  login: (email: string, password?: string, role?: 'voter' | 'admin') => Promise<void>;
-  register: (studentId: string, email: string, name: string, password?: string) => Promise<void>;
+  login: (email: string, password?: string, role?: 'voter' | 'admin') => Promise<{ otpRequired?: boolean; email?: string }>;
+  register: (studentId: string, email: string, name: string, password?: string) => Promise<{ otpRequired?: boolean; email?: string }>;
+  verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -51,40 +52,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, []);
 
-  const login = async (email: string, password?: string, role: 'voter' | 'admin' = 'voter') => {
+  const login = async (email: string, password?: string, role: 'voter' | 'admin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string }> => {
     setLoading(true);
     try {
-      // If admin, we keep the previous mock logic for now since admin login isn't strictly defined,
-      // but for voter we hit our new strict backend login endpoint.
       if (role === 'admin') {
         if (email !== 'admin@htu.edu.gh' || password !== 'admin080') {
           throw new Error('Invalid administrator credentials.');
         }
-        
         const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
         const mockToken = `MOCK_${uid}`;
         localStorage.setItem('Votick_token', mockToken);
-        
-        setUser({
-          uid,
-          email,
-          name: 'System Administrator',
-          role: 'admin',
-          status: 'active'
-        });
-        
+        setUser({ uid, email, name: 'System Administrator', role: 'admin', status: 'active' });
         router.push('/admin/dashboard');
+        return {};
       } else {
-        // Strict Student Login
-        const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/login', 'POST', { email, password });
-
+        const res = await apiRequest<{ status: string; data?: UserProfile; token?: string; email?: string }>('/auth/login', 'POST', { email, password });
+        if (res.status === 'otp_required') {
+          return { otpRequired: true, email: res.email };
+        }
         if (res.status === 'success' && res.token) {
           localStorage.setItem('Votick_token', `Bearer ${res.token}`);
-          setUser(res.data);
+          setUser(res.data!);
           router.push('/voter/dashboard');
-        } else {
-          throw new Error('Invalid response from server during authentication.');
+          return {};
         }
+        throw new Error('Unexpected response from server.');
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -94,20 +86,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (studentId: string, email: string, name: string, password?: string) => {
+  const register = async (studentId: string, email: string, name: string, password?: string): Promise<{ otpRequired?: boolean; email?: string }> => {
     setLoading(true);
     try {
-      // Hit our new strict backend register endpoint
-      const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/register', 'POST', { studentId, email, name, password });
-
-      if (res.status === 'success') {
-        // Do not auto login. The user will be requested to login again.
-        return;
-      } else {
-        throw new Error('Registration failed due to server error.');
+      const res = await apiRequest<{ status: string; email?: string; token?: string; data?: UserProfile }>('/auth/register', 'POST', { studentId, email, name, password });
+      if (res.status === 'otp_required') {
+        return { otpRequired: true, email: res.email };
       }
+      if (res.status === 'success') {
+        return {};
+      }
+      throw new Error('Registration failed due to server error.');
     } catch (error: any) {
       console.error('Registration error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtp = async (email: string, otp: string): Promise<void> => {
+    setLoading(true);
+    try {
+      const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/verify-otp', 'POST', { email, otp });
+      if (res.status === 'success' && res.token) {
+        localStorage.setItem('Votick_token', `Bearer ${res.token}`);
+        setUser(res.data);
+        router.push('/voter/dashboard');
+      } else {
+        throw new Error('OTP verification failed.');
+      }
+    } catch (error: any) {
+      console.error('OTP error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -121,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, verifyOtp, logout }}>
       {children}
     </AuthContext.Provider>
   );
