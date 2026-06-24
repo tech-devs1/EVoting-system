@@ -179,7 +179,7 @@
 }
 
 .form-input-with-icon {
-  padding-left: var(--space-11);
+  padding-left: 2.75rem; /* 44px: clears 18px icon at left: 16px */
 }
 
 .form-input:focus {
