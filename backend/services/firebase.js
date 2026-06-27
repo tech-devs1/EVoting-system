@@ -26,11 +26,18 @@ if (!hasFirebaseCreds) {
   try {
     // Only initialize if not already done (prevents duplicate app error on hot-reload)
     if (getApps().length === 0) {
+      // Sanitize the private key in case it is wrapped in double quotes by Vercel
+      let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+      if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+        privateKey = privateKey.slice(1, -1);
+      }
+      privateKey = privateKey.replace(/\\n/g, '\n');
+
       initializeApp({
         credential: cert({
           projectId: process.env.FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          privateKey: privateKey,
         }),
       });
     }
