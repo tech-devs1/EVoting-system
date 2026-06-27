@@ -1,26 +1,51 @@
-const admin = require('firebase-admin');
+// firebase-admin v14 uses named top-level exports (no more admin.credential namespace)
+const {
+  initializeApp,
+  getApps,
+  cert,
+} = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
-// Initialize Firebase Admin (mock configuration for now if environment variables are not real)
-// In a real environment, we'd use a service account key JSON.
-try {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID || 'mock-project',
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL || 'mock@mock.com',
-      privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : '-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----\n',
-    })
-  });
-  console.log('Firebase Admin SDK initialized successfully.');
-} catch (error) {
-  console.log('Using mock firestore instance as Firebase creds might be invalid.');
+// Initialize Firebase Admin SDK
+// Requires FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY in .env
+const hasFirebaseCreds =
+  process.env.FIREBASE_PROJECT_ID &&
+  process.env.FIREBASE_CLIENT_EMAIL &&
+  process.env.FIREBASE_PRIVATE_KEY;
+
+let firestoreDb = null;
+
+if (!hasFirebaseCreds) {
+  console.warn('⚠️  WARNING: Firebase credentials are missing from .env (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).');
+  console.warn('⚠️  Student index numbers cannot be fetched from the real database — falling back to in-memory MockFirestore.');
+  console.warn('⚠️  Add the Firebase service account credentials to backend/.env and restart the server to fix this.');
+} else {
+  try {
+    // Only initialize if not already done (prevents duplicate app error on hot-reload)
+    if (getApps().length === 0) {
+      initializeApp({
+        credential: cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        }),
+      });
+    }
+    firestoreDb = getFirestore();
+    console.log('✅ Firebase Admin SDK initialized — connected to project:', process.env.FIREBASE_PROJECT_ID);
+  } catch (error) {
+    console.error('Firebase Admin SDK initialization failed:', error.message);
+    console.warn('⚠️  Falling back to in-memory MockFirestore. Student records will not persist across restarts.');
+    firestoreDb = null;
+  }
 }
 
-const db = admin.firestore ? admin.firestore() : null;
-
-// Mock database wrapper to allow the app to run without a real Firebase project connected
+// ─── Mock Firestore ───────────────────────────────────────────────────────────
+// Used when real Firebase credentials are absent or initialization fails.
+// Data is in-memory only — lost on server restart.
 class MockFirestore {
   constructor() {
     this.collections = {
@@ -47,7 +72,7 @@ class MockFirestore {
         return {
           id: docId,
           set: async (data) => { collectionMap.set(docId, { ...data, id: docId }); return data; },
-          get: async () => { 
+          get: async () => {
             const data = collectionMap.get(docId);
             return { exists: !!data, data: () => data, id: docId };
           },
@@ -73,27 +98,30 @@ class MockFirestore {
         return { docs, empty: docs.length === 0, forEach: (cb) => docs.forEach(cb) };
       },
       where: function(field, operator, value) {
-        // Simple mock where
         const filteredDocs = Array.from(collectionMap.values()).filter(doc => {
           if (operator === '==') return doc[field] === value;
+          if (operator === '!=') return doc[field] !== value;
+          if (operator === '>') return doc[field] > value;
+          if (operator === '<') return doc[field] < value;
           return false;
         });
-        
-        return {
+
+        const buildQuery = (docs) => ({
           get: async () => {
-            const docs = filteredDocs.map(data => ({ id: data.id, data: () => data, exists: true }));
-            return { docs, empty: docs.length === 0, forEach: (cb) => docs.forEach(cb) };
-          }
-        };
+            const result = docs.map(data => ({ id: data.id, data: () => data, exists: true }));
+            return { docs: result, empty: result.length === 0, forEach: (cb) => result.forEach(cb) };
+          },
+          where: (f2, op2, v2) => buildQuery(docs.filter(doc => op2 === '==' ? doc[f2] === v2 : false)),
+          orderBy: function() { return this; },
+          limit: function() { return this; },
+        });
+
+        return buildQuery(filteredDocs);
       }
     };
   }
 }
 
-// Export either real firestore or mock based on initialization success
-const firestoreDb = db || new MockFirestore();
+const db = firestoreDb || new MockFirestore();
 
-module.exports = {
-  admin,
-  db: firestoreDb
-};
+module.exports = { db };
