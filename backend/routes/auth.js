@@ -58,6 +58,17 @@ router.post('/verify-student', async (req, res) => {
     const studentData = studentDoc.data();
     
     if (studentData.isRegistered) {
+      // Check if registration is incomplete (has OTP but not verified)
+      if (studentData.otp) {
+        return res.status(200).json({ 
+          status: 'incomplete_registration', 
+          data: { 
+            name: studentData.name, 
+            email: studentData.email 
+          },
+          message: 'You have an incomplete registration. Please complete the verification process.'
+        });
+      }
       return res.status(403).json({ status: 'error', message: 'This student ID has already been registered.' });
     }
 
@@ -334,4 +345,24 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-module.exports = router;
+router.delete('/cleanup-incomplete', async (req, res) => {
+  try {
+    // Find users marked as registered but still have pending OTP (registration not completed)
+    const usersSnap = await db.collection('users')
+      .where('isRegistered', '==', true)
+      .where('otp', '!=', null)
+      .get();
+    if (usersSnap.empty) {
+      return res.status(200).json({ status: 'success', message: 'No incomplete registrations found.' });
+    }
+    const batch = db.batch();
+    usersSnap.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+    return res.status(200).json({ status: 'success', message: `${usersSnap.size} incomplete registrations deleted.` });
+  } catch (error) {
+    console.error('Error cleaning up incomplete registrations:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to clean up registrations' });
+  }
+});

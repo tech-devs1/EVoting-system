@@ -26,6 +26,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
   const [otpEmail, setOtpEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [resendMsg, setResendMsg] = useState('');
@@ -38,13 +39,21 @@ export default function RegisterPage() {
       return;
     }
     setError('');
+    setInfoMessage('');
     setLoading(true);
     try {
-      const res = await apiRequest<{ status: string; data: { name: string; email: string } }>('/auth/verify-student', 'POST', { studentId });
+      const res = await apiRequest<{ status: string; data: { name: string; email: string }; message?: string }>('/auth/verify-student', 'POST', { studentId });
       if (res.status === 'success') {
         setName(res.data.name);
         setEmail(res.data.email);
         setCurrentStep(2);
+      } else if (res.status === 'incomplete_registration') {
+        // User has incomplete registration - redirect to OTP verification
+        setName(res.data.name);
+        setEmail(res.data.email);
+        setOtpEmail(res.data.email);
+        setInfoMessage(res.message || 'You have an incomplete registration. Please complete the verification process.');
+        setCurrentStep(4); // Skip to OTP verification step
       }
     } catch (err: any) {
       setError(err.message || 'Failed to verify student ID.');
@@ -112,6 +121,7 @@ export default function RegisterPage() {
     const otpCode = otp.join('');
     if (otpCode.length !== 6) { setError('Please enter the full 6-digit code.'); return; }
     setError('');
+    setInfoMessage('');
     setLoading(true);
     try {
       const res = await apiRequest<{ status: string; token: string; data: any }>('/auth/verify-otp', 'POST', { email: otpEmail, otp: otpCode });
@@ -200,6 +210,20 @@ export default function RegisterPage() {
             border: '1px solid rgba(239, 68, 68, 0.2)'
           }}>
             {error}
+          </div>
+        )}
+
+        {infoMessage && (
+          <div className="alert alert-info" style={{ 
+            padding: 'var(--space-3) var(--space-4)', 
+            borderRadius: 'var(--radius-md)', 
+            marginBottom: 'var(--space-4)',
+            fontSize: 'var(--text-sm)',
+            background: 'var(--color-primary-100)',
+            color: 'var(--color-primary)',
+            border: '1px solid rgba(59, 130, 246, 0.2)'
+          }}>
+            {infoMessage}
           </div>
         )}
 
