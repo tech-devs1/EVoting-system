@@ -60,13 +60,15 @@ router.post('/verify-student', async (req, res) => {
     if (studentData.isRegistered) {
       // Check if registration is incomplete (has OTP but not verified)
       if (studentData.otp) {
+        // Resend OTP to allow user to complete registration
+        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
         return res.status(200).json({ 
           status: 'incomplete_registration', 
           data: { 
             name: studentData.name, 
             email: studentData.email 
           },
-          message: 'You have an incomplete registration. Please complete the verification process.'
+          message: 'You have an incomplete registration. A new verification code has been sent to your email.'
         });
       }
       return res.status(403).json({ status: 'error', message: 'This student ID has already been registered.' });
@@ -111,19 +113,23 @@ router.post('/register', async (req, res) => {
       return res.status(403).json({ status: 'error', message: 'This student ID has already registered an account to prevent cheating.' });
     }
 
+    // Register a user securely
+    // Store credentials but do NOT mark as registered yet; require OTP verification first
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Using studentId as the UID
-    await studentDocRef.update({
-      isRegistered: true,
+    // Create or update user document with pending verification
+    await studentDocRef.set({
+      isRegistered: false,
       password: hashedPassword,
       name: name || studentData.name,
-      uid: studentId
-    });
+      uid: studentId,
+      // OTP will be set by generateAndSendOtp
+    }, { merge: true });
 
-    // Send OTP instead of issuing token immediately
+    // Send OTP for verification
     await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
 
+    // Respond indicating OTP is required
     res.status(201).json({ status: 'otp_required', email: studentData.email, message: 'OTP sent to your school email. Please verify.' });
   } catch (error) {
     console.error('Error registering user:', error);
@@ -192,8 +198,9 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'OTP has expired. Please request a new one.' });
     }
 
-    // Invalidate OTP and issue JWT
-    await db.collection('users').doc(userDoc.id).update({ otp: null, otpExpiry: null });
+    // Verify OTP and issue JWT token; mark user as registered
+    const userRef = db.collection('users').doc(userDoc.id);
+    await userRef.update({ otp: null, otpExpiry: null, isRegistered: true });
 
     const token = jwt.sign(
       { uid: userDoc.id, email: userData.email, role: userData.role || 'voter' },

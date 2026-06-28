@@ -29,7 +29,16 @@ export default function RegisterPage() {
   const [infoMessage, setInfoMessage] = useState('');
   const [otpEmail, setOtpEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [resendMsg, setResendMsg] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Countdown effect for resend button
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleStep1Submit = async (e: React.FormEvent) => {
@@ -142,11 +151,12 @@ export default function RegisterPage() {
       setResendMsg('A new code has been sent to your email.');
       setOtp(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
+      // start 60‑second cooldown
+      setResendCooldown(60);
     } catch (err: any) {
       setError(err.message || 'Failed to resend.');
     }
   };
-
   const renderStepNumber = (step: number) => {
     if (currentStep > step) {
       return (
@@ -394,8 +404,20 @@ export default function RegisterPage() {
 
               <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
                 <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Didn't get the code? </span>
-                <button type="button" onClick={handleResend} style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 'bold', background: 'none', border: 'none', cursor: 'pointer' }}>
-                  Resend Code
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={loading || resendCooldown > 0}
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: resendCooldown > 0 ? 'var(--text-muted)' : 'var(--color-primary)',
+                    fontWeight: 'bold',
+                    background: 'none',
+                    border: 'none',
+                    cursor: resendCooldown > 0 ? 'default' : 'pointer'
+                  }}
+                >
+                  {resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : 'Resend Code'}
                 </button>
               </div>
             </form>
