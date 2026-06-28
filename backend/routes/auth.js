@@ -56,23 +56,22 @@ router.post('/verify-student', async (req, res) => {
     }
 
     const studentData = studentDoc.data();
-    // If the student is already registered, reject
+    
     if (studentData.isRegistered) {
+      // Check if registration is incomplete (has OTP but not verified)
+      if (studentData.otp) {
+        // Resend OTP to allow user to complete registration
+        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
+        return res.status(200).json({
+          status: 'incomplete_registration',
+          data: {
+            name: studentData.name,
+            email: studentData.email
+          },
+          message: 'You have an incomplete registration. A verification code has been sent to your email.'
+        });
+      }
       return res.status(403).json({ status: 'error', message: 'This student ID has already been registered.' });
-    }
-
-    // If the student has an OTP but is not yet registered, treat as incomplete registration
-    if (studentData.otp) {
-      // Resend OTP to allow user to complete registration
-      await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
-      return res.status(200).json({
-        status: 'incomplete_registration',
-        data: {
-          name: studentData.name,
-          email: studentData.email
-        },
-        message: 'You have an incomplete registration. A verification code has been sent to your email.'
-      });
     }
 
     return res.status(200).json({ 
