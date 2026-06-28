@@ -30,6 +30,7 @@ export default function RegisterPage() {
   const [otpEmail, setOtpEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendMsg, setResendMsg] = useState('');
 
   // Countdown effect for resend button
   useEffect(() => {
