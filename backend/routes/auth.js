@@ -366,3 +366,5 @@ router.delete('/cleanup-incomplete', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to clean up registrations' });
   }
 });
+
+module.exports = router;
