@@ -85,6 +85,14 @@ export default function RegisterPage() {
   const handleStep3Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passphrases do not match');
       return;

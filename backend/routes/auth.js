@@ -103,6 +103,15 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
+    // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.' 
+      });
+    }
+
     const studentDocRef = db.collection('users').doc(studentId);
     const studentDoc = await studentDocRef.get();
 
@@ -338,6 +347,15 @@ router.post('/reset-password', async (req, res) => {
     const { email, code, newPassword } = req.body;
     if (!email || !code || !newPassword) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
+    }
+
+    // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.' 
+      });
     }
 
     const usersSnapshot = await db.collection('users').where('email', '==', email).get();
