@@ -13,7 +13,9 @@ import {
   Lock, 
   MailCheck, 
   Check,
-  CheckCircle2
+  CheckCircle2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -24,6 +26,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
@@ -315,10 +319,10 @@ export default function RegisterPage() {
             <form onSubmit={handleStep3Submit}>
               <div className="form-group">
                 <label className="form-label" htmlFor="reg-password">Ballot Security Passphrase</label>
-                <div className="form-input-container">
+                <div className="form-input-container" style={{ position: 'relative' }}>
                   <Lock size={18} className="form-input-icon" />
                   <input 
-                    type="password" 
+                    type={showPassword ? "text" : "password"} 
                     id="reg-password" 
                     className="form-input form-input-with-icon" 
                     placeholder="••••••••••••" 
@@ -327,14 +331,24 @@ export default function RegisterPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)'
+                    }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="reg-confirm">Confirm Passphrase</label>
-                <div className="form-input-container">
+                <div className="form-input-container" style={{ position: 'relative' }}>
                   <Lock size={18} className="form-input-icon" />
                   <input 
-                    type="password" 
+                    type={showConfirmPassword ? "text" : "password"} 
                     id="reg-confirm" 
                     className="form-input form-input-with-icon" 
                     placeholder="••••••••••••" 
@@ -343,6 +357,16 @@ export default function RegisterPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={loading}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{
+                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)'
+                    }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>

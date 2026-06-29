@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, Mail, KeyRound, ArrowLeft, Lock } from 'lucide-react';
+import { ShieldCheck, Mail, KeyRound, ArrowLeft, Lock, Eye, EyeOff } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +13,8 @@ export default function ForgotPasswordPage() {
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -123,10 +125,10 @@ export default function ForgotPasswordPage() {
 
             <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
               <label className="form-label" htmlFor="new-pass">New Passphrase</label>
-              <div className="form-input-container">
+              <div className="form-input-container" style={{ position: 'relative' }}>
                 <Lock size={18} className="form-input-icon" />
                 <input 
-                  type="password" 
+                  type={showPassword ? "text" : "password"} 
                   id="new-pass" 
                   className="form-input form-input-with-icon" 
                   placeholder="••••••••••••" 
@@ -135,15 +137,25 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   disabled={loading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
             <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
               <label className="form-label" htmlFor="confirm-pass">Confirm Passphrase</label>
-              <div className="form-input-container">
+              <div className="form-input-container" style={{ position: 'relative' }}>
                 <Lock size={18} className="form-input-icon" />
                 <input 
-                  type="password" 
+                  type={showConfirmPassword ? "text" : "password"} 
                   id="confirm-pass" 
                   className="form-input form-input-with-icon" 
                   placeholder="••••••••••••" 
@@ -152,6 +164,16 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={loading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)'
+                  }}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
