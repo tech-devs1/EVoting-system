@@ -262,7 +262,7 @@ router.post('/resend-otp', async (req, res) => {
     res.status(200).json({ status: 'success', message: 'A new OTP has been sent to your email.' });
   } catch (error) {
     console.error('Error resending OTP:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to resend OTP.' });
+    res.status(500).json({ status: 'error', message: error.message || 'Failed to resend OTP.' });
   }
 });
 
