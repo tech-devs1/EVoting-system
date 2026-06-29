@@ -114,7 +114,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Main Content Area */}
-        <main className="content-area" style={{ flexGrow: 1, padding: 'var(--container-padding)' }}>
+        <main className="content-area" style={{ flexGrow: 1, padding: 'var(--container-padding)', paddingBottom: 'calc(var(--container-padding) + var(--bottom-nav-height, 60px))' }}>
           {children}
         </main>
       </div>

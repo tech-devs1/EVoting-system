@@ -228,14 +228,14 @@ router.post('/verify-otp', async (req, res) => {
     await userRef.update({ otp: null, otpExpiry: null, isRegistered: true });
 
     const token = jwt.sign(
-      { uid: userDoc.id, email: userData.email, role: userData.role || 'voter' },
+      { uid: userDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     res.status(200).json({
       status: 'success',
-      data: { uid: userDoc.id, email: userData.email, role: userData.role || 'voter' },
+      data: { uid: userDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name },
       token
     });
   } catch (error) {
