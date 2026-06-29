@@ -56,30 +56,37 @@ router.post('/verify-student', async (req, res) => {
     }
 
     const studentData = studentDoc.data();
-    
+
+    // Case 1: Fully registered (OTP verified) — reject
     if (studentData.isRegistered) {
-      // Check if registration is incomplete (has OTP but not verified)
-      if (studentData.otp) {
-        // Resend OTP to allow user to complete registration
-        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
-        return res.status(200).json({
-          status: 'incomplete_registration',
-          data: {
-            name: studentData.name,
-            email: studentData.email
-          },
-          message: 'You have an incomplete registration. A verification code has been sent to your email.'
-        });
-      }
       return res.status(403).json({ status: 'error', message: 'This student ID has already been registered.' });
     }
 
-    return res.status(200).json({ 
-      status: 'success', 
-      data: { 
-        name: studentData.name, 
-        email: studentData.email 
-      } 
+    // Case 2: Partial registration (has password but hasn't verified OTP yet)
+    if (studentData.password) {
+      // Try to send a new OTP so they can complete verification
+      try {
+        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
+      } catch (emailErr) {
+        console.error('OTP email failed for incomplete registration (user can resend):', emailErr.message || emailErr);
+      }
+      return res.status(200).json({
+        status: 'incomplete_registration',
+        data: {
+          name: studentData.name,
+          email: studentData.email
+        },
+        message: 'You have an incomplete registration. A verification code has been sent to your email.'
+      });
+    }
+
+    // Case 3: Fresh student — proceed to registration
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        name: studentData.name,
+        email: studentData.email
+      }
     });
   } catch (error) {
     console.error('Error verifying student:', error);
@@ -113,24 +120,33 @@ router.post('/register', async (req, res) => {
       return res.status(403).json({ status: 'error', message: 'This student ID has already registered an account to prevent cheating.' });
     }
 
-    // Register a user securely
     // Store credentials but do NOT mark as registered yet; require OTP verification first
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create or update user document with pending verification
     await studentDocRef.set({
       isRegistered: false,
       password: hashedPassword,
       name: name || studentData.name,
       uid: studentId,
-      // OTP will be set by generateAndSendOtp
     }, { merge: true });
 
-    // Send OTP for verification
-    await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
+    // Attempt to send OTP — don't fail the entire registration if email fails
+    let otpSent = true;
+    try {
+      await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
+    } catch (emailErr) {
+      console.error('OTP email failed during registration (user can resend):', emailErr.message || emailErr);
+      otpSent = false;
+    }
 
-    // Respond indicating OTP is required
-    res.status(201).json({ status: 'otp_required', email: studentData.email, message: 'OTP sent to your school email. Please verify.' });
+    // Always proceed to OTP step — user can use "Resend Code" if email didn't arrive
+    res.status(201).json({
+      status: 'otp_required',
+      email: studentData.email,
+      message: otpSent
+        ? 'OTP sent to your school email. Please verify.'
+        : 'Registration saved. We could not send the verification code right now — please use "Resend Code" on the next screen.'
+    });
   } catch (error) {
     console.error('Error registering user:', error);
     res.status(500).json({ status: 'error', message: 'Failed to register user' });
