@@ -99,7 +99,8 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
 
       {/* Main Content Frame */}
       <div className="main-wrapper" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-        <header className="topbar" id="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--container-padding)' }}>
+        {/* Topbar — hidden on mobile via voter-topbar-hidden class */}
+        <header className="topbar voter-topbar-hidden" id="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--container-padding)' }}>
           <div className="page-title-section">
             <h2 className="page-title" style={{ fontSize: 'var(--text-xl)', fontWeight: 600 }}>{currentTitle}</h2>
             <span className="page-subtitle" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
@@ -131,7 +132,28 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
             </Link>
           );
         })}
+        {/* Theme toggle in bottom nav for mobile */}
+        <button
+          className="mobile-nav-link"
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+          type="button"
+        >
+          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          <span>Theme</span>
+        </button>
+        {/* Logout in bottom nav for mobile */}
+        <button
+          className="mobile-nav-link"
+          onClick={logout}
+          aria-label="Log out"
+          type="button"
+        >
+          <LogOut size={18} />
+          <span>Logout</span>
+        </button>
       </nav>
     </div>
   );
 }
+

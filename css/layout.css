@@ -326,6 +326,11 @@
   .topbar {
     padding: 0 var(--space-4);
   }
+
+  /* Hide the topbar on voter pages for a cleaner mobile experience */
+  .voter-topbar-hidden {
+    display: none !important;
+  }
   
   .content-area {
     padding: var(--space-4);
