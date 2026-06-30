@@ -114,20 +114,20 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Main Content Area */}
-        <main className="content-area" style={{ flexGrow: 1, padding: 'var(--container-padding)', paddingBottom: 'calc(var(--container-padding) + var(--bottom-nav-height, 60px))' }}>
+        <main className="content-area" style={{ flexGrow: 1 }}>
           {children}
         </main>
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="mobile-nav" id="mobile-navigation-bar" style={{ display: 'flex', justifyContent: 'space-around', position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--bg-glass)', borderTop: '1px solid var(--border-color)', height: 'var(--bottom-nav-height)' }}>
+      <nav className="mobile-nav" id="mobile-navigation-bar">
         {navLinks.map(link => {
           const Icon = link.icon;
           const isActive = pathname === link.href;
           return (
-            <Link href={link.href} className={`mobile-nav-link ${isActive ? 'active' : ''}`} key={link.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Link href={link.href} className={`mobile-nav-link ${isActive ? 'active' : ''}`} key={link.href}>
               <Icon size={18} />
-              <span style={{ fontSize: '10px', marginTop: '4px' }}>{link.label}</span>
+              <span>{link.label}</span>
             </Link>
           );
         })}

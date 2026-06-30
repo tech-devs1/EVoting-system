@@ -222,6 +222,13 @@
   margin-bottom: var(--space-4);
 }
 
+@media (max-width: 640px) {
+  .candidate-compare-overlay {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
+
 /* ---- Vote Confirmation & Success Screen ---- */
 .confirm-box {
   max-width: 600px;

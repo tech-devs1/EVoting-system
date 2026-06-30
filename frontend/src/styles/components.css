@@ -395,6 +395,19 @@
   display: flex;
   gap: var(--space-6);
   margin-bottom: var(--space-6);
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+.tabs-container::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs-container {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 .tab-btn {
@@ -404,6 +417,7 @@
   color: var(--text-secondary);
   position: relative;
   transition: color var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .tab-btn:hover {
@@ -435,6 +449,7 @@
   bottom: 0;
   background: var(--bg-overlay);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: var(--z-modal);
   display: flex;
   align-items: center;
@@ -443,6 +458,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--transition-base);
+  overflow-y: auto;
 }
 
 .modal-overlay.active {
@@ -456,6 +472,10 @@
   border-radius: var(--radius-2xl);
   width: 100%;
   max-width: 540px;
+  max-height: calc(100% - var(--space-8));
+  max-height: calc(90dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-2xl);
   transform: translateY(20px) scale(0.95);
   transition: transform var(--transition-spring);
@@ -472,6 +492,7 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -498,6 +519,9 @@
 
 .modal-body {
   padding: var(--space-6);
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
@@ -506,4 +530,5 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
+  flex-shrink: 0;
 }
