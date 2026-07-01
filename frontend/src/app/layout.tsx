@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${poppins.variable}`} data-theme="light">
+    <html lang="en" className={`${inter.variable} ${poppins.variable}`} data-theme="light" suppressHydrationWarning>
       <body>
         <AuthProvider>
           {children}

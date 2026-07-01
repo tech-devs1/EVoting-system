@@ -25,8 +25,15 @@ interface Election {
 function CountdownTimer({ endsAt }: { endsAt: string }) {
   const [timeLeft, setTimeLeft] = useState('');
   const [endingSoon, setEndingSoon] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     const endTime = new Date(endsAt).getTime();
 
     const updateTimer = () => {
@@ -54,11 +61,11 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
     const interval = setInterval(updateTimer, 1000);
 
     return () => clearInterval(interval);
-  }, [endsAt]);
+  }, [endsAt, mounted]);
 
   return (
-    <div className={`countdown-timer ${endingSoon ? 'ending-soon' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-      <Clock size={14} /> {timeLeft}
+    <div className={`countdown-timer ${endingSoon ? 'ending-soon' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }} suppressHydrationWarning>
+      <Clock size={14} /> {mounted ? timeLeft : 'Loading...'}
     </div>
   );
 }
@@ -68,8 +75,15 @@ export default function VoterDashboard() {
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalVotes, setTotalVotes] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     async function fetchData() {
       try {
         console.log('[Dashboard] Fetching elections data...');
@@ -84,16 +98,12 @@ export default function VoterDashboard() {
         }
 
         // Get total votes cast from local storage history or mock
-        if (typeof window !== 'undefined') {
-          const storedVotes = localStorage.getItem('Votick_voter_votes');
-          if (storedVotes) {
-            const parsed = JSON.parse(storedVotes);
-            setTotalVotes(parsed.length);
-          } else {
-            setTotalVotes(0); // default to 0 for empty database
-          }
+        const storedVotes = localStorage.getItem('Votick_voter_votes');
+        if (storedVotes) {
+          const parsed = JSON.parse(storedVotes);
+          setTotalVotes(parsed.length);
         } else {
-          setTotalVotes(0);
+          setTotalVotes(0); // default to 0 for empty database
         }
       } catch (err) {
         console.error('[Dashboard] Error fetching dashboard data:', err);
@@ -103,13 +113,13 @@ export default function VoterDashboard() {
     }
 
     fetchData();
-  }, []);
+  }, [mounted]);
 
   const userName = user?.name || "";
   const voterCode = user?.uid ? user.uid.substring(0, 12) : "";
 
   return (
-    <div className="dashboard-grid animate-page-enter">
+    <div className="dashboard-grid animate-page-enter" suppressHydrationWarning>
       {/* Main Content Column */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
         
