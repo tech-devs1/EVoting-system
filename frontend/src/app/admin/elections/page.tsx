@@ -158,14 +158,14 @@ export default function AdminElectionsPage() {
               <button className="modal-close" onClick={() => setIsModalOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleCreateElection}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <div className="modal-body">
                 <div className="form-group">
                   <label className="form-label" htmlFor="el-title">Election Title</label>
                   <input type="text" id="el-title" className="form-input" placeholder="e.g. Student Council Presidential Election" required value={formTitle} onChange={e => setFormTitle(e.target.value)} />
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="el-desc">Description</label>
-                  <textarea id="el-desc" className="form-input" placeholder="Describe the purpose of this election..." style={{ minHeight: '80px' }} value={formDescription} onChange={e => setFormDescription(e.target.value)} />
+                  <textarea id="el-desc" className="form-input" placeholder="Describe the purpose of this election..." style={{ minHeight: '80px', resize: 'vertical' }} value={formDescription} onChange={e => setFormDescription(e.target.value)} />
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="el-type">Election Type</label>
@@ -198,12 +198,12 @@ export default function AdminElectionsPage() {
                     <input type="datetime-local" id="el-end" className="form-input" required value={formEndDate} onChange={e => setFormEndDate(e.target.value)} />
                   </div>
                 </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={submitting}>
-                  {submitting ? 'Creating...' : 'Create Election'}
-                </button>
+                <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-6)' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={submitting}>
+                    {submitting ? 'Creating...' : 'Create Election'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
