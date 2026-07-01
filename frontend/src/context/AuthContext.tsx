@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (role === 'admin') {
         if (email !== 'admin@htu.edu.gh' || password !== 'admin080') {
-          throw new Error('Invalid administrator credentials.');
+          throw new Error('Invalid administrator credentials. Use email: admin@htu.edu.gh, password: admin080');
         }
         const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
         const mockToken = `MOCK_${uid}`;

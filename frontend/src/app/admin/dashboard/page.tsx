@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
 import { 
   TrendingUp, 
@@ -9,7 +10,9 @@ import {
   Users, 
   Vote, 
   RefreshCw, 
-  Check 
+  Check,
+  Plus,
+  Settings
 } from 'lucide-react';
 import { 
   Chart as ChartJS, 
@@ -123,6 +126,21 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="animate-page-enter">
+      {/* Dashboard Header with Action Buttons */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+        <div>
+          <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, margin: 0 }}>Executive Dashboard</h2>
+          <p style={{ color: 'var(--text-secondary)', margin: 'var(--space-1) 0 0 0', fontSize: 'var(--text-sm)' }}>
+            Real-time election monitoring and management
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <Link href="/admin/elections" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <Settings size={16} /> Manage Elections
+          </Link>
+        </div>
+      </div>
+
       {/* Executive KPI Cards */}
       <div className="admin-grid-top">
         

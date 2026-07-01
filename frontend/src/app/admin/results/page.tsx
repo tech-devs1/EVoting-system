@@ -1,8 +1,9 @@
 ﻿'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, ArrowLeft } from 'lucide-react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -113,6 +114,9 @@ export default function AdminResultsPage() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
         <div>
+          <Link href="/admin/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>
+            <ArrowLeft size={14} /> Return to Dashboard
+          </Link>
           <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-1)' }}>
             {selectedElection?.title || 'Live Results Monitor'}
           </h2>

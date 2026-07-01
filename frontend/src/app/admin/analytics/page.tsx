@@ -1,7 +1,8 @@
 ﻿'use client';
 
 import React, { useEffect, useState } from 'react';
-import { FileText, FileSpreadsheet, Download } from 'lucide-react';
+import Link from 'next/link';
+import { FileText, FileSpreadsheet, Download, ArrowLeft } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import {
   Chart as ChartJS,
@@ -80,6 +81,9 @@ export default function AdminAnalyticsPage() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
         <div>
+          <Link href="/admin/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>
+            <ArrowLeft size={14} /> Return to Dashboard
+          </Link>
           <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-1)' }}>Detailed Election Analytics</h2>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Historical metrics, trends and download logs</span>
         </div>

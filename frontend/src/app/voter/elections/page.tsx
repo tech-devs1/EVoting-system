@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { Search, FolderOpen, Clock, Lock } from 'lucide-react';
+import { Search, FolderOpen, Clock, Lock, ArrowLeft } from 'lucide-react';
 
 interface Election {
   id: string;
@@ -122,31 +122,36 @@ export default function VoterElectionsPage() {
     <div className="animate-page-enter">
       {/* Top Filter and Search Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-        <div className="tabs-container" style={{ marginBottom: 0 }}>
-          <button 
-            className={`tab-btn ${selectedFilter === 'all' ? 'active' : ''}`} 
-            onClick={() => setSelectedFilter('all')}
-          >
-            All Elections
-          </button>
-          <button 
-            className={`tab-btn ${selectedFilter === 'active' ? 'active' : ''}`} 
-            onClick={() => setSelectedFilter('active')}
-          >
-            Active
-          </button>
-          <button 
-            className={`tab-btn ${selectedFilter === 'draft' ? 'active' : ''}`} 
-            onClick={() => setSelectedFilter('draft')}
-          >
-            Upcoming
-          </button>
-          <button 
-            className={`tab-btn ${selectedFilter === 'completed' ? 'active' : ''}`} 
-            onClick={() => setSelectedFilter('completed')}
-          >
-            Closed
-          </button>
+        <div>
+          <Link href="/voter/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-2)' }}>
+            <ArrowLeft size={14} /> Return to Dashboard
+          </Link>
+          <div className="tabs-container" style={{ marginBottom: 0 }}>
+            <button 
+              className={`tab-btn ${selectedFilter === 'all' ? 'active' : ''}`} 
+              onClick={() => setSelectedFilter('all')}
+            >
+              All Elections
+            </button>
+            <button 
+              className={`tab-btn ${selectedFilter === 'active' ? 'active' : ''}`} 
+              onClick={() => setSelectedFilter('active')}
+            >
+              Active
+            </button>
+            <button 
+              className={`tab-btn ${selectedFilter === 'draft' ? 'active' : ''}`} 
+              onClick={() => setSelectedFilter('draft')}
+            >
+              Upcoming
+            </button>
+            <button 
+              className={`tab-btn ${selectedFilter === 'completed' ? 'active' : ''}`} 
+              onClick={() => setSelectedFilter('completed')}
+            >
+              Closed
+            </button>
+          </div>
         </div>
         
         <div className="form-input-container" style={{ maxWidth: '300px', width: '100%' }}>

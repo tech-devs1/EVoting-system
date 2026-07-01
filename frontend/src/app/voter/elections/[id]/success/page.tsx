@@ -3,7 +3,7 @@
 import React, { use } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ShieldCheck, Copy, Download, Search, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Copy, Download, Search, AlertTriangle, ArrowLeft } from 'lucide-react';
 
 export default function VoteSuccessPage({ params }: { params: Promise<{ id: string }> }) {
   const searchParams = useSearchParams();
@@ -42,6 +42,11 @@ export default function VoteSuccessPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="confirm-box animate-page-enter" style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'center' }}>
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <Link href="/voter/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
+          <ArrowLeft size={14} /> Return to Dashboard
+        </Link>
+      </div>
       
       {/* Animated Checkmark Indicator */}
       <div className="success-checkmark" style={{ margin: '0 auto var(--space-6) auto' }}>

@@ -165,6 +165,7 @@
   align-items: center;
   justify-content: space-between;
   z-index: var(--z-sticky);
+  flex-shrink: 0;
 }
 
 .page-title-section {
@@ -216,7 +217,9 @@
 .content-area {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--container-padding);
+  -webkit-overflow-scrolling: touch;
 }
 
 .content-container {

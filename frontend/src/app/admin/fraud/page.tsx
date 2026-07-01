@@ -1,8 +1,9 @@
 ﻿'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { ShieldCheck, RefreshCw } from 'lucide-react';
+import { ShieldCheck, RefreshCw, ArrowLeft } from 'lucide-react';
 
 interface Alert {
   id: string;
@@ -60,6 +61,9 @@ export default function AdminFraudPage() {
         {/* Header */}
         <div className="soc-title-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}>
           <div>
+            <Link href="/admin/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)', color: '#94A3B8' }}>
+              <ArrowLeft size={14} /> Return to Dashboard
+            </Link>
             <h3 style={{ fontSize: 'var(--text-xl)', marginBottom: '2px', color: '#F1F5F9' }}>Threat Mitigation Command</h3>
             <span style={{ color: '#94A3B8', fontSize: 'var(--text-xs)' }}>Cybersecurity & Fraud Prevention Operations Dashboard</span>
           </div>

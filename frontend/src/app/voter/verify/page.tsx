@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { Key, Search, ShieldCheck, Activity, EyeOff, ShieldAlert, AlertOctagon } from 'lucide-react';
+import { Key, Search, ShieldCheck, Activity, EyeOff, ShieldAlert, AlertOctagon, ArrowLeft } from 'lucide-react';
 
 interface AuditLog {
   electionId: string;
@@ -73,6 +74,9 @@ export default function VoterVerifyPage() {
   return (
     <div className="candidate-selection-container animate-page-enter">
       <div style={{ marginBottom: 'var(--space-8)' }}>
+        <Link href="/voter/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-4)' }}>
+          <ArrowLeft size={16} /> Return to Dashboard
+        </Link>
         <h2 style={{ marginBottom: 'var(--space-2)' }}>Vote Verification Hub</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
           Verify that your ballot transaction has been accurately cataloged on the digital audit log ledger without revealing candidate choices.

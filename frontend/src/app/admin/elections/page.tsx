@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { Plus, FolderOpen, Settings, Activity, Trash } from 'lucide-react';
+import { Plus, FolderOpen, Settings, Activity, Trash, ArrowLeft } from 'lucide-react';
 
 interface Election {
   id: string;
@@ -90,6 +90,9 @@ export default function AdminElectionsPage() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
         <div>
+          <Link href="/admin/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>
+            <ArrowLeft size={14} /> Return to Dashboard
+          </Link>
           <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-1)' }}>Manage Elections</h2>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Create, configure, and monitor all election instances</span>
         </div>
