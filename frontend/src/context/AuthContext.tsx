@@ -51,7 +51,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (e) {
           console.error('Failed to restore session from token', e);
-          localStorage.removeItem('Votick_token');
+          // Fallback: try to restore from localStorage if API fails
+          const storedUser = localStorage.getItem('Votick_user');
+          if (storedUser) {
+            try {
+              setUser(JSON.parse(storedUser));
+            } catch (parseError) {
+              console.error('Failed to parse stored user data', parseError);
+              localStorage.removeItem('Votick_token');
+            }
+          } else {
+            localStorage.removeItem('Votick_token');
+          }
         }
       }
       setLoading(false);
@@ -69,7 +80,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
         const mockToken = `MOCK_${uid}`;
         localStorage.setItem('Votick_token', mockToken);
-        setUser({ uid, email, name: 'System Administrator', role: 'admin', status: 'active' });
+        const userData = { uid, email, name: 'System Administrator', role: 'admin' as const, status: 'active' };
+        localStorage.setItem('Votick_user', JSON.stringify(userData));
+        setUser(userData);
         router.push('/admin/dashboard');
         return {};
       } else {
@@ -79,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (res.status === 'success' && res.token) {
           localStorage.setItem('Votick_token', `Bearer ${res.token}`);
+          localStorage.setItem('Votick_user', JSON.stringify(res.data));
           setUser(res.data!);
           router.push('/voter/dashboard');
           return {};
@@ -118,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/verify-otp', 'POST', { email, otp });
       if (res.status === 'success' && res.token) {
         localStorage.setItem('Votick_token', `Bearer ${res.token}`);
+        localStorage.setItem('Votick_user', JSON.stringify(res.data));
         setUser(res.data);
         router.push('/voter/dashboard');
       } else {
@@ -133,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('Votick_token');
+    localStorage.removeItem('Votick_user');
     setUser(null);
     router.push('/login');
   };
