@@ -13,7 +13,10 @@ import {
   Sun, 
   Moon,
   Menu,
-  X
+  X,
+  Settings,
+  KeyRound,
+  User
 } from 'lucide-react';
 
 export default function VoterLayout({ children }: { children: React.ReactNode }) {
@@ -21,6 +24,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -51,16 +55,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   }
 
   // Fallback profile details if user context properties are empty
-  const userName = user?.name || "Alex Mercer";
-  const userInitials = (() => {
-    const parts = userName.trim().split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    } else {
-      return userName.slice(0, 2).toUpperCase();
-    }
-  })();
-  const userCode = user?.uid?.substring(0, 12) || "HTU-2026-8849";
+  const userName = user?.name || user?.email?.split('@')[0] || "Alex Mercer";
 
   const currentTitle = navLinks.find(link => pathname.startsWith(link.href))?.label || "Voter Terminal";
 
@@ -99,20 +94,6 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
             );
           })}
         </nav>
-        <div className="sidebar-footer">
-          <div className="user-profile-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
-            <div className="user-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-              {userInitials}
-            </div>
-            <div className="user-info" style={{ flexGrow: 1, minWidth: 0 }}>
-              <div className="user-name truncate" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{userName}</div>
-              <div className="user-role truncate" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{userCode}</div>
-            </div>
-            <button onClick={logout} style={{ color: 'var(--text-tertiary)', cursor: 'pointer' }} title="Log out">
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Main Content Frame */}
@@ -136,9 +117,142 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
           <div className="topbar-actions" style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
-            <button className="theme-toggle-btn" aria-label="Toggle Light/Dark Theme" onClick={toggleTheme}>
-              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-            </button>
+            <div style={{ position: 'relative' }}>
+              <button 
+                className="settings-toggle-btn" 
+                aria-label="Settings" 
+                onClick={() => setSettingsOpen(!settingsOpen)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  background: 'none',
+                  border: 'none',
+                  padding: 'var(--space-1)'
+                }}
+              >
+                <Settings size={18} />
+              </button>
+              {settingsOpen && (
+                <div 
+                  className="settings-dropdown"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + var(--space-2))',
+                    right: 0,
+                    width: '280px',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-lg)',
+                    boxShadow: 'var(--shadow-lg)',
+                    zIndex: 50,
+                    padding: 'var(--space-4)'
+                  }}
+                >
+                  <div style={{ marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-4)', borderBottom: '1px solid var(--border-light)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: 'var(--radius-full)',
+                        background: 'var(--gradient-primary)',
+                        color: 'var(--text-inverse)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        fontSize: 'var(--text-sm)'
+                      }}>
+                        <User size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>{userName}</div>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{user?.email}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+                    <button 
+                      onClick={() => {
+                        setSettingsOpen(false);
+                        // TODO: Open change password modal
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-3)',
+                        padding: 'var(--space-3)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        borderRadius: 'var(--radius-md)',
+                        color: 'var(--text-secondary)',
+                        fontSize: 'var(--text-sm)',
+                        textAlign: 'left',
+                        width: '100%'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <KeyRound size={16} />
+                      <span>Change Password</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setSettingsOpen(false);
+                        toggleTheme();
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-3)',
+                        padding: 'var(--space-3)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        borderRadius: 'var(--radius-md)',
+                        color: 'var(--text-secondary)',
+                        fontSize: 'var(--text-sm)',
+                        textAlign: 'left',
+                        width: '100%'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+                      <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+                    </button>
+                    <div style={{ height: '1px', background: 'var(--border-light)', margin: 'var(--space-2) 0' }}></div>
+                    <button 
+                      onClick={() => {
+                        setSettingsOpen(false);
+                        logout();
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-3)',
+                        padding: 'var(--space-3)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        borderRadius: 'var(--radius-md)',
+                        color: 'var(--color-danger)',
+                        fontSize: 'var(--text-sm)',
+                        textAlign: 'left',
+                        width: '100%'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <LogOut size={16} />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
