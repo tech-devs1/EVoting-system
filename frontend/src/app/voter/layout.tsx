@@ -120,39 +120,6 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="mobile-nav" id="mobile-navigation-bar">
-        {navLinks.map(link => {
-          const Icon = link.icon;
-          const isActive = pathname === link.href;
-          return (
-            <Link href={link.href} className={`mobile-nav-link ${isActive ? 'active' : ''}`} key={link.href}>
-              <Icon size={18} />
-              <span>{link.label}</span>
-            </Link>
-          );
-        })}
-        {/* Theme toggle in bottom nav for mobile */}
-        <button
-          className="mobile-nav-link"
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          type="button"
-        >
-          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-          <span>Theme</span>
-        </button>
-        {/* Logout in bottom nav for mobile */}
-        <button
-          className="mobile-nav-link"
-          onClick={logout}
-          aria-label="Log out"
-          type="button"
-        >
-          <LogOut size={18} />
-          <span>Logout</span>
-        </button>
-      </nav>
     </div>
   );
 }
