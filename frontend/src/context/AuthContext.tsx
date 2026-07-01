@@ -32,6 +32,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Load user from local storage or check backend
   useEffect(() => {
     async function loadUser() {
+      // Only run on client side
+      if (typeof window === 'undefined') {
+        setLoading(false);
+        return;
+      }
+
       const mockToken = localStorage.getItem('Votick_token');
       if (mockToken) {
         try {

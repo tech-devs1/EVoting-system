@@ -22,6 +22,9 @@ export default function LandingPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     // Load theme from localStorage or document default
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const currentTheme = savedTheme || 'light';

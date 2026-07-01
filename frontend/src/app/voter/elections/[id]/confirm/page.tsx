@@ -92,15 +92,17 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
         const verificationId = res.data.verificationId;
         
         // Save to local storage voter votes history
-        const storedVotes = localStorage.getItem('Votick_voter_votes') || '[]';
-        const parsed = JSON.parse(storedVotes);
-        parsed.push({
-          id: verificationId,
-          electionId,
-          electionName: election.title,
-          timestamp: new Date().toISOString()
-        });
-        localStorage.setItem('Votick_voter_votes', JSON.stringify(parsed));
+        if (typeof window !== 'undefined') {
+          const storedVotes = localStorage.getItem('Votick_voter_votes') || '[]';
+          const parsed = JSON.parse(storedVotes);
+          parsed.push({
+            id: verificationId,
+            electionId,
+            electionName: election.title,
+            timestamp: new Date().toISOString()
+          });
+          localStorage.setItem('Votick_voter_votes', JSON.stringify(parsed));
+        }
 
         // Redirect to success screen
         router.push(`/voter/elections/${electionId}/success?verificationId=${verificationId}`);

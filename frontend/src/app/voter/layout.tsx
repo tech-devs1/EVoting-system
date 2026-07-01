@@ -33,6 +33,9 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const currentTheme = savedTheme || 'light';
     setTheme(currentTheme);

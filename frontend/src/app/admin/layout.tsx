@@ -23,6 +23,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const currentTheme = savedTheme || 'light';
     setTheme(currentTheme);

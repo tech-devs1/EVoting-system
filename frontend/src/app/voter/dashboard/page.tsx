@@ -82,12 +82,16 @@ export default function VoterDashboard() {
         }
 
         // Get total votes cast from local storage history or mock
-        const storedVotes = localStorage.getItem('Votick_voter_votes');
-        if (storedVotes) {
-          const parsed = JSON.parse(storedVotes);
-          setTotalVotes(parsed.length);
+        if (typeof window !== 'undefined') {
+          const storedVotes = localStorage.getItem('Votick_voter_votes');
+          if (storedVotes) {
+            const parsed = JSON.parse(storedVotes);
+            setTotalVotes(parsed.length);
+          } else {
+            setTotalVotes(0); // default to 0 for empty database
+          }
         } else {
-          setTotalVotes(0); // default to 0 for empty database
+          setTotalVotes(0);
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
