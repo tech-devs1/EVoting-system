@@ -72,8 +72,10 @@ export default function VoterDashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
+        console.log('[Dashboard] Fetching elections data...');
         // Fetch active elections
         const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
+        console.log('[Dashboard] Elections response:', res);
         if (res.status === 'success') {
           // Only show elections created by admin
           const adminElections = res.data.filter(el => el.createdBy === 'admin');
@@ -94,7 +96,7 @@ export default function VoterDashboard() {
           setTotalVotes(0);
         }
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
+        console.error('[Dashboard] Error fetching dashboard data:', err);
       } finally {
         setLoading(false);
       }

@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // The Express backend URL — defaults to localhost:5000 in development
+// On Vercel, this should be set to the deployed backend URL
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 async function handler(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
   const pathString = path.join('/');
   const targetUrl = `${BACKEND_URL}/api/${pathString}${req.nextUrl.search}`;
+
+  console.log(`[API Proxy] Forwarding ${req.method} request to: ${targetUrl}`);
 
   // Forward all headers from the incoming request
   const headers: Record<string, string> = {};
@@ -26,6 +29,10 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
 
     const data = await backendResponse.text();
 
+    if (!backendResponse.ok) {
+      console.error(`[API Proxy] Backend returned error: ${backendResponse.status} ${backendResponse.statusText}`);
+    }
+
     return new NextResponse(data, {
       status: backendResponse.status,
       statusText: backendResponse.statusText,
@@ -36,7 +43,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   } catch (error) {
     console.error(`[API Proxy] Failed to reach backend at ${targetUrl}:`, error);
     return NextResponse.json(
-      { status: 'error', message: 'Backend service is unavailable. Please ensure the backend server is running.' },
+      { status: 'error', message: `Backend service is unavailable. Target: ${targetUrl}` },
       { status: 503 }
     );
   }

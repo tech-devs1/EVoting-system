@@ -1,7 +1,10 @@
 const { admin } = require('../services/firebase');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 
 /**
- * Middleware to verify Firebase ID token and attach user to request
+ * Middleware to verify Firebase ID token or JWT token and attach user to request
  */
 async function verifyAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -18,9 +21,22 @@ async function verifyAuth(req, res, next) {
       return next();
     }
 
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    req.user = decodedToken;
-    next();
+    // Try to verify as Firebase ID token first
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      req.user = decodedToken;
+      return next();
+    } catch (firebaseError) {
+      // If Firebase verification fails, try JWT verification
+      try {
+        const decoded = jwt.verify(idToken, JWT_SECRET);
+        req.user = decoded;
+        return next();
+      } catch (jwtError) {
+        console.error('JWT verification failed:', jwtError);
+        throw new Error('Invalid token');
+      }
+    }
   } catch (error) {
     console.error('Error verifying auth token:', error);
     res.status(403).json({ status: 'error', message: 'Forbidden: Invalid token' });
