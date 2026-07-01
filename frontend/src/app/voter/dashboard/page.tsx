@@ -19,6 +19,7 @@ interface Election {
   startDate: string;
   endDate: string;
   status: 'draft' | 'active' | 'completed';
+  createdBy?: string;
 }
 
 function CountdownTimer({ endsAt }: { endsAt: string }) {
@@ -74,8 +75,10 @@ export default function VoterDashboard() {
         // Fetch active elections
         const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
         if (res.status === 'success') {
+          // Only show elections created by admin
+          const adminElections = res.data.filter(el => el.createdBy === 'admin');
           // Exclude completed or draft if route returns everything, or display only active
-          setElections(res.data.filter(el => el.status === 'active'));
+          setElections(adminElections.filter(el => el.status === 'active'));
         }
 
         // Get total votes cast from local storage history or mock

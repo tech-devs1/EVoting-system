@@ -12,6 +12,7 @@ interface Election {
   startDate: string;
   endDate: string;
   status: 'draft' | 'active' | 'completed';
+  createdBy?: string;
 }
 
 function CountdownTimer({ endsAt, status }: { endsAt: string; status: string }) {
@@ -72,8 +73,10 @@ export default function VoterElectionsPage() {
       try {
         const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
         if (res.status === 'success') {
-          setElections(res.data);
-          setFilteredList(res.data);
+          // Only show elections created by admin
+          const adminElections = res.data.filter(el => el.createdBy === 'admin');
+          setElections(adminElections);
+          setFilteredList(adminElections);
         }
       } catch (err) {
         console.error('Error fetching elections:', err);

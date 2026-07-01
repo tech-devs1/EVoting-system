@@ -28,6 +28,7 @@ router.get('/', async (req, res) => {
             endDate: new Date(Date.now() + 86400000 * 2).toISOString(),
             status: "active",
             organizationId: "htu",
+            createdBy: "admin",
             createdAt: Date.now()
           },
           {
@@ -37,6 +38,7 @@ router.get('/', async (req, res) => {
             endDate: new Date(Date.now() + 86400000 * 5).toISOString(),
             status: "active",
             organizationId: "htu",
+            createdBy: "admin",
             createdAt: Date.now()
           },
           {
@@ -46,6 +48,7 @@ router.get('/', async (req, res) => {
             endDate: new Date(Date.now() + 86400000 * 7).toISOString(),
             status: "draft", // acts as upcoming/draft
             organizationId: "htu",
+            createdBy: "admin",
             createdAt: Date.now()
           },
           {
@@ -55,6 +58,7 @@ router.get('/', async (req, res) => {
             endDate: new Date(Date.now() - 86400000 * 1).toISOString(),
             status: "completed", // closed
             organizationId: "htu",
+            createdBy: "admin",
             createdAt: Date.now()
           }
         ];
@@ -113,6 +117,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       type: type || 'src',
       department: department || '',
       status: 'draft', // draft, active, completed
+      createdBy: 'admin',
       createdAt: Date.now()
     };
 
