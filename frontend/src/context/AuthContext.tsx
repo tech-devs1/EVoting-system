@@ -79,10 +79,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
         const mockToken = `MOCK_${uid}`;
-        localStorage.setItem('Votick_token', mockToken);
+        localStorage.setItem('Votick_token', `Bearer ${mockToken}`);
         const userData = { uid, email, name: 'System Administrator', role: 'admin' as const, status: 'active' };
         localStorage.setItem('Votick_user', JSON.stringify(userData));
         setUser(userData);
+        console.log('[Auth Context] Admin login successful, token:', `Bearer ${mockToken}`);
         router.push('/admin/dashboard');
         return {};
       } else {

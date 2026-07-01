@@ -10,6 +10,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const targetUrl = `${BACKEND_URL}/api/${pathString}${req.nextUrl.search}`;
 
   console.log(`[API Proxy] Forwarding ${req.method} request to: ${targetUrl}`);
+  console.log(`[API Proxy] Authorization header:`, req.headers.get('authorization'));
 
   // Forward all headers from the incoming request
   const headers: Record<string, string> = {};
@@ -17,6 +18,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     // Skip headers that should not be forwarded
     if (!['host', 'connection', 'transfer-encoding'].includes(key.toLowerCase())) {
       headers[key] = value;
+      console.log(`[API Proxy] Forwarding header ${key}:`, key === 'authorization' ? '[REDACTED]' : value);
     }
   });
 
