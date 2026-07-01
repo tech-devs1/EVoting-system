@@ -9,8 +9,35 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
   try {
     // In a real database, use aggregations. Using mock get() here.
     const electionsDoc = await db.collection('elections').get();
-    const votersDoc = await db.collection('users').where('role', '==', 'voter').get();
+    const votersDoc = await db.collection('users').where('isRegistered', '==', true).get();
     const votesDoc = await db.collection('votes').get();
+
+    console.log('[Admin Dashboard] Total elections:', electionsDoc.docs.length);
+    console.log('[Admin Dashboard] Total registered voters (isRegistered=true):', votersDoc.docs.length);
+    console.log('[Admin Dashboard] Total votes:', votesDoc.docs.length);
+
+    // Debug: Count all users and their isRegistered status
+    const allUsersDoc = await db.collection('users').get();
+    let registeredCount = 0;
+    let unregisteredCount = 0;
+    let noFieldCount = 0;
+    
+    allUsersDoc.forEach(doc => {
+      const data = doc.data();
+      if (data.isRegistered === true) {
+        registeredCount++;
+      } else if (data.isRegistered === false) {
+        unregisteredCount++;
+      } else {
+        noFieldCount++;
+      }
+    });
+
+    console.log('[Admin Dashboard] All users breakdown:');
+    console.log('  - isRegistered=true:', registeredCount);
+    console.log('  - isRegistered=false:', unregisteredCount);
+    console.log('  - no isRegistered field:', noFieldCount);
+    console.log('  - Total:', allUsersDoc.docs.length);
 
     res.status(200).json({
       status: 'success',

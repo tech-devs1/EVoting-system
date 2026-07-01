@@ -137,6 +137,7 @@ router.post('/register', async (req, res) => {
       password: hashedPassword,
       name: name || studentData.name,
       uid: studentId,
+      role: 'voter',
     }, { merge: true });
 
     // Attempt to send OTP — don't fail the entire registration if email fails

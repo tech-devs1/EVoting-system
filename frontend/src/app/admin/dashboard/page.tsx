@@ -60,7 +60,9 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
+        console.log('[Admin Dashboard] Fetching dashboard data...');
         const res = await apiRequest<{ status: string; data: KPIStats }>('/admin/dashboard');
+        console.log('[Admin Dashboard] Response:', res);
         if (res.status === 'success') {
           // If mock DB is empty, use defaults
           const s = res.data;
@@ -79,7 +81,7 @@ export default function AdminDashboardPage() {
           setActiveElectionsCount(active);
         }
       } catch (err) {
-        console.error('Error fetching admin dashboard KPIs:', err);
+        console.error('[Admin Dashboard] Error fetching admin dashboard KPIs:', err);
       } finally {
         setLoading(false);
       }
