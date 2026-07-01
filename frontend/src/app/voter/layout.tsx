@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -16,7 +16,11 @@ import {
   X,
   Settings,
   KeyRound,
-  User
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  X as CloseIcon
 } from 'lucide-react';
 
 export default function VoterLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +29,8 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -62,6 +68,23 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+
+  // Close settings dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+
+    if (settingsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [settingsOpen]);
 
   return (
     <div className="app-shell" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
@@ -117,7 +140,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
           <div className="topbar-actions" style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative' }} ref={settingsRef}>
               <button 
                 className="settings-toggle-btn" 
                 aria-label="Settings" 
@@ -176,7 +199,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
                     <button 
                       onClick={() => {
                         setSettingsOpen(false);
-                        // TODO: Open change password modal
+                        setChangePasswordOpen(true);
                       }}
                       style={{
                         display: 'flex',
@@ -278,7 +301,272 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
           }}
         />
       )}
+
+      {/* Change Password Modal */}
+      {changePasswordOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'var(--space-4)'
+          }}
+          onClick={() => setChangePasswordOpen(false)}
+        >
+          <div 
+            style={{
+              background: 'var(--bg-card)',
+              borderRadius: 'var(--radius-xl)',
+              padding: 'var(--space-6)',
+              maxWidth: '450px',
+              width: '100%',
+              boxShadow: 'var(--shadow-lg)',
+              border: '1px solid var(--border-color)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, margin: 0 }}>Change Password</h3>
+              <button 
+                onClick={() => setChangePasswordOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              >
+                <CloseIcon size={20} />
+              </button>
+            </div>
+            <ChangePasswordForm onClose={() => setChangePasswordOpen(false)} />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// Change Password Form Component
+function ChangePasswordForm({ onClose }: { onClose: () => void }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+    
+    // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // TODO: Call API to change password
+      // await apiRequest('/auth/change-password', 'POST', {
+      //   currentPassword,
+      //   newPassword
+      // });
+      setSuccess(true);
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to change password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div style={{ textAlign: 'center', padding: 'var(--space-4)' }}>
+        <div style={{
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          background: 'var(--color-success-bg)',
+          color: 'var(--color-success)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto var(--space-4) auto'
+        }}>
+          <KeyRound size={30} />
+        </div>
+        <h4 style={{ margin: 0, marginBottom: 'var(--space-2)' }}>Password Changed</h4>
+        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Your password has been successfully updated.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {error && (
+        <div style={{
+          padding: 'var(--space-3)',
+          borderRadius: 'var(--radius-md)',
+          marginBottom: 'var(--space-4)',
+          fontSize: 'var(--text-sm)',
+          background: 'var(--color-danger-bg)',
+          color: 'var(--color-danger)',
+          border: '1px solid rgba(239, 68, 68, 0.2)'
+        }}>
+          {error}
+        </div>
+      )}
+      
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>
+          Current Password
+        </label>
+        <div style={{ position: 'relative' }}>
+          <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+          <input
+            type={showCurrent ? "text" : "password"}
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            required
+            placeholder="Enter current password"
+            style={{
+              width: '100%',
+              padding: 'var(--space-3) var(--space-3) var(--space-3) 40px',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-input)',
+              color: 'var(--text-primary)',
+              fontSize: 'var(--text-sm)'
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowCurrent(!showCurrent)}
+            style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+          >
+            {showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>
+          New Password
+        </label>
+        <div style={{ position: 'relative' }}>
+          <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+          <input
+            type={showNew ? "text" : "password"}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+            placeholder="Enter new password"
+            style={{
+              width: '100%',
+              padding: 'var(--space-3) var(--space-3) var(--space-3) 40px',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-input)',
+              color: 'var(--text-primary)',
+              fontSize: 'var(--text-sm)'
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowNew(!showNew)}
+            style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+          >
+            {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 'var(--space-6)' }}>
+        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>
+          Confirm New Password
+        </label>
+        <div style={{ position: 'relative' }}>
+          <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+          <input
+            type={showConfirm ? "text" : "password"}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            placeholder="Confirm new password"
+            style={{
+              width: '100%',
+              padding: 'var(--space-3) var(--space-3) var(--space-3) 40px',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-input)',
+              color: 'var(--text-primary)',
+              fontSize: 'var(--text-sm)'
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirm(!showConfirm)}
+            style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+          >
+            {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            flex: 1,
+            padding: 'var(--space-3)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-card)',
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 500
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            flex: 1,
+            padding: 'var(--space-3)',
+            border: 'none',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--color-primary)',
+            color: 'var(--text-inverse)',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 500,
+            opacity: loading ? 0.7 : 1
+          }}
+        >
+          {loading ? 'Updating...' : 'Change Password'}
+        </button>
+      </div>
+    </form>
   );
 }
 
