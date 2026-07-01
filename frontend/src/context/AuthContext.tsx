@@ -27,17 +27,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Load user from local storage or check backend
   useEffect(() => {
-    async function loadUser() {
-      // Only run on client side
-      if (typeof window === 'undefined') {
-        setLoading(false);
-        return;
-      }
+    if (!mounted) return;
 
+    async function loadUser() {
       const mockToken = localStorage.getItem('Votick_token');
       if (mockToken) {
         try {
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
     loadUser();
-  }, []);
+  }, [mounted]);
 
   const login = async (email: string, password?: string, role: 'voter' | 'admin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string }> => {
     setLoading(true);

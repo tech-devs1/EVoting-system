@@ -30,17 +30,22 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined') return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Only run on client side after mount
+    if (!mounted) return;
 
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const currentTheme = savedTheme || 'light';
     setTheme(currentTheme);
     document.documentElement.setAttribute('data-theme', currentTheme);
-  }, []);
+  }, [mounted]);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';

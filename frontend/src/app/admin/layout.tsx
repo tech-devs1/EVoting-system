@@ -21,16 +21,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { logout, loading } = useAuth();
   const pathname = usePathname();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined') return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Only run on client side after mount
+    if (!mounted) return;
 
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const currentTheme = savedTheme || 'light';
     setTheme(currentTheme);
     document.documentElement.setAttribute('data-theme', currentTheme);
-  }, []);
+  }, [mounted]);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';

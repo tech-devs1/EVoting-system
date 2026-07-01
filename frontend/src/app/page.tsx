@@ -20,17 +20,22 @@ import {
 
 export default function LandingPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined') return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Only run on client side after mount
+    if (!mounted) return;
 
     // Load theme from localStorage or document default
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const currentTheme = savedTheme || 'light';
     setTheme(currentTheme);
     document.documentElement.setAttribute('data-theme', currentTheme);
-  }, []);
+  }, [mounted]);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
