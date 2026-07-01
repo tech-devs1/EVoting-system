@@ -52,7 +52,14 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
 
   // Fallback profile details if user context properties are empty
   const userName = user?.name || "Alex Mercer";
-  const userInitials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const userInitials = (() => {
+    const parts = userName.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    } else {
+      return userName.slice(0, 2).toUpperCase();
+    }
+  })();
   const userCode = user?.uid?.substring(0, 12) || "HTU-2026-8849";
 
   const currentTitle = navLinks.find(link => pathname.startsWith(link.href))?.label || "Voter Terminal";
