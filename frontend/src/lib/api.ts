@@ -3,7 +3,7 @@ import { auth } from './firebase';
 // Use Next.js API proxy at /api/[...path]/route.ts which forwards to backend
 // On local dev, the proxy forwards to localhost:5000
 // On Vercel, BACKEND_URL env var should be set to the deployed backend URL
-const API_BASE_URL = '';
+const API_BASE_URL = '/api';
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;

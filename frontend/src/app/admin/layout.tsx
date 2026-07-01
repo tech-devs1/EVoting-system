@@ -90,20 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             );
           })}
         </nav>
-        <div className="sidebar-footer">
-          <div className="user-profile-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
-            <div className="user-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-              SA
-            </div>
-            <div className="user-info" style={{ flexGrow: 1, minWidth: 0 }}>
-              <div className="user-name truncate" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>System Administrator</div>
-              <div className="user-role truncate" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Audit Cleared</div>
-            </div>
-            <button onClick={logout} style={{ color: 'var(--text-tertiary)', cursor: 'pointer' }} title="Log out">
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
+
       </aside>
 
       {/* Main Content Frame */}

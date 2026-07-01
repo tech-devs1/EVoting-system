@@ -17,59 +17,6 @@ router.get('/', async (req, res) => {
     }
     
     if (snapshot.empty) {
-      // Seed default elections if the mock DB has no elections yet
-      const countSnapshot = await electionsRef.get();
-      if (countSnapshot.empty) {
-        const defaultElections = [
-          {
-            title: "University Student Council Presidential Election",
-            description: "Vote for the next Student Council President to lead HTU initiatives, policy changes, and events for the academic year 2026/2027.",
-            startDate: new Date().toISOString(),
-            endDate: new Date(Date.now() + 86400000 * 2).toISOString(),
-            status: "active",
-            organizationId: "htu",
-            createdBy: "admin",
-            createdAt: Date.now()
-          },
-          {
-            title: "Department of Computer Science Representative",
-            description: "Annual representative vote for Computer Science faculty board and curriculum adjustment committee representation.",
-            startDate: new Date().toISOString(),
-            endDate: new Date(Date.now() + 86400000 * 5).toISOString(),
-            status: "active",
-            organizationId: "htu",
-            createdBy: "admin",
-            createdAt: Date.now()
-          },
-          {
-            title: "HTU Sports Club Board Members",
-            description: "General board elections for sports facilities allocations, event funding boards, and club tournament operations management.",
-            startDate: new Date(Date.now() + 86400000 * 3).toISOString(),
-            endDate: new Date(Date.now() + 86400000 * 7).toISOString(),
-            status: "draft", // acts as upcoming/draft
-            organizationId: "htu",
-            createdBy: "admin",
-            createdAt: Date.now()
-          },
-          {
-            title: "Annual Budget Allocation Referendum",
-            description: "Vote on proposed allocation of surplus university funds between campus construction projects vs student activity grants.",
-            startDate: new Date(Date.now() - 86400000 * 5).toISOString(),
-            endDate: new Date(Date.now() - 86400000 * 1).toISOString(),
-            status: "completed", // closed
-            organizationId: "htu",
-            createdBy: "admin",
-            createdAt: Date.now()
-          }
-        ];
-        
-        const seeded = [];
-        for (const item of defaultElections) {
-          const docRef = await electionsRef.add(item);
-          seeded.push({ id: docRef.id, ...item });
-        }
-        return res.status(200).json({ status: 'success', data: seeded });
-      }
       return res.status(200).json({ status: 'success', data: [] });
     }
 
@@ -142,6 +89,17 @@ router.patch('/:id/status', verifyAuth, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error updating election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to update election' });
+  }
+});
+
+// Delete election (Admin only)
+router.delete('/:id', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    await db.collection('elections').doc(req.params.id).delete();
+    res.status(200).json({ status: 'success', message: 'Election deleted' });
+  } catch (error) {
+    console.error('Error deleting election:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to delete election' });
   }
 });
 

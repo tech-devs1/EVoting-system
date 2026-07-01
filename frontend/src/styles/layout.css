@@ -99,11 +99,6 @@
   color: var(--color-primary);
 }
 
-.sidebar-footer {
-  padding: var(--space-4);
-  border-top: 1px solid var(--border-light);
-}
-
 /* User Card in Sidebar */
 .user-profile-card {
   display: flex;
@@ -307,8 +302,7 @@
   
   .sidebar-logo span,
   .sidebar-link span,
-  .user-info,
-  .sidebar-footer .user-profile-card {
+  .user-info {
     display: none;
   }
   

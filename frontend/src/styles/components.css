@@ -469,13 +469,11 @@
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 600px;
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-2xl);
   transform: translateY(20px) scale(0.95);
   transition: transform var(--transition-spring);
-  overflow: hidden;
   margin: auto;
 }
 
@@ -520,10 +518,7 @@
 
 .modal-body {
   padding: var(--space-6);
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible;
 }
 
 .modal-footer {

@@ -85,6 +85,16 @@ export default function AdminElectionsPage() {
     }
   };
 
+  const handleDeleteElection = async (elId: string) => {
+    if (!confirm('Are you sure you want to delete this election?')) return;
+    try {
+      await apiRequest(`/elections/${elId}`, 'DELETE');
+      setElections(prev => prev.filter(el => el.id !== elId));
+    } catch (err) {
+      console.error('Error deleting election:', err);
+    }
+  };
+
   return (
     <div className="animate-page-enter">
       {/* Header */}
@@ -143,6 +153,9 @@ export default function AdminElectionsPage() {
                 <Link href={`/admin/results`} className="btn btn-primary btn-sm" style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Activity size={12} /> View Results
                 </Link>
+                <button className="btn btn-danger btn-sm" onClick={() => handleDeleteElection(el.id)} style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Trash size={12} /> Delete
+                </button>
               </div>
             </div>
           ))}
@@ -157,7 +170,7 @@ export default function AdminElectionsPage() {
               <h3 className="modal-title">Create New Election</h3>
               <button className="modal-close" onClick={() => setIsModalOpen(false)}>&times;</button>
             </div>
-            <form onSubmit={handleCreateElection}>
+            <form onSubmit={handleCreateElection} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div className="modal-body">
                 <div className="form-group">
                   <label className="form-label" htmlFor="el-title">Election Title</label>
@@ -198,12 +211,12 @@ export default function AdminElectionsPage() {
                     <input type="datetime-local" id="el-end" className="form-input" required value={formEndDate} onChange={e => setFormEndDate(e.target.value)} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-6)' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" disabled={submitting}>
-                    {submitting ? 'Creating...' : 'Create Election'}
-                  </button>
-                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  {submitting ? 'Creating...' : 'Create Election'}
+                </button>
               </div>
             </form>
           </div>

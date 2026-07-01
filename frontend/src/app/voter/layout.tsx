@@ -47,6 +47,23 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
     document.documentElement.setAttribute('data-theme', currentTheme);
   }, [mounted]);
 
+  // Close settings dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+
+    if (settingsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [settingsOpen]);
+
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(nextTheme);
@@ -76,23 +93,6 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
-
-  // Close settings dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
-        setSettingsOpen(false);
-      }
-    };
-
-    if (settingsOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [settingsOpen]);
 
   return (
     <div className="app-shell" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
@@ -387,11 +387,11 @@ function ChangePasswordForm({ onClose }: { onClose: () => void }) {
 
     setLoading(true);
     try {
-      // TODO: Call API to change password
-      // await apiRequest('/auth/change-password', 'POST', {
-      //   currentPassword,
-      //   newPassword
-      // });
+      const { apiRequest } = await import('@/lib/api');
+      await apiRequest('/auth/change-password', 'POST', {
+        currentPassword,
+        newPassword
+      });
       setSuccess(true);
       setTimeout(() => {
         onClose();

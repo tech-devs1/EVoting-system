@@ -17,7 +17,9 @@ async function verifyAuth(req, res, next) {
   try {
     // In our mock environment, if token starts with MOCK_ we skip actual verification
     if (idToken.startsWith('MOCK_')) {
-      req.user = { uid: idToken.replace('MOCK_', ''), email: 'mock@votetrust.ai', role: 'voter' };
+      const uid = idToken.replace('MOCK_', '');
+      const role = uid.startsWith('admin_') ? 'admin' : 'voter';
+      req.user = { uid, email: role === 'admin' ? 'admin@htu.edu.gh' : 'mock@votetrust.ai', role };
       return next();
     }
 

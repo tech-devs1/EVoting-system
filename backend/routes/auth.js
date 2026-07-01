@@ -269,6 +269,21 @@ router.post('/resend-otp', async (req, res) => {
 // Get Current User Profile
 router.get('/me', verifyAuth, async (req, res) => {
   try {
+    // Handle mock tokens (admin login)
+    if (req.user.uid.startsWith('admin_')) {
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          uid: req.user.uid,
+          email: req.user.email || 'admin@htu.edu.gh',
+          name: 'System Administrator',
+          role: 'admin',
+          status: 'active',
+          createdAt: Date.now()
+        }
+      });
+    }
+
     const uid = req.user.uid;
     const doc = await db.collection('users').doc(uid).get();
 
@@ -383,6 +398,65 @@ router.post('/reset-password', async (req, res) => {
   } catch (error) {
     console.error('Error in reset-password:', error);
     res.status(500).json({ status: 'error', message: 'Server error' });
+  }
+});
+
+// Change Password (Authenticated)
+router.post('/change-password', verifyAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ status: 'error', message: 'Current password and new password are required.' });
+    }
+
+    // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.' 
+      });
+    }
+
+    // Handle mock tokens (admin login)
+    if (req.user.uid.startsWith('admin_')) {
+      return res.status(400).json({ status: 'error', message: 'Admin accounts cannot change password via this endpoint.' });
+    }
+
+    const uid = req.user.uid;
+    const userDoc = await db.collection('users').doc(uid).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+
+    const userData = userDoc.data();
+
+    if (!userData.password) {
+      return res.status(400).json({ status: 'error', message: 'No password set for this account.' });
+    }
+
+    // Verify current password matches the stored password
+    const isMatch = await bcrypt.compare(currentPassword, userData.password);
+    if (!isMatch) {
+      return res.status(401).json({ status: 'error', message: 'Current password is incorrect.' });
+    }
+
+    // Check if new password is same as current password
+    const isSamePassword = await bcrypt.compare(newPassword, userData.password);
+    if (isSamePassword) {
+      return res.status(400).json({ status: 'error', message: 'New password cannot be the same as current password.' });
+    }
+
+    // Hash and update the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.collection('users').doc(uid).update({ password: hashedPassword });
+
+    res.status(200).json({ status: 'success', message: 'Password changed successfully.' });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to change password.' });
   }
 });
 
