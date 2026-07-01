@@ -11,13 +11,16 @@ import {
   Search, 
   LogOut, 
   Sun, 
-  Moon 
+  Moon,
+  Menu,
+  X
 } from 'lucide-react';
 
 export default function VoterLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -54,10 +57,18 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
 
   const currentTitle = navLinks.find(link => pathname.startsWith(link.href))?.label || "Voter Terminal";
 
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   return (
     <div className="app-shell" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
       {/* Sidebar Navigation */}
-      <aside className="sidebar" id="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
+      <aside 
+        className={`sidebar ${sidebarOpen ? 'open' : ''}`} 
+        id="sidebar" 
+        style={{ display: 'flex', flexDirection: 'column' }}
+      >
         <div className="sidebar-header">
           <Link href="/voter/dashboard" className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} />
@@ -101,11 +112,21 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
       <div className="main-wrapper" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
         {/* Topbar — hidden on mobile via voter-topbar-hidden class */}
         <header className="topbar voter-topbar-hidden" id="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--container-padding)' }}>
-          <div className="page-title-section">
-            <h2 className="page-title" style={{ fontSize: 'var(--text-xl)', fontWeight: 600 }}>{currentTitle}</h2>
-            <span className="page-subtitle" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-              Secure Voter Balloting Session
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <button 
+              className="menu-toggle-btn" 
+              aria-label="Toggle sidebar" 
+              onClick={toggleSidebar}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'none', border: 'none', padding: 'var(--space-1)' }}
+            >
+              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+            <div className="page-title-section">
+              <h2 className="page-title" style={{ fontSize: 'var(--text-xl)', fontWeight: 600 }}>{currentTitle}</h2>
+              <span className="page-subtitle" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                Secure Voter Balloting Session
+              </span>
+            </div>
           </div>
           <div className="topbar-actions" style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
             <button className="theme-toggle-btn" aria-label="Toggle Light/Dark Theme" onClick={toggleTheme}>
@@ -120,6 +141,22 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
 
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="sidebar-overlay"
+          onClick={toggleSidebar}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 40
+          }}
+        />
+      )}
     </div>
   );
 }

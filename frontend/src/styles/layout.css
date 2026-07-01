@@ -22,10 +22,16 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
   z-index: var(--z-sidebar);
-  transition: width var(--transition-base);
+  transition: transform var(--transition-base);
+  transform: translateX(-100%);
+}
+
+.sidebar.open {
+  transform: translateX(0);
 }
 
 .sidebar-header {
@@ -311,11 +317,11 @@
 
 @media (max-width: 768px) {
   .sidebar {
-    display: none;
+    width: 280px;
   }
   
   .mobile-nav {
-    display: flex;
+    display: none;
   }
   
   .main-wrapper {
@@ -327,14 +333,13 @@
     padding: 0 var(--space-4);
   }
 
-  /* Hide the topbar on voter pages for a cleaner mobile experience */
+  /* Show the topbar on voter pages since we removed mobile nav */
   .voter-topbar-hidden {
-    display: none !important;
+    display: flex !important;
   }
   
   .content-area {
     padding: var(--space-4);
-    padding-bottom: calc(var(--space-6) + var(--bottom-nav-height) + env(safe-area-inset-bottom));
   }
 }
 
