@@ -56,6 +56,15 @@ export default function AdminElectionsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      console.log('[Create Election] Submitting form data:', {
+        title: formTitle,
+        description: formDescription,
+        startDate: formStartDate,
+        endDate: formEndDate,
+        type: formType,
+        department: formType === 'departmental' ? formDepartment : '',
+      });
+      
       const res = await apiRequest<{ status: string; data: Election }>('/elections', 'POST', {
         title: formTitle,
         description: formDescription,
@@ -64,13 +73,20 @@ export default function AdminElectionsPage() {
         type: formType,
         department: formType === 'departmental' ? formDepartment : '',
       });
+      
+      console.log('[Create Election] Response:', res);
+      
       if (res.status === 'success') {
         setElections(prev => [...prev, res.data]);
         setIsModalOpen(false);
         setFormTitle(''); setFormDescription(''); setFormStartDate(''); setFormEndDate(''); setFormType('src'); setFormDepartment('');
+        alert('Election created successfully!');
+      } else {
+        alert('Failed to create election: ' + (res as any).message || 'Unknown error');
       }
-    } catch (err) {
-      console.error('Error creating election:', err);
+    } catch (err: any) {
+      console.error('[Create Election] Error:', err);
+      alert('Failed to create election: ' + err.message);
     } finally {
       setSubmitting(false);
     }
