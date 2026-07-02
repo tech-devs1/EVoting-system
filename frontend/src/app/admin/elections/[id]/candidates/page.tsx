@@ -222,24 +222,28 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               <button className="modal-close" onClick={() => setIsModalOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleAddCandidate}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="cand-name">Candidate Name</label>
-                  <input type="text" id="cand-name" className="form-input" placeholder="e.g. John Doe" required value={formName} onChange={e => setFormName(e.target.value)} />
-                </div>
-                <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-                  <label className="form-label" htmlFor="cand-pos">Position</label>
-                  <input type="text" id="cand-pos" className="form-input" placeholder="e.g. President" required value={formPos} onChange={e => setFormPos(e.target.value)} />
-                </div>
-                 <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-                  <label className="form-label" htmlFor="cand-man">Candidate Manifesto Statement</label>
-                  <textarea id="cand-man" className="form-input" placeholder="Paste candidate's full manifesto statement here..." style={{ minHeight: '160px' }} required value={formManifesto} onChange={e => setFormManifesto(e.target.value)} />
-                </div>
-                <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-                  <label className="form-label" htmlFor="cand-photo">Candidate Photo (Image) - Optional</label>
-                  <input type="file" id="cand-photo" accept="image/*" className="form-input" onChange={e => e.target.files && setPhotoFile(e.target.files[0])} />
-                </div>
-              </div>
+        <div className="modal-body">
+          {/* Candidate Name */}
+          <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+            <label className="form-label" htmlFor="cand-name" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Name</label>
+            <input type="text" id="cand-name" className="form-input" placeholder="e.g. John Doe" required value={formName} onChange={e => setFormName(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+          </div>
+          {/* Position */}
+          <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+            <label className="form-label" htmlFor="cand-pos" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Position</label>
+            <input type="text" id="cand-pos" className="form-input" placeholder="e.g. President" required value={formPos} onChange={e => setFormPos(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+          </div>
+          {/* Manifesto */}
+          <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+            <label className="form-label" htmlFor="cand-man" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Manifesto Statement</label>
+            <textarea id="cand-man" className="form-input" placeholder="Paste candidate's full manifesto statement here..." style={{ width: '100%', minHeight: '140px', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} required value={formManifesto} onChange={e => setFormManifesto(e.target.value)}></textarea>
+          </div>
+          {/* Photo Upload */}
+          <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+            <label className="form-label" htmlFor="cand-photo" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Photo (Image) - Optional</label>
+            <input type="file" id="cand-photo" accept="image/*" className="form-input" onChange={e => e.target.files && setPhotoFile(e.target.files[0])} style={{ width: '100%', padding: 'var(--space-1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+          </div>
+        </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>

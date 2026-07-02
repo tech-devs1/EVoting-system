@@ -17,9 +17,13 @@
   margin-bottom: var(--space-8);
 }
 
-@media (max-width: 992px) {
-  .admin-grid-charts {
-    grid-template-columns: 1fr;
+@media (max-width: 768px) {
+  .chart-body {
+    height: 200px !important;
+    padding: var(--space-2);
+  }
+  .chart-card {
+    margin-bottom: var(--space-6);
   }
 }
 
