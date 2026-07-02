@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
@@ -26,12 +26,10 @@ export default function AdminFraudPage() {
     async function fetchAlerts() {
       try {
         const res = await apiRequest<{ status: string; data: Alert[] }>('/admin/fraud-alerts');
-        if (res.status === 'success' && res.data.length > 0) {
-          setAlerts(res.data);
-        }
-      } catch {
-        // Use default mock alerts on error
-      } finally {
+    if (res.status === 'success' && res.data.length > 0) {
+      const dupAlerts = res.data.filter(a => a.message && a.message.toLowerCase().includes('duplicate'));
+      setAlerts(dupAlerts);
+    }  } finally {
         setLoading(false);
       }
     }

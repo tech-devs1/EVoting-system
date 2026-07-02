@@ -3,6 +3,7 @@ const router = express.Router();
 const { db } = require('../services/firebase');
 const { verifyAuth } = require('../middleware/auth');
 const { recordVoteAudit } = require('../services/audit');
+const { logFraudAlert } = require('../services/fraud');
 
 // Cast a vote
 router.post('/cast', verifyAuth, async (req, res) => {
@@ -28,6 +29,8 @@ router.post('/cast', verifyAuth, async (req, res) => {
 
     if (votedDoc.exists) {
       console.log('[Cast Vote] User already voted:', voterId);
+      // Log fraud alert for duplicate voting attempt
+      await logFraudAlert('DUPLICATE_VOTE', `User attempted to vote multiple times in election ${electionId}`, { voterId, electionId, candidateId });
       return res.status(403).json({ status: 'error', message: 'User has already voted in this election' });
     }
 

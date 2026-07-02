@@ -80,7 +80,12 @@ router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
     }
 
     const alerts = [];
-    alertsDoc.forEach(doc => alerts.push({ id: doc.id, ...doc.data() }));
+    alertsDoc.forEach(doc => {
+      const data = doc.data();
+      if (data.message && data.message.toLowerCase().includes('duplicate')) {
+        alerts.push({ id: doc.id, ...data });
+      }
+    });
 
     res.status(200).json({ status: 'success', data: alerts });
   } catch (error) {
