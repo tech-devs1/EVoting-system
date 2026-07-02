@@ -131,6 +131,52 @@ export default function LoadingScreen() {
           bottom: '15%', right: '15%', filter: 'blur(50px)'
         }} />
 
+        {/* Votick logo — sits above Woezor */}
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.85 }}
+          animate={{
+            opacity: 1,
+            y: showButtons ? -30 : 0,
+            scale: 1,
+          }}
+          transition={{
+            opacity: { duration: 0.9, ease: 'easeOut' },
+            scale: { duration: 0.9, ease: 'easeOut' },
+            y: showButtons
+              ? { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] }
+              : { duration: 0.9, ease: 'easeOut' },
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            marginBottom: '-0.5rem',
+          }}
+        >
+          <span style={{
+            fontFamily: "'Inter', 'Outfit', system-ui, sans-serif",
+            fontSize: 'clamp(3rem, 12vw, 7.5rem)',
+            fontWeight: 800,
+            color: '#ffffff',
+            letterSpacing: '-2px',
+            lineHeight: 1,
+            textShadow: '0 0 40px rgba(99,102,241,0.7), 0 4px 20px rgba(0,0,0,0.4)',
+          }}>
+            Votick
+          </span>
+          <span style={{
+            fontSize: 'clamp(2rem, 8vw, 5rem)',
+            color: '#60a5fa',
+            lineHeight: 1,
+            fontWeight: 900,
+            textShadow: '0 0 30px rgba(96,165,250,0.8)',
+            marginTop: '-0.25em',
+          }}>
+            ✓
+          </span>
+        </motion.div>
+
         {/* WOEZOR text — rises up when buttons appear */}
         <motion.h1
           initial={{ opacity: 0, y: 40, filter: 'blur(12px)' }}
@@ -140,19 +186,19 @@ export default function LoadingScreen() {
             filter: 'blur(0px)',
           }}
           transition={{
-            opacity: { duration: 1.2, ease: 'easeOut' },
-            filter: { duration: 1.2, ease: 'easeOut' },
+            opacity: { duration: 1.2, ease: 'easeOut', delay: 0.3 },
+            filter: { duration: 1.2, ease: 'easeOut', delay: 0.3 },
             y: showButtons
               ? { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] }
-              : { duration: 1.2, ease: 'easeOut' },
+              : { duration: 1.2, ease: 'easeOut', delay: 0.3 },
           }}
           style={{
             fontFamily: "'Dancing Script', 'Brush Script MT', 'Lucida Handwriting', cursive",
-            fontSize: 'clamp(3.5rem, 10vw, 6rem)',
-            color: '#ffffff',
+            fontSize: 'clamp(2.5rem, 7vw, 4.5rem)',
+            color: 'rgba(255,255,255,0.85)',
             textShadow: '0 4px 30px rgba(99,102,241,0.6), 0 0 60px rgba(255,255,255,0.15)',
             margin: 0,
-            letterSpacing: '4px',
+            letterSpacing: '6px',
           }}
         >
           Woezor
