@@ -10,68 +10,66 @@ export default function LoadingScreen() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
-  // Capture the beforeinstallprompt event ASAP
+  // All lifecycle logic handled in a single static hook to prevent hook mismatch errors
   useEffect(() => {
+    // 1. Detect platform information
     const ua = window.navigator.userAgent.toLowerCase();
-    setIsIOS(/iphone|ipad|ipod/.test(ua));
+    const ios = /iphone|ipad|ipod/.test(ua);
+    setIsIOS(ios);
 
-    // Detect standalone (installed PWA)
     const standalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true ||
       document.referrer.includes('android-app://');
     setIsStandalone(standalone);
 
+    // 2. Listen for install prompts
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
 
-  useEffect(() => {
-    // Only play the loading screen ONCE per session — never loop
+    // 3. Skip screen if already shown this session
     if (sessionStorage.getItem('votick_splash_shown')) {
-      return; // Already shown this session, skip entirely
+      setPhase('hidden');
+      return () => window.removeEventListener('beforeinstallprompt', handler);
     }
 
-    // Detect standalone (installed PWA) synchronously on mount
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true ||
-      document.referrer.includes('android-app://');
-
+    // 4. Run animations based on platform type
     if (standalone) {
-      // Installed App: Start with the 5-second splash loading screen
+      // Installed app flow: Splash (5s) -> Woezor (2.5s) -> Auto dismiss
       setPhase('splash');
-      const woezorTimer = setTimeout(() => {
+      
+      const toWoezor = setTimeout(() => {
         setPhase('woezor');
+        
+        const toDismiss = setTimeout(() => {
+          sessionStorage.setItem('votick_splash_shown', '1');
+          setPhase('hidden');
+        }, 2500);
+        
+        return () => clearTimeout(toDismiss);
       }, 5000);
-      return () => clearTimeout(woezorTimer);
+
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handler);
+        clearTimeout(toWoezor);
+      };
     } else {
-      // Web Browser: Skip the 5-second splash, show Woezor screen immediately
+      // Browser flow: Skip splash -> show Woezor immediately -> show buttons after 1.8s
       setPhase('woezor');
+      
+      const toButtons = setTimeout(() => {
+        setShowButtons(true);
+      }, 1800);
+
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handler);
+        clearTimeout(toButtons);
+      };
     }
   }, []);
-
-  // Mark splash as shown and decide what to do when Woezor appears
-  useEffect(() => {
-    if (phase !== 'woezor') return;
-
-    if (isStandalone) {
-      // Installed PWA: dismiss overlay after Woezor — login page is already loaded underneath
-      const autoNav = setTimeout(() => {
-        sessionStorage.setItem('votick_splash_shown', '1');
-        setPhase('hidden');
-      }, 2500);
-      return () => clearTimeout(autoNav);
-    } else {
-      // Browser: show install/continue buttons after Woezor rises
-      const buttonsTimer = setTimeout(() => setShowButtons(true), 1800);
-      return () => clearTimeout(buttonsTimer);
-    }
-  }, [phase, isStandalone]);
 
   const handleInstall = async () => {
     if (isIOS) {
