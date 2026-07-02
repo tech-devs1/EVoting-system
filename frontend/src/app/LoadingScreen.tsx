@@ -10,11 +10,19 @@ export default function LoadingScreen() {
   const [showButtons, setShowButtons] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   // Capture the beforeinstallprompt event ASAP
   useEffect(() => {
     const ua = window.navigator.userAgent.toLowerCase();
     setIsIOS(/iphone|ipad|ipod/.test(ua));
+
+    // Detect standalone (installed PWA)
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true ||
+      document.referrer.includes('android-app://');
+    setIsStandalone(standalone);
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -25,23 +33,29 @@ export default function LoadingScreen() {
   }, []);
 
   useEffect(() => {
-    // Show on every visit (not just standalone) since the page is now the entry point
     setPhase('splash');
 
     const woezorTimer = setTimeout(() => {
       setPhase('woezor');
     }, 5000);
 
-    // After Woezor appears, let it rise then show buttons
-    const buttonsTimer = setTimeout(() => {
-      setShowButtons(true);
-    }, 6800); // 5s splash + 1.8s for woezor to animate up
-
-    return () => {
-      clearTimeout(woezorTimer);
-      clearTimeout(buttonsTimer);
-    };
+    return () => clearTimeout(woezorTimer);
   }, []);
+
+  // Once Woezor is showing, decide what to do next based on context
+  useEffect(() => {
+    if (phase !== 'woezor') return;
+
+    if (isStandalone) {
+      // Installed PWA: auto-navigate after Woezor animation finishes, no buttons
+      const autoNav = setTimeout(() => router.push('/login'), 2500);
+      return () => clearTimeout(autoNav);
+    } else {
+      // Browser: show install/continue buttons after Woezor rises
+      const buttonsTimer = setTimeout(() => setShowButtons(true), 1800);
+      return () => clearTimeout(buttonsTimer);
+    }
+  }, [phase, isStandalone]);
 
   const handleInstall = async () => {
     if (isIOS) {
