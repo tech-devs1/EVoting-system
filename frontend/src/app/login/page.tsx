@@ -35,12 +35,7 @@ export default function LoginPage() {
       return;
     }
     
-    // Validate password - only allow alphanumeric and basic special characters
-    const passwordRegex = /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~ ]+$/;
-    if (!passwordRegex.test(password)) {
-      setError('Password contains invalid characters. Only letters, numbers, and basic special characters are allowed.');
-      return;
-    }
+
     
     setLoading(true);
     try {

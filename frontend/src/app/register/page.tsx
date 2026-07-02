@@ -106,12 +106,7 @@ export default function RegisterPage() {
       return;
     }
     
-    // Validate password - only allow alphanumeric and basic special characters (no emojis)
-    const passwordCharRegex = /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~ ]+$/;
-    if (!passwordCharRegex.test(password)) {
-      setError('Password contains invalid characters. Only letters, numbers, and basic special characters are allowed.');
-      return;
-    }
+
 
     if (password !== confirmPassword) {
       setError('Passphrases do not match');
