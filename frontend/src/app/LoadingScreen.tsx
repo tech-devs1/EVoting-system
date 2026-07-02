@@ -72,7 +72,10 @@ export default function LoadingScreen() {
   }, []);
 
   const handleInstall = async () => {
+    // Detect platform for install instructions
+    const isAndroid = /android/.test(window.navigator.userAgent.toLowerCase());
     if (isIOS) {
+      // iOS – show Add‑to‑Home‑Screen instructions
       alert(
         'To install Votick on iOS:\n\n' +
         '1. Tap the Share button (□↑) at the bottom of Safari\n' +
@@ -81,14 +84,23 @@ export default function LoadingScreen() {
       );
       return;
     }
+    if (isAndroid) {
+      // Android – show explicit install command/info
+      alert(
+        'To install Votick on Android, open this page in Chrome and click the install icon (⊕) at the right side of the address bar, or select "Add to Home screen" from the browser menu.'
+      );
+      return;
+    }
     if (deferredPrompt) {
+      // Fallback – use the saved beforeinstallprompt event
       deferredPrompt.prompt();
       await deferredPrompt.userChoice;
       setDeferredPrompt(null);
     } else {
+      // Generic fallback for any other platform
       alert(
         'To install Votick:\n\n' +
-        '• Chrome: Click the install icon (⊕) in the address bar\n' +
+        '• Chrome (Android): Click the install icon (⊕) in the address bar\n' +
         '• Edge: Click "App available" in the address bar'
       );
     }
