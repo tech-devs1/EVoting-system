@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { Plus, FolderOpen, Settings, Activity, Trash, ArrowLeft } from 'lucide-react';
+import { Plus, FolderOpen, Settings, Activity, Trash, ArrowLeft, Download } from 'lucide-react';
 
 interface Election {
   id: string;
@@ -111,6 +111,34 @@ export default function AdminElectionsPage() {
     }
   };
 
+  const handleDownloadReport = async (elId: string, elTitle: string) => {
+    try {
+      const token = localStorage.getItem('Votick_token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'}/elections/${elId}/report/pdf`, {
+        headers: {
+          'Authorization': token || ''
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to download report');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${elTitle.replace(/[^a-zA-Z0-9]/g, '_')}_report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error downloading report:', err);
+      alert('Failed to download report');
+    }
+  };
+
   return (
     <div className="animate-page-enter">
       {/* Header */}
@@ -161,6 +189,11 @@ export default function AdminElectionsPage() {
                 {el.status === 'active' && (
                   <button className="btn btn-secondary btn-sm" onClick={() => handleChangeStatus(el.id, 'completed')} style={{ fontSize: 'var(--text-xs)' }}>
                     Close Election
+                  </button>
+                )}
+                {el.status === 'completed' && (
+                  <button className="btn btn-primary btn-sm" onClick={() => handleDownloadReport(el.id, el.title)} style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Download size={12} /> Download Report
                   </button>
                 )}
                 <Link href={`/admin/elections/${el.id}/candidates`} className="btn btn-outline btn-sm" style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
