@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
 export default function LoadingScreen() {
-  const [visible, setVisible] = useState(false);
+  const [phase, setPhase] = useState<'hidden' | 'splash' | 'woezor'>('hidden');
 
   useEffect(() => {
     // Only show the splash screen if launched in standalone PWA mode
@@ -16,17 +16,55 @@ export default function LoadingScreen() {
       return;
     }
 
-    setVisible(true);
+    setPhase('splash');
 
-    // Hide splash screen after exactly 5 seconds
-    const timer = setTimeout(() => {
-      setVisible(false);
+    const woezorTimer = setTimeout(() => {
+      setPhase('woezor');
     }, 5000);
 
-    return () => clearTimeout(timer);
+    const hideTimer = setTimeout(() => {
+      setPhase('hidden');
+    }, 8000);
+
+    return () => {
+      clearTimeout(woezorTimer);
+      clearTimeout(hideTimer);
+    };
   }, []);
 
-  if (!visible) return null;
+  if (phase === 'hidden') return null;
+
+  if (phase === 'woezor') {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: '#2563eb', // Beautiful primary blue background
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 99999,
+        }}
+      >
+        <motion.h1
+          initial={{ opacity: 0, scale: 0.8, filter: 'blur(10px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, scale: 1.1 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+          style={{
+            fontFamily: "'Dancing Script', 'Brush Script MT', 'Lucida Handwriting', cursive",
+            fontSize: '5rem',
+            color: '#ffffff',
+            textShadow: '0px 4px 15px rgba(0,0,0,0.2)',
+            margin: 0
+          }}
+        >
+          Woezor
+        </motion.h1>
+      </div>
+    );
+  }
 
   // 8x8 grid for scatter effect
   const gridSize = 8;
