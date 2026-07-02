@@ -76,9 +76,11 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
           photoUrl = await getDownloadURL(photoRef);
           console.log('[Add Candidate] Photo uploaded:', photoUrl);
         } catch (uploadError) {
-          console.error('[Add Candidate] Photo upload failed, continuing without photo:', uploadError);
+          console.error('[Add Candidate] Photo upload failed, continuing withoutphoto:', uploadError);
           // Continue without photo if upload fails
         }
+      } else {
+        console.log('[Add Candidate] No photo provided, skipping upload');
       }
       
       if (manifestoFile) {
@@ -92,6 +94,8 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
           console.error('[Add Candidate] Manifesto upload failed, continuing without manifesto:', uploadError);
           // Continue without manifesto if upload fails
         }
+      } else {
+        console.log('[Add Candidate] No manifesto provided, skipping upload');
       }
 
       console.log('[Add Candidate] Sending API request...');
@@ -206,11 +210,11 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                   <textarea id="cand-man" className="form-input" placeholder="Brief summary of manifesto..." style={{ minHeight: '60px' }} required value={formManifesto} onChange={e => setFormManifesto(e.target.value)} />
                 </div>
                 <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-                  <label className="form-label" htmlFor="cand-photo">Candidate Photo (Image)</label>
+                  <label className="form-label" htmlFor="cand-photo">Candidate Photo (Image) - Optional</label>
                   <input type="file" id="cand-photo" accept="image/*" className="form-input" onChange={e => e.target.files && setPhotoFile(e.target.files[0])} />
                 </div>
                 <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-                  <label className="form-label" htmlFor="cand-man-file">Manifesto Document (PDF)</label>
+                  <label className="form-label" htmlFor="cand-man-file">Manifesto Document (PDF) - Optional</label>
                   <input type="file" id="cand-man-file" accept=".pdf" className="form-input" onChange={e => e.target.files && setManifestoFile(e.target.files[0])} />
                 </div>
               </div>
