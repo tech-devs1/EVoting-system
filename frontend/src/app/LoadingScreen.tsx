@@ -28,12 +28,9 @@ export default function LoadingScreen() {
 
   if (!visible) return null;
 
-  // We split the logo into a grid of squares to 'scatter' them
-  const grid = [];
-  const gridSize = 10; // 10x10 grid
-  for (let i = 0; i < gridSize * gridSize; i++) {
-    grid.push(i);
-  }
+  // 8x8 grid for scatter effect
+  const gridSize = 8;
+  const grid = Array.from({ length: gridSize * gridSize }, (_, i) => i);
 
   return (
     <div
@@ -43,7 +40,7 @@ export default function LoadingScreen() {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: '#0f172a', // dark theme background
+        backgroundColor: '#ffffff', // White background so the logo's white background blends in perfectly
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -56,33 +53,33 @@ export default function LoadingScreen() {
         initial="initial"
         animate="animate"
         variants={{
-          initial: { y: -500, scale: 0.5 },
+          initial: { y: -300, opacity: 0 },
           animate: {
             y: 0,
-            scale: 1,
+            opacity: 1,
             transition: {
-              type: 'spring',
-              stiffness: 200,
-              damping: 10,
               duration: 1.5,
-              delay: 0.5
+              ease: "easeOut"
             }
           }
         }}
-        style={{ position: 'relative', width: 200, height: 200 }}
+        style={{ position: 'relative', width: 160, height: 160, marginBottom: '2rem' }}
       >
-        {/* We use a grid of divs that look like the image, and then they shatter */}
-        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <motion.div
+          animate={{ rotate: [0, 0, 360, 360] }}
+          transition={{ duration: 4, times: [0, 0.4, 0.8, 1], ease: "easeInOut" }}
+          style={{ width: '100%', height: '100%', position: 'relative' }}
+        >
           {grid.map((index) => {
             const row = Math.floor(index / gridSize);
             const col = index % gridSize;
             const xOffset = col * (100 / gridSize);
             const yOffset = row * (100 / gridSize);
             
-            // Random scatter position
-            const randX = (Math.random() - 0.5) * 800;
-            const randY = (Math.random() - 0.5) * 800;
-            const randRot = (Math.random() - 0.5) * 720;
+            // Scatter directions
+            const randX = (Math.random() - 0.5) * 400;
+            const randY = (Math.random() - 0.5) * 400;
+            const randRot = (Math.random() - 0.5) * 360;
 
             return (
               <motion.div
@@ -95,11 +92,11 @@ export default function LoadingScreen() {
                     x: [0, randX, 0],
                     y: [0, randY, 0],
                     rotate: [0, randRot, 0],
-                    opacity: [1, 0, 1],
+                    opacity: [1, 0.5, 1],
                     transition: {
-                      duration: 2.5,
-                      delay: 2.0, // starts shattering at 2s
-                      times: [0, 0.5, 1], // scatter out, then come back
+                      duration: 3,
+                      delay: 1, // drops in first, then scatters
+                      times: [0, 0.5, 1],
                       ease: "easeInOut"
                     }
                   }
@@ -113,21 +110,43 @@ export default function LoadingScreen() {
                   backgroundImage: "url('/icons/logo.png')",
                   backgroundSize: `${gridSize * 100}% ${gridSize * 100}%`,
                   backgroundPosition: `${(col / (gridSize - 1)) * 100}% ${(row / (gridSize - 1)) * 100}%`,
+                  mixBlendMode: 'multiply' // Helps remove white background artifacts
                 }}
               />
             );
           })}
-        </div>
+        </motion.div>
       </motion.div>
-      
+
+      {/* Stylish Font Display */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 1, 0] }}
-        transition={{ duration: 2, delay: 2.2, repeat: 1 }}
-        style={{ marginTop: '40px', color: '#fff', fontSize: '24px', fontWeight: 'bold', fontFamily: 'sans-serif' }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 1 }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: '#0f172a',
+          fontSize: '2.5rem',
+          fontWeight: '800',
+          letterSpacing: '2px',
+          fontFamily: 'var(--font-display), sans-serif',
+          marginBottom: '2rem'
+        }}
       >
-        Votick Security Check...
+        VOTICK <span style={{ color: '#2563eb' }}>✓</span>
       </motion.div>
+
+      {/* Loading Line */}
+      <div style={{ width: '250px', height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+        <motion.div
+          initial={{ x: '-100%' }}
+          animate={{ x: '100%' }}
+          transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+          style={{ width: '100%', height: '100%', background: '#2563eb', borderRadius: '2px' }}
+        />
+      </div>
     </div>
   );
 }

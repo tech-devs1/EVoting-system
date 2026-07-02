@@ -2,12 +2,12 @@ import withPWAInit from '@ducanh2912/next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
+  disable: false, // Enable in development so you can test the install button
 });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Any other next config here
+  turbopack: {},
 };
 
 export default withPWA(nextConfig);
