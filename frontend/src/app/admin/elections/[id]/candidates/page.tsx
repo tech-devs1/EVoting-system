@@ -58,6 +58,19 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
     fetchData();
   }, [electionId]);
 
+  const handleDeleteCandidate = async (candidateId: string) => {
+    try {
+      console.log('[Delete Candidate] Deleting candidate:', candidateId);
+      await apiRequest(`/candidates/${candidateId}`, 'DELETE');
+      console.log('[Delete Candidate] Candidate deleted successfully');
+      setCandidates(prev => prev.filter(c => c.id !== candidateId));
+      alert('Candidate removed successfully');
+    } catch (err: any) {
+      console.error('[Delete Candidate] Error:', err);
+      alert('Failed to remove candidate: ' + err.message);
+    }
+  };
+
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -178,7 +191,7 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               <button
                 className="btn btn-sm btn-full"
                 style={{ background: 'var(--color-danger-bg)', color: 'var(--color-danger)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                onClick={() => setCandidates(prev => prev.filter(c => c.id !== cand.id))}
+                onClick={() => handleDeleteCandidate(cand.id)}
               >
                 <Trash size={14} /> Remove Candidate
               </button>
