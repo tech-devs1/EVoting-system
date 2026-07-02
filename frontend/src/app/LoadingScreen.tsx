@@ -2,10 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
 
 export default function LoadingScreen() {
-  const router = useRouter();
   const [phase, setPhase] = useState<'hidden' | 'splash' | 'woezor'>('hidden');
   const [showButtons, setShowButtons] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -47,8 +45,8 @@ export default function LoadingScreen() {
     if (phase !== 'woezor') return;
 
     if (isStandalone) {
-      // Installed PWA: auto-navigate after Woezor animation finishes, no buttons
-      const autoNav = setTimeout(() => router.push('/login'), 2500);
+      // Installed PWA: dismiss overlay after Woezor — login page is already loaded underneath
+      const autoNav = setTimeout(() => setPhase('hidden'), 2500);
       return () => clearTimeout(autoNav);
     } else {
       // Browser: show install/continue buttons after Woezor rises
@@ -81,7 +79,8 @@ export default function LoadingScreen() {
   };
 
   const handleContinue = () => {
-    router.push('/login');
+    // Login page is already loaded underneath — just dismiss the overlay
+    setPhase('hidden');
   };
 
   if (phase === 'hidden') return null;
