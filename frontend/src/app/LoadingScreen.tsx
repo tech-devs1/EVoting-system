@@ -84,24 +84,22 @@ export default function LoadingScreen() {
       );
       return;
     }
-    if (isAndroid) {
-      // Android – show explicit install command/info
-      alert(
-        'To install Votick on Android, open this page in Chrome and click the install icon (⊕) at the right side of the address bar, or select "Add to Home screen" from the browser menu.'
-      );
-      return;
-    }
+    
     if (deferredPrompt) {
-      // Fallback – use the saved beforeinstallprompt event
+      // Trigger native PWA install prompt (works perfectly on Android Chrome)
       deferredPrompt.prompt();
       await deferredPrompt.userChoice;
       setDeferredPrompt(null);
+    } else if (isAndroid) {
+      // Fallback if the event hasn't fired yet or browser doesn't support it
+      alert(
+        'To install Votick on Android, open this page in Chrome and click "Add to Home screen" from the browser menu.'
+      );
     } else {
       // Generic fallback for any other platform
       alert(
         'To install Votick:\n\n' +
-        '• Chrome (Android): Click the install icon (⊕) in the address bar\n' +
-        '• Edge: Click "App available" in the address bar'
+        '• Chrome/Edge: Click the app install icon (⊕) in the right side of your address bar.'
       );
     }
   };
