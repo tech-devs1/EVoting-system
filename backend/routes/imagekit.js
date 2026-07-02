@@ -8,9 +8,9 @@ let imagekit = null;
 function getImageKitInstance() {
   if (imagekit) return imagekit;
 
-  const publicKey = process.env.IMAGEKIT_PUBLIC_KEY;
-  const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
-  const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT;
+  const publicKey = process.env.IMAGEKIT_PUBLIC_KEY || "public_IdMY8+9qGvRoDF3lZfo+avVLvpw=";
+  const privateKey = process.env.IMAGEKIT_PRIVATE_KEY || "private_ZHI/MxM0e0u+xUuAigWOajpk6Xk=";
+  const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT || "https://ik.imagekit.io/sfau1s00d";
 
   if (!publicKey || !privateKey || !urlEndpoint) {
     throw new Error('ImageKit environment variables are missing.');

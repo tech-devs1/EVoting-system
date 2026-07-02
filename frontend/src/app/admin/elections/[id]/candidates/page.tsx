@@ -91,7 +91,7 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
           }
 
           // 2. Upload directly to ImageKit
-          const publicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY;
+          const publicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || "public_IdMY8+9qGvRoDF3lZfo+avVLvpw=";
           if (!publicKey) {
             throw new Error('NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY is missing on the client side. Please add it to your frontend deployment dashboard (e.g. Vercel settings) and trigger a new build.');
           }
