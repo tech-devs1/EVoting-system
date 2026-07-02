@@ -23,6 +23,27 @@
   }
 }
 
+@media (max-width: 640px) {
+  .admin-grid-top {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .admin-grid-charts {
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .kpi-value {
+    font-size: var(--text-2xl);
+  }
+
+  .kpi-icon-wrapper {
+    width: 40px;
+    height: 40px;
+  }
+}
+
 /* ---- Stat KPI Cards ---- */
 .kpi-card {
   display: flex;

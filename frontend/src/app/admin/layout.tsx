@@ -14,7 +14,9 @@ import {
   BarChart3, 
   LogOut, 
   Sun, 
-  Moon 
+  Moon,
+  Menu,
+  X
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -22,6 +24,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [mounted, setMounted] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Close sidebar on navigation change
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     setMounted(true);
@@ -64,14 +72,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const currentTitle = navLinks.find(link => pathname.startsWith(link.href))?.label || "Admin Console";
 
   return (
-    <div className="app-shell" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+    <div className="app-shell" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)', position: 'relative' }}>
+      {/* Mobile Drawer Overlay */}
+      <div 
+        className={`sidebar-overlay ${isSidebarOpen ? 'active' : ''}`} 
+        onClick={() => setIsSidebarOpen(false)} 
+      />
+
       {/* Sidebar Navigation */}
-      <aside className="sidebar" id="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
-        <div className="sidebar-header">
+      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`} id="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <Link href="/admin/dashboard" className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} />
             <span style={{ fontWeight: 700, letterSpacing: '-0.5px' }}>Votick <span style={{ color: 'var(--color-primary)' }}>✓</span></span>
           </Link>
+          <button 
+            onClick={() => setIsSidebarOpen(false)}
+            className="theme-toggle-btn mobile-only-close"
+            style={{ display: 'none', border: 'none', background: 'none', padding: '4px', cursor: 'pointer' }}
+          >
+            <X size={20} />
+          </button>
         </div>
         <nav className="sidebar-nav" style={{ flexGrow: 1 }}>
           {navLinks.map(link => {
@@ -96,11 +117,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content Frame */}
       <div className="main-wrapper" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
         <header className="topbar" id="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--container-padding)' }}>
-          <div className="page-title-section">
-            <h2 className="page-title" style={{ fontSize: 'var(--text-xl)', fontWeight: 600 }}>{currentTitle}</h2>
-            <span className="page-subtitle" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-              Administrator Terminal Session
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="theme-toggle-btn mobile-menu-btn"
+              style={{ display: 'none', cursor: 'pointer' }}
+              aria-label="Open Sidebar"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="page-title-section">
+              <h2 className="page-title" style={{ fontSize: 'var(--text-xl)', fontWeight: 600 }}>{currentTitle}</h2>
+              <span className="page-subtitle" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                Administrator Terminal Session
+              </span>
+            </div>
           </div>
           <div className="topbar-actions" style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
             <button className="theme-toggle-btn" aria-label="Toggle Light/Dark Theme" onClick={toggleTheme}>

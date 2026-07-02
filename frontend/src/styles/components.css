@@ -529,3 +529,38 @@
   gap: var(--space-3);
   flex-shrink: 0;
 }
+
+/* ---- Mobile Modal Fixes ---- */
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-container {
+    max-width: 100%;
+    width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 92dvh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+
+  .modal-body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+  }
+
+  .modal-footer {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .modal-footer .btn {
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+  }
+}

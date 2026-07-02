@@ -171,7 +171,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="animate-page-enter">
       {/* Dashboard Header with Action Buttons */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
         <div>
           <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, margin: 0 }}>Executive Dashboard</h2>
           <p style={{ color: 'var(--text-secondary)', margin: 'var(--space-1) 0 0 0', fontSize: 'var(--text-sm)' }}>

@@ -22,16 +22,25 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
+  flex-shrink: 0;
   z-index: var(--z-sidebar);
   transition: transform var(--transition-base);
-  transform: translateX(-100%);
 }
 
-.sidebar.open {
-  transform: translateX(0);
+/* Sidebar overlay backdrop on mobile when open */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: calc(var(--z-sidebar) - 1);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.sidebar-overlay.active {
+  display: block;
 }
 
 .sidebar-header {
@@ -314,7 +323,17 @@
 
 @media (max-width: 768px) {
   .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 280px;
+    height: 100vh;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-2xl);
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
   }
   
   .mobile-nav {
@@ -333,6 +352,27 @@
   /* Show the topbar on voter pages since we removed mobile nav */
   .voter-topbar-hidden {
     display: flex !important;
+  }
+  
+  /* Show hamburger button and close button on mobile drawer */
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+  
+  .mobile-only-close {
+    display: flex !important;
+  }
+
+  /* Show labels inside the mobile drawer sidebar since it slides out */
+  .sidebar-logo span,
+  .sidebar-link span,
+  .user-info {
+    display: block !important;
+  }
+
+  .sidebar-link {
+    justify-content: flex-start !important;
+    padding: var(--space-3) var(--space-4) !important;
   }
   
   .content-area {
