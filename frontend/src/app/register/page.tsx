@@ -53,6 +53,14 @@ export default function RegisterPage() {
       setError('Student ID is required');
       return;
     }
+    
+    // Validate student ID - only allow alphanumeric and basic characters
+    const studentIdRegex = /^[a-zA-Z0-9-]+$/;
+    if (!studentIdRegex.test(studentId)) {
+      setError('Student ID contains invalid characters. Only letters, numbers, and hyphens are allowed.');
+      return;
+    }
+    
     setError('');
     setInfoMessage('');
     setLoading(true);
@@ -95,6 +103,13 @@ export default function RegisterPage() {
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
     if (!passwordRegex.test(password)) {
       setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.');
+      return;
+    }
+    
+    // Validate password - only allow alphanumeric and basic special characters (no emojis)
+    const passwordCharRegex = /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~ ]+$/;
+    if (!passwordCharRegex.test(password)) {
+      setError('Password contains invalid characters. Only letters, numbers, and basic special characters are allowed.');
       return;
     }
 

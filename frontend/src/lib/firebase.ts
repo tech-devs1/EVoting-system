@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "mock-api-key",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "mock-Votick.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "mock-Votick-project",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "mock-Votick.appspot.com",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "000000000000",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:000000000000:web:000000000000",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyDLZAnrMZJhti55Mo3PTntoPFa4-8hvHb4",
+  authDomain: "voting-0.firebaseapp.com",
+  projectId: "voting-0",
+  storageBucket: "voting-0.firebasestorage.app",
+  messagingSenderId: "719858248032",
+  appId: "1:719858248032:web:06f6fd64c8f29639cc5605",
+  measurementId: "G-PP0ZC2Q44R"
 };
 
 // Initialize Firebase

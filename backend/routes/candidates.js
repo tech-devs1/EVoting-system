@@ -91,9 +91,11 @@ router.get('/election/:electionId', async (req, res) => {
 // Add a new candidate (Admin only)
 router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   try {
+    console.log('[Add Candidate] Request body:', req.body);
     const { name, manifesto, manifestoUrl, electionId, position, photoUrl } = req.body;
     
     if (!name || !electionId) {
+      console.log('[Add Candidate] Missing required fields:', { name, electionId });
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
@@ -108,10 +110,13 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       createdAt: Date.now()
     };
 
+    console.log('[Add Candidate] Creating candidate with data:', newCandidate);
     const docRef = await db.collection('candidates').add(newCandidate);
+    console.log('[Add Candidate] Candidate created with ID:', docRef.id);
+    
     res.status(201).json({ status: 'success', data: { id: docRef.id, ...newCandidate } });
   } catch (error) {
-    console.error('Error adding candidate:', error);
+    console.error('[Add Candidate] Error:', error);
     res.status(500).json({ status: 'error', message: 'Failed to add candidate' });
   }
 });

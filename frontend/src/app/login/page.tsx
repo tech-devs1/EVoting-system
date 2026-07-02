@@ -27,6 +27,21 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Validate email - only allow alphanumeric, @, ., -, _
+    const emailRegex = /^[a-zA-Z0-9@._-]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Email contains invalid characters. Only letters, numbers, @, ., -, and _ are allowed.');
+      return;
+    }
+    
+    // Validate password - only allow alphanumeric and basic special characters
+    const passwordRegex = /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~ ]+$/;
+    if (!passwordRegex.test(password)) {
+      setError('Password contains invalid characters. Only letters, numbers, and basic special characters are allowed.');
+      return;
+    }
+    
     setLoading(true);
     try {
       const role = email.includes('admin') ? 'admin' : 'voter';

@@ -22,6 +22,14 @@ export default function ForgotPasswordPage() {
   const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Validate email - only allow alphanumeric, @, ., -, _
+    const emailRegex = /^[a-zA-Z0-9@._-]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Email contains invalid characters. Only letters, numbers, @, ., -, and _ are allowed.');
+      return;
+    }
+    
     setLoading(true);
     try {
       const res = await apiRequest<{ status: string; message: string }>('/auth/forgot-password', 'POST', { email });
@@ -39,6 +47,20 @@ export default function ForgotPasswordPage() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Validate reset code - only allow digits
+    const codeRegex = /^\d+$/;
+    if (!codeRegex.test(code)) {
+      setError('Reset code must contain only numbers.');
+      return;
+    }
+    
+    // Validate new password - only allow alphanumeric and basic special characters (no emojis)
+    const passwordCharRegex = /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~ ]+$/;
+    if (!passwordCharRegex.test(newPassword)) {
+      setError('Password contains invalid characters. Only letters, numbers, and basic special characters are allowed.');
+      return;
+    }
     
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match.');

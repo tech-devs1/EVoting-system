@@ -62,21 +62,39 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
     e.preventDefault();
     setSubmitting(true);
     try {
+      console.log('[Add Candidate] Starting candidate creation...');
+      console.log('[Add Candidate] Form data:', { name: formName, position: formPos, electionId });
+      
       let photoUrl = '';
       let manifestoUrl = '';
       
       if (photoFile) {
-        const photoRef = ref(storage, `candidates/photos/${Date.now()}_${photoFile.name}`);
-        await uploadBytes(photoRef, photoFile);
-        photoUrl = await getDownloadURL(photoRef);
+        console.log('[Add Candidate] Uploading photo...');
+        try {
+          const photoRef = ref(storage, `candidates/photos/${Date.now()}_${photoFile.name}`);
+          await uploadBytes(photoRef, photoFile);
+          photoUrl = await getDownloadURL(photoRef);
+          console.log('[Add Candidate] Photo uploaded:', photoUrl);
+        } catch (uploadError) {
+          console.error('[Add Candidate] Photo upload failed, continuing without photo:', uploadError);
+          // Continue without photo if upload fails
+        }
       }
       
       if (manifestoFile) {
-        const manRef = ref(storage, `candidates/manifestos/${Date.now()}_${manifestoFile.name}`);
-        await uploadBytes(manRef, manifestoFile);
-        manifestoUrl = await getDownloadURL(manRef);
+        console.log('[Add Candidate] Uploading manifesto...');
+        try {
+          const manRef = ref(storage, `candidates/manifestos/${Date.now()}_${manifestoFile.name}`);
+          await uploadBytes(manRef, manifestoFile);
+          manifestoUrl = await getDownloadURL(manRef);
+          console.log('[Add Candidate] Manifesto uploaded:', manifestoUrl);
+        } catch (uploadError) {
+          console.error('[Add Candidate] Manifesto upload failed, continuing without manifesto:', uploadError);
+          // Continue without manifesto if upload fails
+        }
       }
 
+      console.log('[Add Candidate] Sending API request...');
       const res = await apiRequest<{ status: string; data: Candidate }>('/candidates', 'POST', {
         name: formName,
         position: formPos,
@@ -85,14 +103,21 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
         manifestoUrl,
         electionId
       });
+      
+      console.log('[Add Candidate] API response:', res);
+      
       if (res.status === 'success') {
         setCandidates(prev => [...prev, res.data]);
         setIsModalOpen(false);
         setFormName(''); setFormPos(''); setFormManifesto('');
         setPhotoFile(null); setManifestoFile(null);
+        alert('Candidate added successfully!');
+      } else {
+        alert('Failed to add candidate: ' + (res as any).message || 'Unknown error');
       }
-    } catch (err) {
-      console.error('Error adding candidate:', err);
+    } catch (err: any) {
+      console.error('[Add Candidate] Error:', err);
+      alert('Failed to add candidate: ' + err.message);
     } finally {
       setSubmitting(false);
     }

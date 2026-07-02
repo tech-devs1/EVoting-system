@@ -373,6 +373,19 @@ function ChangePasswordForm({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     setError('');
     
+    // Validate current password - only allow alphanumeric and basic special characters (no emojis)
+    const passwordCharRegex = /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~ ]+$/;
+    if (!passwordCharRegex.test(currentPassword)) {
+      setError('Current password contains invalid characters. Only letters, numbers, and basic special characters are allowed.');
+      return;
+    }
+    
+    // Validate new password - only allow alphanumeric and basic special characters (no emojis)
+    if (!passwordCharRegex.test(newPassword)) {
+      setError('New password contains invalid characters. Only letters, numbers, and basic special characters are allowed.');
+      return;
+    }
+    
     if (newPassword !== confirmPassword) {
       setError('New passwords do not match');
       return;
