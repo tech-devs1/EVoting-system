@@ -36,14 +36,18 @@ export default function LoadingScreen() {
       return; // Already shown this session, skip entirely
     }
 
-    setPhase('splash');
-
-    const woezorTimer = setTimeout(() => {
+    if (isStandalone) {
+      // Installed App: Start with the 5-second splash loading screen
+      setPhase('splash');
+      const woezorTimer = setTimeout(() => {
+        setPhase('woezor');
+      }, 5000);
+      return () => clearTimeout(woezorTimer);
+    } else {
+      // Web Browser: Skip the 5-second splash, show Woezor screen immediately
       setPhase('woezor');
-    }, 5000);
-
-    return () => clearTimeout(woezorTimer);
-  }, []);
+    }
+  }, [isStandalone]);
 
   // Mark splash as shown and decide what to do when Woezor appears
   useEffect(() => {
