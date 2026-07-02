@@ -36,7 +36,13 @@ export default function LoadingScreen() {
       return; // Already shown this session, skip entirely
     }
 
-    if (isStandalone) {
+    // Detect standalone (installed PWA) synchronously on mount
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true ||
+      document.referrer.includes('android-app://');
+
+    if (standalone) {
       // Installed App: Start with the 5-second splash loading screen
       setPhase('splash');
       const woezorTimer = setTimeout(() => {
@@ -47,7 +53,7 @@ export default function LoadingScreen() {
       // Web Browser: Skip the 5-second splash, show Woezor screen immediately
       setPhase('woezor');
     }
-  }, [isStandalone]);
+  }, []);
 
   // Mark splash as shown and decide what to do when Woezor appears
   useEffect(() => {
