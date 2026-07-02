@@ -39,13 +39,25 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
     console.log('  - no isRegistered field:', noFieldCount);
     console.log('  - Total:', allUsersDoc.docs.length);
 
+    // Fetch candidates for real-time chart
+    const candidatesDoc = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();
+    const topCandidates = [];
+    candidatesDoc.forEach(doc => {
+      const data = doc.data();
+      topCandidates.push({
+        name: data.name,
+        votes: data.votes || 0
+      });
+    });
+
     res.status(200).json({
       status: 'success',
       data: {
         totalElections: electionsDoc.empty ? 0 : electionsDoc.docs.length,
         totalVoters: votersDoc.empty ? 0 : votersDoc.docs.length,
         totalVotesCast: votesDoc.empty ? 0 : votesDoc.docs.length,
-        activeAlerts: 0 // Mock for now
+        activeAlerts: 0, // Mock for now
+        topCandidates
       }
     });
   } catch (error) {
@@ -152,15 +164,26 @@ router.get('/export/:format', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Live votes count endpoint – returns total votes cast across all elections
+// Live votes count endpoint – returns total votes cast across all elections and top candidates
 router.get('/live-votes', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const votesSnap = await db.collection('votes').get();
     const liveVotesCount = votesSnap.empty ? 0 : votesSnap.docs.length;
-    console.log('[Admin Live Votes] Total votes:', liveVotesCount);
+    
+    // Fetch candidates for real-time chart
+    const candidatesDoc = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();
+    const topCandidates = [];
+    candidatesDoc.forEach(doc => {
+      const data = doc.data();
+      topCandidates.push({
+        name: data.name,
+        votes: data.votes || 0
+      });
+    });
+
     res.status(200).json({
       status: 'success',
-      data: { liveVotesCount }
+      data: { liveVotesCount, topCandidates }
     });
   } catch (error) {
     console.error('[Admin Live Votes] Error fetching live votes:', error);

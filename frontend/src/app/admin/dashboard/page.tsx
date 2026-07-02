@@ -20,19 +20,21 @@ import {
   LinearScale, 
   PointElement, 
   LineElement, 
+  BarElement,
   ArcElement,
   Title, 
   Tooltip, 
   Legend, 
   Filler 
 } from 'chart.js';
-import { Line, Doughnut } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   ArcElement,
   Title,
   Tooltip,
@@ -40,11 +42,17 @@ ChartJS.register(
   Filler
 );
 
+interface CandidateStats {
+  name: string;
+  votes: number;
+}
+
 interface KPIStats {
   totalElections: number;
   totalVoters: number;
   totalVotesCast: number;
   activeAlerts: number;
+  topCandidates?: CandidateStats[];
 }
 
 export default function AdminDashboardPage() {
@@ -70,6 +78,7 @@ export default function AdminDashboardPage() {
             totalVoters: s.totalVoters || 0,
             totalVotesCast: s.totalVotesCast || 0,
             activeAlerts: s.activeAlerts || 0,
+            topCandidates: s.topCandidates || []
           });
         }
         
@@ -93,11 +102,12 @@ export default function AdminDashboardPage() {
 
   // Update live votes and trigger animation only on change
   const [liveVotesCast, setLiveVotesCast] = useState(0);
+  const [liveCandidates, setLiveCandidates] = useState<CandidateStats[]>([]);
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     async function fetchLiveVotes() {
       try {
-        const res = await apiRequest<{ status: string; data: { liveVotesCount: number } }>('/admin/live-votes');
+        const res = await apiRequest<{ status: string; data: { liveVotesCount: number; topCandidates?: CandidateStats[] } }>('/admin/live-votes');
         if (res.status === 'success') {
           const count = res.data.liveVotesCount ?? 0;
           setLiveVotesCast(prev => {
@@ -107,6 +117,9 @@ export default function AdminDashboardPage() {
             }
             return prev;
           });
+          if (res.data.topCandidates) {
+             setLiveCandidates(res.data.topCandidates);
+          }
         }
       } catch (err) {
         console.error('[Admin Dashboard] Error fetching live votes:', err);
@@ -125,47 +138,26 @@ export default function AdminDashboardPage() {
     }
   }, [animateDonut]);
 
-  const activityData = {
-    labels: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00'],
+  // Candidate Bar Chart Data
+  const candidatesSource = liveCandidates.length > 0 ? liveCandidates : (stats.topCandidates || []);
+  const candidateChartData = {
+    labels: candidatesSource.map(c => c.name),
     datasets: [{
-      label: 'Votes Cast / Hour',
-      data: [0, 0, 0, 0, 0, 0, 0],
-      borderColor: '#2563EB',
-      backgroundColor: 'rgba(37, 99, 235, 0.1)',
-      tension: 0.4,
-      fill: true
+      label: 'Votes Cast',
+      data: candidatesSource.map(c => c.votes),
+      backgroundColor: '#3B82F6',
+      borderRadius: 4
     }]
   };
 
-  const activityOptions = {
+  const candidateChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      y: { grid: { color: 'rgba(148, 163, 184, 0.1)' } },
+      y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, beginAtZero: true },
       x: { grid: { display: false } }
     }
-  };
-
-  // Updated donut data using liveVotesCast
-  const turnoutData = {
-    labels: ['Voted', 'Remaining'],
-    datasets: [{
-      data: [
-        liveVotesCast,
-        Math.max(0, stats.totalVoters - liveVotesCast)
-      ],
-      backgroundColor: ['#10B981', '#E2E8F0'],
-      borderWidth: 0,
-    }],
-  };
-
-  // Enable animation on the donut chart only when animateDonut is true
-  const turnoutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: animateDonut ? { animateScale: true, animateRotate: true } : false,
-    plugins: { legend: { position: 'bottom' as const } },
   };
 
   return (
@@ -243,28 +235,24 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Real-Time Activity Charts Grid */}
-      <div className="admin-grid-charts">
+      <div className="admin-grid-charts" style={{ gridTemplateColumns: '1fr' }}>
         
-        {/* Main Line Chart */}
+        {/* Main Live Candidate Bar Chart */}
         <div className="card chart-card">
           <div className="chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 className="chart-title">Real-Time Voting Activity Stream</h3>
+            <h3 className="chart-title">Real-Time Candidate Vote Standings</h3>
             <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <RefreshCw size={12} className="animate-spin-slow" /> Live updates
             </span>
           </div>
-          <div className="chart-body" style={{ height: '300px', position: 'relative' }}>
-            <Line data={activityData} options={activityOptions} />
-          </div>
-        </div>
-
-        {/* Turnout Donut Chart */}
-        <div className="card chart-card">
-          <div className="chart-header">
-            <h3 className="chart-title">Voter turnout status</h3>
-          </div>
-          <div className="chart-body" style={{ height: '300px', position: 'relative' }}>
-            <Doughnut data={turnoutData} options={turnoutOptions} />
+          <div className="chart-body" style={{ height: '400px', position: 'relative' }}>
+            {candidatesSource.length > 0 ? (
+              <Bar data={candidateChartData} options={candidateChartOptions} />
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-tertiary)' }}>
+                No active candidates found
+              </div>
+            )}
           </div>
         </div>
 
