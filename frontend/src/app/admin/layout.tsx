@@ -56,9 +56,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "Executive Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { label: "Manage Elections", href: "/admin/elections", icon: Settings },
     { label: "Live Results", href: "/admin/results", icon: Activity },
-    { label: "Fraud Monitor", href: "/admin/fraud", icon: ShieldAlert },
-    { label: "Audit Ledger", href: "/admin/audit", icon: Database },
-    { label: "Analytics Module", href: "/admin/analytics", icon: BarChart3 }
+    { label: "Fraud Monitor", href: "/admin/fraud", icon: ShieldAlert }
   ];
 
   if (loading) {
