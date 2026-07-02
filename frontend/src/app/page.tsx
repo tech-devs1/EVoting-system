@@ -46,8 +46,26 @@ export default function LandingPage() {
 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    // Detect if already running as installed PWA
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
+                    || (window.navigator as any).standalone
+                    || document.referrer.includes('android-app://');
+    setIsStandalone(standalone);
+
+    // Detect iOS
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const ios = /iphone|ipad|ipod/.test(userAgent);
+    setIsIOS(ios);
+
+    // On iOS, always show install (there's no beforeinstallprompt)
+    if (ios && !standalone) {
+      setIsInstallable(true);
+    }
+
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -62,7 +80,14 @@ export default function LandingPage() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    if (isIOS) {
+      alert('To install Votick on iOS:\n\n1. Tap the Share button (box with arrow) at the bottom of Safari\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" to confirm');
+      return;
+    }
+    if (!deferredPrompt) {
+      alert('To install Votick:\n\n• On Chrome: Click the install icon (⊕) in the address bar\n• On Edge: Click the "App available" icon in the address bar\n• On Firefox: PWA install is not yet supported');
+      return;
+    }
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
@@ -123,14 +148,13 @@ export default function LandingPage() {
             <div className="hero-ctas">
               <Link href="/login" className="btn btn-primary btn-lg hover-lift">Vote Now</Link>
               <a href="#features" className="btn btn-outline btn-lg">Explore Features</a>
-              {isInstallable && (
+              {!isStandalone && (
                 <button 
                   onClick={handleInstallClick} 
                   className="btn btn-lg hover-lift"
-                  style={{ background: 'var(--color-purple)', color: '#fff', border: 'none' }}
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
-                  <Lock size={18} style={{ marginRight: '8px', display: 'inline' }} />
-                  Install App
+                  ⬇ {isIOS ? 'Add to Home Screen' : 'Install App'}
                 </button>
               )}
             </div>

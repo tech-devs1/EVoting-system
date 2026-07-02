@@ -26,6 +26,7 @@ const poppins = Poppins({
 });
 
 import LoadingScreen from "./LoadingScreen";
+import ServiceWorkerRegistrar from "./ServiceWorkerRegistrar";
 
 export const metadata: Metadata = {
   title: "Votick ✓ - Secure Digital Elections & Cryptographic Verification",
@@ -47,6 +48,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable}`} data-theme="light" suppressHydrationWarning>
       <body>
+        <ServiceWorkerRegistrar />
         <AuthProvider>
           <LoadingScreen />
           {children}
