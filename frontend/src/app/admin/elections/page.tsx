@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -114,13 +114,16 @@ export default function AdminElectionsPage() {
   const handleDownloadReport = async (elId: string, elTitle: string) => {
     try {
       const token = localStorage.getItem('Votick_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'}/elections/${elId}/report/pdf`, {
+      const authHeader = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000/api'}/elections/${elId}/report/pdf`, {
         headers: {
-          'Authorization': token || ''
-        }
+          'Authorization': authHeader,
+        },
       });
-      
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Report download failed:', response.status, errorText);
         throw new Error('Failed to download report');
       }
       

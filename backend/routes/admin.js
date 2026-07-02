@@ -147,4 +147,20 @@ router.get('/export/:format', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Live votes count endpoint – returns total votes cast across all elections
+router.get('/live-votes', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const votesSnap = await db.collection('votes').get();
+    const liveVotesCount = votesSnap.empty ? 0 : votesSnap.docs.length;
+    console.log('[Admin Live Votes] Total votes:', liveVotesCount);
+    res.status(200).json({
+      status: 'success',
+      data: { liveVotesCount }
+    });
+  } catch (error) {
+    console.error('[Admin Live Votes] Error fetching live votes:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch live votes' });
+  }
+});
+
 module.exports = router;

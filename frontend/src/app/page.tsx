@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -42,6 +42,33 @@ export default function LandingPage() {
     setTheme(nextTheme);
     localStorage.setItem('theme', nextTheme);
     document.documentElement.setAttribute('data-theme', nextTheme);
+  };
+
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+    }
+    setDeferredPrompt(null);
   };
 
   return (
@@ -96,6 +123,16 @@ export default function LandingPage() {
             <div className="hero-ctas">
               <Link href="/login" className="btn btn-primary btn-lg hover-lift">Vote Now</Link>
               <a href="#features" className="btn btn-outline btn-lg">Explore Features</a>
+              {isInstallable && (
+                <button 
+                  onClick={handleInstallClick} 
+                  className="btn btn-lg hover-lift"
+                  style={{ background: 'var(--color-purple)', color: '#fff', border: 'none' }}
+                >
+                  <Lock size={18} style={{ marginRight: '8px', display: 'inline' }} />
+                  Install App
+                </button>
+              )}
             </div>
           </div>
           <div className="hero-illustration">

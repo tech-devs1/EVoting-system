@@ -241,6 +241,35 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     doc.text(`Report Generated: ${new Date().toLocaleString()}`);
     doc.moveDown();
     
+    // Add vote distribution chart
+    const chartConfig = {
+      type: 'doughnut',
+      data: {
+        labels: candidates.map(c => c.name),
+        datasets: [{
+          data: candidates.map(c => c.votes || 0),
+          backgroundColor: [
+            '#4e79a7', '#f28e2b', '#e15759', '#76b7b2',
+            '#59a14f', '#edc949', '#af7aa1', '#ff9da7',
+            '#9c755f', '#bab0ab'
+          ],
+        }],
+      },
+      options: {
+        plugins: { legend: { position: 'right' } },
+      },
+    };
+    try {
+      const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&w=500&h=300&f=png`;
+      const chartRes = await fetch(chartUrl);
+      if (chartRes.ok) {
+        const chartBuffer = await chartRes.arrayBuffer();
+        doc.image(Buffer.from(chartBuffer), { fit: [250, 250], align: 'center' });
+        doc.moveDown();
+      }
+    } catch (e) {
+      console.error('Failed to fetch chart image:', e);
+    }
     // Candidates section
     doc.fontSize(16).font('Helvetica-Bold').text('Candidate Results', { underline: true });
     doc.moveDown();

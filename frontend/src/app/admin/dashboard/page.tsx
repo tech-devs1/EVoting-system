@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
 import { 
@@ -57,20 +57,19 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeElectionsCount, setActiveElectionsCount] = useState(0);
 
+  // Updated admin dashboard to fetch live vote count and animate donut on new votes
   useEffect(() => {
-    async function fetchData() {
+    async function fetchDashboard() {
       try {
-        console.log('[Admin Dashboard] Fetching dashboard data...');
+        console.log('[Admin Dashboard] Fetching static KPIs...');
         const res = await apiRequest<{ status: string; data: KPIStats }>('/admin/dashboard');
-        console.log('[Admin Dashboard] Response:', res);
         if (res.status === 'success') {
-          // If mock DB is empty, use defaults
           const s = res.data;
           setStats({
             totalElections: s.totalElections || 0,
             totalVoters: s.totalVoters || 0,
             totalVotesCast: s.totalVotesCast || 0,
-            activeAlerts: s.activeAlerts || 0
+            activeAlerts: s.activeAlerts || 0,
           });
         }
         
@@ -81,13 +80,50 @@ export default function AdminDashboardPage() {
           setActiveElectionsCount(active);
         }
       } catch (err) {
-        console.error('[Admin Dashboard] Error fetching admin dashboard KPIs:', err);
+        console.error('[Admin Dashboard] Error fetching KPIs:', err);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+    fetchDashboard();
   }, []);
+
+  // State to control donut animation
+  const [animateDonut, setAnimateDonut] = useState(false);
+
+  // Update live votes and trigger animation only on change
+  const [liveVotesCast, setLiveVotesCast] = useState(0);
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    async function fetchLiveVotes() {
+      try {
+        const res = await apiRequest<{ status: string; data: { liveVotesCount: number } }>('/admin/live-votes');
+        if (res.status === 'success') {
+          const count = res.data.liveVotesCount ?? 0;
+          setLiveVotesCast(prev => {
+            if (prev !== count) {
+              setAnimateDonut(true); // trigger animation
+              return count;
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        console.error('[Admin Dashboard] Error fetching live votes:', err);
+      }
+    }
+    fetchLiveVotes();
+    intervalId = setInterval(fetchLiveVotes, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Reset animation flag after a short period to avoid re‑animation on unchanged data
+  useEffect(() => {
+    if (animateDonut) {
+      const timeout = setTimeout(() => setAnimateDonut(false), 1000);
+      return () => clearTimeout(timeout);
+    }
+  }, [animateDonut]);
 
   const activityData = {
     labels: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00'],
@@ -111,19 +147,25 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Updated donut data using liveVotesCast
   const turnoutData = {
     labels: ['Voted', 'Remaining'],
     datasets: [{
-      data: [stats.totalVotesCast, Math.max(0, stats.totalVoters - stats.totalVotesCast)],
+      data: [
+        liveVotesCast,
+        Math.max(0, stats.totalVoters - liveVotesCast)
+      ],
       backgroundColor: ['#10B981', '#E2E8F0'],
-      borderWidth: 0
-    }]
+      borderWidth: 0,
+    }],
   };
 
+  // Enable animation on the donut chart only when animateDonut is true
   const turnoutOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom' as const } }
+    animation: animateDonut ? { animateScale: true, animateRotate: true } : false,
+    plugins: { legend: { position: 'bottom' as const } },
   };
 
   return (

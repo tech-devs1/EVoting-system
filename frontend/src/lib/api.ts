@@ -5,7 +5,7 @@ import { auth } from './firebase';
 // On Vercel, BACKEND_URL env var should be set to the deployed backend URL
 const API_BASE_URL = '/api';
 
-async function getAuthHeaders(): Promise<HeadersInit> {
+export async function getAuthHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
   if (user) {
     try {

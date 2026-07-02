@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -25,9 +25,18 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700", "800"],
 });
 
+import LoadingScreen from "./LoadingScreen";
+
 export const metadata: Metadata = {
   title: "Votick ✓ - Secure Digital Elections & Cryptographic Verification",
   description: "Secure, digital, and end-to-end verifiable e-voting for organizations. Audit-trail verified elections using SHA-256 with real-time AI security diagnostics.",
+  manifest: "/manifest.json",
+  themeColor: "#2563eb",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Votick",
+  },
 };
 
 export default function RootLayout({
@@ -39,6 +48,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${poppins.variable}`} data-theme="light" suppressHydrationWarning>
       <body>
         <AuthProvider>
+          <LoadingScreen />
           {children}
         </AuthProvider>
       </body>

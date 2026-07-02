@@ -10,6 +10,8 @@ router.post('/cast', verifyAuth, async (req, res) => {
     const { electionId, candidateId } = req.body;
     const voterId = req.user.uid;
 
+    console.log('[Cast Vote] Vote attempt:', { electionId, candidateId, voterId });
+
     if (!electionId || !candidateId) {
       return res.status(400).json({ status: 'error', message: 'Missing election or candidate ID' });
     }
@@ -25,6 +27,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
     const votedDoc = await votedRef.get();
 
     if (votedDoc.exists) {
+      console.log('[Cast Vote] User already voted:', voterId);
       return res.status(403).json({ status: 'error', message: 'User has already voted in this election' });
     }
 
@@ -38,7 +41,9 @@ router.post('/cast', verifyAuth, async (req, res) => {
     }
 
     const currentVotes = candidateDoc.data().votes || 0;
+    console.log('[Cast Vote] Current votes before increment:', currentVotes);
     await candidateRef.update({ votes: currentVotes + 1 });
+    console.log('[Cast Vote] Votes incremented to:', currentVotes + 1);
 
     // 4. Create Anonymized Vote Record
     const votePayload = {
@@ -60,6 +65,8 @@ router.post('/cast', verifyAuth, async (req, res) => {
       auditTxId // Give voter the transaction ID so they can verify later
     });
 
+    console.log('[Cast Vote] Vote cast successfully:', { voterId, candidateId, newVoteCount: currentVotes + 1 });
+
     res.status(200).json({ 
       status: 'success', 
       message: 'Vote cast successfully',
@@ -69,7 +76,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error casting vote:', error);
+    console.error('[Cast Vote] Error casting vote:', error);
     res.status(500).json({ status: 'error', message: 'Failed to cast vote' });
   }
 });

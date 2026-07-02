@@ -82,14 +82,33 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
       let manifestoUrl = '';
       
       if (photoFile) {
-        console.log('[Add Candidate] Uploading photo...');
+        console.log('[Add Candidate] Uploading photo to imgBB...');
         try {
-          const photoRef = ref(storage, `candidates/photos/${Date.now()}_${photoFile.name}`);
-          await uploadBytes(photoRef, photoFile);
-          photoUrl = await getDownloadURL(photoRef);
-          console.log('[Add Candidate] Photo uploaded:', photoUrl);
+          const formData = new FormData();
+          formData.append('image', photoFile);
+          
+          const apiKey = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
+          console.log('[Add Candidate] API Key present:', !!apiKey);
+          console.log('[Add Candidate] API Key length:', apiKey?.length);
+          
+          const imgBBResponse = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+            method: 'POST',
+            body: formData
+          });
+          
+          console.log('[Add Candidate] imgBB response status:', imgBBResponse.status);
+          
+          const imgBBData = await imgBBResponse.json();
+          console.log('[Add Candidate] imgBB full response:', imgBBData);
+          
+          if (imgBBData.success) {
+            photoUrl = imgBBData.data.url;
+            console.log('[Add Candidate] Photo uploaded to imgBB:', photoUrl);
+          } else {
+            console.error('[Add Candidate] imgBB upload failed:', imgBBData.error || imgBBData);
+          }
         } catch (uploadError) {
-          console.error('[Add Candidate] Photo upload failed, continuing withoutphoto:', uploadError);
+          console.error('[Add Candidate] Photo upload failed, continuing without photo:', uploadError);
           // Continue without photo if upload fails
         }
       } else {
