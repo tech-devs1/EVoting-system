@@ -17,6 +17,7 @@ app.use('/api/elections', require('./routes/elections'));
 app.use('/api/candidates', require('./routes/candidates'));
 app.use('/api/votes', require('./routes/votes'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/imagekit', require('./routes/imagekit'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

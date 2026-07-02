@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -82,34 +82,44 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
       let manifestoUrl = '';
       
       if (photoFile) {
-        console.log('[Add Candidate] Uploading photo to imgBB...');
+        console.log('[Add Candidate] Uploading photo to ImageKit...');
         try {
+          // 1. Get Auth params from our backend
+          const authRes = await apiRequest<{ signature: string; expire: number; token: string }>('/imagekit/auth', 'GET');
+          
+          if (!authRes || !authRes.signature) {
+            throw new Error('Failed to fetch ImageKit auth parameters');
+          }
+
+          // 2. Upload directly to ImageKit
           const formData = new FormData();
-          formData.append('image', photoFile);
+          formData.append('file', photoFile);
+          formData.append('publicKey', process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || '');
+          formData.append('signature', authRes.signature);
+          formData.append('expire', authRes.expire.toString());
+          formData.append('token', authRes.token);
+          formData.append('fileName', `candidate_${Date.now()}_${photoFile.name}`);
+          formData.append('folder', '/candidates'); // Optional: organize in folder
           
-          const apiKey = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
-          console.log('[Add Candidate] API Key present:', !!apiKey);
-          console.log('[Add Candidate] API Key length:', apiKey?.length);
-          
-          const imgBBResponse = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+          const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
             method: 'POST',
             body: formData
           });
           
-          console.log('[Add Candidate] imgBB response status:', imgBBResponse.status);
+          const uploadData = await uploadRes.json();
           
-          const imgBBData = await imgBBResponse.json();
-          console.log('[Add Candidate] imgBB full response:', imgBBData);
-          
-          if (imgBBData.success) {
-            photoUrl = imgBBData.data.url;
-            console.log('[Add Candidate] Photo uploaded to imgBB:', photoUrl);
+          if (uploadRes.ok) {
+            photoUrl = uploadData.url;
+            console.log('[Add Candidate] Photo uploaded to ImageKit:', photoUrl);
           } else {
-            console.error('[Add Candidate] imgBB upload failed:', imgBBData.error || imgBBData);
+            console.error('[Add Candidate] ImageKit upload failed:', uploadData);
+            throw new Error(uploadData.message || 'ImageKit upload failed: Invalid keys or missing configuration. Did you restart the server?');
           }
-        } catch (uploadError) {
-          console.error('[Add Candidate] Photo upload failed, continuing without photo:', uploadError);
-          // Continue without photo if upload fails
+        } catch (uploadError: any) {
+          console.error('[Add Candidate] Photo upload failed:', uploadError);
+          alert('Photo upload failed: ' + uploadError.message);
+          setSubmitting(false);
+          return; // Stop candidate creation if photo upload fails!
         }
       } else {
         console.log('[Add Candidate] No photo provided, skipping upload');
