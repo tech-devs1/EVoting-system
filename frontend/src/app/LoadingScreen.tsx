@@ -31,6 +31,11 @@ export default function LoadingScreen() {
   }, []);
 
   useEffect(() => {
+    // Only play the loading screen ONCE per session — never loop
+    if (sessionStorage.getItem('votick_splash_shown')) {
+      return; // Already shown this session, skip entirely
+    }
+
     setPhase('splash');
 
     const woezorTimer = setTimeout(() => {
@@ -40,13 +45,16 @@ export default function LoadingScreen() {
     return () => clearTimeout(woezorTimer);
   }, []);
 
-  // Once Woezor is showing, decide what to do next based on context
+  // Mark splash as shown and decide what to do when Woezor appears
   useEffect(() => {
     if (phase !== 'woezor') return;
 
     if (isStandalone) {
       // Installed PWA: dismiss overlay after Woezor — login page is already loaded underneath
-      const autoNav = setTimeout(() => setPhase('hidden'), 2500);
+      const autoNav = setTimeout(() => {
+        sessionStorage.setItem('votick_splash_shown', '1');
+        setPhase('hidden');
+      }, 2500);
       return () => clearTimeout(autoNav);
     } else {
       // Browser: show install/continue buttons after Woezor rises
@@ -80,6 +88,7 @@ export default function LoadingScreen() {
 
   const handleContinue = () => {
     // Login page is already loaded underneath — just dismiss the overlay
+    sessionStorage.setItem('votick_splash_shown', '1');
     setPhase('hidden');
   };
 
