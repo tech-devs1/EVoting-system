@@ -12,14 +12,14 @@ export interface UserProfile {
   createdAt?: number;
   status?: string;
   faceImage?: string;
-  faceDescriptor?: number[];
+  faceImage?: string;
 }
 
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   login: (email: string, password?: string, role?: 'voter' | 'admin') => Promise<{ otpRequired?: boolean; email?: string }>;
-  register: (studentId: string, email: string, name: string, password?: string, faceImage?: string, faceDescriptor?: number[]) => Promise<{ otpRequired?: boolean; email?: string }>;
+  register: (studentId: string, email: string, name: string, password?: string, faceImage?: string) => Promise<{ otpRequired?: boolean; email?: string }>;
 
   verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
@@ -111,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (studentId: string, email: string, name: string, password?: string, faceImage?: string, faceDescriptor?: number[]): Promise<{ otpRequired?: boolean; email?: string }> => {
+  const register = async (studentId: string, email: string, name: string, password?: string, faceImage?: string): Promise<{ otpRequired?: boolean; email?: string }> => {
     setLoading(true);
     try {
       const res = await apiRequest<{ status: string; email?: string; token?: string; data?: UserProfile }>('/auth/register', 'POST', {
@@ -119,8 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         name,
         password,
-        faceImage,
-        faceDescriptor,
+        faceImage
       });
       if (res.status === 'otp_required') {
         return { otpRequired: true, email: res.email };

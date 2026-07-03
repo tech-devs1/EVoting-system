@@ -97,7 +97,7 @@ router.post('/verify-student', async (req, res) => {
 // Register a user securely
 router.post('/register', async (req, res) => {
   try {
-    const { studentId, email, name, password, faceImage, faceDescriptor } = req.body;
+    const { studentId, email, name, password, faceImage } = req.body;
 
     if (!studentId || !email || !password) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
@@ -139,7 +139,6 @@ router.post('/register', async (req, res) => {
       uid: studentId,
       role: 'voter',
       faceImage: faceImage || '',
-      faceDescriptor: faceDescriptor || null,
     }, { merge: true });
 
     // Attempt to send OTP — don't fail the entire registration if email fails
@@ -243,8 +242,7 @@ router.post('/verify-otp', async (req, res) => {
         email: userData.email,
         role: userData.role || 'voter',
         name: userData.name,
-        faceImage: userData.faceImage || '',
-        faceDescriptor: userData.faceDescriptor || null
+        faceImage: userData.faceImage || ''
       },
       token
     });

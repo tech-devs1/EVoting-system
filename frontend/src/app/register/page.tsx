@@ -92,7 +92,7 @@ export default function RegisterPage() {
         setEmail(res.data.email);
         setOtpEmail(res.data.email);
         setInfoMessage(res.message || 'You have an incomplete registration. Please complete the verification process.');
-        setCurrentStep(4); // Skip to OTP verification step
+        setCurrentStep(5); // Skip to OTP verification step
       }
     } catch (err: any) {
       setError(err.message || 'Failed to verify student ID.');
@@ -165,19 +165,13 @@ export default function RegisterPage() {
     setCameraActive(false);
   };
 
-  const [faceDescriptor, setFaceDescriptor] = useState<number[] | null>(null);
-
   const handleCaptureFace = async () => {
     if (!videoRef.current) return;
     setCameraMessage('Detecting face...');
 
     try {
-      const { loadFaceModels, getFaceDescriptor } = await import('@/lib/faceUtils');
-      await loadFaceModels();
-
-      const descriptor = await getFaceDescriptor(videoRef.current);
-      if (!descriptor) {
-        setCameraMessage('No face detected. Please align your face clearly and try again.');
+      if (!videoRef.current) {
+        setCameraMessage('No active camera feed found.');
         return;
       }
 
@@ -194,7 +188,6 @@ export default function RegisterPage() {
         setCapturedImage(base64);
       }
 
-      setFaceDescriptor(Array.from(descriptor));
       setCameraMessage('Face captured and biometric profile created!');
       stopCamera();
     } catch (err) {
@@ -205,15 +198,15 @@ export default function RegisterPage() {
 
   const handleStep4Submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!capturedImage || !faceDescriptor) {
+    if (!capturedImage) {
       setError('Please capture your face to continue');
       return;
     }
     setError('');
     setLoading(true);
     try {
-      // Pass the captured faceImage base64 and descriptor to register API call
-      const result = await register(studentId, email, name, password, capturedImage, faceDescriptor);
+      // Pass the captured faceImage base64 to register API call
+      const result = await register(studentId, email, name, password, capturedImage);
       if (result?.otpRequired && result.email) {
         setOtpEmail(result.email);
         setCurrentStep(5); // OTP step
