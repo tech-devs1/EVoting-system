@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -13,6 +13,7 @@ interface Election {
   endDate: string;
   status: 'draft' | 'active' | 'completed';
   createdBy?: string;
+  showResults?: boolean;
 }
 
 function CountdownTimer({ endsAt, status }: { endsAt: string; status: string }) {
@@ -190,19 +191,26 @@ export default function VoterElectionsPage() {
                 <p className="election-card-desc">{el.description}</p>
                 <div className="election-card-meta">
                   <CountdownTimer endsAt={el.endDate} status={el.status} />
-                  {el.status === 'active' ? (
-                    <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
-                      Vote Now
-                    </Link>
-                  ) : el.status === 'completed' ? (
-                    <Link href={`/voter/verify`} className="btn btn-outline btn-sm">
-                      Audit Records
-                    </Link>
-                  ) : (
-                    <button className="btn btn-secondary btn-sm" disabled style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Lock size={12} /> Locked
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                    {el.status === 'active' ? (
+                      <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
+                        Vote Now
+                      </Link>
+                    ) : el.status === 'completed' ? (
+                      <Link href={`/voter/verify`} className="btn btn-outline btn-sm">
+                        Audit Records
+                      </Link>
+                    ) : (
+                      <button className="btn btn-secondary btn-sm" disabled style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Lock size={12} /> Locked
+                      </button>
+                    )}
+                    {el.showResults && (
+                      <Link href={`/voter/elections/${el.id}/results`} className="btn btn-secondary btn-sm">
+                        View Results
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
             );

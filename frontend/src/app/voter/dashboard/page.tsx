@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -20,6 +20,7 @@ interface Election {
   endDate: string;
   status: 'draft' | 'active' | 'completed';
   createdBy?: string;
+  showResults?: boolean;
 }
 
 function CountdownTimer({ endsAt }: { endsAt: string }) {
@@ -174,9 +175,16 @@ export default function VoterDashboard() {
                   <p className="election-card-desc">{el.description}</p>
                   <div className="election-card-meta">
                     <CountdownTimer endsAt={el.endDate} />
-                    <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
-                      Vote Now
-                    </Link>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                      <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
+                        Vote Now
+                      </Link>
+                      {el.showResults && (
+                        <Link href={`/voter/elections/${el.id}/results`} className="btn btn-secondary btn-sm">
+                          View Results
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

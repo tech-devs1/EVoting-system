@@ -12,6 +12,7 @@ interface Election {
   startDate: string;
   endDate: string;
   status: 'draft' | 'active' | 'completed';
+  showResults?: boolean;
 }
 
 const statusBadgeMap: Record<string, string> = {
@@ -36,6 +37,7 @@ export default function AdminElectionsPage() {
   const [formEndDate, setFormEndDate] = useState('');
   const [formType, setFormType] = useState('src');
   const [formDepartment, setFormDepartment] = useState('');
+  const [formShowResults, setFormShowResults] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -63,6 +65,7 @@ export default function AdminElectionsPage() {
         endDate: formEndDate,
         type: formType,
         department: formType === 'departmental' ? formDepartment : '',
+        showResults: formShowResults,
       });
       
       const res = await apiRequest<{ status: string; data: Election }>('/elections', 'POST', {
@@ -72,6 +75,7 @@ export default function AdminElectionsPage() {
         endDate: formEndDate,
         type: formType,
         department: formType === 'departmental' ? formDepartment : '',
+        showResults: formShowResults,
       });
       
       console.log('[Create Election] Response:', res);
@@ -79,7 +83,7 @@ export default function AdminElectionsPage() {
       if (res.status === 'success') {
         setElections(prev => [...prev, res.data]);
         setIsModalOpen(false);
-        setFormTitle(''); setFormDescription(''); setFormStartDate(''); setFormEndDate(''); setFormType('src'); setFormDepartment('');
+        setFormTitle(''); setFormDescription(''); setFormStartDate(''); setFormEndDate(''); setFormType('src'); setFormDepartment(''); setFormShowResults(false);
         alert('Election created successfully!');
       } else {
         alert('Failed to create election: ' + (res as any).message || 'Unknown error');
@@ -89,6 +93,16 @@ export default function AdminElectionsPage() {
       alert('Failed to create election: ' + err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleToggleResults = async (elId: string, newShowResults: boolean) => {
+    try {
+      await apiRequest(`/elections/${elId}/toggle-results`, 'PATCH', { showResults: newShowResults });
+      setElections(prev => prev.map(el => el.id === elId ? { ...el, showResults: newShowResults } : el));
+    } catch (err: any) {
+      console.error('Error toggling results visibility:', err);
+      alert('Failed to update results visibility: ' + err.message);
     }
   };
 
@@ -184,6 +198,13 @@ export default function AdminElectionsPage() {
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                <button
+                  className={`btn btn-sm ${el.showResults ? 'btn-success' : 'btn-outline'}`}
+                  onClick={() => handleToggleResults(el.id, !el.showResults)}
+                  style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  {el.showResults ? 'Results: Public' : 'Results: Hidden'}
+                </button>
                 {el.status === 'draft' && (
                   <button className="btn btn-success btn-sm" onClick={() => handleChangeStatus(el.id, 'active')} style={{ fontSize: 'var(--text-xs)' }}>
                     <Activity size={12} /> Activate
@@ -262,6 +283,18 @@ export default function AdminElectionsPage() {
                     <label className="form-label" htmlFor="el-end">End Date</label>
                     <input type="datetime-local" id="el-end" className="form-input" required value={formEndDate} onChange={e => setFormEndDate(e.target.value)} />
                   </div>
+                </div>
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-4)', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    id="el-show-results"
+                    checked={formShowResults}
+                    onChange={e => setFormShowResults(e.target.checked)}
+                    style={{ width: 'auto', margin: 0, cursor: 'pointer' }}
+                  />
+                  <label htmlFor="el-show-results" style={{ margin: 0, cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 'var(--weight-semibold)' }}>
+                    Allow voters to see live results/charts
+                  </label>
                 </div>
               </div>
               <div className="modal-footer">

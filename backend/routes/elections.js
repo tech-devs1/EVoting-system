@@ -65,7 +65,7 @@ router.get('/:id', async (req, res) => {
 // Create new election (Admin only)
 router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const { title, description, startDate, endDate, organizationId, type, department } = req.body;
+    const { title, description, startDate, endDate, organizationId, type, department, showResults } = req.body;
     
     if (!title || !startDate || !endDate) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
@@ -80,6 +80,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       type: type || 'src',
       department: department || '',
       status: 'draft', // draft, active, completed
+      showResults: showResults === true,
       createdBy: 'admin',
       createdAt: Date.now()
     };
@@ -105,6 +106,22 @@ router.patch('/:id/status', verifyAuth, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error updating election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to update election' });
+  }
+});
+
+// Toggle showResults status (Admin only)
+router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const { showResults } = req.body;
+    if (typeof showResults !== 'boolean') {
+      return res.status(400).json({ status: 'error', message: 'showResults must be a boolean' });
+    }
+
+    await db.collection('elections').doc(req.params.id).update({ showResults });
+    res.status(200).json({ status: 'success', message: `Voter results visibility updated to ${showResults}` });
+  } catch (error) {
+    console.error('Error toggling results visibility:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update results visibility' });
   }
 });
 

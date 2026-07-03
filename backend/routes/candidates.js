@@ -7,12 +7,47 @@ const { verifyAuth, requireAdmin } = require('../middleware/auth');
 router.get('/election/:electionId', async (req, res) => {
   try {
     const { electionId } = req.params;
+    
+    // Check if requester is an admin by decoding JWT/Mock token
+    const authHeader = req.headers.authorization;
+    let isAdmin = false;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split('Bearer ')[1];
+      try {
+        if (token.startsWith('MOCK_')) {
+          const uid = token.replace('MOCK_', '');
+          if (uid.startsWith('admin_')) isAdmin = true;
+        } else {
+          const jwt = require('jsonwebtoken');
+          const decoded = jwt.decode(token);
+          if (decoded && (decoded.role === 'admin' || decoded.email?.includes('admin'))) {
+            isAdmin = true;
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    // Fetch election to see if live charts are published to voters
+    const electionDoc = await db.collection('elections').doc(electionId).get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
+    const electionData = electionDoc.data();
+    const showResults = electionData.showResults === true;
+
     const candidatesRef = db.collection('candidates');
     const snapshot = await candidatesRef.where('electionId', '==', electionId).get();
     
     const candidates = [];
     snapshot.forEach(doc => {
-      candidates.push({ id: doc.id, ...doc.data() });
+      const data = doc.data();
+      // Hide votes from API response if not admin and showResults is false
+      if (!isAdmin && !showResults) {
+        data.votes = 0;
+      }
+      candidates.push({ id: doc.id, ...data });
     });
 
     res.status(200).json({ status: 'success', data: candidates });
