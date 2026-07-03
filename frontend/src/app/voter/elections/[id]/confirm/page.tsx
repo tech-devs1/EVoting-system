@@ -23,6 +23,7 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
   const router = useRouter();
   const searchParams = useSearchParams();
   const resolvedParams = use(params);
+  const { user } = useAuth();
   
   const electionId = resolvedParams.id;
   // Get all candidate IDs passed in search params
