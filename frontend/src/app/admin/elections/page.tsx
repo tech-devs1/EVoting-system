@@ -307,18 +307,6 @@ export default function AdminElectionsPage() {
                     <input type="datetime-local" id="el-end" className="form-input" required value={formEndDate} onChange={e => setFormEndDate(e.target.value)} />
                   </div>
                 </div>
-                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-4)', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    id="el-show-results"
-                    checked={formShowResults}
-                    onChange={e => setFormShowResults(e.target.checked)}
-                    style={{ width: 'auto', margin: 0, cursor: 'pointer' }}
-                  />
-                  <label htmlFor="el-show-results" style={{ margin: 0, cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 'var(--weight-semibold)' }}>
-                    Allow voters to see live results/charts
-                  </label>
-                </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
