@@ -87,6 +87,8 @@ export default function LoadingScreen() {
   const [phase, setPhase] = useState<'hidden' | 'splash' | 'woezor'>('hidden');
   const [showButtons, setShowButtons] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  // Dropdown for install instructions
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     const ua = window.navigator.userAgent.toLowerCase();
@@ -267,7 +269,7 @@ export default function LoadingScreen() {
               }}
             >
               <button
-                onClick={handleInstall}
+                onClick={() => setShowDropdown(prev => !prev)}
                 style={{
                   width: '100%',
                   padding: '14px 24px',
@@ -289,6 +291,58 @@ export default function LoadingScreen() {
                 <span style={{ fontSize: '1.2rem' }}>{isIOS ? '📲' : '⬇'}</span>
                 {isIOS ? 'Add to Home Screen' : 'Install App'}
               </button>
+
+              {/* Dropdown instruction menu */}
+              {showDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  left: 0,
+                  right: 0,
+                  background: 'linear-gradient(160deg, #0f172a, #1a2a5e)',
+                  borderRadius: '12px',
+                  padding: '12px 16px',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+                  zIndex: 1000,
+                }}>
+                  {/* Steps list */}
+                  {(
+                    isIOS
+                      ? [
+                          { icon: '🌐', text: 'Open this page in Safari (not Chrome or other browsers)' },
+                          { icon: '⬆️', text: 'Tap the Share button (□↑) at the bottom of the screen' },
+                          { icon: '➕', text: 'Scroll down and tap "Add to Home Screen"' },
+                          { icon: '✅', text: 'Tap "Add" in the top‑right corner to confirm' },
+                        ]
+                      : [
+                          { icon: '⋮', text: "Tap the three‑dot menu (⋮) in Chrome's top‑right corner" },
+                          { icon: '📱', text: 'Tap "Add to Home screen" or "Install app"' },
+                          { icon: '✅', text: 'Tap "Add" to confirm' },
+                        ]
+                  ).map((s, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '1.2rem' }}>{s.icon}</span>
+                      <p style={{ color: '#fff', margin: 0, fontSize: '0.9rem' }}>{s.text}</p>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setShowDropdown(false)}
+                    style={{
+                      marginTop: '8px',
+                      width: '100%',
+                      padding: '8px',
+                      background: '#2563eb',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+
 
               <button
                 onClick={handleContinue}
