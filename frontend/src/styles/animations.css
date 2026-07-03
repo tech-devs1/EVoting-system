@@ -422,6 +422,13 @@
   animation: countUp 0.6s var(--ease-out) both;
 }
 
+/* ---- Facial Scanner Laser Animation ---- */
+@keyframes scanLaser {
+  0% { top: 0%; opacity: 0.8; }
+  50% { top: 100%; opacity: 1; }
+  100% { top: 0%; opacity: 0.8; }
+}
+
 /* ---- Prefers Reduced Motion ---- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
