@@ -41,6 +41,8 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
   const [scanComplete, setScanComplete] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
   const [scanMessage, setScanMessage] = useState('Position your face within the scanner ring');
+  // freshDescriptor holds the latest faceDescriptor fetched directly from /auth/me
+  const [freshDescriptor, setFreshDescriptor] = useState<number[] | null>(null);
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
 
@@ -88,15 +90,16 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
     );
   }
 
-  const startCamera = async () => {
+  const startCamera = async (descriptor?: number[]) => {
     setCameraActive(true);
     setScanComplete(false);
     setScanSuccess(false);
     setScanning(false);
     setScanMessage('Initializing camera stream...');
 
-    if (!user || !user.faceDescriptor) {
-      setScanMessage('No biometric profile found on file! Please re-register to enroll your face.');
+    const activeDescriptor = descriptor || freshDescriptor || user?.faceDescriptor;
+    if (!activeDescriptor) {
+      setScanMessage('No biometric profile found. Please re-register to enroll your face.');
       setCameraActive(false);
       return;
     }
@@ -127,57 +130,68 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
   };
 
   const handleStartScan = async () => {
-  if (!user || !user.faceDescriptor) {
-    setScanMessage('Verification denied: missing face template.');
-    return;
-  }
-  setScanning(true);
-  setScanMessage('Extracting live facial vectors...');
-  try {
-    if (!videoRef.current) {
-      setScanMessage('Camera not ready. Please try again.');
-      setScanning(false);
+    const activeDescriptor = freshDescriptor || user?.faceDescriptor;
+    if (!activeDescriptor) {
+      setScanMessage('Verification denied: missing face template.');
       return;
     }
-    const liveDescriptor = await getFaceDescriptor(videoRef.current);
-    if (!liveDescriptor) {
-      setScanMessage('No face detected. Please align your face and try again.');
+    setScanning(true);
+    setScanMessage('Extracting live facial vectors...');
+    try {
+      if (!videoRef.current) {
+        setScanMessage('Camera not ready. Please try again.');
+        setScanning(false);
+        return;
+      }
+      const liveDescriptor = await getFaceDescriptor(videoRef.current);
+      if (!liveDescriptor) {
+        setScanMessage('No face detected. Please align your face and try again.');
+        setScanning(false);
+        setCameraActive(false);
+        return;
+      }
+      const storedDescriptor = new Float32Array(activeDescriptor.map(Number));
+      const distance = await compareFaceDescriptors(storedDescriptor, liveDescriptor);
+      const THRESHOLD = 0.5;
+      if (distance > THRESHOLD) {
+        setScanMessage('Face mismatch – verification failed.');
+        setScanning(false);
+        setCameraActive(false);
+        return;
+      }
+      setScanComplete(true);
+      setScanning(false);
+      setScanSuccess(true);
+      setScanMessage('Facial match verified!');
+      setTimeout(() => {
+        stopCamera();
+        setIsFaceVerifyOpen(false);
+        castBallot();
+      }, 1500);
+    } catch (err) {
+      console.error('Face verification error:', err);
+      setScanMessage('Verification error. Please try again.');
       setScanning(false);
       setCameraActive(false);
-      return;
     }
-    const storedDescriptor = new Float32Array(user.faceDescriptor.map(Number));
-    const distance = await compareFaceDescriptors(storedDescriptor, liveDescriptor);
-    const THRESHOLD = 0.5;
-    if (distance > THRESHOLD) {
-      setScanMessage('Face mismatch – verification failed.');
-      setScanning(false);
-      setCameraActive(false);
-      return;
-    }
-    setScanComplete(true);
-    setScanning(false);
-    setScanSuccess(true);
-    setScanMessage('Facial match verified!');
-    // Proceed to cast vote after a short delay
-    setTimeout(() => {
-      stopCamera();
-      setIsFaceVerifyOpen(false);
-      castBallot();
-    }, 1500);
-  } catch (err) {
-    console.error('Face verification error:', err);
-    setScanMessage('Verification error. Please try again.');
-    setScanning(false);
-    setCameraActive(false);
-  }
-};
+  };
 
-  const triggerFacialVerification = () => {
+  const triggerFacialVerification = async () => {
     setIsFaceVerifyOpen(true);
-    setTimeout(() => {
-      startCamera();
-    }, 100);
+    setScanMessage('Fetching your biometric profile...');
+    // Always fetch the latest profile from Firestore to get faceDescriptor
+    try {
+      const res = await apiRequest<{ status: string; data: { faceDescriptor?: number[]; faceImage?: string } }>('/auth/me');
+      if (res.status === 'success' && res.data?.faceDescriptor) {
+        setFreshDescriptor(res.data.faceDescriptor);
+        setTimeout(() => startCamera(res.data.faceDescriptor), 100);
+      } else {
+        // Fallback to session data
+        setTimeout(() => startCamera(), 100);
+      }
+    } catch {
+      setTimeout(() => startCamera(), 100);
+    }
   };
 
   const castBallot = async () => {
