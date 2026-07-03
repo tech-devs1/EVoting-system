@@ -19,7 +19,8 @@ interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   login: (email: string, password?: string, role?: 'voter' | 'admin') => Promise<{ otpRequired?: boolean; email?: string }>;
-  register: (studentId: string, email: string, name: string, password?: string, faceImage?: string, faceDescriptor?: number[]) => Promise<{ otpRequired?: boolean; email?: string }>;;
+  register: (studentId: string, email: string, name: string, password?: string, faceImage?: string, faceDescriptor?: number[]) => Promise<{ otpRequired?: boolean; email?: string }>;
+
   verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
 }
