@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState, use, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
@@ -19,7 +19,7 @@ interface Election {
   title: string;
 }
 
-export default function VoteConfirmationPage({ params }: { params: Promise<{ id: string }> }) {
+function VoteConfirmationPageContent({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resolvedParams = use(params);
@@ -429,6 +429,13 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
           </div>
         </div>
       )}
-    </div>
+  );
+}
+
+export default function VoteConfirmationPage(props: any) {
+  return (
+    <Suspense fallback={<p style={{ color: 'var(--text-secondary)', padding: 'var(--space-8)', textAlign: 'center' }}>Preparing ballot confirmation details...</p>}>
+      <VoteConfirmationPageContent {...props} />
+    </Suspense>
   );
 }
