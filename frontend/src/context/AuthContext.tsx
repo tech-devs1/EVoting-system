@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (studentId: string, email: string, name: string, password?: string, faceImage?: string, faceDescriptor?: number[]): Promise<{ otpRequired?: boolean; email?: string }> => {
     setLoading(true);
     try {
-      const res = await apiRequest<{ status: string; email?: string; token?: string; data?: UserProfile }>(' /auth/register', 'POST', {
+      const res = await apiRequest<{ status: string; email?: string; token?: string; data?: UserProfile }>('/auth/register', 'POST', {
         studentId,
         email,
         name,
