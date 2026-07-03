@@ -131,6 +131,11 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
   setScanning(true);
   setScanMessage('Extracting live facial vectors...');
   try {
+    if (!videoRef.current) {
+      setScanMessage('Camera not ready. Please try again.');
+      setScanning(false);
+      return;
+    }
     const liveDescriptor = await getFaceDescriptor(videoRef.current);
     if (!liveDescriptor) {
       setScanMessage('No face detected. Please align your face and try again.');
