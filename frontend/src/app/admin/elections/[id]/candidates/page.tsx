@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
 import { Plus, ArrowLeft, Trash, Users } from 'lucide-react';
@@ -55,6 +55,14 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   const [editManifestoCand, setEditManifestoCand] = useState<Candidate | null>(null);
   const [manifestoContent, setManifestoContent] = useState<string>('');
   const [savingManifesto, setSavingManifesto] = useState(false);
+
+  // Ref to imperatively clear the add-manifesto rich-text editor
+  const addManifestoEditorRef = useRef<HTMLDivElement>(null);
+
+  const clearAddManifestoEditor = () => {
+    setFormManifesto('');
+    if (addManifestoEditorRef.current) addManifestoEditorRef.current.innerHTML = '';
+  };
 
   // Unwrap params
   React.useEffect(() => {
@@ -156,7 +164,7 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
       if (res.status === 'success') {
         setCandidates(prev => [...prev, res.data]);
         setIsModalOpen(false);
-        setFormName(''); setFormPosSelect(''); setFormPosCustom(''); setFormManifesto('');
+        setFormName(''); setFormPosSelect(''); setFormPosCustom(''); clearAddManifestoEditor();
         setPhotoFile(null);
       } else {
         alert('Failed to add candidate: ' + (res as any).message || 'Unknown error');
@@ -230,7 +238,7 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
 
       {/* Add Candidate Modal */}
       {isModalOpen && (
-        <div className="modal-overlay active" onClick={() => { setIsModalOpen(false); setFormPosSelect(''); setFormPosCustom(''); }}>
+        <div className="modal-overlay active" onClick={() => { setIsModalOpen(false); setFormPosSelect(''); setFormPosCustom(''); clearAddManifestoEditor(); }}>
           <div className="modal-container" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Add Candidate Profile</h3>
@@ -274,8 +282,42 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                   )}
                 </div>
                 <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-                  <label className="form-label" htmlFor="cand-man" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Manifesto Statement (optional)</label>
-                  <textarea id="cand-man" className="form-input" placeholder="Paste candidate's manifesto here..." style={{ width: '100%', minHeight: '120px', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} value={formManifesto} onChange={e => setFormManifesto(e.target.value)} />
+                  <label style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)' }}>
+                    Manifesto Statement <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span>
+                  </label>
+                  {/* Formatting toolbar */}
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', padding: 'var(--space-2)', background: 'var(--bg-input)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', border: '1px solid var(--border-color)', borderBottom: 'none' }}>
+                    <button type="button" className="btn btn-outline btn-sm" style={{ fontWeight: 'bold', minWidth: 32 }} onMouseDown={e => { e.preventDefault(); document.execCommand('bold'); }}>B</button>
+                    <button type="button" className="btn btn-outline btn-sm" style={{ fontStyle: 'italic', minWidth: 32 }} onMouseDown={e => { e.preventDefault(); document.execCommand('italic'); }}>I</button>
+                    <button type="button" className="btn btn-outline btn-sm" style={{ textDecoration: 'underline', minWidth: 32 }} onMouseDown={e => { e.preventDefault(); document.execCommand('underline'); }}>U</button>
+                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 2px' }} />
+                    <button type="button" className="btn btn-outline btn-sm" onMouseDown={e => { e.preventDefault(); document.execCommand('insertUnorderedList'); }}>• List</button>
+                    <button type="button" className="btn btn-outline btn-sm" onMouseDown={e => { e.preventDefault(); document.execCommand('insertOrderedList'); }}>1. List</button>
+                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 2px' }} />
+                    <button type="button" className="btn btn-outline btn-sm" onMouseDown={e => { e.preventDefault(); document.execCommand('justifyLeft'); }}>≡ Left</button>
+                    <button type="button" className="btn btn-outline btn-sm" onMouseDown={e => { e.preventDefault(); document.execCommand('justifyCenter'); }}>≡ Center</button>
+                  </div>
+                  {/* Editable area */}
+                  <div
+                    id="add-manifesto-editor"
+                    ref={addManifestoEditorRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    onInput={e => setFormManifesto(e.currentTarget.innerHTML)}
+                    style={{
+                      minHeight: '130px',
+                      padding: 'var(--space-3)',
+                      borderRadius: '0 0 var(--radius-md) var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-primary)',
+                      overflowY: 'auto',
+                      lineHeight: 1.7,
+                      fontSize: 'var(--text-sm)',
+                      outline: 'none',
+                    }}
+                    data-placeholder="Write the candidate's manifesto here…"
+                  />
                 </div>
                 <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
                   <label className="form-label" htmlFor="cand-photo" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Photo — Optional</label>
