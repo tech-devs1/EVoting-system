@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
 import { Plus, ArrowLeft, Trash, Users } from 'lucide-react';
@@ -47,6 +48,8 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   const [formManifesto, setFormManifesto] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // Resolved position — either the dropdown pick or the custom text
   const formPos = formPosSelect === '__custom__' ? formPosCustom : formPosSelect;
@@ -236,10 +239,26 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
         )}
       </div>
 
-      {/* Add Candidate Modal */}
-      {isModalOpen && (
-        <div className="modal-overlay active" onClick={() => { setIsModalOpen(false); setFormPosSelect(''); setFormPosCustom(''); clearAddManifestoEditor(); }}>
-          <div className="modal-container" onClick={e => e.stopPropagation()}>
+      {/* Add Candidate Modal — portal to escape overflow:hidden on app-shell */}
+      {mounted && isModalOpen && createPortal(
+        <div
+          onClick={() => { setIsModalOpen(false); setFormPosSelect(''); setFormPosCustom(''); clearAddManifestoEditor(); }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9000,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            padding: '80px 16px 88px 16px',
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            className="modal-container"
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '560px', maxHeight: 'calc(100dvh - 180px)' }}
+          >
             <div className="modal-header">
               <h3 className="modal-title">Add Candidate Profile</h3>
               <button className="modal-close" onClick={() => setIsModalOpen(false)}>&times;</button>
@@ -266,8 +285,6 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                     ))}
                     <option value="__custom__">✏️ Custom position…</option>
                   </select>
-
-                  {/* Custom position text input */}
                   {formPosSelect === '__custom__' && (
                     <input
                       type="text"
@@ -285,7 +302,6 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                   <label style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)' }}>
                     Manifesto Statement <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span>
                   </label>
-                  {/* Formatting toolbar */}
                   <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', padding: 'var(--space-2)', background: 'var(--bg-input)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', border: '1px solid var(--border-color)', borderBottom: 'none' }}>
                     <button type="button" className="btn btn-outline btn-sm" style={{ fontWeight: 'bold', minWidth: 32 }} onMouseDown={e => { e.preventDefault(); document.execCommand('bold'); }}>B</button>
                     <button type="button" className="btn btn-outline btn-sm" style={{ fontStyle: 'italic', minWidth: 32 }} onMouseDown={e => { e.preventDefault(); document.execCommand('italic'); }}>I</button>
@@ -297,25 +313,13 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                     <button type="button" className="btn btn-outline btn-sm" onMouseDown={e => { e.preventDefault(); document.execCommand('justifyLeft'); }}>≡ Left</button>
                     <button type="button" className="btn btn-outline btn-sm" onMouseDown={e => { e.preventDefault(); document.execCommand('justifyCenter'); }}>≡ Center</button>
                   </div>
-                  {/* Editable area */}
                   <div
                     id="add-manifesto-editor"
                     ref={addManifestoEditorRef}
                     contentEditable
                     suppressContentEditableWarning
                     onInput={e => setFormManifesto(e.currentTarget.innerHTML)}
-                    style={{
-                      minHeight: '130px',
-                      padding: 'var(--space-3)',
-                      borderRadius: '0 0 var(--radius-md) var(--radius-md)',
-                      border: '1px solid var(--border-color)',
-                      background: 'var(--bg-input)',
-                      color: 'var(--text-primary)',
-                      overflowY: 'auto',
-                      lineHeight: 1.7,
-                      fontSize: 'var(--text-sm)',
-                      outline: 'none',
-                    }}
+                    style={{ minHeight: '130px', padding: 'var(--space-3)', borderRadius: '0 0 var(--radius-md) var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', overflowY: 'auto', lineHeight: 1.7, fontSize: 'var(--text-sm)', outline: 'none' }}
                     data-placeholder="Write the candidate's manifesto here…"
                   />
                 </div>
@@ -332,13 +336,30 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Edit / Upload Manifesto Modal (Rich Text) */}
-      {editManifestoCand && (
-        <div className="modal-overlay active" onClick={closeEditManifesto}>
-          <div className="modal-container" onClick={e => e.stopPropagation()}>
+      {/* Edit Manifesto Modal — portal to escape overflow:hidden on app-shell */}
+      {mounted && editManifestoCand && createPortal(
+        <div
+          onClick={closeEditManifesto}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9000,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            padding: '80px 16px 88px 16px',
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            className="modal-container"
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '560px', maxHeight: 'calc(100dvh - 180px)' }}
+          >
             <div className="modal-header">
               <h3 className="modal-title">
                 {editManifestoCand.manifesto ? 'Edit' : 'Upload'} Manifesto — {editManifestoCand.name}
@@ -346,7 +367,6 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               <button className="modal-close" onClick={closeEditManifesto}>&times;</button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              {/* Formatting toolbar */}
               <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', padding: 'var(--space-2)', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
                 <button type="button" className="btn btn-outline btn-sm" style={{ fontWeight: 'bold' }} onClick={() => document.execCommand('bold')}>B</button>
                 <button type="button" className="btn btn-outline btn-sm" style={{ fontStyle: 'italic' }} onClick={() => document.execCommand('italic')}>I</button>
@@ -358,24 +378,11 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                 <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('justifyLeft')}>≡ Left</button>
                 <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('justifyCenter')}>≡ Center</button>
               </div>
-
-              {/* Editable area */}
               <div
                 id="manifesto-editor"
                 contentEditable
                 suppressContentEditableWarning
-                style={{
-                  minHeight: '220px',
-                  padding: 'var(--space-3)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--bg-input)',
-                  color: 'var(--text-primary)',
-                  overflowY: 'auto',
-                  lineHeight: 1.7,
-                  fontSize: 'var(--text-sm)',
-                  outline: 'none',
-                }}
+                style={{ minHeight: '220px', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', overflowY: 'auto', lineHeight: 1.7, fontSize: 'var(--text-sm)', outline: 'none' }}
                 onInput={e => setManifestoContent(e.currentTarget.innerHTML)}
                 dangerouslySetInnerHTML={{ __html: manifestoContent }}
               />
@@ -387,7 +394,8 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
