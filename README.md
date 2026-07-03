@@ -9,13 +9,10 @@ A full-stack, PWA-ready electronic voting platform built for HTU. Features real-
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Prerequisites](#-prerequisites)
-- [Third-Party Services Setup](#-third-party-services-setup)
 - [Running Locally](#-running-locally)
-- [Environment Variables Reference](#-environment-variables-reference)
-- [Deploying to Vercel (Live)](#-deploying-to-vercel-live)
 - [Installing the App (PWA)](#-installing-the-app-pwa)
-- [API Endpoints Overview](#-api-endpoints-overview)
-- [Troubleshooting](#-troubleshooting)
+- [How to use the app](#-registering-account-and-voting)
+- [Live App](VOTICK.VERCEL.APP)
 
 ---
 
@@ -40,7 +37,7 @@ A full-stack, PWA-ready electronic voting platform built for HTU. Features real-
 
 ## 📁 Project Structure
 
-```
+
 EVoting-system/
 ├── backend/                  # Express API server
 │   ├── routes/               # API route handlers
@@ -81,7 +78,6 @@ EVoting-system/
 │   └── package.json
 │
 └── vercel.json               # Vercel monorepo build config
-```
 
 ---
 
@@ -104,138 +100,41 @@ Install all of the following before running the project locally:
 - **Chrome** (recommended for local PWA testing)
 - **Firefox**, **Edge**, or **Safari** also work
 
----
-
-## 🔧 Third-Party Services Setup
-
-You need accounts on three external services. They are all free-tier.
-
-### 🔥 Firebase (Database + Auth)
-
-1. Go to https://console.firebase.google.com
-2. Click **Add project** → name it (e.g. `voting-0`) → Continue
-3. **Enable Firestore**:
-   - Sidebar → Build → Firestore Database → Create database → Start in test mode
-4. **Enable Authentication**:
-   - Sidebar → Build → Authentication → Get started → Enable **Email/Password**
-5. **Get Admin SDK credentials** (for the backend):
-   - Project Settings (⚙️) → Service accounts → **Generate new private key**
-   - Download the `.json` file — you'll need `project_id`, `client_email`, and `private_key`
-6. **Get Frontend config** (for the frontend):
-   - Project Settings (⚙️) → General → Your apps → Add app → Web (`</>`)
-   - Copy the `firebaseConfig` object values
-
-### 🖼️ ImageKit (Candidate Photo Uploads)
-
-1. Sign up free at https://imagekit.io
-2. Dashboard → Developer options → copy:
-   - `Public Key`
-   - `Private Key`
-   - `URL Endpoint` (looks like `https://ik.imagekit.io/your_id`)
-
-### 📧 EmailJS (Voter Notifications)
-
-1. Sign up free at https://emailjs.com
-2. Create a **Service** (connect your Gmail or other email) → note the `Service ID`
-3. Create an **Email Template** → note the `Template ID`
-4. Go to Account → API Keys → note your `Public Key` and `Private Key`
-
----
+---.
 
 ## 🚀 Running Locally
 
 ### Step 1 — Clone the repository
 
-```bash
 git clone https://github.com/tech-devs1/EVoting-system.git
 cd EVoting-system
-```
 
 ### Step 2 — Set up the Backend
-
-```bash
+cd into the folder you cloned the repo in
 cd backend
 npm install
-```
 
-Create a `.env` file inside the `backend/` folder:
-
-```bash
-# backend/.env
-
-PORT=5000
-JWT_SECRET=your-strong-random-secret-here
-
-# Firebase Admin SDK
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxx@your-project-id.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n"
-
-# EmailJS
-EMAILJS_SERVICE_ID=service_xxxxxxx
-EMAILJS_TEMPLATE_ID=template_xxxxxxx
-EMAILJS_PUBLIC_KEY=your_emailjs_public_key
-EMAILJS_PRIVATE_KEY=your_emailjs_private_key
-
-# ImageKit
-IMAGEKIT_PUBLIC_KEY=public_xxxxxxxxxxxxxxxxxxxxxxxx
-IMAGEKIT_PRIVATE_KEY=private_xxxxxxxxxxxxxxxxxxxxxxxx
-IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
-```
-
-> ⚠️ **Important:** Never commit `.env` to Git. It is already in `.gitignore`.
-
+###
 Start the backend server:
-
-```bash
-npm run dev
-```
-
+npm start
 The backend will run at **http://localhost:5000**
 
 Verify it's working:
-```
 GET http://localhost:5000/api/health
-```
 
 ---
 
 ### Step 3 — Set up the Frontend
 
 Open a **new terminal window** and run:
-
-```bash
+cd into the folder you cloned the repo in
 cd frontend
 npm install
-```
-
-Create a `.env.local` file inside the `frontend/` folder:
-
-```bash
-# frontend/.env.local
-
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY=public_xxxxxxxxxxxxxxxxxxxxxxxx
-NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
-
-# Firebase client config (from Firebase console → Project Settings → Your Apps)
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
-NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef123456
-```
 
 Start the frontend dev server:
-
-```bash
 npm run dev
-```
 
 The frontend will run at **http://localhost:3000**
-
----
 
 ### Step 4 — You're ready!
 
@@ -246,99 +145,13 @@ The frontend will run at **http://localhost:3000**
 | http://localhost:5000/api/health | Backend health check |
 
 **Default Admin Access:**  
-Register a user, then manually set `isAdmin: true` on their Firestore user document via the Firebase console.
-
+Admin email: admin@htu.edu.gh
+admin password : admin080
 ---
 
-## 🔑 Environment Variables Reference
+### LIVE APP
+The live app is available at votick.vercel.app
 
-### Backend (`backend/.env`)
-
-| Variable | Description | Required |
-|---|---|---|
-| `PORT` | Port the Express server listens on (default: 5000) | ✅ |
-| `JWT_SECRET` | Secret key for signing JWT tokens | ✅ |
-| `FIREBASE_PROJECT_ID` | Firebase project ID | ✅ |
-| `FIREBASE_CLIENT_EMAIL` | Firebase service account email | ✅ |
-| `FIREBASE_PRIVATE_KEY` | Firebase service account private key | ✅ |
-| `EMAILJS_SERVICE_ID` | EmailJS service ID | ✅ |
-| `EMAILJS_TEMPLATE_ID` | EmailJS template ID | ✅ |
-| `EMAILJS_PUBLIC_KEY` | EmailJS public API key | ✅ |
-| `EMAILJS_PRIVATE_KEY` | EmailJS private API key | ✅ |
-| `IMAGEKIT_PUBLIC_KEY` | ImageKit public key | ✅ |
-| `IMAGEKIT_PRIVATE_KEY` | ImageKit private key | ✅ |
-| `IMAGEKIT_URL_ENDPOINT` | ImageKit URL endpoint | ✅ |
-
-### Frontend (`frontend/.env.local`)
-
-| Variable | Description | Required |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | URL of the backend API | ✅ |
-| `NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY` | ImageKit public key (client-side upload) | ✅ |
-| `NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT` | ImageKit URL endpoint | ✅ |
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase web app API key | ✅ |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | ✅ |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project ID | ✅ |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | ✅ |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender ID | ✅ |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase app ID | ✅ |
-
----
-
-## ☁️ Deploying to Vercel (Live)
-
-This repo is configured as a **Vercel monorepo** with both frontend and backend deploying from a single repository.
-
-### Step 1 — Push to GitHub
-
-```bash
-git add -A
-git commit -m "your commit message"
-git push origin main
-```
-
-### Step 2 — Connect to Vercel
-
-1. Go to https://vercel.com → **Add New Project**
-2. Import your GitHub repository (`EVoting-system`)
-3. Vercel will auto-detect the `vercel.json` at the root
-
-### Step 3 — Add Environment Variables in Vercel
-
-Go to your project → **Settings** → **Environment Variables** and add **all** the variables from both `.env` and `.env.local`:
-
-**Backend variables (no `NEXT_PUBLIC_` prefix):**
-- `JWT_SECRET`
-- `FIREBASE_PROJECT_ID`
-- `FIREBASE_CLIENT_EMAIL`
-- `FIREBASE_PRIVATE_KEY`
-- `EMAILJS_SERVICE_ID`
-- `EMAILJS_TEMPLATE_ID`
-- `EMAILJS_PUBLIC_KEY`
-- `EMAILJS_PRIVATE_KEY`
-- `IMAGEKIT_PUBLIC_KEY`
-- `IMAGEKIT_PRIVATE_KEY`
-- `IMAGEKIT_URL_ENDPOINT`
-
-**Frontend variables (with `NEXT_PUBLIC_` prefix):**
-- `NEXT_PUBLIC_API_URL` → set to your Vercel deployment URL e.g. `https://evoting-system.vercel.app/api`
-- `NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY`
-- `NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT`
-- `NEXT_PUBLIC_FIREBASE_API_KEY`
-- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `NEXT_PUBLIC_FIREBASE_APP_ID`
-
-### Step 4 — Deploy
-
-- Vercel automatically deploys every time you push to `main`
-- To trigger a manual redeploy: Vercel Dashboard → your project → **Deployments** tab → **Redeploy**
-
-> 💡 **Tip:** After adding environment variables, always trigger a **new deployment** for them to take effect.
-
----
 
 ## 📱 Installing the App (PWA)
 
@@ -348,11 +161,11 @@ Votick is a **Progressive Web App (PWA)** — it can be installed on any device 
 
 1. Open the live app URL in **Google Chrome**
 2. Tap the **"Install App"** button on the landing screen
-3. Chrome will show the native **"Add to Home screen"** install prompt
-4. Tap **Install** to confirm
+3. Tap **Install** to confirm
+4. > If the install prompt doesn't appear, open Chrome menu (⋮) → **Add to Home screen**
 5. The app icon appears on your home screen
 
-> If the install prompt doesn't appear, open Chrome menu (⋮) → **Add to Home screen**
+
 
 ### iOS (Safari)
 
@@ -371,67 +184,21 @@ Votick is a **Progressive Web App (PWA)** — it can be installed on any device 
 3. Click it and confirm installation
 4. Votick opens as a standalone app window
 
----
+### RUNNING THE APP
+we used our class list in the databse for now.
+--FIRST TIME REGISTRATION
 
-## 📡 API Endpoints Overview
+1.Open the app,and click register account.Enter your index number and the system fishes your id in the database and posfixes it with htu email standard(@htu.edu.gh)
+2.Set your password following the requirements
+3.you will be sent an OTP via the email(or spam) to verify
+4.you will be redirected to login and verify otp again
+5.if elections are available you view, and read manifestos and vote your preferred candidate.
 
-All endpoints are prefixed with `/api`.
+--ALREADY REGISTERED
+1.login with your credentials.
+2.if elections are available you view, and read manifestos and vote your preferred candidate.
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/health` | None | Server health check |
-| `POST` | `/auth/register` | None | Register a new voter |
-| `POST` | `/auth/login` | None | Login and receive JWT |
-| `GET` | `/elections` | None | List all elections |
-| `POST` | `/elections` | Admin | Create a new election |
-| `PUT` | `/elections/:id` | Admin | Update an election |
-| `DELETE` | `/elections/:id` | Admin | Delete an election |
-| `GET` | `/elections/:id/results/pdf` | Admin | Download PDF results |
-| `GET` | `/candidates/election/:id` | None | List candidates for election |
-| `POST` | `/candidates` | Admin | Add a candidate |
-| `DELETE` | `/candidates/:id` | Admin | Delete a candidate |
-| `POST` | `/votes` | Voter | Cast a vote |
-| `GET` | `/admin/dashboard` | Admin | KPI stats + top candidates |
-| `GET` | `/admin/live-votes` | Admin | Live vote count + candidate standings |
-| `GET` | `/admin/fraud-alerts` | Admin | Duplicate vote attempts |
-| `GET` | `/imagekit/auth` | Voter | ImageKit upload auth token |
 
----
+--VOTICK.VERCEL.APP
 
-## 🩺 Troubleshooting
-
-### Backend won't start
-- Make sure `backend/.env` exists with all required variables
-- Run `npm install` inside the `backend/` directory
-- Check that port 5000 is not in use: `netstat -ano | findstr :5000` (Windows)
-
-### Frontend can't reach the API
-- Ensure `NEXT_PUBLIC_API_URL` in `frontend/.env.local` points to the correct backend URL
-- Locally: `http://localhost:5000/api`
-- On Vercel: `https://your-deployment.vercel.app/api`
-
-### Candidate image upload fails
-- Verify `IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY`, and `IMAGEKIT_URL_ENDPOINT` are set in both backend `.env` and Vercel environment variables
-- Check the browser console for the exact error message
-
-### Firebase authentication errors
-- Ensure the Firebase project has **Email/Password** authentication enabled
-- Verify all `NEXT_PUBLIC_FIREBASE_*` variables are correctly set
-- Make sure Firestore is in **production** or **test** mode (not locked down)
-
-### Vercel deployment not reflecting latest changes
-- Go to Vercel Dashboard → your project → **Deployments** → click **Redeploy** on the latest commit
-- After adding/changing environment variables, a new deployment is always required
-
-### "Module not found" errors on Vercel
-- Run `npm install` locally, commit the `package-lock.json`, and push again
-
----
-
-## 📄 License
-
-This project is built for HTU academic purposes.
-
----
-
-*Built with ❤️ by the HTU dev team.*
+*Built with ❤️ by the Techdevstudios team.*
