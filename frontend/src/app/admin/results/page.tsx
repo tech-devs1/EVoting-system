@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
@@ -6,13 +6,15 @@ import { apiRequest } from '@/lib/api';
 import { RefreshCw, ArrowLeft } from 'lucide-react';
 import {
   Chart as ChartJS,
-  ArcElement,
+  CategoryScale,
+  LinearScale,
+  BarElement,
   Tooltip,
   Legend,
 } from 'chart.js';
-import { Doughnut } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 interface Candidate {
   id: string;
@@ -54,7 +56,7 @@ export default function AdminResultsPage() {
     fetchElections();
   }, []);
 
-  // Fetch candidates whenever election selection changes
+  // Fetch real candidate vote counts whenever election selection changes (polls every 5s)
   useEffect(() => {
     if (!selectedElectionId) return;
 
@@ -73,19 +75,9 @@ export default function AdminResultsPage() {
 
     fetchCandidates();
 
-    // Simulate real-time vote streaming
+    // Poll real data every 5 seconds
     if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      setCandidates(prev => {
-        const updated = prev.map(c => ({
-          ...c,
-          votes: (c.votes || 0) + Math.floor(Math.random() * 3)
-        }));
-        const newTotal = updated.reduce((sum, c) => sum + c.votes, 0);
-        setTotalVotes(newTotal);
-        return updated;
-      });
-    }, 2000);
+    intervalRef.current = setInterval(fetchCandidates, 5000);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -94,19 +86,41 @@ export default function AdminResultsPage() {
 
   const selectedElection = elections.find(e => e.id === selectedElectionId);
 
-  const chartData = {
+  const COLORS = ['#3B82F6', '#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#F97316'];
+
+  const barChartData = {
     labels: candidates.map(c => c.name),
     datasets: [{
+      label: 'Votes',
       data: candidates.map(c => c.votes || 0),
-      backgroundColor: ['#2563EB', '#7C3AED', '#10B981', '#F59E0B'],
-      borderWidth: 0,
+      backgroundColor: candidates.map((_, i) => COLORS[i % COLORS.length]),
+      borderRadius: 6,
+      borderSkipped: false,
     }]
   };
 
-  const chartOptions = {
+  const barChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom' as const } }
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx: any) => {
+            const pct = totalVotes > 0 ? ((ctx.raw / totalVotes) * 100).toFixed(1) : '0.0';
+            return ` ${ctx.raw} votes (${pct}%)`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(148, 163, 184, 0.1)' },
+        ticks: { stepSize: 1 }
+      },
+      x: { grid: { display: false } }
+    }
   };
 
   return (
@@ -137,7 +151,7 @@ export default function AdminResultsPage() {
             ))}
           </select>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-            <RefreshCw size={14} className="animate-spin-slow" /> Stream active (2s auto-refresh)
+            <RefreshCw size={14} className="animate-spin-slow" /> Live (5s refresh)
           </div>
         </div>
       </div>
@@ -145,53 +159,60 @@ export default function AdminResultsPage() {
       {loading ? (
         <p style={{ color: 'var(--text-secondary)' }}>Loading results stream...</p>
       ) : (
-        <div className="admin-grid-charts" style={{ gridTemplateColumns: '1.2fr 1fr' }}>
-          {/* Live Rank Progress Indicators */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+
+          {/* Bar Chart - Real-time vote counts */}
           <div className="card">
-            <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-6)' }}>Candidate Vote Standings</h3>
-            <div className="rankings-list">
-              {candidates.length === 0 ? (
-                <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>No candidates registered for this election.</p>
+            <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-4)' }}>
+              Real-Time Vote Standings
+            </h3>
+            <div style={{ height: '320px', position: 'relative' }}>
+              {candidates.length > 0 ? (
+                <Bar data={barChartData} options={barChartOptions} />
               ) : (
-                candidates.map((cand, idx) => {
-                  const percentage = totalVotes > 0 ? Math.round(((cand.votes || 0) / totalVotes) * 100) : 0;
-                  const colors = ['#2563EB', '#7C3AED', '#10B981', '#F59E0B'];
-                  return (
-                    <div className="ranking-item" key={cand.id} style={{ marginBottom: 'var(--space-4)' }}>
-                      <div className="ranking-info" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)' }}>
-                        <span style={{ fontWeight: 'var(--weight-semibold)' }}>{cand.name} <span style={{ color: 'var(--text-tertiary)', fontWeight: 'normal' }}>({cand.position})</span></span>
-                        <span>{(cand.votes || 0).toLocaleString()} votes ({percentage}%)</span>
-                      </div>
-                      <div className="ranking-progress-bg" style={{ height: '8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-                        <div
-                          className="ranking-progress-bar"
-                          style={{
-                            width: `${percentage}%`,
-                            height: '100%',
-                            background: colors[idx % colors.length],
-                            borderRadius: 'var(--radius-full)',
-                            transition: 'width 0.5s ease'
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })
+                <p style={{ color: 'var(--text-secondary)', textAlign: 'center', marginTop: 'var(--space-8)' }}>No candidates registered for this election.</p>
               )}
             </div>
           </div>
 
-          {/* Vote Share Donut Chart */}
+          {/* Progress bars ranking */}
           <div className="card">
-            <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-6)' }}>Vote Share Breakdown</h3>
-            <div style={{ height: '280px', position: 'relative' }}>
-              {candidates.length > 0 ? (
-                <Doughnut data={chartData} options={chartOptions} />
+            <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-6)' }}>Candidate Rankings</h3>
+            <div className="rankings-list">
+              {candidates.length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>No candidates registered for this election.</p>
               ) : (
-                <p style={{ color: 'var(--text-secondary)', textAlign: 'center', marginTop: 'var(--space-8)' }}>No vote data available.</p>
+                [...candidates]
+                  .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+                  .map((cand, idx) => {
+                    const percentage = totalVotes > 0 ? Math.round(((cand.votes || 0) / totalVotes) * 100) : 0;
+                    return (
+                      <div className="ranking-item" key={cand.id} style={{ marginBottom: 'var(--space-4)' }}>
+                        <div className="ranking-info" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)' }}>
+                          <span style={{ fontWeight: 'var(--weight-semibold)' }}>
+                            #{idx + 1} {cand.name} <span style={{ color: 'var(--text-tertiary)', fontWeight: 'normal' }}>({cand.position})</span>
+                          </span>
+                          <span>{(cand.votes || 0).toLocaleString()} votes ({percentage}%)</span>
+                        </div>
+                        <div className="ranking-progress-bg" style={{ height: '8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                          <div
+                            className="ranking-progress-bar"
+                            style={{
+                              width: `${percentage}%`,
+                              height: '100%',
+                              background: COLORS[idx % COLORS.length],
+                              borderRadius: 'var(--radius-full)',
+                              transition: 'width 0.5s ease'
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })
               )}
             </div>
           </div>
+
         </div>
       )}
     </div>

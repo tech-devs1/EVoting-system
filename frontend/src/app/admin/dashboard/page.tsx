@@ -18,28 +18,20 @@ import {
   Chart as ChartJS, 
   CategoryScale, 
   LinearScale, 
-  PointElement, 
-  LineElement, 
   BarElement,
-  ArcElement,
   Title, 
   Tooltip, 
-  Legend, 
-  Filler 
+  Legend
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
-  PointElement,
-  LineElement,
   BarElement,
-  ArcElement,
   Title,
   Tooltip,
-  Legend,
-  Filler
+  Legend
 );
 
 interface CandidateStats {
@@ -97,10 +89,7 @@ export default function AdminDashboardPage() {
     fetchDashboard();
   }, []);
 
-  // State to control donut animation
-  const [animateDonut, setAnimateDonut] = useState(false);
-
-  // Update live votes and trigger animation only on change
+  // Update live votes and candidates every 5s
   const [liveVotesCast, setLiveVotesCast] = useState(0);
   const [liveCandidates, setLiveCandidates] = useState<CandidateStats[]>([]);
   useEffect(() => {
@@ -110,13 +99,7 @@ export default function AdminDashboardPage() {
         const res = await apiRequest<{ status: string; data: { liveVotesCount: number; topCandidates?: CandidateStats[] } }>('/admin/live-votes');
         if (res.status === 'success') {
           const count = res.data.liveVotesCount ?? 0;
-          setLiveVotesCast(prev => {
-            if (prev !== count) {
-              setAnimateDonut(true); // trigger animation
-              return count;
-            }
-            return prev;
-          });
+          setLiveVotesCast(count);
           if (res.data.topCandidates) {
              setLiveCandidates(res.data.topCandidates);
           }
@@ -129,14 +112,6 @@ export default function AdminDashboardPage() {
     intervalId = setInterval(fetchLiveVotes, 5000);
     return () => clearInterval(intervalId);
   }, []);
-
-  // Reset animation flag after a short period to avoid re‑animation on unchanged data
-  useEffect(() => {
-    if (animateDonut) {
-      const timeout = setTimeout(() => setAnimateDonut(false), 1000);
-      return () => clearTimeout(timeout);
-    }
-  }, [animateDonut]);
 
   // Candidate Bar Chart Data
   const candidatesSource = liveCandidates.length > 0 ? liveCandidates : (stats.topCandidates || []);
