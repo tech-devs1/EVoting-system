@@ -3,16 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { Plus, ArrowLeft, Trash, AlertTriangle, Users } from 'lucide-react';
-import { storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Plus, ArrowLeft, Trash, Users } from 'lucide-react';
 
 interface Candidate {
   id: string;
   name: string;
   position: string;
   manifesto: string;
-  manifestoUrl?: string;
   photoUrl: string;
   votes: number;
 }
@@ -27,38 +24,19 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   const [election, setElection] = useState<Election | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Add candidate modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formPos, setFormPos] = useState('');
   const [formManifesto, setFormManifesto] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  
-  // Edit manifesto modal state
+
+  // Edit manifesto modal
   const [editManifestoCand, setEditManifestoCand] = useState<Candidate | null>(null);
   const [manifestoContent, setManifestoContent] = useState<string>('');
-  const [uploadingManifesto, setUploadingManifesto] = useState(false);
-
-  // Save edited manifesto text to backend
-  const handleManifestoSave = async () => {
-    if (!editManifestoCand) return;
-    setUploadingManifesto(true);
-    try {
-      const res = await apiRequest(`/candidates/${editManifestoCand.id}`, 'PATCH', { manifesto: manifestoContent });
-      // Update local state
-      setCandidates(prev =>
-        prev.map(c => (c.id === editManifestoCand.id ? { ...c, manifesto: manifestoContent } : c))
-      );
-      setEditManifestoCand(null);
-      setManifestoContent('');
-      alert('Manifesto updated successfully!');
-    } catch (err: any) {
-      alert('Failed to update manifesto: ' + err.message);
-    } finally {
-      setUploadingManifesto(false);
-    }
-  };
-
+  const [savingManifesto, setSavingManifesto] = useState(false);
 
   // Unwrap params
   React.useEffect(() => {
@@ -83,35 +61,40 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
     fetchData();
   }, [electionId]);
 
-  const handleDeleteCandidate = async (candidateId: string) => {
+  const openEditManifesto = (cand: Candidate) => {
+    setManifestoContent(cand.manifesto || '');
+    setEditManifestoCand(cand);
+  };
+
+  const closeEditManifesto = () => {
+    setEditManifestoCand(null);
+    setManifestoContent('');
+  };
+
+  const handleManifestoSave = async () => {
+    if (!editManifestoCand) return;
+    setSavingManifesto(true);
     try {
-      console.log('[Delete Candidate] Deleting candidate:', candidateId);
-      await apiRequest(`/candidates/${candidateId}`, 'DELETE');
-      console.log('[Delete Candidate] Candidate deleted successfully');
-      setCandidates(prev => prev.filter(c => c.id !== candidateId));
-      alert('Candidate removed successfully');
+      await apiRequest(`/candidates/${editManifestoCand.id}`, 'PATCH', { manifesto: manifestoContent });
+      setCandidates(prev =>
+        prev.map(c => c.id === editManifestoCand.id ? { ...c, manifesto: manifestoContent } : c)
+      );
+      closeEditManifesto();
+      alert('Manifesto updated successfully!');
     } catch (err: any) {
-      console.error('[Delete Candidate] Error:', err);
-      alert('Failed to remove candidate: ' + err.message);
+      alert('Failed to update manifesto: ' + err.message);
+    } finally {
+      setSavingManifesto(false);
     }
   };
 
-  const handleManifestoUpload = async () => {
-    if (!uploadManifestoCand || !manifestoFile) return;
-    setUploadingManifesto(true);
+  const handleDeleteCandidate = async (candidateId: string) => {
+    if (!confirm('Are you sure you want to remove this candidate?')) return;
     try {
-      const storageRef = ref(storage, `manifestos/${uploadManifestoCand.id}_${Date.now()}_${manifestoFile.name}`);
-      await uploadBytes(storageRef, manifestoFile);
-      const url = await getDownloadURL(storageRef);
-      await apiRequest(`/candidates/${uploadManifestoCand.id}`, 'PATCH', { manifestoUrl: url });
-      setCandidates(prev => prev.map(c => c.id === uploadManifestoCand.id ? { ...c, manifestoUrl: url } : c));
-      setUploadManifestoCand(prev => prev ? { ...prev, manifestoUrl: url } : null);
-      setManifestoFile(null);
-      alert('Manifesto uploaded successfully!');
+      await apiRequest(`/candidates/${candidateId}`, 'DELETE');
+      setCandidates(prev => prev.filter(c => c.id !== candidateId));
     } catch (err: any) {
-      alert('Upload failed: ' + err.message);
-    } finally {
-      setUploadingManifesto(false);
+      alert('Failed to remove candidate: ' + err.message);
     }
   };
 
@@ -119,84 +102,48 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
     e.preventDefault();
     setSubmitting(true);
     try {
-      console.log('[Add Candidate] Starting candidate creation...');
-      console.log('[Add Candidate] Form data:', { name: formName, position: formPos, electionId });
-      
       let photoUrl = '';
-      let manifestoUrl = '';
-      
+
       if (photoFile) {
-        console.log('[Add Candidate] Uploading photo to ImageKit...');
-        try {
-          // 1. Get Auth params from our backend
-          const authRes = await apiRequest<{ signature: string; expire: number; token: string }>('/imagekit/auth', 'GET');
-          
-          if (!authRes || !authRes.signature) {
-            throw new Error('Failed to fetch ImageKit auth parameters');
-          }
+        const authRes = await apiRequest<{ signature: string; expire: number; token: string }>('/imagekit/auth', 'GET');
+        if (!authRes?.signature) throw new Error('Failed to fetch ImageKit auth parameters');
 
-          // 2. Upload directly to ImageKit
-          const publicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || "public_IdMY8+9qGvRoDF3lZfo+avVLvpw=";
-          if (!publicKey) {
-            throw new Error('NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY is missing on the client side. Please add it to your frontend deployment dashboard (e.g. Vercel settings) and trigger a new build.');
-          }
+        const publicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || 'public_IdMY8+9qGvRoDF3lZfo+avVLvpw=';
+        const formData = new FormData();
+        formData.append('file', photoFile);
+        formData.append('publicKey', publicKey);
+        formData.append('signature', authRes.signature);
+        formData.append('expire', authRes.expire.toString());
+        formData.append('token', authRes.token);
+        formData.append('fileName', `candidate_${Date.now()}_${photoFile.name}`);
+        formData.append('folder', '/candidates');
 
-          const formData = new FormData();
-          formData.append('file', photoFile);
-          formData.append('publicKey', publicKey);
-          formData.append('signature', authRes.signature);
-          formData.append('expire', authRes.expire.toString());
-          formData.append('token', authRes.token);
-          formData.append('fileName', `candidate_${Date.now()}_${photoFile.name}`);
-          formData.append('folder', '/candidates'); // Optional: organize in folder
-          
-          const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
-            method: 'POST',
-            body: formData
-          });
-          
-          const uploadData = await uploadRes.json();
-          
-          if (uploadRes.ok) {
-            photoUrl = uploadData.url;
-            console.log('[Add Candidate] Photo uploaded to ImageKit:', photoUrl);
-          } else {
-            console.error('[Add Candidate] ImageKit upload failed:', uploadData);
-            throw new Error(uploadData.message || 'ImageKit upload failed: Invalid keys or missing configuration. Did you restart the server?');
-          }
-        } catch (uploadError: any) {
-          console.error('[Add Candidate] Photo upload failed:', uploadError);
-          alert('Photo upload failed: ' + uploadError.message);
-          setSubmitting(false);
-          return; // Stop candidate creation if photo upload fails!
+        const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', { method: 'POST', body: formData });
+        const uploadData = await uploadRes.json();
+        if (uploadRes.ok) {
+          photoUrl = uploadData.url;
+        } else {
+          throw new Error(uploadData.message || 'ImageKit upload failed');
         }
-      } else {
-        console.log('[Add Candidate] No photo provided, skipping upload');
       }
 
-      console.log('[Add Candidate] Sending API request...');
       const res = await apiRequest<{ status: string; data: Candidate }>('/candidates', 'POST', {
         name: formName,
         position: formPos,
         manifesto: formManifesto,
         photoUrl,
-        manifestoUrl,
-        electionId
+        electionId,
       });
-      
-      console.log('[Add Candidate] API response:', res);
-      
+
       if (res.status === 'success') {
         setCandidates(prev => [...prev, res.data]);
         setIsModalOpen(false);
         setFormName(''); setFormPos(''); setFormManifesto('');
         setPhotoFile(null);
-        alert('Candidate added successfully!');
       } else {
         alert('Failed to add candidate: ' + (res as any).message || 'Unknown error');
       }
     } catch (err: any) {
-      console.error('[Add Candidate] Error:', err);
       alert('Failed to add candidate: ' + err.message);
     } finally {
       setSubmitting(false);
@@ -238,15 +185,13 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               />
               <h4 className="candidate-name">{cand.name}</h4>
               <span className="candidate-position">{cand.position}</span>
-              <button 
+              <button
                 type="button"
-                className="btn btn-outline btn-full btn-sm" 
-                onClick={() => {
-                  setEditManifestoCand(cand);
-                }}
+                className="btn btn-outline btn-full btn-sm"
+                onClick={() => openEditManifesto(cand)}
                 style={{ marginTop: 'var(--space-2)', marginBottom: 'var(--space-2)' }}
               >
-                Edit Manifesto
+                {cand.manifesto ? 'Edit Manifesto' : 'Upload Manifesto'}
               </button>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)', marginTop: 'var(--space-1)' }}>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
@@ -274,28 +219,24 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               <button className="modal-close" onClick={() => setIsModalOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleAddCandidate}>
-        <div className="modal-body">
-          {/* Candidate Name */}
-          <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-            <label className="form-label" htmlFor="cand-name" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Name</label>
-            <input type="text" id="cand-name" className="form-input" placeholder="e.g. John Doe" required value={formName} onChange={e => setFormName(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-          </div>
-          {/* Position */}
-          <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-            <label className="form-label" htmlFor="cand-pos" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Position</label>
-            <input type="text" id="cand-pos" className="form-input" placeholder="e.g. President" required value={formPos} onChange={e => setFormPos(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-          </div>
-          {/* Manifesto */}
-          <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-            <label className="form-label" htmlFor="cand-man" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Manifesto Statement</label>
-            <textarea id="cand-man" className="form-input" placeholder="Paste candidate's full manifesto statement here..." style={{ width: '100%', minHeight: '140px', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} required value={formManifesto} onChange={e => setFormManifesto(e.target.value)}></textarea>
-          </div>
-          {/* Photo Upload */}
-          <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-            <label className="form-label" htmlFor="cand-photo" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Photo (Image) - Optional</label>
-            <input type="file" id="cand-photo" accept="image/*" className="form-input" onChange={e => e.target.files && setPhotoFile(e.target.files[0])} style={{ width: '100%', padding: 'var(--space-1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-          </div>
-        </div>
+              <div className="modal-body">
+                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+                  <label className="form-label" htmlFor="cand-name" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Name</label>
+                  <input type="text" id="cand-name" className="form-input" placeholder="e.g. John Doe" required value={formName} onChange={e => setFormName(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+                  <label className="form-label" htmlFor="cand-pos" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Position</label>
+                  <input type="text" id="cand-pos" className="form-input" placeholder="e.g. President" required value={formPos} onChange={e => setFormPos(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+                  <label className="form-label" htmlFor="cand-man" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Manifesto Statement (optional)</label>
+                  <textarea id="cand-man" className="form-input" placeholder="Paste candidate's manifesto here..." style={{ width: '100%', minHeight: '120px', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} value={formManifesto} onChange={e => setFormManifesto(e.target.value)} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+                  <label className="form-label" htmlFor="cand-photo" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Photo — Optional</label>
+                  <input type="file" id="cand-photo" accept="image/*" className="form-input" onChange={e => e.target.files && setPhotoFile(e.target.files[0])} style={{ width: '100%', padding: 'var(--space-1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+                </div>
+              </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
@@ -307,82 +248,55 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
         </div>
       )}
 
-      {/* Upload Manifesto Modal */}
-      {uploadManifestoCand && (
-        <div className="modal-overlay active" onClick={() => { setUploadManifestoCand(null); setManifestoFile(null); }}>
-          <div className="modal-container" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Upload Manifesto — {uploadManifestoCand.name}</h3>
-              <button className="modal-close" onClick={() => { setUploadManifestoCand(null); setManifestoFile(null); }}>&times;</button>
-            </div>
-            <div className="modal-body">
-              {uploadManifestoCand.manifestoUrl && (
-                <div style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'var(--bg-input)', border: '1px solid var(--border-color)' }}>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>Current manifesto:</p>
-                  <a href={uploadManifestoCand.manifestoUrl} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
-                    📄 View Uploaded PDF
-                  </a>
-                </div>
-              )}
-              <div className="form-group">
-                <label className="form-label" htmlFor="manifesto-file" style={{ display: 'block', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>
-                  {uploadManifestoCand.manifestoUrl ? 'Replace manifesto (PDF / DOC)' : 'Upload manifesto file (PDF / DOC)'}
-                </label>
-                <input
-                  type="file"
-                  id="manifesto-file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  className="form-input"
-                  onChange={e => e.target.files && setManifestoFile(e.target.files[0])}
-                  style={{ width: '100%', padding: 'var(--space-1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                />
-                {manifestoFile && (
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>
-                    Selected: {manifestoFile.name}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => { setUploadManifestoCand(null); setManifestoFile(null); }}>Cancel</button>
-              <button
-                className="btn btn-primary"
-                onClick={handleManifestoUpload}
-                disabled={!manifestoFile || uploadingManifesto}
-              >
-                {uploadingManifesto ? 'Uploading...' : 'Upload'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Edit Manifesto Modal */}
+      {/* Edit / Upload Manifesto Modal (Rich Text) */}
       {editManifestoCand && (
-        <div className="modal-overlay active" onClick={() => { setEditManifestoCand(null); setManifestoContent(''); }}>
+        <div className="modal-overlay active" onClick={closeEditManifesto}>
           <div className="modal-container" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Edit Manifesto — {editManifestoCand.name}</h3>
-              <button className="modal-close" onClick={() => { setEditManifestoCand(null); setManifestoContent(''); }}>&times;</button>
+              <h3 className="modal-title">
+                {editManifestoCand.manifesto ? 'Edit' : 'Upload'} Manifesto — {editManifestoCand.name}
+              </h3>
+              <button className="modal-close" onClick={closeEditManifesto}>&times;</button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              {/* Toolbar */}
-              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('bold')}>B</button>
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('italic')}>I</button>
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('underline')}>U</button>
+              {/* Formatting toolbar */}
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', padding: 'var(--space-2)', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                <button type="button" className="btn btn-outline btn-sm" style={{ fontWeight: 'bold' }} onClick={() => document.execCommand('bold')}>B</button>
+                <button type="button" className="btn btn-outline btn-sm" style={{ fontStyle: 'italic' }} onClick={() => document.execCommand('italic')}>I</button>
+                <button type="button" className="btn btn-outline btn-sm" style={{ textDecoration: 'underline' }} onClick={() => document.execCommand('underline')}>U</button>
+                <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('insertUnorderedList')}>• List</button>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('insertOrderedList')}>1. List</button>
+                <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('justifyLeft')}>≡ Left</button>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('justifyCenter')}>≡ Center</button>
               </div>
+
+              {/* Editable area */}
               <div
+                id="manifesto-editor"
                 contentEditable
-                className="form-input"
-                style={{ minHeight: '200px', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', overflowY: 'auto' }}
+                suppressContentEditableWarning
+                style={{
+                  minHeight: '220px',
+                  padding: 'var(--space-3)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
+                  overflowY: 'auto',
+                  lineHeight: 1.7,
+                  fontSize: 'var(--text-sm)',
+                  outline: 'none',
+                }}
                 onInput={e => setManifestoContent(e.currentTarget.innerHTML)}
                 dangerouslySetInnerHTML={{ __html: manifestoContent }}
-              ></div>
+              />
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => { setEditManifestoCand(null); setManifestoContent(''); }}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleManifestoSave} disabled={uploadingManifesto}>
-                {uploadingManifesto ? 'Saving...' : 'Save'}
+              <button className="btn btn-secondary" onClick={closeEditManifesto}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleManifestoSave} disabled={savingManifesto}>
+                {savingManifesto ? 'Saving...' : 'Save Manifesto'}
               </button>
             </div>
           </div>
