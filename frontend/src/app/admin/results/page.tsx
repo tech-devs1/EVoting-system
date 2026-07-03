@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, getAuthHeaders } from '@/lib/api';
 import { RefreshCw, ArrowLeft, Trophy, Download } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -356,12 +356,9 @@ export default function AdminResultsPage() {
 
   const handleDownloadPdf = async (elId: string, elTitle: string) => {
     try {
-      const token = localStorage.getItem('Votick_token');
-      const authHeader = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000/api'}/elections/${elId}/report/pdf`, {
-        headers: {
-          'Authorization': authHeader,
-        },
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/elections/${elId}/report/pdf`, {
+        headers,
       });
 
       if (!response.ok) {
