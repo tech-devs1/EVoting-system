@@ -34,10 +34,31 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   
-  // Upload manifesto modal state
-  const [uploadManifestoCand, setUploadManifestoCand] = useState<Candidate | null>(null);
-  const [manifestoFile, setManifestoFile] = useState<File | null>(null);
+  // Edit manifesto modal state
+  const [editManifestoCand, setEditManifestoCand] = useState<Candidate | null>(null);
+  const [manifestoContent, setManifestoContent] = useState<string>('');
   const [uploadingManifesto, setUploadingManifesto] = useState(false);
+
+  // Save edited manifesto text to backend
+  const handleManifestoSave = async () => {
+    if (!editManifestoCand) return;
+    setUploadingManifesto(true);
+    try {
+      const res = await apiRequest(`/candidates/${editManifestoCand.id}`, 'PATCH', { manifesto: manifestoContent });
+      // Update local state
+      setCandidates(prev =>
+        prev.map(c => (c.id === editManifestoCand.id ? { ...c, manifesto: manifestoContent } : c))
+      );
+      setEditManifestoCand(null);
+      setManifestoContent('');
+      alert('Manifesto updated successfully!');
+    } catch (err: any) {
+      alert('Failed to update manifesto: ' + err.message);
+    } finally {
+      setUploadingManifesto(false);
+    }
+  };
+
 
   // Unwrap params
   React.useEffect(() => {
@@ -220,10 +241,12 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               <button 
                 type="button"
                 className="btn btn-outline btn-full btn-sm" 
-                onClick={() => setUploadManifestoCand(cand)}
+                onClick={() => {
+                  setEditManifestoCand(cand);
+                }}
                 style={{ marginTop: 'var(--space-2)', marginBottom: 'var(--space-2)' }}
               >
-                Upload Manifesto
+                Edit Manifesto
               </button>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)', marginTop: 'var(--space-1)' }}>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
@@ -328,6 +351,38 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                 disabled={!manifestoFile || uploadingManifesto}
               >
                 {uploadingManifesto ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Manifesto Modal */}
+      {editManifestoCand && (
+        <div className="modal-overlay active" onClick={() => { setEditManifestoCand(null); setManifestoContent(''); }}>
+          <div className="modal-container" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Manifesto — {editManifestoCand.name}</h3>
+              <button className="modal-close" onClick={() => { setEditManifestoCand(null); setManifestoContent(''); }}>&times;</button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              {/* Toolbar */}
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('bold')}>B</button>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('italic')}>I</button>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('underline')}>U</button>
+              </div>
+              <div
+                contentEditable
+                className="form-input"
+                style={{ minHeight: '200px', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', overflowY: 'auto' }}
+                onInput={e => setManifestoContent(e.currentTarget.innerHTML)}
+                dangerouslySetInnerHTML={{ __html: manifestoContent }}
+              ></div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => { setEditManifestoCand(null); setManifestoContent(''); }}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleManifestoSave} disabled={uploadingManifesto}>
+                {uploadingManifesto ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
