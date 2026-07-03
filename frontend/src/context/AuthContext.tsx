@@ -12,7 +12,6 @@ export interface UserProfile {
   createdAt?: number;
   status?: string;
   faceImage?: string;
-  faceImage?: string;
 }
 
 interface AuthContextType {
