@@ -618,6 +618,9 @@ export default function RegisterPage() {
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                   A 6-digit code was sent to <strong>{otpEmail}</strong>.<br />Enter it below to verify your account.
                 </p>
+                <p style={{ fontSize: '11px', color: 'var(--color-warning, #f59e0b)', marginTop: 'var(--space-2)', fontWeight: 500 }}>
+                  ⚠️ Don't see it? Please check your <strong>Spam or Junk folder</strong>.
+                </p>
               </div>
 
               {resendMsg && (

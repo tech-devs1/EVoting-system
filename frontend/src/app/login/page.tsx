@@ -238,6 +238,9 @@ export default function LoginPage() {
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                 Check your inbox — code expires in <strong>10 minutes</strong>
               </p>
+              <p style={{ fontSize: '11px', color: 'var(--color-warning, #f59e0b)', marginTop: 'var(--space-2)', fontWeight: 500 }}>
+                ⚠️ Don't see the code? Check your <strong>Spam or Junk folder</strong>.
+              </p>
             </div>
 
             {/* 6-digit OTP boxes */}
