@@ -446,7 +446,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: transparent;
+  background: var(--bg-overlay);
   z-index: var(--z-modal);
   display: flex;
   align-items: center;
@@ -469,7 +469,7 @@
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 600px;
-  max-height: calc(100vh - var(--space-12));
+  max-height: calc(100dvh - var(--space-12));
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-2xl);
@@ -532,11 +532,29 @@
   flex-shrink: 0;
 }
 
-/* ---- Mobile Modal Fixes ---- */
+/* ---- Tablet: bottom nav is visible (769px – 1024px) ---- */
+/* The bottom nav (68px) is displayed in this range, so we must push the
+   modal overlay up so its content is never hidden behind the nav bar. */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .modal-overlay {
+    /* Stop the overlay at the top of the bottom nav */
+    bottom: var(--bottom-nav-height);
+    /* Re-center vertically within the remaining area */
+    align-items: center;
+  }
+
+  .modal-container {
+    /* Leave comfortable breathing room above the nav */
+    max-height: calc(100dvh - var(--bottom-nav-height) - var(--space-12));
+  }
+}
+
+/* ---- Mobile Modal Fixes (<= 768px, no bottom nav) ---- */
 @media (max-width: 768px) {
   .modal-overlay {
     align-items: flex-end;
     padding: 0;
+    bottom: 0; /* No bottom nav on mobile */
   }
 
   .modal-container {
