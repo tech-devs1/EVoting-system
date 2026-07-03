@@ -71,4 +71,22 @@ router.delete('/:candidateId', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Update a candidate field (Admin only) — used for manifesto URL uploads
+router.patch('/:candidateId', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+    const updates = req.body; // e.g. { manifestoUrl: '...' }
+    
+    if (!updates || Object.keys(updates).length === 0) {
+      return res.status(400).json({ status: 'error', message: 'No update fields provided' });
+    }
+
+    await db.collection('candidates').doc(candidateId).update(updates);
+    res.status(200).json({ status: 'success', message: 'Candidate updated successfully' });
+  } catch (error) {
+    console.error('[Update Candidate] Error:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update candidate' });
+  }
+});
+
 module.exports = router;

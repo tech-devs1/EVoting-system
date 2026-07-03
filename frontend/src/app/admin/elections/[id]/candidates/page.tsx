@@ -34,9 +34,10 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   
-  // Manifesto modal state
-  const [isManifestoModalOpen, setIsManifestoModalOpen] = useState(false);
-  const [activeManifestoCandidate, setActiveManifestoCandidate] = useState<Candidate | null>(null);
+  // Upload manifesto modal state
+  const [uploadManifestoCand, setUploadManifestoCand] = useState<Candidate | null>(null);
+  const [manifestoFile, setManifestoFile] = useState<File | null>(null);
+  const [uploadingManifesto, setUploadingManifesto] = useState(false);
 
   // Unwrap params
   React.useEffect(() => {
@@ -71,6 +72,25 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
     } catch (err: any) {
       console.error('[Delete Candidate] Error:', err);
       alert('Failed to remove candidate: ' + err.message);
+    }
+  };
+
+  const handleManifestoUpload = async () => {
+    if (!uploadManifestoCand || !manifestoFile) return;
+    setUploadingManifesto(true);
+    try {
+      const storageRef = ref(storage, `manifestos/${uploadManifestoCand.id}_${Date.now()}_${manifestoFile.name}`);
+      await uploadBytes(storageRef, manifestoFile);
+      const url = await getDownloadURL(storageRef);
+      await apiRequest(`/candidates/${uploadManifestoCand.id}`, 'PATCH', { manifestoUrl: url });
+      setCandidates(prev => prev.map(c => c.id === uploadManifestoCand.id ? { ...c, manifestoUrl: url } : c));
+      setUploadManifestoCand(prev => prev ? { ...prev, manifestoUrl: url } : null);
+      setManifestoFile(null);
+      alert('Manifesto uploaded successfully!');
+    } catch (err: any) {
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setUploadingManifesto(false);
     }
   };
 
@@ -200,13 +220,10 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               <button 
                 type="button"
                 className="btn btn-outline btn-full btn-sm" 
-                onClick={() => {
-                  setActiveManifestoCandidate(cand);
-                  setIsManifestoModalOpen(true);
-                }}
+                onClick={() => setUploadManifestoCand(cand)}
                 style={{ marginTop: 'var(--space-2)', marginBottom: 'var(--space-2)' }}
               >
-                Read Manifesto
+                Upload Manifesto
               </button>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)', marginTop: 'var(--space-1)' }}>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
@@ -267,21 +284,51 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
         </div>
       )}
 
-      {/* Manifesto View Modal */}
-      {isManifestoModalOpen && activeManifestoCandidate && (
-        <div className="modal-overlay active" onClick={() => setIsManifestoModalOpen(false)}>
+      {/* Upload Manifesto Modal */}
+      {uploadManifestoCand && (
+        <div className="modal-overlay active" onClick={() => { setUploadManifestoCand(null); setManifestoFile(null); }}>
           <div className="modal-container" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">{activeManifestoCandidate.name} — Manifesto</h3>
-              <button className="modal-close" onClick={() => setIsManifestoModalOpen(false)}>&times;</button>
+              <h3 className="modal-title">Upload Manifesto — {uploadManifestoCand.name}</h3>
+              <button className="modal-close" onClick={() => { setUploadManifestoCand(null); setManifestoFile(null); }}>&times;</button>
             </div>
             <div className="modal-body">
-              <p style={{ whiteSpace: 'pre-wrap', fontSize: 'var(--text-sm)', lineHeight: 1.6, color: 'var(--text-primary)' }}>
-                {activeManifestoCandidate.manifesto}
-              </p>
+              {uploadManifestoCand.manifestoUrl && (
+                <div style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'var(--bg-input)', border: '1px solid var(--border-color)' }}>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>Current manifesto:</p>
+                  <a href={uploadManifestoCand.manifestoUrl} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
+                    📄 View Uploaded PDF
+                  </a>
+                </div>
+              )}
+              <div className="form-group">
+                <label className="form-label" htmlFor="manifesto-file" style={{ display: 'block', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>
+                  {uploadManifestoCand.manifestoUrl ? 'Replace manifesto (PDF / DOC)' : 'Upload manifesto file (PDF / DOC)'}
+                </label>
+                <input
+                  type="file"
+                  id="manifesto-file"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  className="form-input"
+                  onChange={e => e.target.files && setManifestoFile(e.target.files[0])}
+                  style={{ width: '100%', padding: 'var(--space-1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+                {manifestoFile && (
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>
+                    Selected: {manifestoFile.name}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setIsManifestoModalOpen(false)}>Close</button>
+              <button className="btn btn-secondary" onClick={() => { setUploadManifestoCand(null); setManifestoFile(null); }}>Cancel</button>
+              <button
+                className="btn btn-primary"
+                onClick={handleManifestoUpload}
+                disabled={!manifestoFile || uploadingManifesto}
+              >
+                {uploadingManifesto ? 'Uploading...' : 'Upload'}
+              </button>
             </div>
           </div>
         </div>
