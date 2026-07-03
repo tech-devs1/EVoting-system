@@ -25,13 +25,31 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Predefined positions list
+  const PRESET_POSITIONS = [
+    'President',
+    'Vice President',
+    'Secretary',
+    'Treasurer',
+    'Public Relations Officer',
+    'Academic Affairs Officer',
+    'Social Affairs Officer',
+    'Sports Officer',
+    'Media Officer',
+    'Student Representative',
+  ];
+
   // Add candidate modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formName, setFormName] = useState('');
-  const [formPos, setFormPos] = useState('');
+  const [formPosSelect, setFormPosSelect] = useState('');   // dropdown value
+  const [formPosCustom, setFormPosCustom] = useState('');   // free-text when "custom"
   const [formManifesto, setFormManifesto] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Resolved position — either the dropdown pick or the custom text
+  const formPos = formPosSelect === '__custom__' ? formPosCustom : formPosSelect;
 
   // Edit manifesto modal
   const [editManifestoCand, setEditManifestoCand] = useState<Candidate | null>(null);
@@ -138,7 +156,7 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
       if (res.status === 'success') {
         setCandidates(prev => [...prev, res.data]);
         setIsModalOpen(false);
-        setFormName(''); setFormPos(''); setFormManifesto('');
+        setFormName(''); setFormPosSelect(''); setFormPosCustom(''); setFormManifesto('');
         setPhotoFile(null);
       } else {
         alert('Failed to add candidate: ' + (res as any).message || 'Unknown error');
@@ -212,7 +230,7 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
 
       {/* Add Candidate Modal */}
       {isModalOpen && (
-        <div className="modal-overlay active" onClick={() => setIsModalOpen(false)}>
+        <div className="modal-overlay active" onClick={() => { setIsModalOpen(false); setFormPosSelect(''); setFormPosCustom(''); }}>
           <div className="modal-container" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Add Candidate Profile</h3>
@@ -226,7 +244,34 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                 </div>
                 <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
                   <label className="form-label" htmlFor="cand-pos" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Position</label>
-                  <input type="text" id="cand-pos" className="form-input" placeholder="e.g. President" required value={formPos} onChange={e => setFormPos(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+                  <select
+                    id="cand-pos"
+                    className="form-input"
+                    required
+                    value={formPosSelect}
+                    onChange={e => { setFormPosSelect(e.target.value); setFormPosCustom(''); }}
+                    style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: formPosSelect ? 'var(--text-primary)' : 'var(--text-tertiary)', appearance: 'auto' }}
+                  >
+                    <option value="" disabled>Select a position…</option>
+                    {PRESET_POSITIONS.map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                    <option value="__custom__">✏️ Custom position…</option>
+                  </select>
+
+                  {/* Custom position text input */}
+                  {formPosSelect === '__custom__' && (
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Enter custom position name"
+                      required
+                      value={formPosCustom}
+                      onChange={e => setFormPosCustom(e.target.value)}
+                      autoFocus
+                      style={{ width: '100%', marginTop: 'var(--space-2)', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-primary, #6366f1)', background: 'var(--bg-input)', color: 'var(--text-primary)', outline: 'none' }}
+                    />
+                  )}
                 </div>
                 <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
                   <label className="form-label" htmlFor="cand-man" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Manifesto Statement (optional)</label>
