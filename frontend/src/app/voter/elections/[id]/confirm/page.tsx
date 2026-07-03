@@ -310,138 +310,209 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
 
       {/* Biometric Verification Modal Overlay */}
       {isFaceVerifyOpen && (
-        <div className="modal-overlay active" style={{ zIndex: 10000 }}>
-          <div className="modal-container" style={{ maxWidth: '520px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Biometric Identity Verification</h3>
-              <button 
-                className="modal-close" 
-                onClick={() => {
-                  stopCamera();
-                  setIsFaceVerifyOpen(false);
-                }}
+        <div
+          className="modal-overlay active"
+          style={{ zIndex: 10000, padding: '16px', boxSizing: 'border-box' }}
+          onClick={() => { stopCamera(); setIsFaceVerifyOpen(false); }}
+        >
+          <div
+            className="modal-container"
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              textAlign: 'center',
+              margin: '0 auto',
+              boxSizing: 'border-box',
+              overflow: 'hidden'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="modal-header" style={{ padding: '16px 20px 12px' }}>
+              <h3 className="modal-title" style={{ fontSize: 'clamp(14px, 4vw, 18px)', margin: 0 }}>
+                🔐 Biometric Verification
+              </h3>
+              <button
+                className="modal-close"
+                onClick={() => { stopCamera(); setIsFaceVerifyOpen(false); }}
               >
                 &times;
               </button>
             </div>
-            
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}>
-              
-              {/* Dual image feed layout */}
-              <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
-                
+
+            {/* Body */}
+            <div
+              className="modal-body"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '16px 20px'
+              }}
+            >
+              {/* Camera feeds row */}
+              <div style={{
+                display: 'flex',
+                gap: '16px',
+                justifyContent: 'center',
+                alignItems: 'flex-start',
+                flexWrap: 'wrap',
+                width: '100%'
+              }}>
+
                 {/* Enrolled Template */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>Enrolled Template</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Enrolled
+                  </span>
                   <div style={{
-                    width: '160px',
-                    height: '160px',
+                    width: 'clamp(100px, 28vw, 130px)',
+                    height: 'clamp(100px, 28vw, 130px)',
                     borderRadius: '50%',
                     overflow: 'hidden',
                     border: '3px solid var(--border-color)',
                     background: 'var(--bg-secondary)',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}>
                     {user?.faceImage ? (
-                      <img 
-                        src={user.faceImage} 
-                        alt="Registered Biometric" 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      <img
+                        src={user.faceImage}
+                        alt="Registered Biometric"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     ) : (
-                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>No template</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', padding: '8px', textAlign: 'center' }}>No template</span>
                     )}
                   </div>
                 </div>
 
-                {/* Live Scanner Feed */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>Live Scanner Feed</span>
+                {/* VS divider */}
+                <div style={{ display: 'flex', alignItems: 'center', paddingTop: '28px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-tertiary)' }}>VS</span>
+                </div>
+
+                {/* Live Feed */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Live Feed
+                  </span>
                   <div style={{
                     position: 'relative',
-                    width: '160px',
-                    height: '160px',
+                    width: 'clamp(100px, 28vw, 130px)',
+                    height: 'clamp(100px, 28vw, 130px)',
                     borderRadius: '50%',
                     overflow: 'hidden',
-                    border: '3px solid var(--border-color)',
-                    boxShadow: scanning ? '0 0 15px rgba(99, 102, 241, 0.4)' : scanComplete && scanSuccess ? '0 0 15px rgba(34, 197, 94, 0.4)' : 'none',
+                    border: `3px solid ${scanning ? 'var(--color-primary, #6366f1)' : scanComplete && scanSuccess ? '#22c55e' : 'var(--border-color)'}`,
+                    boxShadow: scanning ? '0 0 18px rgba(99,102,241,0.5)' : scanComplete && scanSuccess ? '0 0 18px rgba(34,197,94,0.5)' : 'none',
                     background: '#000',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
+                    flexShrink: 0,
+                    transition: 'border-color 0.3s, box-shadow 0.3s'
                   }}>
-                    <video 
+                    <video
                       ref={videoRef}
                       autoPlay
                       playsInline
                       muted
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        transform: 'scaleX(-1)' // mirror view
-                      }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block' }}
                     />
-
-                    {/* Face silhouette overlay */}
+                    {/* Dashed guide ring */}
                     <div style={{
                       position: 'absolute',
-                      inset: '12px',
-                      border: '1.5px dashed rgba(255, 255, 255, 0.4)',
+                      inset: '10px',
+                      border: '1.5px dashed rgba(255,255,255,0.35)',
                       borderRadius: '50%',
                       pointerEvents: 'none'
                     }} />
-
-                    {/* Green laser scan bar */}
+                    {/* Laser scan bar */}
                     {scanning && (
                       <div style={{
                         position: 'absolute',
-                        width: '100%',
-                        height: '3px',
+                        left: 0,
+                        right: 0,
+                        height: '2px',
                         background: 'var(--color-primary, #6366f1)',
-                        boxShadow: '0 0 6px var(--color-primary, #6366f1)',
-                        animation: 'scanLaser 2s linear infinite',
+                        boxShadow: '0 0 8px var(--color-primary, #6366f1)',
+                        animation: 'scanLaser 1.5s ease-in-out infinite',
                         top: 0
                       }} />
                     )}
+                    {/* Success check overlay */}
+                    {scanComplete && scanSuccess && (
+                      <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(34,197,94,0.25)'
+                      }}>
+                        <span style={{ fontSize: '32px' }}>✓</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-
               </div>
 
-              {/* Status Message */}
-              <div style={{ marginTop: 'var(--space-2)' }}>
+              {/* Status message */}
+              <div style={{
+                background: scanComplete
+                  ? (scanSuccess ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)')
+                  : 'var(--bg-secondary)',
+                border: `1px solid ${scanComplete ? (scanSuccess ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)') : 'var(--border-color)'}`,
+                borderRadius: '10px',
+                padding: '10px 16px',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}>
                 <p style={{
-                  fontSize: 'var(--text-sm)',
+                  fontSize: '13px',
                   fontWeight: 600,
-                  color: scanComplete ? (scanSuccess ? 'var(--color-success, #22c55e)' : 'var(--color-danger, #ef4444)') : 'var(--text-primary)',
-                  margin: 0
+                  color: scanComplete
+                    ? (scanSuccess ? '#22c55e' : 'var(--color-danger, #ef4444)')
+                    : 'var(--text-primary)',
+                  margin: 0,
+                  textAlign: 'center'
                 }}>
                   {scanMessage}
                 </p>
               </div>
 
+              {/* Instruction hint */}
+              {!scanning && !scanComplete && cameraActive && (
+                <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: 0, textAlign: 'center' }}>
+                  Centre your face in the ring, then tap <strong>Verify &amp; Submit</strong>
+                </p>
+              )}
             </div>
 
-            <div className="modal-footer" style={{ justifyContent: 'center' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => {
-                  stopCamera();
-                  setIsFaceVerifyOpen(false);
-                }}
+            {/* Footer */}
+            <div className="modal-footer" style={{ justifyContent: 'center', gap: '12px', padding: '12px 20px 16px', flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => { stopCamera(); setIsFaceVerifyOpen(false); }}
                 disabled={scanning}
+                style={{ flex: '1 1 auto', minWidth: '110px', maxWidth: '160px' }}
               >
                 Cancel
               </button>
-              <button 
-                className="btn btn-primary" 
+              <button
+                className="btn btn-primary"
                 onClick={handleStartScan}
                 disabled={!cameraActive || scanning || scanComplete}
+                style={{ flex: '1 1 auto', minWidth: '110px', maxWidth: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
-                Verify & Submit
+                {scanning ? (
+                  <>
+                    <span style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    Scanning...
+                  </>
+                ) : (
+                  <><ShieldCheck size={16} /> Verify &amp; Submit</>
+                )}
               </button>
             </div>
           </div>
