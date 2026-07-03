@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
@@ -138,15 +138,13 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
               />
               <h4 className="candidate-name">{cand.name}</h4>
               <span className="candidate-position">{cand.position}</span>
-              <p className="candidate-manifesto line-clamp-3" style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-4)' }}>
-                {cand.manifesto}
-              </p>
               <button 
                 type="button"
                 className="btn btn-outline btn-full btn-sm cand-expand-profile-btn" 
                 onClick={(e) => openProfileModal(cand, e)}
+                style={{ marginTop: 'var(--space-4)' }}
               >
-                View Full Profile & Manifesto
+                Read Manifesto
               </button>
             </div>
           );

@@ -33,6 +33,10 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   const [formManifesto, setFormManifesto] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Manifesto modal state
+  const [isManifestoModalOpen, setIsManifestoModalOpen] = useState(false);
+  const [activeManifestoCandidate, setActiveManifestoCandidate] = useState<Candidate | null>(null);
 
   // Unwrap params
   React.useEffect(() => {
@@ -192,11 +196,18 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                 className="candidate-photo"
               />
               <h4 className="candidate-name">{cand.name}</h4>
-              <span className="candidate-position">{cand.position}</span>
-              <p className="candidate-manifesto line-clamp-6" style={{ marginBottom: 'var(--space-2)', fontSize: 'var(--text-xs)', whiteSpace: 'pre-wrap' }}>
-                {cand.manifesto}
-              </p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+              <button 
+                type="button"
+                className="btn btn-outline btn-full btn-sm" 
+                onClick={() => {
+                  setActiveManifestoCandidate(cand);
+                  setIsManifestoModalOpen(true);
+                }}
+                style={{ marginTop: 'var(--space-2)', marginBottom: 'var(--space-2)' }}
+              >
+                Read Manifesto
+              </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)', marginTop: 'var(--space-1)' }}>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                   Votes: <strong style={{ color: 'var(--text-primary)' }}>{cand.votes || 0}</strong>
                 </span>
@@ -251,6 +262,26 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manifesto View Modal */}
+      {isManifestoModalOpen && activeManifestoCandidate && (
+        <div className="modal-overlay active" onClick={() => setIsManifestoModalOpen(false)}>
+          <div className="modal-container" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{activeManifestoCandidate.name} — Manifesto</h3>
+              <button className="modal-close" onClick={() => setIsManifestoModalOpen(false)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ whiteSpace: 'pre-wrap', fontSize: 'var(--text-sm)', lineHeight: 1.6, color: 'var(--text-primary)' }}>
+                {activeManifestoCandidate.manifesto}
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setIsManifestoModalOpen(false)}>Close</button>
+            </div>
           </div>
         </div>
       )}
