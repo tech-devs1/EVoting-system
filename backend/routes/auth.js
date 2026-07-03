@@ -7,6 +7,20 @@ const { verifyAuth } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 
+// Helper: Calculate Cosine Distance between two vectors
+function cosineDistance(vec1, vec2) {
+  let dotProduct = 0;
+  let norm1 = 0;
+  let norm2 = 0;
+  for (let i = 0; i < vec1.length; i++) {
+    dotProduct += vec1[i] * vec2[i];
+    norm1 += vec1[i] * vec1[i];
+    norm2 += vec2[i] * vec2[i];
+  }
+  if (norm1 === 0 || norm2 === 0) return 1.0;
+  return 1 - (dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2)));
+}
+
 // Shared helper: send OTP via EmailJS
 async function sendOtpViaEmailJS(email, name, otp) {
   const payload = {
@@ -129,6 +143,57 @@ router.post('/register', async (req, res) => {
       return res.status(403).json({ status: 'error', message: 'This student ID has already registered an account to prevent cheating.' });
     }
 
+    let faceEmbedding = null;
+    if (faceImage) {
+      const apiKey = process.env.DEEPFACE_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ status: 'error', message: 'DeepFace API key not configured.' });
+      }
+
+      // Generate embedding using deepface.dev
+      const deepfaceRes = await fetch('https://api.deepface.dev/represent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          img: faceImage,
+          model_name: 'Facenet'
+        })
+      });
+
+      if (!deepfaceRes.ok) {
+        const errText = await deepfaceRes.text();
+        console.error('[Face Represent] Error:', errText);
+        let errorMsg = 'Facial extraction failed. Please try capturing your face again in better lighting.';
+        try {
+          const errJson = JSON.parse(errText);
+          if (errJson.error) errorMsg = errJson.error;
+        } catch (e) {}
+        return res.status(deepfaceRes.status).json({ status: 'error', message: errorMsg });
+      }
+
+      const result = await deepfaceRes.json();
+      if (!result || result.length === 0 || !result[0].embedding) {
+        return res.status(400).json({ status: 'error', message: 'No face detected in the captured image.' });
+      }
+      faceEmbedding = result[0].embedding;
+
+      // Check for duplicates against existing registered users locally
+      const usersSnap = await db.collection('users').where('isRegistered', '==', true).get();
+      for (const doc of usersSnap.docs) {
+        const data = doc.data();
+        if (data.faceEmbedding && Array.isArray(data.faceEmbedding)) {
+          const dist = cosineDistance(faceEmbedding, data.faceEmbedding);
+          // 0.40 is the standard Facenet cosine distance threshold
+          if (dist <= 0.40) {
+            return res.status(403).json({ status: 'error', message: 'This face is already registered to another account.' });
+          }
+        }
+      }
+    }
+
     // Store credentials but do NOT mark as registered yet; require OTP verification first
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -139,6 +204,7 @@ router.post('/register', async (req, res) => {
       uid: studentId,
       role: 'voter',
       faceImage: faceImage || '',
+      faceEmbedding: faceEmbedding || null,
     }, { merge: true });
 
     // Attempt to send OTP — don't fail the entire registration if email fails
