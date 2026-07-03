@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
 import { Plus, FolderOpen, Settings, Activity, Trash, ArrowLeft, Download } from 'lucide-react';
@@ -37,6 +38,9 @@ export default function AdminElectionsPage() {
   const [formDepartment, setFormDepartment] = useState('');
   const [formShowResults, setFormShowResults] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     async function fetchElections() {
@@ -235,10 +239,27 @@ export default function AdminElectionsPage() {
         </div>
       )}
 
-      {/* Create Election Modal */}
-      {isModalOpen && (
-        <div className="modal-overlay active" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-container" onClick={e => e.stopPropagation()}>
+      {/* Create Election Modal — mounted via portal to escape overflow:hidden on app-shell */}
+      {mounted && isModalOpen && createPortal(
+        <div
+          onClick={() => setIsModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9000,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            // pad top below the topbar (64px) + gap, pad bottom above bottom-nav (68px) + gap
+            padding: '80px 16px 88px 16px',
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            className="modal-container"
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '560px', maxHeight: 'calc(100dvh - 180px)' }}
+          >
             <div className="modal-header">
               <h3 className="modal-title">Create New Election</h3>
               <button className="modal-close" onClick={() => setIsModalOpen(false)}>&times;</button>
@@ -297,7 +318,8 @@ export default function AdminElectionsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
