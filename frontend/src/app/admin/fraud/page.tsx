@@ -1,51 +1,55 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { ShieldCheck, RefreshCw, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, RefreshCw, ArrowLeft, AlertTriangle } from 'lucide-react';
 
 interface Alert {
   id: string;
-  type: 'critical' | 'high' | 'medium' | 'low';
+  type: string;
   message: string;
   timestamp: number;
+  metadata?: {
+    voterId?: string;
+    electionId?: string;
+    candidateId?: string;
+    position?: string;
+  };
   status: string;
 }
 
-const DEFAULT_ALERTS: Alert[] = [];
-
-const MOCK_STREAMING_ALERTS: { type: 'critical' | 'high' | 'medium' | 'low'; message: string; }[] = [];
-
 export default function AdminFraudPage() {
-  const [alerts, setAlerts] = useState<Alert[]>(DEFAULT_ALERTS);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     async function fetchAlerts() {
       try {
         const res = await apiRequest<{ status: string; data: Alert[] }>('/admin/fraud-alerts');
-    if (res.status === 'success' && res.data.length > 0) {
-      const dupAlerts = res.data.filter(a => a.message && a.message.toLowerCase().includes('duplicate'));
-      setAlerts(dupAlerts);
-    }  } finally {
+        if (res.status === 'success') {
+          // Filter to show only alerts of double voting in same category/duplicate vote attempts
+          const dupAlerts = res.data.filter(a => 
+            a.message && 
+            (a.message.toLowerCase().includes('duplicate') || 
+             a.message.toLowerCase().includes('twice') || 
+             a.type === 'DUPLICATE_VOTE')
+          );
+          setAlerts(dupAlerts);
+        }
+      } catch (err) {
+        console.error('Error fetching fraud alerts:', err);
+      } finally {
         setLoading(false);
       }
     }
+    
     fetchAlerts();
-
-    // No more simulated live streaming alerts since MOCK_STREAMING_ALERTS is empty.
+    const interval = setInterval(fetchAlerts, 5000);
+    return () => clearInterval(interval);
   }, []);
 
-  const getBadgeStyle = (type: string) => {
-    switch (type) {
-      case 'critical': return { background: 'rgba(239,68,68,0.2)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' };
-      case 'high': return { background: 'rgba(245,158,11,0.2)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' };
-      case 'medium': return { background: 'rgba(124,58,237,0.2)', color: '#7C3AED', border: '1px solid rgba(124,58,237,0.3)' };
-      default: return { background: 'rgba(34,197,94,0.2)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.3)' };
-    }
-  };
+  const uniqueVotersCount = new Set(alerts.map(a => a.metadata?.voterId).filter(Boolean)).size;
 
   return (
     <div className="animate-page-enter">
@@ -57,7 +61,7 @@ export default function AdminFraudPage() {
         color: '#F1F5F9'
       }}>
         {/* Header */}
-        <div className="soc-title-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}>
+        <div className="soc-title-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <div>
             <Link href="/admin/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)', color: '#94A3B8' }}>
               <ArrowLeft size={14} /> Return to Dashboard
@@ -66,34 +70,32 @@ export default function AdminFraudPage() {
             <span style={{ color: '#94A3B8', fontSize: 'var(--text-xs)' }}>Cybersecurity & Fraud Prevention Operations Dashboard</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', background: '#22C55E', borderRadius: '50%', display: 'inline-block', animation: 'pulse 2s infinite' }}></span>
-            <span style={{ fontSize: 'var(--text-xs)', color: '#22C55E', fontWeight: 700, letterSpacing: '0.05em' }}>LIVE MONITOR ACTIVATED</span>
+            <span style={{ width: '8px', height: '8px', background: alerts.length > 0 ? '#EF4444' : '#22C55E', borderRadius: '50%', display: 'inline-block', animation: 'pulse 2s infinite' }}></span>
+            <span style={{ fontSize: 'var(--text-xs)', color: alerts.length > 0 ? '#EF4444' : '#22C55E', fontWeight: 700, letterSpacing: '0.05em' }}>
+              {alerts.length > 0 ? 'ANOMALIES DETECTED' : 'LIVE MONITOR ACTIVATED'}
+            </span>
           </div>
         </div>
 
-        {/* SOC Top Row - Threat Score + Signals */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--space-6)', marginBottom: 'var(--space-8)', alignItems: 'center' }}>
-          <div className="soc-threat-score-card" style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)', textAlign: 'center' }}>
-            <span style={{ fontSize: 'var(--text-xs)', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 'var(--space-2)' }}>Active Threat Score</span>
-            <div style={{ fontSize: '3rem', fontWeight: 800, color: '#F59E0B', lineHeight: 1, marginBottom: 'var(--space-3)' }}>34</div>
-            <span className="badge badge-warning">Medium Risk Level</span>
+        {/* Real-time Signals Row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-8)' }}>
+          <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Double Vote Attempts</span>
+            <span style={{ fontSize: 'var(--text-2xl)', fontWeight: 'bold', color: alerts.length > 0 ? '#EF4444' : '#F1F5F9' }}>
+              {alerts.length} Flagged
+            </span>
           </div>
-
-          <div>
-            <h4 style={{ fontSize: 'var(--text-base)', borderBottom: '1px solid #1E293B', paddingBottom: 'var(--space-2)', marginBottom: 'var(--space-4)', color: '#F1F5F9' }}>Real-Time Signals Tracked</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-              {[
-                { label: 'Duplicate Registers', value: '0 Flagged', color: '#22C55E' },
-                { label: 'Multiple Login Tries', value: '4 Queries', color: '#F59E0B' },
-                { label: 'Rapid Vote Spikes', value: '0 Spikes', color: '#22C55E' },
-                { label: 'Suspicious Devices', value: '1 Flagged', color: '#EF4444' },
-              ].map(item => (
-                <div key={item.label} style={{ border: '1px solid #1E293B', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)' }}>
-                  <span style={{ fontSize: '10px', color: '#94A3B8', display: 'block', marginBottom: '2px' }}>{item.label}</span>
-                  <span style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: item.color }}>{item.value}</span>
-                </div>
-              ))}
-            </div>
+          <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Flagged Voter IDs</span>
+            <span style={{ fontSize: 'var(--text-2xl)', fontWeight: 'bold', color: uniqueVotersCount > 0 ? '#F59E0B' : '#F1F5F9' }}>
+              {uniqueVotersCount} Unique
+            </span>
+          </div>
+          <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Threat Severity</span>
+            <span style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: alerts.length > 0 ? '#EF4444' : '#22C55E', marginTop: 'auto' }}>
+              {alerts.length > 5 ? 'HIGH RISK' : alerts.length > 0 ? 'MEDIUM RISK' : 'SECURE'}
+            </span>
           </div>
         </div>
 
@@ -106,43 +108,53 @@ export default function AdminFraudPage() {
           <div className="soc-alert-timeline" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
             {loading ? (
               <p style={{ color: '#94A3B8' }}>Loading threat monitor...</p>
+            ) : alerts.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: 'var(--space-8) 0',
+                border: '1px dashed #334155',
+                borderRadius: 'var(--radius-lg)',
+                color: '#94A3B8'
+              }}>
+                <ShieldCheck size={36} style={{ color: '#22C55E', marginBottom: 'var(--space-2)' }} />
+                <p style={{ margin: 0, fontSize: 'var(--text-sm)' }}>No double-voting attempts detected. Ledger system integrity verified.</p>
+              </div>
             ) : (
               alerts.map(al => (
                 <div
                   key={al.id}
-                  className={`soc-alert-item ${al.type}`}
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 'var(--space-3)',
                     padding: 'var(--space-3) var(--space-4)',
                     borderRadius: 'var(--radius-md)',
-                    border: '1px solid #1E293B',
-                    background: '#1E293B',
+                    border: '1px solid #EF444433',
+                    background: '#EF444411',
                     animation: 'fadeIn 0.3s ease'
                   }}
                 >
-                  <span
-                    className={`soc-alert-badge ${al.type}`}
-                    style={{
-                      ...getBadgeStyle(al.type),
-                      padding: '2px 8px',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      textTransform: 'uppercase' as const,
-                      whiteSpace: 'nowrap' as const,
-                      flexShrink: 0
-                    }}
-                  >
-                    {al.type}
-                  </span>
+                  <AlertTriangle size={18} color="#EF4444" style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div style={{ flex: 1 }}>
-                    <p style={{ margin: 0, color: '#F8FAFC', fontSize: 'var(--text-sm)' }}>{al.message}</p>
-                    <span style={{ fontSize: '10px', color: '#64748B' }}>
-                      Timestamp: {new Date(al.timestamp).toLocaleTimeString()}
-                    </span>
+                    <p style={{ margin: 0, color: '#F8FAFC', fontSize: 'var(--text-sm)', fontWeight: 600 }}>
+                      Duplicate Vote Detected
+                    </p>
+                    <p style={{ margin: '2px 0 6px', color: '#CBD5E1', fontSize: 'var(--text-xs)' }}>
+                      {al.message}
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4)', fontSize: '10px', color: '#94A3B8' }}>
+                      {al.metadata?.voterId && (
+                        <span>Voter ID: <strong style={{ color: '#F1F5F9' }}>{al.metadata.voterId}</strong></span>
+                      )}
+                      {al.metadata?.position && (
+                        <span>Category: <strong style={{ color: '#F1F5F9' }}>{al.metadata.position}</strong></span>
+                      )}
+                      <span>Time: {new Date(al.timestamp).toLocaleTimeString()}</span>
+                    </div>
                   </div>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#EF4444', textTransform: 'uppercase', background: '#EF444422', padding: '2px 6px', borderRadius: '4px' }}>
+                    Critical
+                  </span>
                 </div>
               ))
             )}

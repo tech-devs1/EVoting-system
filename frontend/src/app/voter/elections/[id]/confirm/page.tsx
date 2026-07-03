@@ -1,10 +1,10 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
-import { AlertTriangle, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ShieldCheck, CheckCircle } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -24,16 +24,17 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
   const resolvedParams = use(params);
   
   const electionId = resolvedParams.id;
-  const candidateId = searchParams.get('candidateId');
+  // Get all candidate IDs passed in search params
+  const candidateIds = searchParams.getAll('candidateId');
 
   const [election, setElection] = useState<Election | null>(null);
-  const [candidate, setCandidate] = useState<Candidate | null>(null);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!candidateId) {
+    if (candidateIds.length === 0) {
       setLoading(false);
       return;
     }
@@ -47,8 +48,8 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
 
         const candidatesRes = await apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${electionId}`);
         if (candidatesRes.status === 'success') {
-          const found = candidatesRes.data.find(c => c.id === candidateId);
-          if (found) setCandidate(found);
+          const filtered = candidatesRes.data.filter(c => candidateIds.includes(c.id));
+          setCandidates(filtered);
         }
       } catch (err) {
         console.error('Error fetching confirmation data:', err);
@@ -57,13 +58,13 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
       }
     }
     fetchData();
-  }, [electionId, candidateId]);
+  }, [electionId, searchParams]);
 
   if (loading) {
     return <p style={{ color: 'var(--text-secondary)' }}>Preparing ballot confirmation details...</p>;
   }
 
-  if (!election || !candidate) {
+  if (!election || candidates.length === 0) {
     return (
       <div className="empty-state">
         <AlertTriangle size={48} style={{ color: 'var(--color-danger)' }} />
@@ -80,35 +81,46 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
     setError('');
     setSubmitting(true);
     try {
-      const res = await apiRequest<{ 
-        status: string; 
-        data: { verificationId: string } 
-      }>('/votes/cast', 'POST', {
-        electionId,
-        candidateId
-      });
+      // Cast all votes in parallel
+      const castPromises = candidates.map(cand =>
+        apiRequest<{ 
+          status: string; 
+          data: { verificationId: string } 
+        }>('/votes/cast', 'POST', {
+          electionId,
+          candidateId: cand.id
+        })
+      );
 
-      if (res.status === 'success') {
-        const verificationId = res.data.verificationId;
+      const responses = await Promise.all(castPromises);
+      
+      // Grab verification ID from the first cast response as representative or store all
+      const verificationId = responses[0]?.data?.verificationId || 'verified';
+
+      // Save to local storage voter votes history
+      if (typeof window !== 'undefined') {
+        const storedVotes = localStorage.getItem('Votick_voter_votes') || '[]';
+        const parsed = JSON.parse(storedVotes);
         
-        // Save to local storage voter votes history
-        if (typeof window !== 'undefined') {
-          const storedVotes = localStorage.getItem('Votick_voter_votes') || '[]';
-          const parsed = JSON.parse(storedVotes);
-          parsed.push({
-            id: verificationId,
-            electionId,
-            electionName: election.title,
-            timestamp: new Date().toISOString()
-          });
-          localStorage.setItem('Votick_voter_votes', JSON.stringify(parsed));
-        }
-
-        // Redirect to success screen
-        router.push(`/voter/elections/${electionId}/success?verificationId=${verificationId}`);
+        responses.forEach((res, i) => {
+          if (res.status === 'success') {
+            const cand = candidates[i];
+            parsed.push({
+              id: res.data.verificationId,
+              electionId,
+              electionName: `${election.title} — ${cand.position}`,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+        
+        localStorage.setItem('Votick_voter_votes', JSON.stringify(parsed));
       }
+
+      // Redirect to success screen
+      router.push(`/voter/elections/${electionId}/success?verificationId=${verificationId}`);
     } catch (err: any) {
-      setError(err.message || 'Transmission failed. Ensure you are eligible and haven\'t already voted.');
+      setError(err.message || 'Transmission failed. Ensure you are eligible and haven\'t already voted in these categories.');
     } finally {
       setSubmitting(false);
     }
@@ -116,8 +128,8 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="confirm-box animate-page-enter" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-      <div style={{ marginBottom: 'var(--space-8)' }}>
-        <h2 style={{ marginBottom: 'var(--space-2)' }}>Confirm Your Vote Choice</h2>
+      <div style={{ marginBottom: 'var(--space-6)' }}>
+        <h2 style={{ marginBottom: 'var(--space-2)' }}>Confirm Your Vote choices</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
           Verify the details of your cryptographic ballot before transmission to the audit chain.
         </p>
@@ -138,27 +150,32 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
         </div>
       )}
 
-      {/* Selected Summary Card */}
-      <div className="glass-card" style={{ 
-        marginBottom: 'var(--space-6)', 
-        textAlign: 'left', 
-        display: 'flex', 
-        gap: 'var(--space-4)', 
-        alignItems: 'center', 
-        borderColor: 'rgba(37, 99, 235, 0.2)' 
-      }}>
-        <img 
-          src={candidate.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'} 
-          alt={candidate.name} 
-          style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: 'var(--radius-lg)' }} 
-        />
-        <div>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)' }}>
-            {candidate.position} Choice
-          </span>
-          <h3 style={{ fontSize: 'var(--text-xl)', margin: 'var(--space-1) 0' }}>{candidate.name}</h3>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>{election.title}</p>
-        </div>
+      {/* Selected Summary Card List */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
+        {candidates.map(candidate => (
+          <div className="glass-card" key={candidate.id} style={{ 
+            textAlign: 'left', 
+            display: 'flex', 
+            gap: 'var(--space-4)', 
+            alignItems: 'center', 
+            borderColor: 'rgba(37, 99, 235, 0.2)',
+            padding: 'var(--space-3)'
+          }}>
+            <img 
+              src={candidate.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'} 
+              alt={candidate.name} 
+              style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--radius-md)' }} 
+            />
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)' }}>
+                {candidate.position}
+              </span>
+              <h3 style={{ fontSize: 'var(--text-base)', margin: '2px 0', fontWeight: 600 }}>{candidate.name}</h3>
+              <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: 0 }}>{election.title}</p>
+            </div>
+            <CheckCircle size={18} color="var(--color-success, #22c55e)" style={{ marginRight: 'var(--space-2)' }} />
+          </div>
+        ))}
       </div>
 
       {/* Warning Panel Alert */}
@@ -167,14 +184,14 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
         <div>
           <p style={{ fontWeight: 'bold', margin: 0, color: 'var(--text-primary)' }}>Warning: Action is Permanent</p>
           <p style={{ margin: 0, fontSize: 'var(--text-xs)' }}>
-            Your vote cannot be changed or recalled after submission. The audit ledger does not support modifications once block confirmation completes.
+            Your votes cannot be changed or recalled after submission. The audit ledger does not support modifications once block confirmation completes.
           </p>
         </div>
       </div>
 
       {/* Submit Items Actions */}
       <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'center' }}>
-        <Link href={`/voter/elections/${electionId}?candidateId=${candidateId}`} className="btn btn-secondary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <Link href={`/voter/elections/${electionId}`} className="btn btn-secondary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <ArrowLeft size={18} /> Go Back
         </Link>
         <button 
