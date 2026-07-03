@@ -114,11 +114,7 @@ export default function LoginPage() {
       
       <div className="glass-card-strong auth-card" style={{ maxWidth: '450px', width: '100%', margin: '0 auto' }}>
         <div className="auth-header">
-          <div style={{ marginBottom: 'var(--space-4)' }}>
-            <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
-              <ArrowLeft size={14} /> Back to Home
-            </Link>
-          </div>
+
           <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
             <span style={{ fontWeight: 600, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
