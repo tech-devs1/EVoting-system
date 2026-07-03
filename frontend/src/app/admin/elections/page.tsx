@@ -60,10 +60,15 @@ export default function AdminElectionsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const typeLabel = formType === 'src' ? 'SRC Election' : `${formDepartment.replace('_', ' ').toUpperCase()} Departmental Election`;
-      const dateLabel = formStartDate ? new Date(formStartDate).toLocaleDateString() : new Date().toLocaleDateString();
+      const deptLabel = formDepartment.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const typeLabel = formType === 'src' ? 'SRC Election' : `${deptLabel} Departmental Election`;
+      const dateLabel = formStartDate ? new Date(formStartDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString();
       const generatedTitle = `${typeLabel} (${dateLabel})`;
-      const generatedDesc = `Automated ${typeLabel} scheduled for ${dateLabel}.`;
+
+      // Type-specific description
+      const generatedDesc = formType === 'src'
+        ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
+        : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
 
       console.log('[Create Election] Submitting auto-generated form data:', {
         title: generatedTitle,

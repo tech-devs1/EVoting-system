@@ -74,6 +74,7 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
 export default function VoterDashboard() {
   const { user } = useAuth();
   const [elections, setElections] = useState<Election[]>([]);
+  const [upcomingElections, setUpcomingElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalVotes, setTotalVotes] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -94,8 +95,8 @@ export default function VoterDashboard() {
         if (res.status === 'success') {
           // Only show elections created by admin
           const adminElections = res.data.filter(el => el.createdBy === 'admin');
-          // Exclude completed or draft if route returns everything, or display only active
           setElections(adminElections.filter(el => el.status === 'active'));
+          setUpcomingElections(adminElections.filter(el => el.status === 'draft'));
         }
 
         // Get total votes cast from local storage history or mock
@@ -135,14 +136,12 @@ export default function VoterDashboard() {
               <span className="stat-widget-val">{elections.length}</span>
             </div>
             <div className="stat-widget">
-              <span className="stat-widget-label">Total Verified Votes</span>
-              <span className="stat-widget-val">{totalVotes}</span>
+              <span className="stat-widget-label">Upcoming Elections</span>
+              <span className="stat-widget-val">{upcomingElections.length}</span>
             </div>
             <div className="stat-widget">
-              <span className="stat-widget-label">ID Hash Signature</span>
-              <span className="stat-widget-val" style={{ fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}>
-                {voterCode}
-              </span>
+              <span className="stat-widget-label">Total Verified Votes</span>
+              <span className="stat-widget-val">{totalVotes}</span>
             </div>
           </div>
         </div>
@@ -191,6 +190,36 @@ export default function VoterDashboard() {
             </div>
           )}
         </div>
+
+        {/* Upcoming Elections Section */}
+        {upcomingElections.length > 0 && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+              <h3>Upcoming Elections</h3>
+              <Link href="/voter/elections" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>View All</Link>
+            </div>
+            <div className="election-grid">
+              {upcomingElections.map(el => (
+                <div className="card election-card" key={el.id}>
+                  <div className="election-card-header">
+                    <h4 className="election-card-title">{el.title}</h4>
+                    <span className="badge badge-warning">Upcoming</span>
+                  </div>
+                  <p className="election-card-desc">{el.description}</p>
+                  <div className="election-card-meta">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                      <Clock size={13} />
+                      Starts {new Date(el.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+                    <button className="btn btn-secondary btn-sm" disabled style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.6 }}>
+                      Not Yet Open
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sidebar Widgets Column */}
