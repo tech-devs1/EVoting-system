@@ -33,6 +33,16 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Facial verification states — declared here (before any early returns) to comply with Rules of Hooks
+  const [isFaceVerifyOpen, setIsFaceVerifyOpen] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanComplete, setScanComplete] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
+  const [scanMessage, setScanMessage] = useState('Position your face within the scanner ring');
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+
   useEffect(() => {
     if (candidateIds.length === 0) {
       setLoading(false);
@@ -76,16 +86,6 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
       </div>
     );
   }
-
-  // Facial verification states
-  const [isFaceVerifyOpen, setIsFaceVerifyOpen] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [scanComplete, setScanComplete] = useState(false);
-  const [scanSuccess, setScanSuccess] = useState(false);
-  const [scanMessage, setScanMessage] = useState('Position your face within the scanner ring');
-  const videoRef = React.useRef<HTMLVideoElement>(null);
-  const streamRef = React.useRef<MediaStream | null>(null);
 
   const startCamera = async () => {
     setCameraActive(true);
