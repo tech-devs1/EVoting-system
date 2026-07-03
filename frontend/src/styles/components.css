@@ -440,6 +440,51 @@
 }
 
 /* ---- Modals ---- */
+
+/* ---- Candidate Grid & Card Layout ---- */
+.candidate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.candidate-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .candidate-card {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .candidate-photo {
+    width: 150px;
+    height: auto;
+    max-height: none;
+    object-fit: cover;
+    margin-right: var(--space-4);
+    border-radius: var(--radius-md);
+  }
+}
+
+
+.candidate-photo {
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
 .modal-overlay {
   position: fixed;
   inset: 0;
