@@ -45,6 +45,22 @@ export default function RegisterPage() {
     }
     return () => clearTimeout(timer);
   }, [resendCooldown]);
+
+  // Manage camera lifecycle for Step 4
+  useEffect(() => {
+    if (currentStep === 4) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+    return () => {
+      // Cleanup on unmount
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [currentStep]);
+
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleStep1Submit = async (e: React.FormEvent) => {
@@ -115,9 +131,6 @@ export default function RegisterPage() {
     
     // Go to Facial Enrollment Step 4
     setCurrentStep(4);
-    setTimeout(() => {
-      startCamera();
-    }, 100);
   };
 
   // Step 4 (Facial Capture) handlers
