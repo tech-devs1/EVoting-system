@@ -12,7 +12,7 @@ A full-stack, PWA-ready electronic voting platform built for HTU. Features real-
 - [Running Locally](#-running-locally)
 - [Installing the App (PWA)](#-installing-the-app-pwa)
 - [How to use the app](#-registering-account-and-voting)
-- [Live App](VOTICK.VERCEL.APP)
+- [Live App](#-live-app)
 
 ---
 
@@ -37,7 +37,7 @@ A full-stack, PWA-ready electronic voting platform built for HTU. Features real-
 
 ## 📁 Project Structure
 
-
+```text
 EVoting-system/
 ├── backend/                  # Express API server
 │   ├── routes/               # API route handlers
@@ -78,6 +78,7 @@ EVoting-system/
 │   └── package.json
 │
 └── vercel.json               # Vercel monorepo build config
+```
 
 ---
 
@@ -86,53 +87,62 @@ EVoting-system/
 Install all of the following before running the project locally:
 
 ### 1. Node.js (v18 or higher)
-- Download: https://nodejs.org/en/download
+- Download: [Node.js Downloads](https://nodejs.org/en/download)
 - Verify: `node --version`
 
 ### 2. npm (comes with Node.js)
 - Verify: `npm --version`
 
 ### 3. Git
-- Download: https://git-scm.com/downloads
+- Download: [Git Downloads](https://git-scm.com/downloads)
 - Verify: `git --version`
 
 ### 4. A modern web browser
 - **Chrome** (recommended for local PWA testing)
 - **Firefox**, **Edge**, or **Safari** also work
 
----.
+---
 
 ## 🚀 Running Locally
 
 ### Step 1 — Clone the repository
 
+```bash
 git clone https://github.com/tech-devs1/EVoting-system.git
 cd EVoting-system
+```
 
 ### Step 2 — Set up the Backend
-cd into the folder you cloned the repo in
+cd into the folder you cloned the repo in:
+```bash
 cd backend
 npm install
+```
 
-###
 Start the backend server:
+```bash
 npm start
+```
 The backend will run at **http://localhost:5000**
 
 Verify it's working:
-GET http://localhost:5000/api/health
+`GET http://localhost:5000/api/health`
 
 ---
 
 ### Step 3 — Set up the Frontend
 
 Open a **new terminal window** and run:
-cd into the folder you cloned the repo in
+cd into the folder you cloned the repo in:
+```bash
 cd frontend
 npm install
+```
 
 Start the frontend dev server:
+```bash
 npm run dev
+```
 
 The frontend will run at **http://localhost:3000**
 
@@ -145,13 +155,15 @@ The frontend will run at **http://localhost:3000**
 | http://localhost:5000/api/health | Backend health check |
 
 **Default Admin Access:**  
-Admin email: admin@htu.edu.gh
-admin password : admin080
+- **Admin email**: `admin@htu.edu.gh`
+- **Admin password**: `admin080`
+
 ---
 
-### LIVE APP
-The live app is available at votick.vercel.app
+## 🌐 Live App
+The live app is available at: [votick.vercel.app](https://votick.vercel.app)
 
+---
 
 ## 📱 Installing the App (PWA)
 
@@ -164,8 +176,6 @@ Votick is a **Progressive Web App (PWA)** — it can be installed on any device 
 3. Tap **Install** to confirm
 4. > If the install prompt doesn't appear, open Chrome menu (⋮) → **Add to Home screen**
 5. The app icon appears on your home screen
-
-
 
 ### iOS (Safari)
 
@@ -184,21 +194,26 @@ Votick is a **Progressive Web App (PWA)** — it can be installed on any device 
 3. Click it and confirm installation
 4. Votick opens as a standalone app window
 
-### RUNNING THE APP
-we used our class list in the databse for now.
---FIRST TIME REGISTRATION
+---
 
-1.Open the app,and click register account.Enter your index number and the system fishes your id in the database and posfixes it with htu email standard(@htu.edu.gh)
-2.Set your password following the requirements
-3.you will be sent an OTP via the email(or spam) to verify
-4.you will be redirected to login and verify otp again
-5.if elections are available you view, and read manifestos and vote your preferred candidate.
+## 📋 Registering Account and Voting
 
---ALREADY REGISTERED
-1.login with your credentials.
-2.if elections are available you view, and read manifestos and vote your preferred candidate.
+We used our class list in the database for now.
 
+### First Time Registration
 
---VOTICK.VERCEL.APP
+1. Open the app, and click **Register Account**.
+2. Enter your index number. The system fetches your ID in the database and postfixes it with HTU email standard (`@htu.edu.gh`).
+3. Set your password following the requirements.
+4. You will be sent an OTP via email (check spam if not found) to verify.
+5. You will be redirected to login and verify OTP again.
+6. If elections are available, you can view them, read manifestos, and vote for your preferred candidate.
+
+### Already Registered
+
+1. Login with your credentials.
+2. If elections are available, you can view them, read manifestos, and vote for your preferred candidate.
+
+---
 
 *Built with ❤️ by the Techdevstudios team.*

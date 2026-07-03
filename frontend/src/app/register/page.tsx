@@ -109,7 +109,7 @@ export default function RegisterPage() {
 
 
     if (password !== confirmPassword) {
-      setError('Passphrases do not match');
+      setError('Passwords do not match');
       return;
     }
     setLoading(true);
@@ -334,7 +334,7 @@ export default function RegisterPage() {
           {currentStep === 3 && (
             <form onSubmit={handleStep3Submit}>
               <div className="form-group">
-                <label className="form-label" htmlFor="reg-password">Ballot Security Passphrase</label>
+                <label className="form-label" htmlFor="reg-password">Password</label>
                 <div className="form-input-container" style={{ position: 'relative' }}>
                   <Lock size={18} className="form-input-icon" />
                   <input 
@@ -358,9 +358,44 @@ export default function RegisterPage() {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                
+                {/* Real-time password requirement indicator */}
+                <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                  <p style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>Password Requirements:</p>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {[
+                      { label: 'Minimum 8 characters', test: (p: string) => p.length >= 8 },
+                      { label: 'At least one uppercase letter (A-Z)', test: (p: string) => /[A-Z]/.test(p) },
+                      { label: 'At least one lowercase letter (a-z)', test: (p: string) => /[a-z]/.test(p) },
+                      { label: 'At least one special character (e.g. !@#$...)', test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+                    ].map((req, index) => {
+                      const isFulfilled = req.test(password);
+                      return (
+                        <li key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: isFulfilled ? 'var(--color-success)' : 'var(--text-tertiary)' }}>
+                          <span style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            width: '14px', 
+                            height: '14px', 
+                            borderRadius: '50%', 
+                            border: `1px solid ${isFulfilled ? 'var(--color-success)' : 'var(--text-tertiary)'}`,
+                            background: isFulfilled ? 'rgba(34,197,94,0.1)' : 'transparent',
+                            fontSize: '9px',
+                            fontWeight: 'bold',
+                            color: isFulfilled ? 'var(--color-success)' : 'inherit'
+                          }}>
+                            {isFulfilled ? '✓' : ''}
+                          </span>
+                          {req.label}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="reg-confirm">Confirm Passphrase</label>
+                <label className="form-label" htmlFor="reg-confirm">Confirm Password</label>
                 <div className="form-input-container" style={{ position: 'relative' }}>
                   <Lock size={18} className="form-input-icon" />
                   <input 
@@ -484,7 +519,7 @@ export default function RegisterPage() {
               </div>
               <h3 className="auth-title">Account Verified & Created!</h3>
               <p className="auth-subtitle" style={{ marginBottom: 'var(--space-6)' }}>
-                Your identity has been confirmed. Please proceed to the login terminal to authenticate with your new passphrase.
+                Your identity has been confirmed. Please proceed to the login terminal to authenticate with your new password.
               </p>
               <Link href="/login" className="btn btn-primary btn-full hover-lift">Proceed to Login Terminal</Link>
             </div>

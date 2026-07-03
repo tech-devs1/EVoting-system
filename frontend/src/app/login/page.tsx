@@ -183,7 +183,7 @@ export default function LoginPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="login-password">Ballot Security Passphrase</label>
+              <label className="form-label" htmlFor="login-password">Password</label>
               <div className="form-input-container" style={{ position: 'relative' }}>
                 <Lock size={18} className="form-input-icon" />
                 <input
@@ -214,7 +214,7 @@ export default function LoginPage() {
                 <input type="checkbox" className="form-checkbox" defaultChecked />
                 <span style={{ fontSize: 'var(--text-sm)' }}>Remember this session</span>
               </label>
-              <Link href="/forgot-password" style={{ fontSize: 'var(--text-sm)' }}>Forgot Key?</Link>
+              <Link href="/forgot-password" style={{ fontSize: 'var(--text-sm)' }}>Forgot Password?</Link>
             </div>
 
             <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading}>

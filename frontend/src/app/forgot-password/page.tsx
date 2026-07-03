@@ -146,7 +146,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-              <label className="form-label" htmlFor="new-pass">New Passphrase</label>
+              <label className="form-label" htmlFor="new-pass">New Password</label>
               <div className="form-input-container" style={{ position: 'relative' }}>
                 <Lock size={18} className="form-input-icon" />
                 <input 
@@ -170,10 +170,45 @@ export default function ForgotPasswordPage() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              
+              {/* Real-time password requirement indicator */}
+              <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                <p style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>Password Requirements:</p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {[
+                    { label: 'Minimum 8 characters', test: (p: string) => p.length >= 8 },
+                    { label: 'At least one uppercase letter (A-Z)', test: (p: string) => /[A-Z]/.test(p) },
+                    { label: 'At least one lowercase letter (a-z)', test: (p: string) => /[a-z]/.test(p) },
+                    { label: 'At least one special character (e.g. !@#$...)', test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+                  ].map((req, index) => {
+                    const isFulfilled = req.test(newPassword);
+                    return (
+                      <li key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: isFulfilled ? 'var(--color-success)' : 'var(--text-tertiary)' }}>
+                        <span style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          width: '14px', 
+                          height: '14px', 
+                          borderRadius: '50%', 
+                          border: `1px solid ${isFulfilled ? 'var(--color-success)' : 'var(--text-tertiary)'}`,
+                          background: isFulfilled ? 'rgba(34,197,94,0.1)' : 'transparent',
+                          fontSize: '9px',
+                          fontWeight: 'bold',
+                          color: isFulfilled ? 'var(--color-success)' : 'inherit'
+                        }}>
+                          {isFulfilled ? '✓' : ''}
+                        </span>
+                        {req.label}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             </div>
 
             <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-              <label className="form-label" htmlFor="confirm-pass">Confirm Passphrase</label>
+              <label className="form-label" htmlFor="confirm-pass">Confirm Password</label>
               <div className="form-input-container" style={{ position: 'relative' }}>
                 <Lock size={18} className="form-input-icon" />
                 <input 
@@ -200,7 +235,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading} style={{ marginTop: 'var(--space-4)' }}>
-              {loading ? 'Verifying...' : 'Reset Passphrase'}
+              {loading ? 'Verifying...' : 'Reset Password'}
             </button>
           </form>
         )}
@@ -210,7 +245,7 @@ export default function ForgotPasswordPage() {
             <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(34,197,94,0.1)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--space-4) auto' }}>
               <ShieldCheck size={32} />
             </div>
-            <h3 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-2)' }}>Passphrase Reset Successful</h3>
+            <h3 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-2)' }}>Password Reset Successful</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-6)', fontSize: 'var(--text-sm)' }}>Your terminal access key has been securely updated.</p>
             <Link href="/login" className="btn btn-primary btn-full hover-lift">
               Return to Login
