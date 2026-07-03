@@ -31,8 +31,6 @@ export default function AdminElectionsPage() {
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formTitle, setFormTitle] = useState('');
-  const [formDescription, setFormDescription] = useState('');
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
   const [formType, setFormType] = useState('src');
@@ -58,9 +56,14 @@ export default function AdminElectionsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      console.log('[Create Election] Submitting form data:', {
-        title: formTitle,
-        description: formDescription,
+      const typeLabel = formType === 'src' ? 'SRC Election' : `${formDepartment.replace('_', ' ').toUpperCase()} Departmental Election`;
+      const dateLabel = formStartDate ? new Date(formStartDate).toLocaleDateString() : new Date().toLocaleDateString();
+      const generatedTitle = `${typeLabel} (${dateLabel})`;
+      const generatedDesc = `Automated ${typeLabel} scheduled for ${dateLabel}.`;
+
+      console.log('[Create Election] Submitting auto-generated form data:', {
+        title: generatedTitle,
+        description: generatedDesc,
         startDate: formStartDate,
         endDate: formEndDate,
         type: formType,
@@ -69,8 +72,8 @@ export default function AdminElectionsPage() {
       });
       
       const res = await apiRequest<{ status: string; data: Election }>('/elections', 'POST', {
-        title: formTitle,
-        description: formDescription,
+        title: generatedTitle,
+        description: generatedDesc,
         startDate: formStartDate,
         endDate: formEndDate,
         type: formType,
@@ -83,7 +86,7 @@ export default function AdminElectionsPage() {
       if (res.status === 'success') {
         setElections(prev => [...prev, res.data]);
         setIsModalOpen(false);
-        setFormTitle(''); setFormDescription(''); setFormStartDate(''); setFormEndDate(''); setFormType('src'); setFormDepartment(''); setFormShowResults(false);
+        setFormStartDate(''); setFormEndDate(''); setFormType('src'); setFormDepartment(''); setFormShowResults(false);
         alert('Election created successfully!');
       } else {
         alert('Failed to create election: ' + (res as any).message || 'Unknown error');
@@ -245,14 +248,6 @@ export default function AdminElectionsPage() {
             </div>
             <form onSubmit={handleCreateElection} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="el-title">Election Title</label>
-                  <input type="text" id="el-title" className="form-input" placeholder="e.g. Student Council Presidential Election" required value={formTitle} onChange={e => setFormTitle(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="el-desc">Description</label>
-                  <textarea id="el-desc" className="form-input" placeholder="Describe the purpose of this election..." style={{ minHeight: '80px', resize: 'vertical' }} value={formDescription} onChange={e => setFormDescription(e.target.value)} />
-                </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="el-type">Election Type</label>
                   <select id="el-type" className="form-input" value={formType} onChange={e => setFormType(e.target.value)}>
