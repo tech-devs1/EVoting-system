@@ -533,18 +533,16 @@
 }
 
 /* ---- Tablet: bottom nav is visible (769px – 1024px) ---- */
-/* The bottom nav (68px) is displayed in this range, so we must push the
-   modal overlay up so its content is never hidden behind the nav bar. */
+/* Overlay stays full-screen so the backdrop covers everything,
+   but padding-bottom offsets the flex-centering so the modal
+   is positioned above the nav bar, not behind it. */
 @media (min-width: 769px) and (max-width: 1024px) {
   .modal-overlay {
-    /* Stop the overlay at the top of the bottom nav */
-    bottom: var(--bottom-nav-height);
-    /* Re-center vertically within the remaining area */
+    padding-bottom: calc(var(--bottom-nav-height) + var(--space-4));
     align-items: center;
   }
 
   .modal-container {
-    /* Leave comfortable breathing room above the nav */
     max-height: calc(100dvh - var(--bottom-nav-height) - var(--space-12));
   }
 }

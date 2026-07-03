@@ -243,7 +243,7 @@
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border-top: 1px solid var(--border-color);
-  z-index: var(--z-sidebar); /* Sit above general content overlays */
+  z-index: calc(var(--z-modal) - 10); /* Sit below modals but above page content */
   justify-content: space-around;
   align-items: center;
   padding-bottom: env(safe-area-inset-bottom);
