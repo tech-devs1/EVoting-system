@@ -319,6 +319,16 @@
     justify-content: center;
     padding: var(--space-3);
   }
+
+  /* Show the bottom nav on tablet/mid-range where sidebar is collapsed */
+  .mobile-nav {
+    display: flex;
+  }
+
+  /* Ensure content scrolls clear of the bottom nav */
+  .content-area {
+    padding-bottom: calc(var(--container-padding) + var(--bottom-nav-height) + env(safe-area-inset-bottom));
+  }
 }
 
 @media (max-width: 768px) {
@@ -377,6 +387,8 @@
   
   .content-area {
     padding: var(--space-4);
+    /* On mobile the bottom nav is hidden, so no extra padding needed */
+    padding-bottom: var(--space-4);
   }
 }
 
