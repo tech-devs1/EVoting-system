@@ -1,186 +1,158 @@
-﻿'use client';
+'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { ShieldCheck, RefreshCw, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Key, Search, ShieldCheck, Activity, EyeOff, ShieldAlert, AlertOctagon, ArrowLeft } from 'lucide-react';
 
-interface AuditNode {
-  id: string;
-  currentHash: string;
-  previousHash: string;
+interface AuditLog {
+  electionId: string;
   timestamp: number;
-  status?: string;
+  previousHash: string;
+  currentHash: string;
+  dataPayload: string;
 }
 
-const DEFAULT_NODES: AuditNode[] = [
-  {
-    id: 'GENESIS_BLOCK',
-    currentHash: '0000000000000000000000000000000000000000000000000000000000000000',
-    previousHash: 'NONE',
-    timestamp: Date.now(),
-    status: 'valid'
-  }
-];
-
 export default function AdminAuditPage() {
-  const [nodes, setNodes] = useState<AuditNode[]>(DEFAULT_NODES);
-  const [integrityStatus, setIntegrityStatus] = useState<string | null>(null);
-  const [checking, setChecking] = useState(false);
+  const [searchId, setSearchId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<AuditLog | null>(null);
+  const [electionTitle, setElectionTitle] = useState('');
+  const [error, setError] = useState(false);
+  const [searched, setSearched] = useState(false);
 
-  const handleRunIntegrity = async () => {
-    setChecking(true);
-    setIntegrityStatus(null);
+  const performSearch = async (id: string) => {
+    if (!id || id.trim() === '') return;
+    setLoading(true);
+    setError(false);
+    setResult(null);
+    setElectionTitle('');
+    setSearched(true);
 
     try {
-      // Try to get the first election's audit status
-      const electionsRes = await apiRequest<{ status: string; data: any[] }>('/elections');
-      if (electionsRes.status === 'success' && electionsRes.data.length > 0) {
-        const firstElection = electionsRes.data[0];
-        const auditRes = await apiRequest<{ status: string; data: { valid: boolean; message: string } }>(
-          `/admin/audit/${firstElection.id}`
-        );
-        setIntegrityStatus(auditRes.data.valid ? '✓ All blocks verified. Cryptographic chain is intact.' : '⚠ ' + auditRes.data.message);
+      // Lookup the audit log entry by document ID from backend
+      const res = await apiRequest<{ status: string; data: AuditLog }>(`/votes/verify/${id.trim()}`);
+      if (res.status === 'success') {
+        setResult(res.data);
+        
+        // Fetch election details for user clarity
+        try {
+          const elRes = await apiRequest<{ status: string; data: { title: string } }>(`/elections/${res.data.electionId}`);
+          if (elRes.status === 'success') {
+            setElectionTitle(elRes.data.title);
+          }
+        } catch {
+          setElectionTitle('Student Election Instance');
+        }
       } else {
-        setIntegrityStatus('✓ No votes recorded yet. Chain integrity confirmed: GENESIS_HASH is valid.');
+        setError(true);
       }
-    } catch {
-      setIntegrityStatus('✓ Integrity check complete. Chain is valid.');
+    } catch (err) {
+      console.error('Audit search error:', err);
+      setError(true);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Add a new mock node
-    const lastNode = nodes[nodes.length - 1];
-    const mockHash = Math.random().toString(36).substring(2).padEnd(64, '0');
-    const newNode: AuditNode = {
-      id: `VT-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      currentHash: mockHash,
-      previousHash: lastNode.currentHash,
-      timestamp: Date.now(),
-      status: 'valid'
-    };
-
-    setNodes(prev => [...prev, newNode]);
-    setChecking(false);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    performSearch(searchId);
   };
 
   return (
     <div className="animate-page-enter">
-      {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-        <div>
-          <Link href="/admin/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>
-            <ArrowLeft size={14} /> Return to Dashboard
-          </Link>
-          <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-1)' }}>Cryptographic Audit Ledger Explorer</h2>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Verify the validation chains hashes preservation ledger state</span>
-        </div>
-        <button
-          className="btn btn-primary"
-          onClick={handleRunIntegrity}
-          disabled={checking}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
-          {checking ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <ShieldCheck size={16} />}
-          {checking ? 'Checking ledger...' : 'Run Integrity Check'}
-        </button>
+      <div style={{ marginBottom: 'var(--space-8)' }}>
+        <Link href="/admin/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-4)' }}>
+          <ArrowLeft size={16} /> Return to Dashboard
+        </Link>
+        <h2 style={{ marginBottom: 'var(--space-2)' }}>Vote Verification Hub</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
+          Verify that ballot transactions have been accurately cataloged on the digital audit log ledger without revealing candidate choices.
+        </p>
       </div>
 
-      {/* Integrity Check Result */}
-      {integrityStatus && (
-        <div style={{
-          padding: 'var(--space-3) var(--space-4)',
-          borderRadius: 'var(--radius-md)',
-          marginBottom: 'var(--space-6)',
-          fontSize: 'var(--text-sm)',
-          background: 'var(--color-success-bg)',
-          color: 'var(--color-success)',
-          border: '1px solid rgba(34, 197, 94, 0.2)',
-          fontWeight: 500
-        }}>
-          {integrityStatus}
-        </div>
-      )}
+      {/* Search Input Card */}
+      <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="form-group" style={{ flex: 1, minWidth: '250px', marginBottom: 0 }}>
+            <label className="form-label" htmlFor="verify-input-id">Enter Cryptographic Verification ID</label>
+            <div className="form-input-container">
+              <Key size={18} className="form-input-icon" />
+              <input 
+                type="text" 
+                id="verify-input-id" 
+                className="form-input form-input-with-icon" 
+                placeholder="e.g. VT-2026-AB12XY" 
+                value={searchId}
+                onChange={(e) => setSearchId(e.target.value)}
+                required 
+              />
+            </div>
+          </div>
+          <button type="submit" className="btn btn-primary" style={{ height: '46px', display: 'flex', alignItems: 'center', gap: '6px' }} disabled={loading}>
+            <Search size={18} /> {loading ? 'Looking up...' : 'Lookup Record'}
+          </button>
+        </form>
+      </div>
 
-      {/* Blockchain Visual Nodes */}
-      <div className="blockchain-visualizer" style={{
-        display: 'flex',
-        overflowX: 'auto',
-        gap: 'var(--space-2)',
-        marginBottom: 'var(--space-8)',
-        padding: 'var(--space-4) 0',
-        alignItems: 'center'
-      }}>
-        {nodes.map((node, idx) => (
-          <React.Fragment key={node.id}>
-            <div
-              className={`blockchain-node ${node.status === 'valid' ? 'valid' : 'broken'} animate-scale-in`}
-              style={{
-                flexShrink: 0,
-                minWidth: '200px',
-                background: 'var(--bg-card)',
-                border: `2px solid ${node.status === 'valid' ? 'var(--color-success)' : 'var(--color-danger)'}`,
-                borderRadius: 'var(--radius-lg)',
-                padding: 'var(--space-4)',
-                boxShadow: node.status === 'valid' ? 'var(--shadow-glow-green)' : 'var(--shadow-glow-red)'
-              }}
-            >
-              <span
-                className={`badge ${node.status === 'valid' ? 'badge-success' : 'badge-danger'}`}
-                style={{ alignSelf: 'flex-start', marginBottom: 'var(--space-2)', display: 'block' }}
-              >
-                BLOCK #{idx + 1}
-              </span>
-              <div className="node-hash" style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', marginBottom: 'var(--space-1)', wordBreak: 'break-all' }}>
-                Hash: {node.currentHash.substring(0, 16)}...
+      {/* Verification Results Box */}
+      <div id="verification-result-container">
+        {loading && <p style={{ color: 'var(--text-secondary)' }}>Searching ledger networks...</p>}
+        
+        {!loading && result && (
+          <div className="card animate-fade-in" style={{ borderColor: 'var(--color-success)', borderWidth: '2px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+              <div>
+                <span className="badge badge-success" style={{ fontSize: 'var(--text-xs)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <ShieldCheck size={14} /> Recorded & Verified
+                </span>
+                <h3 style={{ fontSize: 'var(--text-xl)', marginTop: 'var(--space-2)' }}>{searchId}</h3>
               </div>
-              <div className="node-prev" style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-3)', wordBreak: 'break-all' }}>
-                Prev: {node.previousHash.substring(0, 12)}...
-              </div>
-              <div className="node-meta" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                <span>{node.id}</span>
-                <span style={{ color: 'var(--color-success)' }}>Verified</span>
+              <div className="countdown-timer" style={{ color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Activity size={14} /> Ledgers Verified
               </div>
             </div>
-            {idx < nodes.length - 1 && (
-              <div className="blockchain-connector" style={{ flexShrink: 0, color: 'var(--text-tertiary)' }}>
-                <ArrowRight size={20} />
-              </div>
-            )}
-          </React.Fragment>
-        ))}
-      </div>
 
-      {/* Block Ledger Log Table */}
-      <div className="card">
-        <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-4)' }}>Block Ledger Log</h3>
-        <div className="table-container">
-          <table className="custom-table">
-            <thead>
-              <tr>
-                <th>Verification ID</th>
-                <th>Hash Signature</th>
-                <th>Parent Hash</th>
-                <th>Timestamp</th>
-                <th>Integrity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {nodes.map(node => (
-                <tr key={node.id}>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>{node.id}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-secondary)', wordBreak: 'break-all', maxWidth: '180px' }}>
-                    {node.currentHash}
-                  </td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-tertiary)', wordBreak: 'break-all', maxWidth: '180px' }}>
-                    {node.previousHash}
-                  </td>
-                  <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{new Date(node.timestamp).toLocaleString()}</td>
-                  <td><span className="badge badge-success">Valid</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+              <div>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Election Instance</span>
+                <span style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>{electionTitle}</span>
+              </div>
+              <div>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Verification Timestamp</span>
+                <span style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>{new Date(result.timestamp).toLocaleString()}</span>
+              </div>
+              <div>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Ballot Choices Status</span>
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                  <EyeOff size={14} /> Hidden (Anonymized)
+                </span>
+              </div>
+            </div>
+
+            <div className="alert alert-info" style={{ marginBottom: 0, display: 'flex', gap: 'var(--space-3)' }}>
+              <ShieldAlert size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <p style={{ fontWeight: 'bold', margin: 0, color: 'var(--text-primary)' }}>Audit Integrity Certified</p>
+                <p style={{ margin: 0, fontSize: 'var(--text-xs)' }}>
+                  SHA-256 Block Hash: <code style={{ fontSize: '10px', wordBreak: 'break-all' }}>{result.currentHash}</code>. Previous Hash: <code style={{ fontSize: '10px', wordBreak: 'break-all' }}>{result.previousHash}</code>.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading && error && searched && (
+          <div className="card text-center animate-fade-in" style={{ borderColor: 'var(--color-danger)' }}>
+            <AlertOctagon size={48} style={{ color: 'var(--color-danger)', margin: '0 auto var(--space-3) auto' }} />
+            <h3 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-2)' }}>Audit Hash Mismatch</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', maxWidth: '400px', margin: '0 auto' }}>
+              No matching ballot receipts fit that transaction verification ID on our ledger networks.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
