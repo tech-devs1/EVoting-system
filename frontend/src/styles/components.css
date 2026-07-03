@@ -443,7 +443,7 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: var(--bg-overlay);
+  background: transparent;
   z-index: var(--z-modal);
   display: flex;
   align-items: center;
