@@ -238,7 +238,14 @@ router.post('/verify-otp', async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: { uid: userDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name },
+      data: {
+        uid: userDoc.id,
+        email: userData.email,
+        role: userData.role || 'voter',
+        name: userData.name,
+        faceImage: userData.faceImage || '',
+        faceDescriptor: userData.faceDescriptor || null
+      },
       token
     });
   } catch (error) {

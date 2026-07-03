@@ -95,13 +95,16 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
     setScanning(false);
     setScanMessage('Initializing camera stream...');
 
-    if (!user || !user.faceImage) {
-      setScanMessage('No biometric profile found on file! Denied voting access.');
+    if (!user || !user.faceDescriptor) {
+      setScanMessage('No biometric profile found on file! Please re-register to enroll your face.');
       setCameraActive(false);
       return;
     }
 
     try {
+      // Pre-load face models in parallel with camera init
+      loadFaceModels().catch(err => console.warn('Face model preload failed:', err));
+
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320, facingMode: 'user' } });
       streamRef.current = stream;
       if (videoRef.current) {
