@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState, use, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { AlertTriangle, ArrowLeft, ShieldCheck, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { loadFaceModels, getFaceDescriptor, compareFaceDescriptors } from '@/lib/faceUtils';
 
 interface Candidate {
   id: string;
@@ -122,33 +123,47 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
     setCameraActive(false);
   };
 
-  const handleStartScan = () => {
-    if (!user || !user.faceImage) {
-      setScanMessage('Verification denied: missing face template.');
+  const handleStartScan = async () => {
+  if (!user || !user.faceDescriptor) {
+    setScanMessage('Verification denied: missing face template.');
+    return;
+  }
+  setScanning(true);
+  setScanMessage('Extracting live facial vectors...');
+  try {
+    const liveDescriptor = await getFaceDescriptor(videoRef.current);
+    if (!liveDescriptor) {
+      setScanMessage('No face detected. Please align your face and try again.');
+      setScanning(false);
+      setCameraActive(false);
       return;
     }
-
-    setScanning(true);
-    setScanMessage('Extracting live facial vectors...');
-    
-    // Simulate biometric comparison algorithm
+    const storedDescriptor = new Float32Array(user.faceDescriptor.map(Number));
+    const distance = await compareFaceDescriptors(storedDescriptor, liveDescriptor);
+    const THRESHOLD = 0.5;
+    if (distance > THRESHOLD) {
+      setScanMessage('Face mismatch – verification failed.');
+      setScanning(false);
+      setCameraActive(false);
+      return;
+    }
+    setScanComplete(true);
+    setScanning(false);
+    setScanSuccess(true);
+    setScanMessage('Facial match verified!');
+    // Proceed to cast vote after a short delay
     setTimeout(() => {
-      setScanMessage('Comparing vectors with enrolled template...');
-      setTimeout(() => {
-        setScanComplete(true);
-        setScanning(false);
-        setScanSuccess(true);
-        setScanMessage('Facial match verified (99.8% match confidence)!');
-        
-        // Proceed to cast vote after 1.5s
-        setTimeout(() => {
-          stopCamera();
-          setIsFaceVerifyOpen(false);
-          castBallot();
-        }, 1500);
-      }, 1500);
+      stopCamera();
+      setIsFaceVerifyOpen(false);
+      castBallot();
     }, 1500);
-  };
+  } catch (err) {
+    console.error('Face verification error:', err);
+    setScanMessage('Verification error. Please try again.');
+    setScanning(false);
+    setCameraActive(false);
+  }
+};
 
   const triggerFacialVerification = () => {
     setIsFaceVerifyOpen(true);
