@@ -167,7 +167,7 @@ function renderLandingPage() {
               <div class="timeline-node"></div>
               <div class="timeline-step">Step 1</div>
               <h3 style="font-size: var(--text-lg); margin-bottom: var(--space-2);">Register Account</h3>
-              <p style="font-size: var(--text-sm);">Provide credentials like student identity card, matching details, and set passphrase key.</p>
+              <p style="font-size: var(--text-sm);">Provide credentials like student identity card, matching details, and set password.</p>
             </div>
 
             <div class="timeline-item">

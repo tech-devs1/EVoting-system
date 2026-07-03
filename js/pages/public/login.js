@@ -34,7 +34,7 @@ function renderLoginPage() {
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="login-password">Ballot Security Passphrase</label>
+            <label class="form-label" for="login-password">Password</label>
             <div class="form-input-container">
               <i data-lucide="lock" class="form-input-icon"></i>
               <input type="password" id="login-password" class="form-input form-input-with-icon" placeholder="••••••••••••" required value="password123">

@@ -75,14 +75,14 @@ function renderRegisterPage() {
       cardBody.innerHTML = `
         <form id="reg-form-step-3">
           <div class="form-group">
-            <label class="form-label" for="reg-password">Ballot Security Passphrase</label>
+            <label class="form-label" for="reg-password">Password</label>
             <div class="form-input-container">
               <i data-lucide="lock" class="form-input-icon"></i>
               <input type="password" id="reg-password" class="form-input form-input-with-icon" placeholder="••••••••••••" required>
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label" for="reg-confirm">Confirm Passphrase</label>
+            <label class="form-label" for="reg-confirm">Confirm Password</label>
             <div class="form-input-container">
               <i data-lucide="lock" class="form-input-icon"></i>
               <input type="password" id="reg-confirm" class="form-input form-input-with-icon" placeholder="••••••••••••" required>
