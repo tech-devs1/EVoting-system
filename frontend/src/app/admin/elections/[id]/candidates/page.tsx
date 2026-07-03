@@ -197,7 +197,15 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
       </div>
 
       {/* Candidate Grid */}
-      <div className="candidate-grid">
+      <div
+        className="candidate-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 'var(--space-4)',
+          padding: 'var(--space-4)',
+        }}
+      >
         {candidates.length === 0 ? (
           <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
             <Users size={48} style={{ color: 'var(--text-tertiary)' }} />
