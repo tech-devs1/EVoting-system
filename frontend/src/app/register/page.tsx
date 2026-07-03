@@ -165,38 +165,55 @@ export default function RegisterPage() {
     setCameraActive(false);
   };
 
-  const handleCaptureFace = () => {
+  const [faceDescriptor, setFaceDescriptor] = useState<number[] | null>(null);
+
+  const handleCaptureFace = async () => {
     if (!videoRef.current) return;
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = 320;
-    canvas.height = 320;
-    const ctx = canvas.getContext('2d');
-    
-    if (ctx) {
-      // Mirror the canvas capture to match mirror video preview
-      ctx.translate(320, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(videoRef.current, 0, 0, 320, 320);
-      
-      const base64 = canvas.toDataURL('image/jpeg', 0.85);
-      setCapturedImage(base64);
-      setCameraMessage('Face signature captured successfully!');
+    setCameraMessage('Detecting face...');
+
+    try {
+      const { loadFaceModels, getFaceDescriptor } = await import('@/lib/faceUtils');
+      await loadFaceModels();
+
+      const descriptor = await getFaceDescriptor(videoRef.current);
+      if (!descriptor) {
+        setCameraMessage('No face detected. Please align your face clearly and try again.');
+        return;
+      }
+
+      // Capture image from canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 320;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.translate(320, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoRef.current, 0, 0, 320, 320);
+        const base64 = canvas.toDataURL('image/jpeg', 0.85);
+        setCapturedImage(base64);
+      }
+
+      setFaceDescriptor(Array.from(descriptor));
+      setCameraMessage('Face captured and biometric profile created!');
       stopCamera();
+    } catch (err) {
+      console.error('Face capture error:', err);
+      setCameraMessage('Face detection failed. Please ensure good lighting and try again.');
     }
   };
 
   const handleStep4Submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!capturedImage) {
+    if (!capturedImage || !faceDescriptor) {
       setError('Please capture your face to continue');
       return;
     }
     setError('');
     setLoading(true);
     try {
-      // Pass the captured faceImage base64 to register API call
-      const result = await register(studentId, email, name, password, capturedImage);
+      // Pass the captured faceImage base64 and descriptor to register API call
+      const result = await register(studentId, email, name, password, capturedImage, faceDescriptor);
       if (result?.otpRequired && result.email) {
         setOtpEmail(result.email);
         setCurrentStep(5); // OTP step
@@ -205,12 +222,10 @@ export default function RegisterPage() {
       }
     } catch (err: any) {
       setError(err.message || 'Registration failed');
-      // If registration fails, let them go back to password/capture step
     } finally {
       setLoading(false);
     }
   };
-
 
   const handleOtpChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
