@@ -235,21 +235,33 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                     <div className="candidate-select-indicator" style={{ display: isSelected ? 'flex' : 'none' }}>
                       <Check size={14} />
                     </div>
-                    <img
-                      src={cand.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'}
-                      alt={cand.name}
-                      className="candidate-photo"
-                    />
-                    <h4 className="candidate-name">{cand.name}</h4>
-                    <span className="candidate-position">{cand.position}</span>
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-full btn-sm cand-expand-profile-btn"
-                      onClick={(e) => openProfileModal(cand, e)}
-                      style={{ marginTop: 'var(--space-4)' }}
-                    >
-                      Read Manifesto
-                    </button>
+                    {/* Photo wrapper — fixed size so image is always fully visible */}
+                    <div className="candidate-photo-wrap">
+                      <img
+                        src={cand.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'}
+                        alt={cand.name}
+                        className="candidate-photo"
+                      />
+                    </div>
+
+                    {/* Content wrapper */}
+                    <div className="candidate-content">
+                      <div className="candidate-info">
+                        <h4 className="candidate-name">{cand.name}</h4>
+                        <span className="candidate-position">{cand.position}</span>
+                      </div>
+
+                      <div className="candidate-actions" style={{ marginTop: 'var(--space-2)' }}>
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm cand-expand-profile-btn"
+                          onClick={(e) => openProfileModal(cand, e)}
+                          style={{ width: '100%' }}
+                        >
+                          Read Manifesto
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
