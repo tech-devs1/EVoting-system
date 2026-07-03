@@ -19,13 +19,11 @@ interface Election {
   title: string;
 }
 
-function VoteConfirmationPageContent({ params }: { params: Promise<{ id: string }> }) {
+function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const resolvedParams = use(params);
   const { user } = useAuth();
   
-  const electionId = resolvedParams.id;
   // Get all candidate IDs passed in search params
   const candidateIds = searchParams.getAll('candidateId');
 
@@ -433,10 +431,11 @@ function VoteConfirmationPageContent({ params }: { params: Promise<{ id: string 
   );
 }
 
-export default function VoteConfirmationPage(props: any) {
+export default function VoteConfirmationPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   return (
     <Suspense fallback={<p style={{ color: 'var(--text-secondary)', padding: 'var(--space-8)', textAlign: 'center' }}>Preparing ballot confirmation details...</p>}>
-      <VoteConfirmationPageContent {...props} />
+      <VoteConfirmationPageContent electionId={resolvedParams.id} />
     </Suspense>
   );
 }
