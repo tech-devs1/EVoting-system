@@ -112,21 +112,92 @@ export default function RegisterPage() {
       setError('Passwords do not match');
       return;
     }
+    
+    // Go to Facial Enrollment Step 4
+    setCurrentStep(4);
+    setTimeout(() => {
+      startCamera();
+    }, 100);
+  };
+
+  // Step 4 (Facial Capture) handlers
+  const [cameraActive, setCameraActive] = useState(false);
+  const [capturedImage, setCapturedImage] = useState('');
+  const [cameraMessage, setCameraMessage] = useState('Align your face inside the frame.');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const startCamera = async () => {
+    setCameraActive(true);
+    setCapturedImage('');
+    setCameraMessage('Requesting camera authorization...');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320, facingMode: 'user' } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setCameraMessage('Align your face in the center and click Capture.');
+    } catch (err) {
+      console.error('Camera stream access failed:', err);
+      setCameraMessage('Failed to initialize webcam. A camera is required for registration.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  const handleCaptureFace = () => {
+    if (!videoRef.current) return;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 320;
+    const ctx = canvas.getContext('2d');
+    
+    if (ctx) {
+      // Mirror the canvas capture to match mirror video preview
+      ctx.translate(320, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(videoRef.current, 0, 0, 320, 320);
+      
+      const base64 = canvas.toDataURL('image/jpeg', 0.85);
+      setCapturedImage(base64);
+      setCameraMessage('Face signature captured successfully!');
+      stopCamera();
+    }
+  };
+
+  const handleStep4Submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!capturedImage) {
+      setError('Please capture your face to continue');
+      return;
+    }
+    setError('');
     setLoading(true);
     try {
-      const result = await register(studentId, email, name, password);
+      // Pass the captured faceImage base64 to register API call
+      const result = await register(studentId, email, name, password, capturedImage);
       if (result?.otpRequired && result.email) {
         setOtpEmail(result.email);
-        setCurrentStep(4); // OTP verification step
+        setCurrentStep(5); // OTP step
       } else {
-        setCurrentStep(5); // success
+        setCurrentStep(6); // Success
       }
     } catch (err: any) {
       setError(err.message || 'Registration failed');
+      // If registration fails, let them go back to password/capture step
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleOtpChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -159,7 +230,7 @@ export default function RegisterPage() {
     try {
       const res = await apiRequest<{ status: string; token: string; data: any }>('/auth/verify-otp', 'POST', { email: otpEmail, otp: otpCode });
       if (res.status === 'success') {
-        setCurrentStep(5); // success screen
+        setCurrentStep(6); // success screen
       }
     } catch (err: any) {
       setError(err.message || 'Invalid OTP. Please try again.');
@@ -181,6 +252,7 @@ export default function RegisterPage() {
       setError(err.message || 'Failed to resend.');
     }
   };
+
   const renderStepNumber = (step: number) => {
     if (currentStep > step) {
       return (
@@ -221,7 +293,7 @@ export default function RegisterPage() {
           <div 
             className="reg-progress-bar" 
             style={{ 
-              width: `${((currentStep - 1) / 4) * 100}%`,
+              width: `${((currentStep - 1) / 5) * 100}%`,
               height: '2px',
               background: 'var(--color-primary)',
               position: 'absolute',
@@ -236,6 +308,7 @@ export default function RegisterPage() {
           {renderStepNumber(3)}
           {renderStepNumber(4)}
           {renderStepNumber(5)}
+          {renderStepNumber(6)}
         </div>
 
         {error && (
@@ -430,6 +503,108 @@ export default function RegisterPage() {
           )}
 
           {currentStep === 4 && (
+            <form onSubmit={handleStep4Submit}>
+              <div style={{ textAlign: 'center', marginBottom: 'var(--space-4)' }}>
+                <h3 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-1)' }}>Facial Identification Setup</h3>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                  A biometric face signature is required to verify identity when casting votes.
+                </p>
+              </div>
+
+              {/* Camera Frame Viewport */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}>
+                <div style={{
+                  position: 'relative',
+                  width: '200px',
+                  height: '200px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '3px solid var(--border-color)',
+                  background: '#000',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: capturedImage ? '0 0 15px rgba(34, 197, 94, 0.3)' : 'none'
+                }}>
+                  {capturedImage ? (
+                    <img 
+                      src={capturedImage} 
+                      alt="Captured Face" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    />
+                  ) : (
+                    <video 
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+                    />
+                  )}
+                  
+                  {!capturedImage && (
+                    <div style={{
+                      position: 'absolute',
+                      inset: '15px',
+                      border: '2px dashed rgba(255, 255, 255, 0.4)',
+                      borderRadius: '50%',
+                      pointerEvents: 'none'
+                    }} />
+                  )}
+                </div>
+
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textAlign: 'center', fontWeight: '500' }}>
+                  {cameraMessage}
+                </p>
+
+                <div style={{ display: 'flex', gap: 'var(--space-3)', width: '100%' }}>
+                  {!capturedImage ? (
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary btn-full"
+                      onClick={handleCaptureFace}
+                      disabled={!cameraActive}
+                    >
+                      Capture Photo
+                    </button>
+                  ) : (
+                    <button 
+                      type="button" 
+                      className="btn btn-outline btn-full"
+                      onClick={() => {
+                        startCamera();
+                      }}
+                    >
+                      Retake Photo
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-6)' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary btn-full" 
+                  onClick={() => {
+                    stopCamera();
+                    setCurrentStep(3);
+                  }}
+                  disabled={loading}
+                >
+                  Back
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary btn-full" 
+                  disabled={loading || !capturedImage}
+                >
+                  {loading ? 'Submitting...' : 'Register Profile'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {currentStep === 5 && (
             <form onSubmit={handleOtpSubmit}>
               <div style={{ textAlign: 'center', marginBottom: 'var(--space-5)' }}>
                 <div style={{
@@ -507,7 +682,7 @@ export default function RegisterPage() {
             </form>
           )}
 
-          {currentStep === 5 && (
+          {currentStep === 6 && (
             <div className="success-screen" style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
               <div className="success-icon-wrapper" style={{ 
                 width: '64px', height: '64px', borderRadius: '50%', 

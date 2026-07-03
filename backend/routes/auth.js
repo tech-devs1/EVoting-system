@@ -97,7 +97,7 @@ router.post('/verify-student', async (req, res) => {
 // Register a user securely
 router.post('/register', async (req, res) => {
   try {
-    const { studentId, email, name, password } = req.body;
+    const { studentId, email, name, password, faceImage } = req.body;
 
     if (!studentId || !email || !password) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
@@ -138,6 +138,7 @@ router.post('/register', async (req, res) => {
       name: name || studentData.name,
       uid: studentId,
       role: 'voter',
+      faceImage: faceImage || '',
     }, { merge: true });
 
     // Attempt to send OTP — don't fail the entire registration if email fails

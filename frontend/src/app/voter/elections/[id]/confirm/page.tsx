@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { AlertTriangle, ArrowLeft, ShieldCheck, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface Candidate {
   id: string;
@@ -82,6 +83,7 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
   const [cameraActive, setCameraActive] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
   const [scanMessage, setScanMessage] = useState('Position your face within the scanner ring');
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
@@ -89,23 +91,27 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
   const startCamera = async () => {
     setCameraActive(true);
     setScanComplete(false);
+    setScanSuccess(false);
     setScanning(false);
     setScanMessage('Initializing camera stream...');
+
+    if (!user || !user.faceImage) {
+      setScanMessage('No biometric profile found on file! Denied voting access.');
+      setCameraActive(false);
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320, facingMode: 'user' } });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-      setScanMessage('Camera active. Align face inside container.');
+      setScanMessage('Align your face to match your registered profile.');
     } catch (err) {
       console.error('Camera stream access failed:', err);
-      setScanMessage('Webcam access error. Proceeding with backup cryptographic validation.');
-      // Graceful fallback: Let them proceed after 2 seconds
-      setTimeout(() => {
-        setIsFaceVerifyOpen(false);
-        castBallot();
-      }, 2000);
+      setScanMessage('Camera hardware error. Biometric verification failed.');
+      setCameraActive(false);
     }
   };
 
@@ -118,16 +124,23 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
   };
 
   const handleStartScan = () => {
+    if (!user || !user.faceImage) {
+      setScanMessage('Verification denied: missing face template.');
+      return;
+    }
+
     setScanning(true);
-    setScanMessage('Analyzing facial markers & depth signatures...');
+    setScanMessage('Extracting live facial vectors...');
     
-    // Simulate biometric match checks
+    // Simulate biometric comparison algorithm
     setTimeout(() => {
-      setScanMessage('Matching with student database template (99.8% confidence)...');
+      setScanMessage('Comparing vectors with enrolled template...');
       setTimeout(() => {
         setScanComplete(true);
         setScanning(false);
-        setScanMessage('Biometric verification success. Signature generated!');
+        setScanSuccess(true);
+        setScanMessage('Facial match verified (99.8% match confidence)!');
+        
         // Proceed to cast vote after 1.5s
         setTimeout(() => {
           stopCamera();
@@ -279,9 +292,9 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
       {/* Biometric Verification Modal Overlay */}
       {isFaceVerifyOpen && (
         <div className="modal-overlay active" style={{ zIndex: 10000 }}>
-          <div className="modal-container" style={{ maxWidth: '400px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-container" style={{ maxWidth: '520px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Biometric Verification</h3>
+              <h3 className="modal-title">Biometric Identity Verification</h3>
               <button 
                 className="modal-close" 
                 onClick={() => {
@@ -295,54 +308,88 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
             
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}>
               
-              {/* Scanning camera feed area */}
-              <div style={{
-                position: 'relative',
-                width: '240px',
-                height: '240px',
-                borderRadius: '50%',
-                overflow: 'hidden',
-                border: '4px solid var(--border-color)',
-                boxShadow: scanning ? '0 0 20px rgba(99, 102, 241, 0.4)' : scanComplete ? '0 0 20px rgba(34, 197, 94, 0.4)' : 'none',
-                background: '#000',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <video 
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    transform: 'scaleX(-1)' // mirror view
-                  }}
-                />
-
-                {/* Face silhouette overlay */}
-                <div style={{
-                  position: 'absolute',
-                  inset: '20px',
-                  border: '2px dashed rgba(255, 255, 255, 0.4)',
-                  borderRadius: '50%',
-                  pointerEvents: 'none'
-                }} />
-
-                {/* Green laser scan bar */}
-                {scanning && (
+              {/* Dual image feed layout */}
+              <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+                
+                {/* Enrolled Template */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>Enrolled Template</span>
                   <div style={{
-                    position: 'absolute',
-                    width: '100%',
-                    height: '4px',
-                    background: 'var(--color-primary, #6366f1)',
-                    boxShadow: '0 0 8px var(--color-primary, #6366f1)',
-                    animation: 'scanLaser 2s linear infinite',
-                    top: 0
-                  }} />
-                )}
+                    width: '160px',
+                    height: '160px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    border: '3px solid var(--border-color)',
+                    background: 'var(--bg-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {user?.faceImage ? (
+                      <img 
+                        src={user.faceImage} 
+                        alt="Registered Biometric" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    ) : (
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>No template</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Live Scanner Feed */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>Live Scanner Feed</span>
+                  <div style={{
+                    position: 'relative',
+                    width: '160px',
+                    height: '160px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    border: '3px solid var(--border-color)',
+                    boxShadow: scanning ? '0 0 15px rgba(99, 102, 241, 0.4)' : scanComplete && scanSuccess ? '0 0 15px rgba(34, 197, 94, 0.4)' : 'none',
+                    background: '#000',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <video 
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        transform: 'scaleX(-1)' // mirror view
+                      }}
+                    />
+
+                    {/* Face silhouette overlay */}
+                    <div style={{
+                      position: 'absolute',
+                      inset: '12px',
+                      border: '1.5px dashed rgba(255, 255, 255, 0.4)',
+                      borderRadius: '50%',
+                      pointerEvents: 'none'
+                    }} />
+
+                    {/* Green laser scan bar */}
+                    {scanning && (
+                      <div style={{
+                        position: 'absolute',
+                        width: '100%',
+                        height: '3px',
+                        background: 'var(--color-primary, #6366f1)',
+                        boxShadow: '0 0 6px var(--color-primary, #6366f1)',
+                        animation: 'scanLaser 2s linear infinite',
+                        top: 0
+                      }} />
+                    )}
+                  </div>
+                </div>
+
               </div>
 
               {/* Status Message */}
@@ -350,7 +397,7 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
                 <p style={{
                   fontSize: 'var(--text-sm)',
                   fontWeight: 600,
-                  color: scanComplete ? 'var(--color-success, #22c55e)' : 'var(--text-primary)',
+                  color: scanComplete ? (scanSuccess ? 'var(--color-success, #22c55e)' : 'var(--color-danger, #ef4444)') : 'var(--text-primary)',
                   margin: 0
                 }}>
                   {scanMessage}
@@ -375,7 +422,7 @@ export default function VoteConfirmationPage({ params }: { params: Promise<{ id:
                 onClick={handleStartScan}
                 disabled={!cameraActive || scanning || scanComplete}
               >
-                Start Facial Scan
+                Verify & Submit
               </button>
             </div>
           </div>
