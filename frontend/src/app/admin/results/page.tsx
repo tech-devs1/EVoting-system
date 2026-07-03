@@ -41,51 +41,6 @@ interface ElectionResult {
   totalVotes: number;
 }
 
-// ---- Download report helper ----
-function downloadReport(results: ElectionResult[]) {
-  const now = new Date().toLocaleString();
-  let text = `VOTICK — ELECTION RESULTS REPORT\nGenerated: ${now}\n`;
-  text += '='.repeat(60) + '\n\n';
-
-  results.forEach(({ election, candidates, totalVotes }) => {
-    text += `ELECTION: ${election.title.toUpperCase()}\n`;
-    text += `Status: ${election.status} | Total Votes: ${totalVotes}\n`;
-    text += '-'.repeat(60) + '\n';
-
-    // Group by position
-    const groups: Record<string, Candidate[]> = {};
-    candidates.forEach(c => {
-      if (!groups[c.position]) groups[c.position] = [];
-      groups[c.position].push(c);
-    });
-
-    Object.entries(groups).forEach(([position, cands]) => {
-      const sorted = [...cands].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-      const posTotal = sorted.reduce((s, c) => s + (c.votes || 0), 0);
-      const topVotes = sorted[0]?.votes || 0;
-      const isTied = sorted.filter(c => (c.votes || 0) === topVotes).length > 1;
-
-      text += `\n  POSITION: ${position}\n`;
-      sorted.forEach((c, i) => {
-        const pct = posTotal > 0 ? (((c.votes || 0) / posTotal) * 100).toFixed(1) : '0.0';
-        const crown = i === 0 && !isTied && posTotal > 0 ? ' [WINNER]' : '';
-        const tie = isTied && (c.votes || 0) === topVotes ? ' [TIE]' : '';
-        text += `  ${i + 1}. ${c.name} — ${c.votes || 0} votes (${pct}%)${crown}${tie}\n`;
-      });
-    });
-
-    text += '\n' + '='.repeat(60) + '\n\n';
-  });
-
-  const blob = new Blob([text], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `votick-results-${Date.now()}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 // ---- Per-position chart sub-component ----
 function PositionChart({
   position,
@@ -274,7 +229,13 @@ function PositionChart({
 }
 
 // ---- Per-election wrapper ----
-function ElectionChart({ result }: { result: ElectionResult }) {
+function ElectionChart({ 
+  result, 
+  onDownloadPdf 
+}: { 
+  result: ElectionResult; 
+  onDownloadPdf: (id: string, title: string) => void;
+}) {
   const { election, candidates, totalVotes } = result;
 
   // Group by position (preserve insertion order)
@@ -308,17 +269,26 @@ function ElectionChart({ result }: { result: ElectionResult }) {
             <span>{totalVotes.toLocaleString()} total vote{totalVotes !== 1 ? 's' : ''}</span>
           </div>
         </div>
-        <span style={{
-          padding: '2px 10px', borderRadius: '999px',
-          fontSize: 'var(--text-xs)', fontWeight: 600,
-          background: `${statusColors[election.status] || '#94a3b8'}22`,
-          color: statusColors[election.status] || '#94a3b8',
-          border: `1px solid ${statusColors[election.status] || '#94a3b8'}44`,
-          textTransform: 'capitalize',
-        }}>
-          {election.status === 'active' && <span style={{ marginRight: 4 }}>●</span>}
-          {election.status}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => onDownloadPdf(election.id, election.title)}
+            style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-xs)', padding: '4px 10px' }}
+          >
+            <Download size={12} /> Download PDF
+          </button>
+          <span style={{
+            padding: '2px 10px', borderRadius: '999px',
+            fontSize: 'var(--text-xs)', fontWeight: 600,
+            background: `${statusColors[election.status] || '#94a3b8'}22`,
+            color: statusColors[election.status] || '#94a3b8',
+            border: `1px solid ${statusColors[election.status] || '#94a3b8'}44`,
+            textTransform: 'capitalize',
+          }}>
+            {election.status === 'active' && <span style={{ marginRight: 4 }}>●</span>}
+            {election.status}
+          </span>
+        </div>
       </div>
 
       {candidates.length === 0 ? (
@@ -384,6 +354,37 @@ export default function AdminResultsPage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, []);
 
+  const handleDownloadPdf = async (elId: string, elTitle: string) => {
+    try {
+      const token = localStorage.getItem('Votick_token');
+      const authHeader = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000/api'}/elections/${elId}/report/pdf`, {
+        headers: {
+          'Authorization': authHeader,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Report download failed:', response.status, errorText);
+        throw new Error('Failed to download PDF report');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${elTitle.replace(/[^a-zA-Z0-9]/g, '_')}_report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error('Error downloading report:', err);
+      alert('Failed to download report: ' + err.message);
+    }
+  };
+
   return (
     <div className="animate-page-enter">
       {/* Header */}
@@ -398,21 +399,9 @@ export default function AdminResultsPage() {
             All elections · Live (5s refresh)
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-            <RefreshCw size={14} className="animate-spin-slow" />
-            {results.length} election{results.length !== 1 ? 's' : ''} tracked
-          </div>
-          {results.length > 0 && (
-            <button
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-              onClick={() => downloadReport(results)}
-            >
-              <Download size={14} />
-              Download Report
-            </button>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          <RefreshCw size={14} className="animate-spin-slow" />
+          {results.length} election{results.length !== 1 ? 's' : ''} tracked
         </div>
       </div>
 
@@ -424,7 +413,7 @@ export default function AdminResultsPage() {
         </div>
       ) : (
         results.map(result => (
-          <ElectionChart key={result.election.id} result={result} />
+          <ElectionChart key={result.election.id} result={result} onDownloadPdf={handleDownloadPdf} />
         ))
       )}
     </div>
