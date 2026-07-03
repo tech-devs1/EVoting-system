@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { RefreshCw, ArrowLeft, Trophy } from 'lucide-react';
+import { RefreshCw, ArrowLeft, Trophy, Download } from 'lucide-react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -41,6 +41,51 @@ interface ElectionResult {
   totalVotes: number;
 }
 
+// ---- Download report helper ----
+function downloadReport(results: ElectionResult[]) {
+  const now = new Date().toLocaleString();
+  let text = `VOTICK — ELECTION RESULTS REPORT\nGenerated: ${now}\n`;
+  text += '='.repeat(60) + '\n\n';
+
+  results.forEach(({ election, candidates, totalVotes }) => {
+    text += `ELECTION: ${election.title.toUpperCase()}\n`;
+    text += `Status: ${election.status} | Total Votes: ${totalVotes}\n`;
+    text += '-'.repeat(60) + '\n';
+
+    // Group by position
+    const groups: Record<string, Candidate[]> = {};
+    candidates.forEach(c => {
+      if (!groups[c.position]) groups[c.position] = [];
+      groups[c.position].push(c);
+    });
+
+    Object.entries(groups).forEach(([position, cands]) => {
+      const sorted = [...cands].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+      const posTotal = sorted.reduce((s, c) => s + (c.votes || 0), 0);
+      const topVotes = sorted[0]?.votes || 0;
+      const isTied = sorted.filter(c => (c.votes || 0) === topVotes).length > 1;
+
+      text += `\n  POSITION: ${position}\n`;
+      sorted.forEach((c, i) => {
+        const pct = posTotal > 0 ? (((c.votes || 0) / posTotal) * 100).toFixed(1) : '0.0';
+        const crown = i === 0 && !isTied && posTotal > 0 ? ' [WINNER]' : '';
+        const tie = isTied && (c.votes || 0) === topVotes ? ' [TIE]' : '';
+        text += `  ${i + 1}. ${c.name} — ${c.votes || 0} votes (${pct}%)${crown}${tie}\n`;
+      });
+    });
+
+    text += '\n' + '='.repeat(60) + '\n\n';
+  });
+
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `votick-results-${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ---- Per-position chart sub-component ----
 function PositionChart({
   position,
@@ -53,6 +98,10 @@ function PositionChart({
 }) {
   const sorted = [...candidates].sort((a, b) => (b.votes || 0) - (a.votes || 0));
   const positionTotal = sorted.reduce((s, c) => s + (c.votes || 0), 0);
+
+  // Tie detection: multiple candidates share the highest vote count
+  const topVotes = sorted[0]?.votes || 0;
+  const isTied = positionTotal > 0 && sorted.filter(c => (c.votes || 0) === topVotes).length > 1;
 
   const barData = {
     labels: sorted.map(c => c.name),
@@ -93,6 +142,7 @@ function PositionChart({
   };
 
   const leader = sorted[0];
+  const accentColor = COLORS[colorOffset % COLORS.length];
 
   return (
     <div style={{
@@ -107,7 +157,7 @@ function PositionChart({
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
           <span style={{
             width: '10px', height: '10px', borderRadius: '50%',
-            background: COLORS[colorOffset % COLORS.length],
+            background: accentColor,
             display: 'inline-block', flexShrink: 0,
           }} />
           <h4 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 700 }}>{position}</h4>
@@ -118,28 +168,57 @@ function PositionChart({
           }}>
             {sorted.length} candidate{sorted.length !== 1 ? 's' : ''}
           </span>
+          {isTied && (
+            <span style={{
+              fontSize: 'var(--text-xs)', padding: '2px 8px',
+              borderRadius: '999px', background: '#F59E0B22',
+              border: '1px solid #F59E0B44', color: '#F59E0B',
+              fontWeight: 600,
+            }}>
+              ⚖ Tied
+            </span>
+          )}
         </div>
         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
           {positionTotal.toLocaleString()} vote{positionTotal !== 1 ? 's' : ''}
         </span>
       </div>
 
-      {/* Leader callout */}
-      {leader && positionTotal > 0 && (
+      {/* Leader callout — hidden when tied */}
+      {leader && positionTotal > 0 && !isTied && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
           marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-3)',
           borderRadius: 'var(--radius-md)',
-          background: `${COLORS[colorOffset % COLORS.length]}18`,
-          border: `1px solid ${COLORS[colorOffset % COLORS.length]}44`,
+          background: `${accentColor}18`,
+          border: `1px solid ${accentColor}44`,
         }}>
-          <Trophy size={14} color={COLORS[colorOffset % COLORS.length]} />
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: COLORS[colorOffset % COLORS.length] }}>
+          <Trophy size={14} color={accentColor} />
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: accentColor }}>
             {leader.name}
           </span>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
             leading with {(leader.votes || 0).toLocaleString()} vote{(leader.votes || 0) !== 1 ? 's' : ''}
             {' '}({positionTotal > 0 ? (((leader.votes || 0) / positionTotal) * 100).toFixed(1) : 0}%)
+          </span>
+        </div>
+      )}
+
+      {/* Tie callout */}
+      {isTied && positionTotal > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+          marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-3)',
+          borderRadius: 'var(--radius-md)',
+          background: '#F59E0B18',
+          border: '1px solid #F59E0B44',
+        }}>
+          <span style={{ fontSize: '14px' }}>⚖️</span>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#F59E0B' }}>
+            Tie — {sorted.filter(c => (c.votes || 0) === topVotes).map(c => c.name).join(' & ')}
+          </span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+            each with {topVotes.toLocaleString()} vote{topVotes !== 1 ? 's' : ''}
           </span>
         </div>
       )}
@@ -154,10 +233,12 @@ function PositionChart({
         {sorted.map((cand, idx) => {
           const pct = positionTotal > 0 ? Math.round(((cand.votes || 0) / positionTotal) * 100) : 0;
           const color = COLORS[(colorOffset + idx) % COLORS.length];
+          const isWinner = idx === 0 && !isTied && positionTotal > 0;
+          const isCandTied = isTied && (cand.votes || 0) === topVotes;
           return (
             <div key={cand.id} style={{ marginBottom: 'var(--space-3)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)', fontSize: 'var(--text-sm)' }}>
-                <span style={{ fontWeight: idx === 0 ? 700 : 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontWeight: isWinner || isCandTied ? 700 : 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{
                     width: '20px', height: '20px', borderRadius: '50%',
                     background: color,
@@ -167,8 +248,11 @@ function PositionChart({
                     {idx + 1}
                   </span>
                   {cand.name}
-                  {idx === 0 && positionTotal > 0 && (
-                    <span style={{ fontSize: '12px' }}>🏆</span>
+                  {/* Trophy only when there is a clear sole winner */}
+                  {isWinner && <span style={{ fontSize: '12px' }}>🏆</span>}
+                  {/* Tie badge instead */}
+                  {isCandTied && (
+                    <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600 }}>⚖</span>
                   )}
                 </span>
                 <span style={{ color: 'var(--text-secondary)' }}>{(cand.votes || 0).toLocaleString()} · {pct}%</span>
@@ -314,9 +398,21 @@ export default function AdminResultsPage() {
             All elections · Live (5s refresh)
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-          <RefreshCw size={14} className="animate-spin-slow" />
-          {results.length} election{results.length !== 1 ? 's' : ''} tracked
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+            <RefreshCw size={14} className="animate-spin-slow" />
+            {results.length} election{results.length !== 1 ? 's' : ''} tracked
+          </div>
+          {results.length > 0 && (
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              onClick={() => downloadReport(results)}
+            >
+              <Download size={14} />
+              Download Report
+            </button>
+          )}
         </div>
       </div>
 
