@@ -9,8 +9,8 @@ export default function LoadingScreen() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
 
-  // All lifecycle logic handled in a single static hook to prevent hook mismatch errors
   useEffect(() => {
     // 1. Detect platform information
     const ua = window.navigator.userAgent.toLowerCase();
@@ -40,30 +40,24 @@ export default function LoadingScreen() {
     if (standalone) {
       // Installed app flow: Splash (5s) -> Woezor (2.5s) -> Auto dismiss
       setPhase('splash');
-      
       const toWoezor = setTimeout(() => {
         setPhase('woezor');
-        
         const toDismiss = setTimeout(() => {
           sessionStorage.setItem('votick_splash_shown', '1');
           setPhase('hidden');
         }, 2500);
-        
         return () => clearTimeout(toDismiss);
       }, 5000);
-
       return () => {
         window.removeEventListener('beforeinstallprompt', handler);
         clearTimeout(toWoezor);
       };
     } else {
-      // Browser flow: Skip splash -> show Woezor immediately -> show buttons after 1.8s
+      // Browser flow: show Woezor immediately -> show buttons after 1.8s
       setPhase('woezor');
-      
       const toButtons = setTimeout(() => {
         setShowButtons(true);
       }, 1800);
-
       return () => {
         window.removeEventListener('beforeinstallprompt', handler);
         clearTimeout(toButtons);
@@ -72,40 +66,23 @@ export default function LoadingScreen() {
   }, []);
 
   const handleInstall = async () => {
-    // Detect platform for install instructions
-    const isAndroid = /android/.test(window.navigator.userAgent.toLowerCase());
     if (isIOS) {
-      // iOS – show Add‑to‑Home‑Screen instructions
-      alert(
-        'To install Votick on iOS:\n\n' +
-        '1. Tap the Share button (□↑) at the bottom of Safari\n' +
-        '2. Scroll down and tap "Add to Home Screen"\n' +
-        '3. Tap "Add" to confirm'
-      );
+      // iOS – show beautiful step-by-step modal
+      setShowInstallModal(true);
       return;
     }
-    
     if (deferredPrompt) {
-      // Trigger native PWA install prompt (works perfectly on Android Chrome)
+      // Android Chrome – trigger native PWA install prompt
       deferredPrompt.prompt();
       await deferredPrompt.userChoice;
       setDeferredPrompt(null);
-    } else if (isAndroid) {
-      // Fallback if the event hasn't fired yet or browser doesn't support it
-      alert(
-        'To install Votick on Android, open this page in Chrome and click "Add to Home screen" from the browser menu.'
-      );
     } else {
-      // Generic fallback for any other platform
-      alert(
-        'To install Votick:\n\n' +
-        '• Chrome/Edge: Click the app install icon (⊕) in the right side of your address bar.'
-      );
+      // Android fallback – show instructions modal
+      setShowInstallModal(true);
     }
   };
 
   const handleContinue = () => {
-    // Login page is already loaded underneath — just dismiss the overlay
     sessionStorage.setItem('votick_splash_shown', '1');
     setPhase('hidden');
   };
@@ -141,14 +118,10 @@ export default function LoadingScreen() {
           bottom: '15%', right: '15%', filter: 'blur(50px)'
         }} />
 
-        {/* Votick logo — sits above Woezor */}
+        {/* Votick logo */}
         <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.85 }}
-          animate={{
-            opacity: 1,
-            y: showButtons ? -30 : 0,
-            scale: 1,
-          }}
+          animate={{ opacity: 1, y: showButtons ? -30 : 0, scale: 1 }}
           transition={{
             opacity: { duration: 0.9, ease: 'easeOut' },
             scale: { duration: 0.9, ease: 'easeOut' },
@@ -156,13 +129,7 @@ export default function LoadingScreen() {
               ? { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] }
               : { duration: 0.9, ease: 'easeOut' },
           }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            marginBottom: '-0.5rem',
-          }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '-0.5rem' }}
         >
           <span style={{
             fontFamily: "'Inter', 'Outfit', system-ui, sans-serif",
@@ -187,14 +154,10 @@ export default function LoadingScreen() {
           </span>
         </motion.div>
 
-        {/* WOEZOR text — rises up when buttons appear */}
+        {/* WOEZOR text */}
         <motion.h1
           initial={{ opacity: 0, y: 40, filter: 'blur(12px)' }}
-          animate={{
-            opacity: 1,
-            y: showButtons ? -30 : 0,
-            filter: 'blur(0px)',
-          }}
+          animate={{ opacity: 1, y: showButtons ? -30 : 0, filter: 'blur(0px)' }}
           transition={{
             opacity: { duration: 1.2, ease: 'easeOut', delay: 0.3 },
             filter: { duration: 1.2, ease: 'easeOut', delay: 0.3 },
@@ -231,7 +194,7 @@ export default function LoadingScreen() {
           Welcome
         </motion.p>
 
-        {/* Buttons appear after Woezor rises */}
+        {/* Action Buttons */}
         <AnimatePresence>
           {showButtons && (
             <motion.div
@@ -250,7 +213,7 @@ export default function LoadingScreen() {
                 padding: '0 1.5rem',
               }}
             >
-              {/* Install App */}
+              {/* Install Button */}
               <button
                 onClick={handleInstall}
                 style={{
@@ -280,7 +243,7 @@ export default function LoadingScreen() {
                   (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 32px rgba(99,102,241,0.5)';
                 }}
               >
-                <span style={{ fontSize: '1.2rem' }}>⬇</span>
+                <span style={{ fontSize: '1.2rem' }}>{isIOS ? '📲' : '⬇'}</span>
                 {isIOS ? 'Add to Home Screen' : 'Install App'}
               </button>
 
@@ -313,6 +276,108 @@ export default function LoadingScreen() {
                 Continue on Website →
               </button>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ─── Install Instructions Modal (iOS & Android fallback) ── */}
+        <AnimatePresence>
+          {showInstallModal && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowInstallModal(false)}
+                style={{
+                  position: 'fixed', inset: 0,
+                  background: 'rgba(0,0,0,0.65)',
+                  backdropFilter: 'blur(6px)',
+                  zIndex: 100000,
+                }}
+              />
+
+              {/* Bottom Sheet */}
+              <motion.div
+                initial={{ y: '100%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                style={{
+                  position: 'fixed',
+                  bottom: 0, left: 0, right: 0,
+                  background: 'linear-gradient(160deg, #0f172a 0%, #1a2a5e 100%)',
+                  borderRadius: '28px 28px 0 0',
+                  padding: '12px 24px 48px',
+                  zIndex: 100001,
+                  boxShadow: '0 -8px 60px rgba(0,0,0,0.6)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}
+              >
+                {/* Drag handle */}
+                <div style={{
+                  width: '40px', height: '4px', borderRadius: '2px',
+                  background: 'rgba(255,255,255,0.25)',
+                  margin: '0 auto 24px',
+                }} />
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '28px' }}>
+                  <div style={{
+                    width: '52px', height: '52px', borderRadius: '16px', flexShrink: 0,
+                    background: 'linear-gradient(135deg, #6366f1, #2563eb)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.6rem',
+                    boxShadow: '0 4px 20px rgba(99,102,241,0.5)',
+                  }}>
+                    📲
+                  </div>
+                  <div>
+                    <p style={{ color: '#fff', fontWeight: 700, fontSize: '1.15rem', margin: 0, lineHeight: 1.2 }}>
+                      Install Votick
+                    </p>
+                    <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem', margin: '4px 0 0' }}>
+                      {isIOS ? 'Add to your iPhone Home Screen' : 'Add to your Android Home Screen'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step-by-step instructions */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                  {isIOS ? (
+                    <>
+                      <InstallStep number={1} icon="🌐" text={<>Open this page in <strong style={{ color: '#60a5fa' }}>Safari</strong> (not Chrome)</>} />
+                      <InstallStep number={2} icon="⬆️" text={<>Tap the <strong style={{ color: '#60a5fa' }}>Share</strong> button (□↑) at the bottom of Safari</>} />
+                      <InstallStep number={3} icon="➕" text={<>Scroll down and tap <strong style={{ color: '#60a5fa' }}>"Add to Home Screen"</strong></>} />
+                      <InstallStep number={4} icon="✅" text={<>Tap <strong style={{ color: '#60a5fa' }}>"Add"</strong> in the top-right corner to confirm</>} />
+                    </>
+                  ) : (
+                    <>
+                      <InstallStep number={1} icon="🌐" text={<>Open this page in <strong style={{ color: '#60a5fa' }}>Chrome</strong></>} />
+                      <InstallStep number={2} icon="⋮" text={<>Tap the <strong style={{ color: '#60a5fa' }}>three-dot menu</strong> (⋮) in the top-right corner</>} />
+                      <InstallStep number={3} icon="📱" text={<>Tap <strong style={{ color: '#60a5fa' }}>"Add to Home screen"</strong></>} />
+                      <InstallStep number={4} icon="✅" text={<>Tap <strong style={{ color: '#60a5fa' }}>"Add"</strong> to confirm</>} />
+                    </>
+                  )}
+                </div>
+
+                {/* Got it button */}
+                <button
+                  onClick={() => setShowInstallModal(false)}
+                  style={{
+                    marginTop: '32px', width: '100%', padding: '15px',
+                    borderRadius: '14px', border: 'none',
+                    background: 'linear-gradient(135deg, #6366f1, #2563eb)',
+                    color: '#fff', fontSize: '1rem', fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 24px rgba(99,102,241,0.45)',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  Got it!
+                </button>
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
       </div>
@@ -430,6 +495,29 @@ export default function LoadingScreen() {
           transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
           style={{ width: '100%', height: '100%', background: '#2563eb', borderRadius: '2px' }}
         />
+      </div>
+    </div>
+  );
+}
+
+/* ─── Install Step helper ────────────────────────────────────────── */
+function InstallStep({ number, icon, text }: { number: number; icon: string; text: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+      <div style={{
+        width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
+        background: 'rgba(99,102,241,0.2)',
+        border: '1px solid rgba(99,102,241,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#a5b4fc', fontWeight: 700, fontSize: '0.82rem',
+      }}>
+        {number}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', paddingTop: '2px' }}>
+        <span style={{ fontSize: '1.25rem', lineHeight: 1.3 }}>{icon}</span>
+        <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', margin: 0, lineHeight: 1.55 }}>
+          {text}
+        </p>
       </div>
     </div>
   );
