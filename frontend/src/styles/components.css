@@ -442,16 +442,17 @@
 /* ---- Modals ---- */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: var(--bg-overlay);
   z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
+  /* Top pad clears the topbar; bottom pad clears the bottom-nav when visible */
+  padding: calc(var(--topbar-height) + var(--space-4))
+           var(--space-4)
+           var(--space-4)
+           var(--space-4);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--transition-base);
@@ -469,13 +470,14 @@
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 600px;
-  max-height: calc(100dvh - var(--space-12));
+  /* Usable height = viewport minus topbar, bottom-nav clearance, and some breathing room */
+  max-height: calc(100dvh - var(--topbar-height) - var(--space-12));
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-2xl);
   transform: translateY(20px) scale(0.95);
   transition: transform var(--transition-spring);
-  margin: auto;
+  margin: 0 auto;
 }
 
 .modal-overlay.active .modal-container {
@@ -532,27 +534,25 @@
   flex-shrink: 0;
 }
 
-/* ---- Tablet: bottom nav is visible (769px – 1024px) ---- */
-/* Overlay stays full-screen so the backdrop covers everything,
-   but padding-bottom offsets the flex-centering so the modal
-   is positioned above the nav bar, not behind it. */
+/* ---- Tablet: bottom nav visible (769px – 1024px) ---- */
+/* Push modal up above the bottom nav with padding-bottom */
 @media (min-width: 769px) and (max-width: 1024px) {
   .modal-overlay {
     padding-bottom: calc(var(--bottom-nav-height) + var(--space-4));
-    align-items: center;
+    /* Align to top so form starts high on screen, never gets cut off below */
+    align-items: flex-start;
   }
 
   .modal-container {
-    max-height: calc(100dvh - var(--bottom-nav-height) - var(--space-12));
+    max-height: calc(100dvh - var(--topbar-height) - var(--bottom-nav-height) - var(--space-8));
   }
 }
 
-/* ---- Mobile Modal Fixes (<= 768px, no bottom nav) ---- */
+/* ---- Mobile: slide-up sheet (<= 768px, no bottom nav) ---- */
 @media (max-width: 768px) {
   .modal-overlay {
     align-items: flex-end;
     padding: 0;
-    bottom: 0; /* No bottom nav on mobile */
   }
 
   .modal-container {
