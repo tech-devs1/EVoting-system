@@ -5,6 +5,27 @@ const { verifyAuth } = require('../middleware/auth');
 const { recordVoteAudit } = require('../services/audit');
 const { logFraudAlert } = require('../services/fraud');
 
+// Get list of election IDs the current user has voted in
+router.get('/voted-elections', verifyAuth, async (req, res) => {
+  try {
+    const voterId = req.user.uid;
+    const snapshot = await db.collection('voted_voters').where('voterId', '==', voterId).get();
+    
+    const votedElectionIds = new Set();
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.electionId) {
+        votedElectionIds.add(data.electionId);
+      }
+    });
+
+    res.status(200).json({ status: 'success', data: Array.from(votedElectionIds) });
+  } catch (error) {
+    console.error('Error fetching voted elections:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch voted status' });
+  }
+});
+
 // Cast a vote
 router.post('/cast', verifyAuth, async (req, res) => {
   try {

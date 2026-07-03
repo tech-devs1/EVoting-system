@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { Search, FolderOpen, Clock, Lock, ArrowLeft } from 'lucide-react';
 
 interface Election {
@@ -63,8 +64,10 @@ function CountdownTimer({ endsAt, status }: { endsAt: string; status: string }) 
 }
 
 export default function VoterElectionsPage() {
+  const { user } = useAuth();
   const [elections, setElections] = useState<Election[]>([]);
   const [filteredList, setFilteredList] = useState<Election[]>([]);
+  const [votedElectionIds, setVotedElectionIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'active' | 'draft' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,6 +82,14 @@ export default function VoterElectionsPage() {
           setElections(adminElections);
           setFilteredList(adminElections);
         }
+
+        // Fetch user voted elections
+        try {
+          const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
+          if (votedRes.status === 'success') {
+            setVotedElectionIds(votedRes.data);
+          }
+        } catch (_) {}
       } catch (err) {
         console.error('Error fetching elections:', err);
       } finally {
@@ -182,20 +193,36 @@ export default function VoterElectionsPage() {
             const statusLabel = mapStatusLabel(el.status);
             const badgeClass = mapStatusBadgeClass(el.status);
 
+            const hasVoted = votedElectionIds.includes(el.id);
             return (
               <div className="card election-card card-hover" key={el.id}>
                 <div className="election-card-header">
                   <h4 className="election-card-title">{el.title}</h4>
-                  <span className={`badge ${badgeClass}`}>{statusLabel}</span>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                    {hasVoted && el.status === 'active' && (
+                      <span className="badge" style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--color-success, #22c55e)', fontSize: '11px' }}>✓ Voted</span>
+                    )}
+                    <span className={`badge ${badgeClass}`}>{statusLabel}</span>
+                  </div>
                 </div>
                 <p className="election-card-desc">{el.description}</p>
                 <div className="election-card-meta">
                   <CountdownTimer endsAt={el.endDate} status={el.status} />
                   <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
                     {el.status === 'active' ? (
-                      <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
-                        Vote Now
-                      </Link>
+                      hasVoted ? (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          disabled
+                          style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                        >
+                          Already Voted
+                        </button>
+                      ) : (
+                        <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
+                          Vote Now
+                        </Link>
+                      )
                     ) : el.status === 'completed' ? (
                       <Link href={`/voter/verify`} className="btn btn-outline btn-sm">
                         Audit Records

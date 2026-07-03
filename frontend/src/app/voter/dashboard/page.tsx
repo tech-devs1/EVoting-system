@@ -75,6 +75,7 @@ export default function VoterDashboard() {
   const { user } = useAuth();
   const [elections, setElections] = useState<Election[]>([]);
   const [upcomingElections, setUpcomingElections] = useState<Election[]>([]);
+  const [votedElectionIds, setVotedElectionIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalVotes, setTotalVotes] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -97,6 +98,16 @@ export default function VoterDashboard() {
           const adminElections = res.data.filter(el => el.createdBy === 'admin');
           setElections(adminElections.filter(el => el.status === 'active'));
           setUpcomingElections(adminElections.filter(el => el.status === 'draft'));
+        }
+
+        // Fetch user voted elections
+        try {
+          const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
+          if (votedRes.status === 'success') {
+            setVotedElectionIds(votedRes.data);
+          }
+        } catch (votedErr) {
+          console.error('Error fetching voted elections:', votedErr);
         }
 
         // Get total votes cast from local storage history or mock
@@ -165,28 +176,46 @@ export default function VoterDashboard() {
             </div>
           ) : (
             <div className="election-grid">
-              {elections.map(el => (
-                <div className="card election-card card-hover" key={el.id}>
-                  <div className="election-card-header">
-                    <h4 className="election-card-title">{el.title}</h4>
-                    <span className="badge badge-success">Active</span>
-                  </div>
-                  <p className="election-card-desc">{el.description}</p>
-                  <div className="election-card-meta">
-                    <CountdownTimer endsAt={el.endDate} />
-                    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                      <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
-                        Vote Now
-                      </Link>
-                      {el.showResults && (
-                        <Link href={`/voter/elections/${el.id}/results`} className="btn btn-secondary btn-sm">
-                          View Results
-                        </Link>
-                      )}
+              {elections.map(el => {
+                const hasVoted = votedElectionIds.includes(el.id);
+                return (
+                  <div className="card election-card card-hover" key={el.id}>
+                    <div className="election-card-header">
+                      <h4 className="election-card-title">{el.title}</h4>
+                      <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                        {hasVoted && (
+                          <span className="badge" style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--color-success, #22c55e)', fontSize: '11px' }}>✓ Voted</span>
+                        )}
+                        <span className="badge badge-success">Active</span>
+                      </div>
+                    </div>
+                    <p className="election-card-desc">{el.description}</p>
+                    <div className="election-card-meta">
+                      <CountdownTimer endsAt={el.endDate} />
+                      <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                        {hasVoted ? (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            disabled
+                            style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                          >
+                            Already Voted
+                          </button>
+                        ) : (
+                          <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
+                            Vote Now
+                          </Link>
+                        )}
+                        {el.showResults && (
+                          <Link href={`/voter/elections/${el.id}/results`} className="btn btn-secondary btn-sm">
+                            View Results
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
