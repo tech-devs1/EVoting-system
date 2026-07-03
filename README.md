@@ -31,7 +31,9 @@ A full-stack, PWA-ready electronic voting platform built for HTU. Features real-
 | **Auth** | Firebase Auth + JWT |
 | **Image Uploads** | ImageKit |
 | **Email** | EmailJS |
+| **Biometrics** | deepface.dev Cloud API |
 | **Deployment** | Vercel |
+
 
 ---
 
@@ -119,6 +121,28 @@ cd backend
 npm install
 ```
 
+Create a `.env` file in the `backend` directory and add the necessary configuration parameters:
+```env
+PORT=5000
+JWT_SECRET=your_jwt_secret
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=your_firebase_client_email
+FIREBASE_PRIVATE_KEY="your_firebase_private_key"
+
+EMAILJS_SERVICE_ID=your_emailjs_service_id
+EMAILJS_TEMPLATE_ID=your_emailjs_template_id
+EMAILJS_PUBLIC_KEY=your_emailjs_public_key
+EMAILJS_PRIVATE_KEY=your_emailjs_private_key
+
+IMAGEKIT_PUBLIC_KEY="your_imagekit_public_key"
+IMAGEKIT_PRIVATE_KEY="your_imagekit_private_key"
+IMAGEKIT_URL_ENDPOINT="your_imagekit_url_endpoint"
+
+# deepface.dev cloud verification key (obtain from deepface.dev dashboard)
+DEEPFACE_API_KEY=your_deepface_api_key
+```
+
+
 Start the backend server:
 ```bash
 npm start
@@ -205,15 +229,28 @@ We used our class list in the database for now.
 1. Open the app, and click **Register Account**.
 2. Enter your index number. The system fetches your ID in the database and postfixes it with HTU email standard (`@htu.edu.gh`).
 3. Set your password following the requirements.
-4. You will be sent an OTP via email (check spam if not found) to verify.
-5. You will be redirected to login and verify OTP again.
-6. If elections are available, you can view them, read manifestos, and vote for your preferred candidate.
+4. **Biometric Enrollment:** Align your face to the camera frame and capture your biometric photo to register your facial profile template.
+5. You will be sent an OTP via email (check spam if not found) to verify.
+6. You will be redirected to login and verify OTP again.
+7. If elections are available, you can view them, read manifestos, and proceed to vote.
 
 ### Already Registered
 
 1. Login with your credentials.
-2. If elections are available, you can view them, read manifestos, and vote for your preferred candidate.
+2. If elections are available, you can view them and select your preferred candidate.
+3. **Biometric Face Verification:** When submitting your vote, the camera overlay will open. Tap "Verify & Submit" to compare your live face against your enrolled profile using the **deepface.dev** cloud verification system to prevent voter fraud.
+4. Once verified, your ballot is cast securely.
+
+---
+
+## 🔒 Biometric Security (deepface.dev Cloud API)
+
+Votick employs state-of-the-art biometric verification to prevent double-voting and identity spoofing:
+- **Enrollment:** During registration, a base64 photo of the voter's face is securely stored in their Firestore document.
+- **Verification:** When casting a ballot, Votick captures a live face snapshot and sends it to the backend. The backend securely queries the **deepface.dev** cloud verification gateway (via `POST https://api.deepface.dev/verify`) using the `Facenet` model and `cosine` distance metric to guarantee that only the owner of the index number can cast the ballot.
+- **Privacy & Security:** Verification is processed on the server-side, protecting the `DEEPFACE_API_KEY` and avoiding heavy browser-side ML resource usage.
 
 ---
 
 *Built with ❤️ by the Techdevstudios team.*
+
