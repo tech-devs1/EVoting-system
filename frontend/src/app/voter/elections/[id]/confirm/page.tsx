@@ -429,6 +429,7 @@ function VoteConfirmationPageContent({ params }: { params: Promise<{ id: string 
           </div>
         </div>
       )}
+    </div>
   );
 }
 
