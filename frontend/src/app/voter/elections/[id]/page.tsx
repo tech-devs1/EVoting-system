@@ -221,12 +221,20 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                   />
                   <h4 style={{ margin: 0 }}>{cand.name}</h4>
                   <span className="badge badge-info" style={{ alignSelf: 'flex-start' }}>{cand.position}</span>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    {cand.manifesto}
-                  </p>
-                  <button className="btn btn-primary btn-sm" onClick={() => selectCandidateFromCompare(cand.id)}>
-                    Select
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={(e) => {
+                        setIsCompareModalOpen(false);
+                        openProfileModal(cand, e);
+                      }}
+                    >
+                      Read Manifesto
+                    </button>
+                    <button className="btn btn-primary btn-sm" onClick={() => selectCandidateFromCompare(cand.id)}>
+                      Select
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

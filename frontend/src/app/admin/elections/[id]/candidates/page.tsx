@@ -196,6 +196,7 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                 className="candidate-photo"
               />
               <h4 className="candidate-name">{cand.name}</h4>
+              <span className="candidate-position">{cand.position}</span>
               <button 
                 type="button"
                 className="btn btn-outline btn-full btn-sm" 
