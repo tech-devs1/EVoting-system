@@ -3,13 +3,90 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// ─── DOM-based install modal — injected directly, bypasses React state issues ───
+function showInstallInstructions(isIOS: boolean) {
+  // Remove any existing modal
+  const existing = document.getElementById('votick-install-overlay');
+  if (existing) existing.remove();
+
+  const isAndroid = !isIOS;
+
+  const steps = isIOS
+    ? [
+        { icon: '🌐', text: 'Open this page in <b style="color:#60a5fa">Safari</b> (not Chrome or other browsers)' },
+        { icon: '⬆️', text: 'Tap the <b style="color:#60a5fa">Share</b> button (□↑) at the bottom of the screen' },
+        { icon: '➕', text: 'Scroll down and tap <b style="color:#60a5fa">"Add to Home Screen"</b>' },
+        { icon: '✅', text: 'Tap <b style="color:#60a5fa">"Add"</b> in the top-right corner to confirm' },
+      ]
+    : [
+        { icon: '⋮', text: 'Tap the <b style="color:#60a5fa">three-dot menu</b> (⋮) in Chrome\'s top-right corner' },
+        { icon: '📱', text: 'Tap <b style="color:#60a5fa">"Add to Home screen"</b> or <b style="color:#60a5fa">"Install app"</b>' },
+        { icon: '✅', text: 'Tap <b style="color:#60a5fa">"Add"</b> to confirm' },
+      ];
+
+  const stepsHTML = steps
+    .map(
+      (s, i) => `
+      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
+        <div style="width:30px;height:30px;border-radius:50%;flex-shrink:0;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.5);display:flex;align-items:center;justify-content:center;color:#a5b4fc;font-weight:700;font-size:0.82rem;font-family:sans-serif">${i + 1}</div>
+        <div style="display:flex;align-items:flex-start;gap:10px;padding-top:2px">
+          <span style="font-size:1.25rem;line-height:1.3">${s.icon}</span>
+          <p style="color:rgba(255,255,255,0.85);font-size:0.9rem;margin:0;line-height:1.55;font-family:sans-serif">${s.text}</p>
+        </div>
+      </div>`
+    )
+    .join('');
+
+  const html = `
+    <div id="votick-install-overlay" style="position:fixed;inset:0;z-index:9999999;display:flex;align-items:flex-end">
+      <!-- Backdrop -->
+      <div id="votick-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px)"></div>
+      <!-- Sheet -->
+      <div id="votick-sheet" style="position:relative;width:100%;background:linear-gradient(160deg,#0f172a 0%,#1a2a5e 100%);border-radius:28px 28px 0 0;padding:12px 24px 48px;box-shadow:0 -8px 60px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">
+        <!-- Handle -->
+        <div style="width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.25);margin:0 auto 24px"></div>
+        <!-- Header -->
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px">
+          <div style="width:52px;height:52px;border-radius:16px;flex-shrink:0;background:linear-gradient(135deg,#6366f1,#2563eb);display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 4px 20px rgba(99,102,241,0.5)">📲</div>
+          <div>
+            <p style="color:#fff;font-weight:700;font-size:1.15rem;margin:0;line-height:1.2;font-family:sans-serif">Install Votick</p>
+            <p style="color:rgba(255,255,255,0.45);font-size:0.82rem;margin:4px 0 0;font-family:sans-serif">${isIOS ? 'Add to your iPhone Home Screen' : 'Add to your Android Home Screen'}</p>
+          </div>
+        </div>
+        <!-- Steps -->
+        ${stepsHTML}
+        <!-- Button -->
+        <button id="votick-got-it" style="margin-top:16px;width:100%;padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,#6366f1,#2563eb);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:sans-serif;letter-spacing:0.5px">Got it!</button>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  // Animate sheet in
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const sheet = document.getElementById('votick-sheet');
+      if (sheet) sheet.style.transform = 'translateY(0)';
+    });
+  });
+
+  // Close handlers
+  const close = () => {
+    const sheet = document.getElementById('votick-sheet');
+    if (sheet) {
+      sheet.style.transform = 'translateY(100%)';
+      setTimeout(() => document.getElementById('votick-install-overlay')?.remove(), 350);
+    }
+  };
+  document.getElementById('votick-got-it')?.addEventListener('click', close);
+  document.getElementById('votick-backdrop')?.addEventListener('click', close);
+}
+
 export default function LoadingScreen() {
   const [phase, setPhase] = useState<'hidden' | 'splash' | 'woezor'>('hidden');
   const [showButtons, setShowButtons] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [showInstallModal, setShowInstallModal] = useState(false);
 
   useEffect(() => {
     const ua = window.navigator.userAgent.toLowerCase();
@@ -20,12 +97,9 @@ export default function LoadingScreen() {
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true ||
       document.referrer.includes('android-app://');
-    setIsStandalone(standalone);
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
+    // Capture beforeinstallprompt but we no longer use it for the modal
+    const handler = (e: Event) => { e.preventDefault(); };
     window.addEventListener('beforeinstallprompt', handler);
 
     if (sessionStorage.getItem('votick_splash_shown')) {
@@ -49,9 +123,7 @@ export default function LoadingScreen() {
       };
     } else {
       setPhase('woezor');
-      const toButtons = setTimeout(() => {
-        setShowButtons(true);
-      }, 1800);
+      const toButtons = setTimeout(() => setShowButtons(true), 1800);
       return () => {
         window.removeEventListener('beforeinstallprompt', handler);
         clearTimeout(toButtons);
@@ -60,8 +132,7 @@ export default function LoadingScreen() {
   }, []);
 
   const handleInstall = () => {
-    // Always show install instructions modal
-    setShowInstallModal(true);
+    showInstallInstructions(isIOS);
   };
 
   const handleContinue = () => {
@@ -69,303 +140,178 @@ export default function LoadingScreen() {
     setPhase('hidden');
   };
 
-  // ─── Install Modal: always rendered so it persists even after splash dismisses ───
-  const installModal = (
-    <AnimatePresence>
-      {showInstallModal && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowInstallModal(false)}
-            style={{
-              position: 'fixed', inset: 0,
-              background: 'rgba(0,0,0,0.7)',
-              backdropFilter: 'blur(6px)',
-              zIndex: 999999,
-            }}
-          />
-          <motion.div
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-            style={{
-              position: 'fixed',
-              bottom: 0, left: 0, right: 0,
-              background: 'linear-gradient(160deg, #0f172a 0%, #1a2a5e 100%)',
-              borderRadius: '28px 28px 0 0',
-              padding: '12px 24px 48px',
-              zIndex: 1000000,
-              boxShadow: '0 -8px 60px rgba(0,0,0,0.6)',
-              border: '1px solid rgba(255,255,255,0.1)',
-            }}
-          >
-            {/* Drag handle */}
-            <div style={{
-              width: '40px', height: '4px', borderRadius: '2px',
-              background: 'rgba(255,255,255,0.25)',
-              margin: '0 auto 24px',
-            }} />
-
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '28px' }}>
-              <div style={{
-                width: '52px', height: '52px', borderRadius: '16px', flexShrink: 0,
-                background: 'linear-gradient(135deg, #6366f1, #2563eb)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '1.6rem',
-                boxShadow: '0 4px 20px rgba(99,102,241,0.5)',
-              }}>
-                📲
-              </div>
-              <div>
-                <p style={{ color: '#fff', fontWeight: 700, fontSize: '1.15rem', margin: 0, lineHeight: 1.2 }}>
-                  Install Votick
-                </p>
-                <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem', margin: '4px 0 0' }}>
-                  {isIOS ? 'Add to your iPhone Home Screen' : 'Add to your Android Home Screen'}
-                </p>
-              </div>
-            </div>
-
-            {/* Steps */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {isIOS ? (
-                <>
-                  <InstallStep number={1} icon="🌐" text={<>Open this page in <strong style={{ color: '#60a5fa' }}>Safari</strong> (not Chrome)</>} />
-                  <InstallStep number={2} icon="⬆️" text={<>Tap the <strong style={{ color: '#60a5fa' }}>Share</strong> button (□↑) at the bottom of Safari</>} />
-                  <InstallStep number={3} icon="➕" text={<>Scroll down and tap <strong style={{ color: '#60a5fa' }}>"Add to Home Screen"</strong></>} />
-                  <InstallStep number={4} icon="✅" text={<>Tap <strong style={{ color: '#60a5fa' }}>"Add"</strong> in the top-right to confirm</>} />
-                </>
-              ) : (
-                <>
-                  <InstallStep number={1} icon="⋮" text={<>Tap the <strong style={{ color: '#60a5fa' }}>three-dot menu</strong> (⋮) in Chrome's top-right corner</>} />
-                  <InstallStep number={2} icon="📱" text={<>Tap <strong style={{ color: '#60a5fa' }}>"Add to Home screen"</strong> or <strong style={{ color: '#60a5fa' }}>"Install app"</strong></>} />
-                  <InstallStep number={3} icon="✅" text={<>Tap <strong style={{ color: '#60a5fa' }}>"Add"</strong> to confirm</>} />
-                </>
-              )}
-            </div>
-
-            <button
-              onClick={() => setShowInstallModal(false)}
-              style={{
-                marginTop: '32px', width: '100%', padding: '15px',
-                borderRadius: '14px', border: 'none',
-                background: 'linear-gradient(135deg, #6366f1, #2563eb)',
-                color: '#fff', fontSize: '1rem', fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 4px 24px rgba(99,102,241,0.45)',
-                letterSpacing: '0.5px',
-              }}
-            >
-              Got it!
-            </button>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-
-  // ─── If splash is hidden, only render the modal (if open) ───────
-  if (phase === 'hidden') {
-    return installModal;
-  }
+  if (phase === 'hidden') return null;
 
   /* ─── WOEZOR SCREEN ─────────────────────────────────────────── */
   if (phase === 'woezor') {
     return (
-      <>
-        <div
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 99999,
+          gap: '2rem',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Background glow orbs */}
+        <div style={{
+          position: 'absolute', width: '400px', height: '400px', borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)',
+          top: '10%', left: '20%', filter: 'blur(60px)'
+        }} />
+        <div style={{
+          position: 'absolute', width: '300px', height: '300px', borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(37,99,235,0.4) 0%, transparent 70%)',
+          bottom: '15%', right: '15%', filter: 'blur(50px)'
+        }} />
+
+        {/* Votick logo */}
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.85 }}
+          animate={{ opacity: 1, y: showButtons ? -30 : 0, scale: 1 }}
+          transition={{
+            opacity: { duration: 0.9, ease: 'easeOut' },
+            scale: { duration: 0.9, ease: 'easeOut' },
+            y: showButtons
+              ? { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] }
+              : { duration: 0.9, ease: 'easeOut' },
+          }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '-0.5rem' }}
+        >
+          <span style={{
+            fontFamily: "'Inter', 'Outfit', system-ui, sans-serif",
+            fontSize: 'clamp(3rem, 12vw, 7.5rem)',
+            fontWeight: 800,
+            color: '#ffffff',
+            letterSpacing: '-2px',
+            lineHeight: 1,
+            textShadow: '0 0 40px rgba(99,102,241,0.7), 0 4px 20px rgba(0,0,0,0.4)',
+          }}>
+            Votick
+          </span>
+          <span style={{
+            fontSize: 'clamp(2rem, 8vw, 5rem)',
+            color: '#60a5fa',
+            lineHeight: 1,
+            fontWeight: 900,
+            textShadow: '0 0 30px rgba(96,165,250,0.8)',
+            marginTop: '-0.25em',
+          }}>
+            ✓
+          </span>
+        </motion.div>
+
+        {/* WOEZOR text */}
+        <motion.h1
+          initial={{ opacity: 0, y: 40, filter: 'blur(12px)' }}
+          animate={{ opacity: 1, y: showButtons ? -30 : 0, filter: 'blur(0px)' }}
+          transition={{
+            opacity: { duration: 1.2, ease: 'easeOut', delay: 0.3 },
+            filter: { duration: 1.2, ease: 'easeOut', delay: 0.3 },
+            y: showButtons
+              ? { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] }
+              : { duration: 1.2, ease: 'easeOut', delay: 0.3 },
+          }}
           style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 99999,
-            gap: '2rem',
-            overflow: 'hidden',
+            fontFamily: "'Dancing Script', 'Brush Script MT', 'Lucida Handwriting', cursive",
+            fontSize: 'clamp(2.5rem, 7vw, 4.5rem)',
+            color: 'rgba(255,255,255,0.85)',
+            textShadow: '0 4px 30px rgba(99,102,241,0.6), 0 0 60px rgba(255,255,255,0.15)',
+            margin: 0,
+            letterSpacing: '6px',
           }}
         >
-          {/* Background glow orbs */}
-          <div style={{
-            position: 'absolute', width: '400px', height: '400px', borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)',
-            top: '10%', left: '20%', filter: 'blur(60px)'
-          }} />
-          <div style={{
-            position: 'absolute', width: '300px', height: '300px', borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(37,99,235,0.4) 0%, transparent 70%)',
-            bottom: '15%', right: '15%', filter: 'blur(50px)'
-          }} />
+          Woezor
+        </motion.h1>
 
-          {/* Votick logo */}
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.85 }}
-            animate={{ opacity: 1, y: showButtons ? -30 : 0, scale: 1 }}
-            transition={{
-              opacity: { duration: 0.9, ease: 'easeOut' },
-              scale: { duration: 0.9, ease: 'easeOut' },
-              y: showButtons
-                ? { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] }
-                : { duration: 0.9, ease: 'easeOut' },
-            }}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '-0.5rem' }}
-          >
-            <span style={{
-              fontFamily: "'Inter', 'Outfit', system-ui, sans-serif",
-              fontSize: 'clamp(3rem, 12vw, 7.5rem)',
-              fontWeight: 800,
-              color: '#ffffff',
-              letterSpacing: '-2px',
-              lineHeight: 1,
-              textShadow: '0 0 40px rgba(99,102,241,0.7), 0 4px 20px rgba(0,0,0,0.4)',
-            }}>
-              Votick
-            </span>
-            <span style={{
-              fontSize: 'clamp(2rem, 8vw, 5rem)',
-              color: '#60a5fa',
-              lineHeight: 1,
-              fontWeight: 900,
-              textShadow: '0 0 30px rgba(96,165,250,0.8)',
-              marginTop: '-0.25em',
-            }}>
-              ✓
-            </span>
-          </motion.div>
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: showButtons ? 0 : 0.7 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          style={{
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: '1rem',
+            letterSpacing: '3px',
+            textTransform: 'uppercase',
+            fontFamily: 'var(--font-display), sans-serif',
+            margin: '-1.5rem 0 0',
+          }}
+        >
+          Welcome
+        </motion.p>
 
-          {/* WOEZOR text */}
-          <motion.h1
-            initial={{ opacity: 0, y: 40, filter: 'blur(12px)' }}
-            animate={{ opacity: 1, y: showButtons ? -30 : 0, filter: 'blur(0px)' }}
-            transition={{
-              opacity: { duration: 1.2, ease: 'easeOut', delay: 0.3 },
-              filter: { duration: 1.2, ease: 'easeOut', delay: 0.3 },
-              y: showButtons
-                ? { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] }
-                : { duration: 1.2, ease: 'easeOut', delay: 0.3 },
-            }}
-            style={{
-              fontFamily: "'Dancing Script', 'Brush Script MT', 'Lucida Handwriting', cursive",
-              fontSize: 'clamp(2.5rem, 7vw, 4.5rem)',
-              color: 'rgba(255,255,255,0.85)',
-              textShadow: '0 4px 30px rgba(99,102,241,0.6), 0 0 60px rgba(255,255,255,0.15)',
-              margin: 0,
-              letterSpacing: '6px',
-            }}
-          >
-            Woezor
-          </motion.h1>
-
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: showButtons ? 0 : 0.7 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            style={{
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: '1rem',
-              letterSpacing: '3px',
-              textTransform: 'uppercase',
-              fontFamily: 'var(--font-display), sans-serif',
-              margin: '-1.5rem 0 0',
-            }}
-          >
-            Welcome
-          </motion.p>
-
-          {/* Action Buttons */}
-          <AnimatePresence>
-            {showButtons && (
-              <motion.div
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.7, ease: [0.34, 1.56, 0.64, 1] }}
+        {/* Action Buttons */}
+        <AnimatePresence>
+          {showButtons && (
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.7, ease: [0.34, 1.56, 0.64, 1] }}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1rem',
+                marginTop: '1rem',
+                width: '100%',
+                maxWidth: '320px',
+                padding: '0 1.5rem',
+              }}
+            >
+              <button
+                onClick={handleInstall}
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  marginTop: '1rem',
                   width: '100%',
-                  maxWidth: '320px',
-                  padding: '0 1.5rem',
+                  padding: '14px 24px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #6366f1, #2563eb)',
+                  color: '#fff',
+                  fontSize: '1rem',
+                  fontWeight: '700',
+                  letterSpacing: '0.5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  boxShadow: '0 8px 32px rgba(99,102,241,0.5)',
                 }}
               >
-                <button
-                  onClick={handleInstall}
-                  style={{
-                    width: '100%',
-                    padding: '14px 24px',
-                    borderRadius: '14px',
-                    border: 'none',
-                    background: 'linear-gradient(135deg, #6366f1, #2563eb)',
-                    color: '#fff',
-                    fontSize: '1rem',
-                    fontWeight: '700',
-                    letterSpacing: '0.5px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    boxShadow: '0 8px 32px rgba(99,102,241,0.5)',
-                    transition: 'transform 0.15s, box-shadow 0.15s',
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.03)';
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 40px rgba(99,102,241,0.65)';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 32px rgba(99,102,241,0.5)';
-                  }}
-                >
-                  <span style={{ fontSize: '1.2rem' }}>{isIOS ? '📲' : '⬇'}</span>
-                  {isIOS ? 'Add to Home Screen' : 'Install App'}
-                </button>
+                <span style={{ fontSize: '1.2rem' }}>{isIOS ? '📲' : '⬇'}</span>
+                {isIOS ? 'Add to Home Screen' : 'Install App'}
+              </button>
 
-                <button
-                  onClick={handleContinue}
-                  style={{
-                    width: '100%',
-                    padding: '13px 24px',
-                    borderRadius: '14px',
-                    border: '1.5px solid rgba(255,255,255,0.25)',
-                    background: 'rgba(255,255,255,0.08)',
-                    backdropFilter: 'blur(8px)',
-                    color: 'rgba(255,255,255,0.9)',
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    letterSpacing: '0.3px',
-                    transition: 'background 0.15s, border-color 0.15s',
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.15)';
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.5)';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)';
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.25)';
-                  }}
-                >
-                  Continue on Website →
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Modal rendered outside the main div so it always sits on top */}
-        {installModal}
-      </>
+              <button
+                onClick={handleContinue}
+                style={{
+                  width: '100%',
+                  padding: '13px 24px',
+                  borderRadius: '14px',
+                  border: '1.5px solid rgba(255,255,255,0.25)',
+                  background: 'rgba(255,255,255,0.08)',
+                  backdropFilter: 'blur(8px)',
+                  color: 'rgba(255,255,255,0.9)',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  letterSpacing: '0.3px',
+                }}
+              >
+                Continue on Website →
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     );
   }
 
@@ -392,11 +338,7 @@ export default function LoadingScreen() {
         animate="animate"
         variants={{
           initial: { y: -300, opacity: 0 },
-          animate: {
-            y: 0,
-            opacity: 1,
-            transition: { duration: 1.5, ease: 'easeOut' },
-          },
+          animate: { y: 0, opacity: 1, transition: { duration: 1.5, ease: 'easeOut' } },
         }}
         style={{ position: 'relative', width: 160, height: 160, marginBottom: '2rem' }}
       >
@@ -413,7 +355,6 @@ export default function LoadingScreen() {
             const randX = (Math.random() - 0.5) * 400;
             const randY = (Math.random() - 0.5) * 400;
             const randRot = (Math.random() - 0.5) * 360;
-
             return (
               <motion.div
                 key={index}
@@ -422,24 +363,14 @@ export default function LoadingScreen() {
                 variants={{
                   assembled: { x: 0, y: 0, rotate: 0, opacity: 1 },
                   shatter: {
-                    x: [0, randX, 0],
-                    y: [0, randY, 0],
-                    rotate: [0, randRot, 0],
-                    opacity: [1, 0.5, 1],
-                    transition: {
-                      duration: 3,
-                      delay: 1,
-                      times: [0, 0.5, 1],
-                      ease: 'easeInOut',
-                    },
+                    x: [0, randX, 0], y: [0, randY, 0], rotate: [0, randRot, 0], opacity: [1, 0.5, 1],
+                    transition: { duration: 3, delay: 1, times: [0, 0.5, 1], ease: 'easeInOut' },
                   },
                 }}
                 style={{
                   position: 'absolute',
-                  width: `${100 / gridSize}%`,
-                  height: `${100 / gridSize}%`,
-                  left: `${xOffset}%`,
-                  top: `${yOffset}%`,
+                  width: `${100 / gridSize}%`, height: `${100 / gridSize}%`,
+                  left: `${xOffset}%`, top: `${yOffset}%`,
                   backgroundImage: "url('/icons/logo.png')",
                   backgroundSize: `${gridSize * 100}% ${gridSize * 100}%`,
                   backgroundPosition: `${(col / (gridSize - 1)) * 100}% ${(row / (gridSize - 1)) * 100}%`,
@@ -456,15 +387,9 @@ export default function LoadingScreen() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 1 }}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          color: '#0f172a',
-          fontSize: '2.5rem',
-          fontWeight: '800',
-          letterSpacing: '2px',
-          fontFamily: 'var(--font-display), sans-serif',
-          marginBottom: '2rem',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          color: '#0f172a', fontSize: '2.5rem', fontWeight: '800',
+          letterSpacing: '2px', fontFamily: 'var(--font-display), sans-serif', marginBottom: '2rem',
         }}
       >
         VOTICK <span style={{ color: '#2563eb' }}>✓</span>
@@ -477,29 +402,6 @@ export default function LoadingScreen() {
           transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
           style={{ width: '100%', height: '100%', background: '#2563eb', borderRadius: '2px' }}
         />
-      </div>
-    </div>
-  );
-}
-
-/* ─── Install Step helper ────────────────────────────────────────── */
-function InstallStep({ number, icon, text }: { number: number; icon: string; text: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-      <div style={{
-        width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
-        background: 'rgba(99,102,241,0.2)',
-        border: '1px solid rgba(99,102,241,0.5)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#a5b4fc', fontWeight: 700, fontSize: '0.82rem',
-      }}>
-        {number}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', paddingTop: '2px' }}>
-        <span style={{ fontSize: '1.25rem', lineHeight: 1.3 }}>{icon}</span>
-        <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', margin: 0, lineHeight: 1.55 }}>
-          {text}
-        </p>
       </div>
     </div>
   );
