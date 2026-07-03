@@ -59,24 +59,9 @@ export default function LoadingScreen() {
     }
   }, []);
 
-  const handleInstall = async () => {
-    if (isIOS) {
-      setShowInstallModal(true);
-      return;
-    }
-    if (deferredPrompt) {
-      // Native Android Chrome install prompt
-      deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      setDeferredPrompt(null);
-      if (choice.outcome === 'accepted') {
-        sessionStorage.setItem('votick_splash_shown', '1');
-        setPhase('hidden');
-      }
-    } else {
-      // Fallback: show manual instructions
-      setShowInstallModal(true);
-    }
+  const handleInstall = () => {
+    // Always show install instructions modal
+    setShowInstallModal(true);
   };
 
   const handleContinue = () => {
