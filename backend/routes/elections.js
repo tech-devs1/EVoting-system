@@ -71,13 +71,26 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
+    // Build a type-specific description if not provided or still generic
+    const electionType = type || 'src';
+    const deptLabel = (department || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const dateLabel = startDate
+      ? new Date(startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : new Date().toLocaleDateString();
+
+    const autoDesc = electionType === 'src'
+      ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
+      : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
+
+    const finalDescription = (description && !description.startsWith('Automated')) ? description : autoDesc;
+
     const newElection = {
       title,
-      description: description || '',
+      description: finalDescription,
       startDate,
       endDate,
       organizationId: organizationId || 'default',
-      type: type || 'src',
+      type: electionType,
       department: department || '',
       status: 'draft', // draft, active, completed
       showResults: showResults === true,
@@ -90,6 +103,38 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error creating election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to create election' });
+  }
+});
+
+// Migrate existing elections to have proper type-specific descriptions (Admin only)
+router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const snapshot = await db.collection('elections').get();
+    const updates = [];
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      // Only fix elections with missing or generic "Automated" descriptions
+      if (!data.description || data.description.startsWith('Automated')) {
+        const electionType = data.type || 'src';
+        const deptLabel = (data.department || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const dateLabel = data.startDate
+          ? new Date(data.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+          : 'a scheduled date';
+
+        const newDesc = electionType === 'src'
+          ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
+          : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
+
+        updates.push(db.collection('elections').doc(doc.id).update({ description: newDesc }));
+      }
+    });
+
+    await Promise.all(updates);
+    res.status(200).json({ status: 'success', message: `Updated ${updates.length} election(s)` });
+  } catch (error) {
+    console.error('Error migrating descriptions:', error);
+    res.status(500).json({ status: 'error', message: 'Migration failed' });
   }
 });
 

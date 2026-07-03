@@ -54,6 +54,11 @@ export default function AdminElectionsPage() {
       }
     }
     fetchElections();
+
+    // One-time migration: fix existing elections with generic descriptions
+    apiRequest('/elections/migrate-descriptions', 'POST')
+      .then((r: any) => console.log('[Migration]', r?.message))
+      .catch(() => {}); // silent — non-critical
   }, []);
 
   const handleCreateElection = async (e: React.FormEvent) => {
