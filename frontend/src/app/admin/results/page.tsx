@@ -41,16 +41,25 @@ interface ElectionResult {
   totalVotes: number;
 }
 
-function ElectionChart({ result }: { result: ElectionResult }) {
-  const { election, candidates, totalVotes } = result;
+// ---- Per-position chart sub-component ----
+function PositionChart({
+  position,
+  candidates,
+  colorOffset,
+}: {
+  position: string;
+  candidates: Candidate[];
+  colorOffset: number;
+}) {
   const sorted = [...candidates].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+  const positionTotal = sorted.reduce((s, c) => s + (c.votes || 0), 0);
 
   const barData = {
     labels: sorted.map(c => c.name),
     datasets: [{
       label: 'Votes',
       data: sorted.map(c => c.votes || 0),
-      backgroundColor: sorted.map((_, i) => COLORS[i % COLORS.length]),
+      backgroundColor: sorted.map((_, i) => COLORS[(colorOffset + i) % COLORS.length]),
       borderRadius: 6,
       borderSkipped: false as const,
     }],
@@ -64,8 +73,8 @@ function ElectionChart({ result }: { result: ElectionResult }) {
       tooltip: {
         callbacks: {
           label: (ctx: any) => {
-            const pct = totalVotes > 0 ? ((ctx.raw / totalVotes) * 100).toFixed(1) : '0.0';
-            return ` ${ctx.raw} votes (${pct}%)`;
+            const pct = positionTotal > 0 ? ((ctx.raw / positionTotal) * 100).toFixed(1) : '0.0';
+            return ` ${ctx.raw} votes (${pct}% of position)`;
           },
         },
       },
@@ -74,11 +83,123 @@ function ElectionChart({ result }: { result: ElectionResult }) {
       y: {
         beginAtZero: true,
         grid: { color: 'rgba(148, 163, 184, 0.1)' },
-        ticks: { stepSize: 1 },
+        ticks: { stepSize: 1, color: 'var(--text-tertiary)' },
       },
-      x: { grid: { display: false } },
+      x: {
+        grid: { display: false },
+        ticks: { color: 'var(--text-secondary)' },
+      },
     },
   };
+
+  const leader = sorted[0];
+
+  return (
+    <div style={{
+      marginBottom: 'var(--space-6)',
+      padding: 'var(--space-4)',
+      borderRadius: 'var(--radius-lg)',
+      border: '1px solid var(--border-color)',
+      background: 'var(--bg-card)',
+    }}>
+      {/* Position header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <span style={{
+            width: '10px', height: '10px', borderRadius: '50%',
+            background: COLORS[colorOffset % COLORS.length],
+            display: 'inline-block', flexShrink: 0,
+          }} />
+          <h4 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 700 }}>{position}</h4>
+          <span style={{
+            fontSize: 'var(--text-xs)', padding: '2px 8px',
+            borderRadius: '999px', background: 'var(--bg-input)',
+            border: '1px solid var(--border-color)', color: 'var(--text-tertiary)',
+          }}>
+            {sorted.length} candidate{sorted.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+          {positionTotal.toLocaleString()} vote{positionTotal !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {/* Leader callout */}
+      {leader && positionTotal > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+          marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-3)',
+          borderRadius: 'var(--radius-md)',
+          background: `${COLORS[colorOffset % COLORS.length]}18`,
+          border: `1px solid ${COLORS[colorOffset % COLORS.length]}44`,
+        }}>
+          <Trophy size={14} color={COLORS[colorOffset % COLORS.length]} />
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: COLORS[colorOffset % COLORS.length] }}>
+            {leader.name}
+          </span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+            leading with {(leader.votes || 0).toLocaleString()} vote{(leader.votes || 0) !== 1 ? 's' : ''}
+            {' '}({positionTotal > 0 ? (((leader.votes || 0) / positionTotal) * 100).toFixed(1) : 0}%)
+          </span>
+        </div>
+      )}
+
+      {/* Bar chart */}
+      <div style={{ height: `${Math.max(160, sorted.length * 44)}px`, position: 'relative', marginBottom: 'var(--space-4)' }}>
+        <Bar data={barData} options={barOptions} />
+      </div>
+
+      {/* Rankings */}
+      <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-3)' }}>
+        {sorted.map((cand, idx) => {
+          const pct = positionTotal > 0 ? Math.round(((cand.votes || 0) / positionTotal) * 100) : 0;
+          const color = COLORS[(colorOffset + idx) % COLORS.length];
+          return (
+            <div key={cand.id} style={{ marginBottom: 'var(--space-3)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)', fontSize: 'var(--text-sm)' }}>
+                <span style={{ fontWeight: idx === 0 ? 700 : 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{
+                    width: '20px', height: '20px', borderRadius: '50%',
+                    background: color,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '10px', fontWeight: 700, color: '#fff', flexShrink: 0,
+                  }}>
+                    {idx + 1}
+                  </span>
+                  {cand.name}
+                  {idx === 0 && positionTotal > 0 && (
+                    <span style={{ fontSize: '12px' }}>🏆</span>
+                  )}
+                </span>
+                <span style={{ color: 'var(--text-secondary)' }}>{(cand.votes || 0).toLocaleString()} · {pct}%</span>
+              </div>
+              <div style={{ height: '6px', background: 'var(--bg-tertiary)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${pct}%`, height: '100%',
+                  background: color,
+                  borderRadius: '999px',
+                  transition: 'width 0.6s ease',
+                }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---- Per-election wrapper ----
+function ElectionChart({ result }: { result: ElectionResult }) {
+  const { election, candidates, totalVotes } = result;
+
+  // Group by position (preserve insertion order)
+  const positionGroups: Record<string, Candidate[]> = {};
+  candidates.forEach(c => {
+    if (!positionGroups[c.position]) positionGroups[c.position] = [];
+    positionGroups[c.position].push(c);
+  });
+  const positions = Object.keys(positionGroups);
 
   const statusColors: Record<string, string> = {
     active: '#10B981',
@@ -87,32 +208,30 @@ function ElectionChart({ result }: { result: ElectionResult }) {
   };
 
   return (
-    <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+    <div className="card" style={{ marginBottom: 'var(--space-8)' }}>
       {/* Election header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
-            <Trophy size={16} color={COLORS[0]} />
-            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600, margin: 0 }}>{election.title}</h3>
+            <Trophy size={18} color={COLORS[0]} />
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, margin: 0 }}>{election.title}</h3>
           </div>
           <div style={{ display: 'flex', gap: 'var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
             <span>{candidates.length} candidate{candidates.length !== 1 ? 's' : ''}</span>
             <span>·</span>
+            <span>{positions.length} position{positions.length !== 1 ? 's' : ''}</span>
+            <span>·</span>
             <span>{totalVotes.toLocaleString()} total vote{totalVotes !== 1 ? 's' : ''}</span>
           </div>
         </div>
-        <span
-          style={{
-            padding: '2px 10px',
-            borderRadius: '999px',
-            fontSize: 'var(--text-xs)',
-            fontWeight: 600,
-            background: `${statusColors[election.status] || '#94a3b8'}22`,
-            color: statusColors[election.status] || '#94a3b8',
-            border: `1px solid ${statusColors[election.status] || '#94a3b8'}44`,
-            textTransform: 'capitalize',
-          }}
-        >
+        <span style={{
+          padding: '2px 10px', borderRadius: '999px',
+          fontSize: 'var(--text-xs)', fontWeight: 600,
+          background: `${statusColors[election.status] || '#94a3b8'}22`,
+          color: statusColors[election.status] || '#94a3b8',
+          border: `1px solid ${statusColors[election.status] || '#94a3b8'}44`,
+          textTransform: 'capitalize',
+        }}>
           {election.status === 'active' && <span style={{ marginRight: 4 }}>●</span>}
           {election.status}
         </span>
@@ -123,47 +242,14 @@ function ElectionChart({ result }: { result: ElectionResult }) {
           No candidates registered for this election.
         </p>
       ) : (
-        <>
-          {/* Bar chart */}
-          <div style={{ height: `${Math.max(200, sorted.length * 48)}px`, position: 'relative', marginBottom: 'var(--space-6)' }}>
-            <Bar data={barData} options={barOptions} />
-          </div>
-
-          {/* Rankings */}
-          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-4)' }}>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rankings</p>
-            {sorted.map((cand, idx) => {
-              const pct = totalVotes > 0 ? Math.round(((cand.votes || 0) / totalVotes) * 100) : 0;
-              return (
-                <div key={cand.id} style={{ marginBottom: 'var(--space-3)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)', fontSize: 'var(--text-sm)' }}>
-                    <span style={{ fontWeight: idx === 0 ? 700 : 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{
-                        width: '20px', height: '20px', borderRadius: '50%',
-                        background: COLORS[idx % COLORS.length],
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '10px', fontWeight: 700, color: '#fff', flexShrink: 0,
-                      }}>
-                        {idx + 1}
-                      </span>
-                      {cand.name}
-                      <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, fontSize: 'var(--text-xs)' }}>({cand.position})</span>
-                    </span>
-                    <span style={{ color: 'var(--text-secondary)' }}>{(cand.votes || 0).toLocaleString()} votes · {pct}%</span>
-                  </div>
-                  <div style={{ height: '6px', background: 'var(--bg-tertiary)', borderRadius: '999px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${pct}%`, height: '100%',
-                      background: COLORS[idx % COLORS.length],
-                      borderRadius: '999px',
-                      transition: 'width 0.6s ease',
-                    }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
+        positions.map((position, pi) => (
+          <PositionChart
+            key={position}
+            position={position}
+            candidates={positionGroups[position]}
+            colorOffset={pi * 3}
+          />
+        ))
       )}
     </div>
   );
