@@ -207,33 +207,43 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
         ) : (
           candidates.map(cand => (
             <div className="card candidate-card" key={cand.id}>
-              <img
-                src={cand.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'}
-                alt={cand.name}
-                className="candidate-photo"
-              />
-              <h4 className="candidate-name">{cand.name}</h4>
-              <span className="candidate-position">{cand.position}</span>
-              <button
-                type="button"
-                className="btn btn-outline btn-full btn-sm"
-                onClick={() => openEditManifesto(cand)}
-                style={{ marginTop: 'var(--space-2)', marginBottom: 'var(--space-2)' }}
-              >
-                {cand.manifesto ? 'Edit Manifesto' : 'Upload Manifesto'}
-              </button>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)', marginTop: 'var(--space-1)' }}>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-                  Votes: <strong style={{ color: 'var(--text-primary)' }}>{cand.votes || 0}</strong>
-                </span>
+              {/* Photo wrapper — fixed size so image is always fully visible */}
+              <div className="candidate-photo-wrap">
+                <img
+                  src={cand.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'}
+                  alt={cand.name}
+                  className="candidate-photo"
+                />
               </div>
-              <button
-                className="btn btn-sm btn-full"
-                style={{ background: 'var(--color-danger-bg)', color: 'var(--color-danger)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                onClick={() => handleDeleteCandidate(cand.id)}
-              >
-                <Trash size={14} /> Remove Candidate
-              </button>
+
+              {/* Content */}
+              <div className="candidate-content">
+                <div className="candidate-info">
+                  <h4 className="candidate-name">{cand.name}</h4>
+                  <span className="candidate-position">{cand.position}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)', display: 'block' }}>
+                    Votes: <strong style={{ color: 'var(--text-primary)' }}>{cand.votes || 0}</strong>
+                  </span>
+                </div>
+
+                <div className="candidate-actions">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => openEditManifesto(cand)}
+                  >
+                    {cand.manifesto ? 'Edit Manifesto' : 'Upload Manifesto'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    style={{ background: 'var(--color-danger-bg)', color: 'var(--color-danger)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    onClick={() => handleDeleteCandidate(cand.id)}
+                  >
+                    <Trash size={13} /> Remove
+                  </button>
+                </div>
+              </div>
             </div>
           ))
         )}

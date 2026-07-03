@@ -444,47 +444,91 @@
 /* ---- Candidate Grid & Card Layout ---- */
 .candidate-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--space-4);
   padding: var(--space-4);
 }
 
+/* Card: row layout — photo left, content right */
 .candidate-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  padding: var(--space-4);
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
+  flex-direction: row;
+  align-items: stretch;
   overflow: hidden;
+  padding: 0 !important; /* override .card padding so photo bleeds to edge */
 }
 
-@media (min-width: 768px) {
-  .candidate-card {
-    flex-direction: row;
-    align-items: stretch;
-  }
-  .candidate-photo {
-    width: 150px;
-    height: auto;
-    max-height: none;
-    object-fit: cover;
-    margin-right: var(--space-4);
-    border-radius: var(--radius-md);
-  }
+/* Photo wrapper: fixed width, full height of card */
+.candidate-photo-wrap {
+  flex: 0 0 120px;
+  width: 120px;
+  min-height: 140px;
+  overflow: hidden;
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
 }
-
 
 .candidate-photo {
   width: 100%;
-  height: auto;
-  max-height: 180px;
+  height: 100%;
   object-fit: cover;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-3);
+  object-position: center top;
+  display: block;
 }
+
+/* Content: fills remaining width, column layout with info top, actions bottom */
+.candidate-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-4);
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.candidate-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.candidate-name {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.candidate-position {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+  display: inline-block;
+  width: fit-content;
+}
+
+/* Action buttons row: sit at bottom of content */
+.candidate-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.candidate-actions .btn {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  padding: 6px 10px;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
