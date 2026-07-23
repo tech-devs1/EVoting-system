@@ -66,6 +66,89 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Get Comprehensive Voter & Election Activity Report
+router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    // 1. Fetch all user records (voters from CSV)
+    const usersSnap = await db.collection('users').get();
+    
+    let totalVotersFromCSV = 0;
+    let totalRegisteredVoters = 0;
+    const voterList = [];
+
+    // 2. Fetch voted_voters to determine unique voters who voted
+    const votedSnap = await db.collection('voted_voters').get();
+    const votedVoterIds = new Set();
+    votedSnap.forEach(doc => {
+      const data = doc.data();
+      if (data.voterId) {
+        votedVoterIds.add(data.voterId);
+      }
+    });
+
+    usersSnap.forEach(doc => {
+      const data = doc.data();
+      // Exclude admin accounts if role is explicitly 'admin'
+      if (data.role !== 'admin') {
+        totalVotersFromCSV++;
+        const isReg = data.isRegistered === true;
+        if (isReg) totalRegisteredVoters++;
+
+        const hasVoted = votedVoterIds.has(doc.id) || votedVoterIds.has(data.studentId);
+
+        voterList.push({
+          id: doc.id,
+          studentId: data.studentId || doc.id,
+          name: data.name || 'Unknown',
+          email: data.email || '',
+          programme: data.programme || 'N/A',
+          level: data.level || 'N/A',
+          isRegistered: isReg,
+          hasVoted: hasVoted
+        });
+      }
+    });
+
+    const totalVoted = votedVoterIds.size;
+
+    // Field status checks (Tick ✓ vs Cross ✗)
+    const summary = {
+      field1_totalVoters: {
+        label: 'Number of Voters (from CSV file)',
+        count: totalVotersFromCSV,
+        isSuccessful: totalVotersFromCSV > 0,
+        mark: totalVotersFromCSV > 0 ? '✓' : '✗'
+      },
+      field2_registeredVoters: {
+        label: 'Number of Registered Voters',
+        count: totalRegisteredVoters,
+        isSuccessful: totalRegisteredVoters > 0,
+        mark: totalRegisteredVoters > 0 ? '✓' : '✗'
+      },
+      field3_successfullyVoted: {
+        label: 'Number of People that have Successfully Voted',
+        count: totalVoted,
+        isSuccessful: totalVoted > 0,
+        mark: totalVoted > 0 ? '✓' : '✗'
+      }
+    };
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        summary,
+        totalVotersFromCSV,
+        totalRegisteredVoters,
+        totalVoted,
+        voters: voterList
+      }
+    });
+  } catch (error) {
+    console.error('Error generating admin report:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to generate report' });
+  }
+});
+
 // Trigger an Audit Check on an election
 router.get('/audit/:electionId', verifyAuth, requireAdmin, async (req, res) => {
   try {
