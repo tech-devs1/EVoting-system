@@ -12,7 +12,8 @@ import {
   Vote, 
   RefreshCw,
   Search,
-  Filter
+  Filter,
+  Printer
 } from 'lucide-react';
 
 interface ReportSummaryField {
@@ -72,8 +73,14 @@ export default function AdminReportPage() {
     fetchReport();
   }, []);
 
-  // Generate downloadable single file containing summary fields + tick/wrong marks + voter status breakdown
-  const downloadReportFile = () => {
+  // Trigger PDF Generation via browser native print dialog
+  const generatePDFReport = () => {
+    if (!reportData) return;
+    window.print();
+  };
+
+  // Generate downloadable single text/raw file containing summary fields + tick/wrong marks + voter status breakdown
+  const downloadReportTextFile = () => {
     if (!reportData) return;
 
     const timestamp = new Date().toLocaleString();
@@ -144,20 +151,79 @@ export default function AdminReportPage() {
   });
 
   return (
-    <div className="animate-page-enter">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+    <div className="animate-page-enter" id="pdf-report-root">
+      {/* Print Styles for PDF Generation */}
+      <style>{`
+        @media print {
+          /* Hide non-printable elements */
+          #sidebar, .sidebar, .topbar, .mobile-nav, .no-print, header, button {
+            display: none !important;
+          }
+          body, html, .app-shell, .main-wrapper, .content-area {
+            background: #ffffff !important;
+            color: #000000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+          }
+          #pdf-report-root {
+            padding: 20px !important;
+          }
+          .card {
+            box-shadow: none !important;
+            border: 1px solid #cccccc !important;
+            background: #ffffff !important;
+            page-break-inside: avoid;
+            margin-bottom: 20px !important;
+          }
+          .pdf-header-logo {
+            display: block !important;
+            text-align: center !important;
+            margin-bottom: 20px !important;
+          }
+          .pdf-header-logo img {
+            max-height: 100px !important;
+            margin: 0 auto 10px auto !important;
+          }
+          table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+          }
+          th, td {
+            border: 1px solid #dddddd !important;
+            padding: 8px !important;
+          }
+        }
+      `}</style>
+
+      {/* COMPSSA Logo & Official Branding Header */}
+      <div className="pdf-header-logo" style={{ textAlign: 'center', marginBottom: 'var(--space-6)', padding: 'var(--space-4)', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
+        <img 
+          src="/compssa_logo.png" 
+          alt="COMPSSA Logo" 
+          style={{ height: '90px', objectFit: 'contain', margin: '0 auto 12px auto', display: 'block', borderRadius: '8px' }} 
+        />
+        <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, margin: 0, letterSpacing: '-0.5px' }}>
+          COMPUTER SCIENCE STUDENTS ASSOCIATION (COMPSSA)
+        </h1>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: '4px 0 0 0', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          Ho Technical University • Technology at its peak
+        </p>
+      </div>
+
+      {/* Header & Actions */}
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
         <div>
           <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FileText className="text-primary" size={28} />
-            Official Election Report
+            Official Election Audit Report
           </h2>
           <p style={{ color: 'var(--text-secondary)', margin: 'var(--space-1) 0 0 0', fontSize: 'var(--text-sm)' }}>
-            Real-time status overview of voter imports, face/OTP registration, and cast votes
+            Generate PDF or export report data on voter rosters, registrations, and cast ballots
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
           <button 
             onClick={fetchReport} 
             className="btn btn-outline" 
@@ -169,13 +235,23 @@ export default function AdminReportPage() {
           </button>
 
           <button 
-            onClick={downloadReportFile} 
-            className="btn btn-primary" 
+            onClick={downloadReportTextFile} 
+            className="btn btn-outline" 
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             disabled={loading || !reportData}
           >
             <Download size={16} />
-            Export Single File Report
+            Export TXT Report
+          </button>
+
+          <button 
+            onClick={generatePDFReport} 
+            className="btn btn-primary" 
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--color-primary)', fontWeight: 600 }}
+            disabled={loading || !reportData}
+          >
+            <Printer size={16} />
+            Generate PDF Report
           </button>
         </div>
       </div>
@@ -351,7 +427,7 @@ export default function AdminReportPage() {
               </div>
 
               {/* Filters */}
-              <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+              <div className="no-print" style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
                 <div style={{ position: 'relative', minWidth: '220px' }}>
                   <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
                   <input 
