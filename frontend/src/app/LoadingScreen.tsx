@@ -195,7 +195,7 @@ export default function LoadingScreen() {
             lineHeight: 1,
             textShadow: '0 0 40px rgba(99,102,241,0.7), 0 4px 20px rgba(0,0,0,0.4)',
           }}>
-            COMPSSA ELECTIONS
+                     COMPSSA
           </span>
           <span style={{
             fontSize: 'clamp(2rem, 8vw, 5rem)',

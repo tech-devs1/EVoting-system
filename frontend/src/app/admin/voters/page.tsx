@@ -90,6 +90,11 @@ export default function AdminVotersPage() {
           }
         }
 
+        const cleanString = (str: string) => {
+          if (!str) return '';
+          return str.replace(/^["']+|["']+$/g, '').trim();
+        };
+
         for (let i = startIndex; i < lines.length; i++) {
           const lineText = lines[i];
           const columns: string[] = [];
@@ -110,7 +115,7 @@ export default function AdminVotersPage() {
           columns.push(current.trim());
 
           if (columns.length >= 4) {
-            let indexNumber = columns[0].replace(/^"(.*)"$/, '$1').trim();
+            let indexNumber = cleanString(columns[0]);
             let fullName = '';
             let programme = '';
             let level = '';
@@ -121,16 +126,18 @@ export default function AdminVotersPage() {
               return s.includes('level') || s.includes('lvl') || /^\d{3}$/.test(s);
             };
 
-            if (columns.length >= 5 && checkIsLevel(columns[4])) {
-              const surname = columns[1].replace(/^"(.*)"$/, '$1').trim();
-              const firstName = columns[2].replace(/^"(.*)"$/, '$1').trim();
+            const cleanedCol4 = cleanString(columns[4]);
+            if (columns.length >= 5 && checkIsLevel(cleanedCol4)) {
+              // Format: index, surname, first_name, programme, level, [phone_number_ignored]
+              const surname = cleanString(columns[1]);
+              const firstName = cleanString(columns[2]);
               fullName = `${surname}, ${firstName}`;
-              programme = columns[3].replace(/^"(.*)"$/, '$1').trim();
-              level = columns[4].replace(/^"(.*)"$/, '$1').trim();
+              programme = cleanString(columns[3]);
+              level = cleanedCol4;
             } else {
-              fullName = columns[1].replace(/^"(.*)"$/, '$1').trim();
-              programme = columns[2].replace(/^"(.*)"$/, '$1').trim();
-              level = columns[3].replace(/^"(.*)"$/, '$1').trim();
+              fullName = cleanString(columns[1]);
+              programme = cleanString(columns[2]);
+              level = cleanString(columns[3]);
             }
 
             if (indexNumber && fullName) {

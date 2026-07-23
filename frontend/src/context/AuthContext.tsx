@@ -41,7 +41,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return;
 
     async function loadUser() {
-      const mockToken = localStorage.getItem('COMPSSA_token');
+      let mockToken = localStorage.getItem('COMPSSA_token');
+      if (!mockToken) {
+        mockToken = localStorage.getItem('Votick_token');
+      }
       if (mockToken) {
         try {
           // If we have a mock token, let's fetch current user info from backend
@@ -50,20 +53,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(res.data);
           } else {
             localStorage.removeItem('COMPSSA_token');
+            localStorage.removeItem('Votick_token');
           }
         } catch (e) {
           console.error('Failed to restore session from token', e);
           // Fallback: try to restore from localStorage if API fails
-          const storedUser = localStorage.getItem('COMPSSA_user');
+          let storedUser = localStorage.getItem('COMPSSA_user');
+          if (!storedUser) {
+            storedUser = localStorage.getItem('Votick_user');
+          }
           if (storedUser) {
             try {
               setUser(JSON.parse(storedUser));
             } catch (parseError) {
               console.error('Failed to parse stored user data', parseError);
               localStorage.removeItem('COMPSSA_token');
+              localStorage.removeItem('Votick_token');
             }
           } else {
             localStorage.removeItem('COMPSSA_token');
+            localStorage.removeItem('Votick_token');
           }
         }
       }
