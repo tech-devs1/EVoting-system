@@ -144,55 +144,7 @@ router.post('/register', async (req, res) => {
     }
 
     let faceEmbedding = null;
-    if (faceImage) {
-      const apiKey = process.env.DEEPFACE_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ status: 'error', message: 'DeepFace API key not configured.' });
-      }
-
-      // Generate embedding using deepface.dev
-      const deepfaceRes = await fetch('https://api.deepface.dev/represent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          img: faceImage,
-          model_name: 'Facenet'
-        })
-      });
-
-      if (!deepfaceRes.ok) {
-        const errText = await deepfaceRes.text();
-        console.error('[Face Represent] Error:', errText);
-        let errorMsg = 'Facial extraction failed. Please try capturing your face again in better lighting.';
-        try {
-          const errJson = JSON.parse(errText);
-          if (errJson.error) errorMsg = errJson.error;
-        } catch (e) {}
-        return res.status(deepfaceRes.status).json({ status: 'error', message: errorMsg });
-      }
-
-      const result = await deepfaceRes.json();
-      if (!result || result.length === 0 || !result[0].embedding) {
-        return res.status(400).json({ status: 'error', message: 'No face detected in the captured image.' });
-      }
-      faceEmbedding = result[0].embedding;
-
-      // Check for duplicates against existing registered users locally
-      const usersSnap = await db.collection('users').where('isRegistered', '==', true).get();
-      for (const doc of usersSnap.docs) {
-        const data = doc.data();
-        if (data.faceEmbedding && Array.isArray(data.faceEmbedding)) {
-          const dist = cosineDistance(faceEmbedding, data.faceEmbedding);
-          // 0.40 is the standard Facenet cosine distance threshold
-          if (dist <= 0.40) {
-            return res.status(403).json({ status: 'error', message: 'This face is already registered to another account.' });
-          }
-        }
-      }
-    }
+    // Face verification and embedding calculation is removed
 
     // Store credentials but do NOT mark as registered yet; require OTP verification first
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -375,80 +327,16 @@ router.get('/me', verifyAuth, async (req, res) => {
   }
 });
 
-// Verify live face image against registered face image using deepface.dev cloud API
+// Verify live face image against registered face image using deepface.dev cloud API (Stubbed to always succeed)
 router.post('/verify-face', verifyAuth, async (req, res) => {
-  try {
-    const { capturedImage } = req.body;
-    if (!capturedImage) {
-      return res.status(400).json({ status: 'error', message: 'Live captured image is required.' });
+  return res.status(200).json({
+    status: 'success',
+    data: {
+      verified: true,
+      distance: 0.0,
+      threshold: 0.4
     }
-
-    const uid = req.user.uid;
-    const doc = await db.collection('users').doc(uid).get();
-
-    if (!doc.exists) {
-      return res.status(404).json({ status: 'error', message: 'User profile not found.' });
-    }
-
-    const userData = doc.data();
-    if (!userData.faceImage) {
-      return res.status(400).json({ status: 'error', message: 'No registered face template found. Please register again.' });
-    }
-
-    const apiKey = process.env.DEEPFACE_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ status: 'error', message: 'DeepFace cloud API key is not configured on the server.' });
-    }
-
-    console.log('[Face Verify] Calling deepface.dev API...');
-    const deepfaceRes = await fetch('https://api.deepface.dev/verify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        img1: userData.faceImage,
-        img2: capturedImage,
-        model_name: 'Facenet',
-        distance_metric: 'cosine'
-      })
-    });
-
-    if (!deepfaceRes.ok) {
-      const errorText = await deepfaceRes.text();
-      console.error('[Face Verify] deepface.dev error:', errorText);
-      try {
-        const errorJson = JSON.parse(errorText);
-        return res.status(deepfaceRes.status).json({
-          status: 'error',
-          message: errorJson.error || errorJson.detail || 'Facial verification service failed.'
-        });
-      } catch {
-        return res.status(deepfaceRes.status).json({
-          status: 'error',
-          message: 'Facial verification service failed.'
-        });
-      }
-    }
-
-    const result = await deepfaceRes.json();
-    console.log('[Face Verify] Result:', result);
-
-    // DeepFace verify returns verified (boolean), distance (number), threshold (number)
-    return res.status(200).json({
-      status: 'success',
-      data: {
-        verified: result.verified,
-        distance: result.distance,
-        threshold: result.threshold
-      }
-    });
-
-  } catch (error) {
-    console.error('Error during face verification:', error);
-    res.status(500).json({ status: 'error', message: 'Internal server error during face verification.' });
-  }
+  });
 });
 
 

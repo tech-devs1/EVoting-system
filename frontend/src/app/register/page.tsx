@@ -46,20 +46,7 @@ export default function RegisterPage() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
-  // Manage camera lifecycle for Step 4
-  useEffect(() => {
-    if (currentStep === 4) {
-      startCamera();
-    } else {
-      stopCamera();
-    }
-    return () => {
-      // Cleanup on unmount
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [currentStep]);
+
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -92,7 +79,7 @@ export default function RegisterPage() {
         setEmail(res.data.email);
         setOtpEmail(res.data.email);
         setInfoMessage(res.message || 'You have an incomplete registration. Please complete the verification process.');
-        setCurrentStep(5); // Skip to OTP verification step
+        setCurrentStep(4); // Skip to OTP verification step
       }
     } catch (err: any) {
       setError(err.message || 'Failed to verify student ID.');
@@ -121,97 +108,21 @@ export default function RegisterPage() {
       setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.');
       return;
     }
-    
-
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
     
-    // Go to Facial Enrollment Step 4
-    setCurrentStep(4);
-  };
-
-  // Step 4 (Facial Capture) handlers
-  const [cameraActive, setCameraActive] = useState(false);
-  const [capturedImage, setCapturedImage] = useState('');
-  const [cameraMessage, setCameraMessage] = useState('Align your face inside the frame.');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  const startCamera = async () => {
-    setCameraActive(true);
-    setCapturedImage('');
-    setCameraMessage('Requesting camera authorization...');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320, facingMode: 'user' } });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setCameraMessage('Align your face in the center and click Capture.');
-    } catch (err) {
-      console.error('Camera stream access failed:', err);
-      setCameraMessage('Failed to initialize webcam. A camera is required for registration.');
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setCameraActive(false);
-  };
-
-  const handleCaptureFace = async () => {
-    if (!videoRef.current) return;
-    setCameraMessage('Detecting face...');
-
-    try {
-      if (!videoRef.current) {
-        setCameraMessage('No active camera feed found.');
-        return;
-      }
-
-      // Capture image from canvas
-      const canvas = document.createElement('canvas');
-      canvas.width = 320;
-      canvas.height = 320;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.translate(320, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(videoRef.current, 0, 0, 320, 320);
-        const base64 = canvas.toDataURL('image/jpeg', 0.85);
-        setCapturedImage(base64);
-      }
-
-      setCameraMessage('Face captured and biometric profile created!');
-      stopCamera();
-    } catch (err) {
-      console.error('Face capture error:', err);
-      setCameraMessage('Face detection failed. Please ensure good lighting and try again.');
-    }
-  };
-
-  const handleStep4Submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!capturedImage) {
-      setError('Please capture your face to continue');
-      return;
-    }
     setError('');
     setLoading(true);
     try {
-      // Pass the captured faceImage base64 to register API call
-      const result = await register(studentId, email, name, password, capturedImage);
+      const result = await register(studentId, email, name, password, '');
       if (result?.otpRequired && result.email) {
         setOtpEmail(result.email);
-        setCurrentStep(5); // OTP step
+        setCurrentStep(4); // Skip to OTP verification step
       } else {
-        setCurrentStep(6); // Success
+        setCurrentStep(5); // Success step
       }
     } catch (err: any) {
       setError(err.message || 'Registration failed');
@@ -219,6 +130,8 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+
 
   const handleOtpChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -251,7 +164,7 @@ export default function RegisterPage() {
     try {
       const res = await apiRequest<{ status: string; token: string; data: any }>('/auth/verify-otp', 'POST', { email: otpEmail, otp: otpCode });
       if (res.status === 'success') {
-        setCurrentStep(6); // success screen
+        setCurrentStep(5); // success screen
       }
     } catch (err: any) {
       setError(err.message || 'Invalid OTP. Please try again.');
@@ -314,7 +227,7 @@ export default function RegisterPage() {
           <div 
             className="reg-progress-bar" 
             style={{ 
-              width: `${((currentStep - 1) / 5) * 100}%`,
+              width: `${((currentStep - 1) / 4) * 100}%`,
               height: '2px',
               background: 'var(--color-primary)',
               position: 'absolute',
@@ -329,7 +242,6 @@ export default function RegisterPage() {
           {renderStepNumber(3)}
           {renderStepNumber(4)}
           {renderStepNumber(5)}
-          {renderStepNumber(6)}
         </div>
 
         {error && (
@@ -524,108 +436,6 @@ export default function RegisterPage() {
           )}
 
           {currentStep === 4 && (
-            <form onSubmit={handleStep4Submit}>
-              <div style={{ textAlign: 'center', marginBottom: 'var(--space-4)' }}>
-                <h3 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-1)' }}>Facial Identification Setup</h3>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                  A biometric face signature is required to verify identity when casting votes.
-                </p>
-              </div>
-
-              {/* Camera Frame Viewport */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}>
-                <div style={{
-                  position: 'relative',
-                  width: '200px',
-                  height: '200px',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  border: '3px solid var(--border-color)',
-                  background: '#000',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: capturedImage ? '0 0 15px rgba(34, 197, 94, 0.3)' : 'none'
-                }}>
-                  {capturedImage ? (
-                    <img 
-                      src={capturedImage} 
-                      alt="Captured Face" 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                    />
-                  ) : (
-                    <video 
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
-                    />
-                  )}
-                  
-                  {!capturedImage && (
-                    <div style={{
-                      position: 'absolute',
-                      inset: '15px',
-                      border: '2px dashed rgba(255, 255, 255, 0.4)',
-                      borderRadius: '50%',
-                      pointerEvents: 'none'
-                    }} />
-                  )}
-                </div>
-
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textAlign: 'center', fontWeight: '500' }}>
-                  {cameraMessage}
-                </p>
-
-                <div style={{ display: 'flex', gap: 'var(--space-3)', width: '100%' }}>
-                  {!capturedImage ? (
-                    <button 
-                      type="button" 
-                      className="btn btn-secondary btn-full"
-                      onClick={handleCaptureFace}
-                      disabled={!cameraActive}
-                    >
-                      Capture Photo
-                    </button>
-                  ) : (
-                    <button 
-                      type="button" 
-                      className="btn btn-outline btn-full"
-                      onClick={() => {
-                        startCamera();
-                      }}
-                    >
-                      Retake Photo
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-6)' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary btn-full" 
-                  onClick={() => {
-                    stopCamera();
-                    setCurrentStep(3);
-                  }}
-                  disabled={loading}
-                >
-                  Back
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary btn-full" 
-                  disabled={loading || !capturedImage}
-                >
-                  {loading ? 'Submitting...' : 'Register Profile'}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {currentStep === 5 && (
             <form onSubmit={handleOtpSubmit}>
               <div style={{ textAlign: 'center', marginBottom: 'var(--space-5)' }}>
                 <div style={{
@@ -706,7 +516,7 @@ export default function RegisterPage() {
             </form>
           )}
 
-          {currentStep === 6 && (
+          {currentStep === 5 && (
             <div className="success-screen" style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
               <div className="success-icon-wrapper" style={{ 
                 width: '64px', height: '64px', borderRadius: '50%', 
