@@ -70,90 +70,130 @@ export default function AdminVotersPage() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      if (text) {
-        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-        const data: ParsedVoter[] = [];
-        
-        let startIndex = 0;
-        // Skip header if it exists
-        if (lines.length > 0) {
-          const firstLine = lines[0].toLowerCase();
-          if (
-            firstLine.includes('index') || 
-            firstLine.includes('name') || 
-            firstLine.includes('id') || 
-            firstLine.includes('programme') || 
-            firstLine.includes('level') ||
-            firstLine.includes('phone')
-          ) {
-            startIndex = 1;
-          }
+      if (!text) return;
+
+      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+      const data: ParsedVoter[] = [];
+
+      // Helper: strip surrounding quotes and whitespace
+      const clean = (s: string) => s.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+
+      // Helper: parse a CSV line respecting quoted fields
+      const parseLine = (lineText: string): string[] => {
+        const cols: string[] = [];
+        let inQuote = false;
+        let cur = '';
+        for (let j = 0; j < lineText.length; j++) {
+          const ch = lineText[j];
+          if (ch === '"') { inQuote = !inQuote; }
+          else if (ch === ',' && !inQuote) { cols.push(clean(cur)); cur = ''; }
+          else { cur += ch; }
+        }
+        cols.push(clean(cur));
+        return cols;
+      };
+
+      // Helper: check if a string looks like an index/student number
+      // Index numbers are typically 9-10 digit numbers or alphanumeric codes like HTU-2026-XXXX
+      const isIndexNumber = (s: string) => /^\d{7,12}$/.test(s) || /^[A-Z0-9]{3,}-\d{4}-\d+$/i.test(s);
+
+      // Helper: check if a string looks like a level value
+      const isLevel = (s: string) => {
+        if (!s) return false;
+        const sl = s.toLowerCase();
+        return sl.includes('level') || sl.includes('lvl') || /^\d{3}$/.test(s) || /^[1-4]00$/.test(s);
+      };
+
+      // Helper: check if a value looks like a phone number (7+ digits, possibly with +)
+      const isPhone = (s: string) => /^\+?[\d\s\-]{7,}$/.test(s) && s.replace(/\D/g,'').length >= 7;
+
+      // Detect and skip header row
+      let startIndex = 0;
+      if (lines.length > 0) {
+        const firstLower = lines[0].toLowerCase();
+        if (firstLower.includes('index') || firstLower.includes('name') || firstLower.includes('programme') || firstLower.includes('level') || firstLower.includes('phone')) {
+          startIndex = 1;
+        }
+      }
+
+      for (let i = startIndex; i < lines.length; i++) {
+        const cols = parseLine(lines[i]);
+        if (cols.length < 4) continue;
+
+        // Filter out phone number columns (so they don't pollute name/programme detection)
+        const filteredCols = cols.filter(c => !isPhone(c));
+
+        // Find the index number column — it's the one that looks like a student ID
+        let indexCol = -1;
+        for (let c = 0; c < filteredCols.length; c++) {
+          if (isIndexNumber(filteredCols[c])) { indexCol = c; break; }
         }
 
-        const cleanString = (str: string) => {
-          if (!str) return '';
-          return str.replace(/^["']+|["']+$/g, '').trim();
+        // If no numeric index found, skip
+        if (indexCol === -1) continue;
+
+        const indexNumber = filteredCols[indexCol];
+        const remaining = filteredCols.filter((_, c) => c !== indexCol);
+
+        // Find the level column
+        let levelCol = -1;
+        for (let c = 0; c < remaining.length; c++) {
+          if (isLevel(remaining[c])) { levelCol = c; break; }
+        }
+
+        const level = levelCol >= 0 ? remaining[levelCol] : '';
+        const nonLevel = remaining.filter((_, c) => c !== levelCol);
+
+        // After removing index and level, we expect: [name parts..., programme]
+        // Programme is typically the last remaining non-name field
+        // Name fields come before programme, programme is usually a known keyword
+        const isProgramme = (s: string) => {
+          const sl = s.toLowerCase();
+          return sl.includes('computer') || sl.includes('engineering') || sl.includes('science') ||
+                 sl.includes('business') || sl.includes('arts') || sl.includes('accounting') ||
+                 sl.includes('management') || sl.includes('education') || sl.includes('law') ||
+                 sl.includes('nursing') || sl.includes('health') || sl.includes('information') ||
+                 sl.includes('technology') || sl.includes('mathematics') || sl.includes('physics') ||
+                 sl.includes('chemistry') || sl.includes('statistics') || sl.includes('economics') ||
+                 sl.length > 8; // Longer fields are likely programme names
         };
 
-        for (let i = startIndex; i < lines.length; i++) {
-          const lineText = lines[i];
-          const columns: string[] = [];
-          let inQuote = false;
-          let current = '';
-          
-          for (let j = 0; j < lineText.length; j++) {
-            const char = lineText[j];
-            if (char === '"') {
-              inQuote = !inQuote;
-            } else if (char === ',' && !inQuote) {
-              columns.push(current.trim());
-              current = '';
-            } else {
-              current += char;
-            }
-          }
-          columns.push(current.trim());
+        let programme = '';
+        let nameParts: string[] = [];
 
-          if (columns.length >= 4) {
-            let indexNumber = cleanString(columns[0]);
-            let fullName = '';
-            let programme = '';
-            let level = '';
-
-            const checkIsLevel = (str: string) => {
-              if (!str) return false;
-              const s = str.toLowerCase();
-              return s.includes('level') || s.includes('lvl') || /^\d{3}$/.test(s);
-            };
-
-            const cleanedCol4 = cleanString(columns[4]);
-            if (columns.length >= 5 && checkIsLevel(cleanedCol4)) {
-              // Format: index, surname, first_name, programme, level, [phone_number_ignored]
-              const surname = cleanString(columns[1]);
-              const firstName = cleanString(columns[2]);
-              fullName = `${surname}, ${firstName}`;
-              programme = cleanString(columns[3]);
-              level = cleanedCol4;
-            } else {
-              fullName = cleanString(columns[1]);
-              programme = cleanString(columns[2]);
-              level = cleanString(columns[3]);
-            }
-
-            if (indexNumber && fullName) {
-              data.push({
-                id: indexNumber,
-                name: fullName,
-                programme: programme,
-                level: level,
-                email: `${indexNumber}@htu.edu.gh`
-              });
-            }
+        // Find programme — scan from the end (it usually comes last before level was removed)
+        let progCol = -1;
+        for (let c = nonLevel.length - 1; c >= 0; c--) {
+          if (isProgramme(nonLevel[c]) && !/^\d+$/.test(nonLevel[c])) {
+            progCol = c;
+            break;
           }
         }
-        
-        setParsedData(data);
+
+        if (progCol >= 0) {
+          programme = nonLevel[progCol];
+          nameParts = nonLevel.filter((_, c) => c !== progCol);
+        } else {
+          // fallback: last element is programme
+          programme = nonLevel[nonLevel.length - 1] || '';
+          nameParts = nonLevel.slice(0, nonLevel.length - 1);
+        }
+
+        // Combine name parts: "Surname, First Name" or just the full combined string
+        const fullName = nameParts.join(', ');
+
+        if (indexNumber && fullName) {
+          data.push({
+            id: indexNumber,
+            name: fullName,
+            programme,
+            level,
+            email: `${indexNumber}@htu.edu.gh`
+          });
+        }
       }
+
+      setParsedData(data);
     };
     reader.onerror = () => {
       setMessage({ type: 'error', text: 'Failed to read the file.' });
