@@ -144,22 +144,36 @@ export default function AdminVotersPage() {
           return true;
         });
 
-        // Step 4: Find programme — usually the longest text field remaining
-        // Sort by length descending, pick the longest as programme
+        // Step 4: Identify programme vs name parts
+        // A field is ONLY a programme if it explicitly contains known academic programme keywords
+        const isProgramme = (s: string) => {
+          const sl = s.toLowerCase();
+          return sl.includes('btech') || sl.includes('bsc') || sl.includes('ba ') ||
+                 sl.includes('hnd') || sl.includes('msc') || sl.includes('phd') ||
+                 sl.includes('computer') || sl.includes('engineering') ||
+                 sl.includes('science') || sl.includes('business') ||
+                 sl.includes('accounting') || sl.includes('management') ||
+                 sl.includes('education') || sl.includes('nursing') ||
+                 sl.includes('health') || sl.includes('information') ||
+                 sl.includes('technology') || sl.includes('mathematics') ||
+                 sl.includes('physics') || sl.includes('chemistry') ||
+                 sl.includes('statistics') || sl.includes('economics') ||
+                 sl.includes('arts') || sl.includes('law') || sl.includes('commerce');
+        };
+
         let programmeVal = '';
         let nameParts: string[] = [];
 
-        if (afterLevel.length === 0) {
-          // No remaining fields after removing level
-          nameParts = [];
-        } else if (afterLevel.length === 1) {
-          // Only one field — it's the name
-          nameParts = afterLevel;
+        // Find programme by keyword match only — everything else is a name part
+        const progIndex = afterLevel.findIndex(v => isProgramme(v));
+        if (progIndex >= 0) {
+          programmeVal = afterLevel[progIndex];
+          nameParts = afterLevel.filter((_, idx) => idx !== progIndex);
         } else {
-          // Multiple fields: longest is programme, rest are name parts
-          const sorted = [...afterLevel].sort((a, b) => b.length - a.length);
-          programmeVal = sorted[0];
-          nameParts = afterLevel.filter(v => v !== programmeVal);
+          // No programme keyword found in this row — all remaining fields are name parts.
+          // Use the CSV filename (minus extension) as the programme fallback.
+          programmeVal = file.name.replace(/\.csv$/i, '').trim();
+          nameParts = afterLevel;
         }
 
         const fullName = nameParts.join(', ');
