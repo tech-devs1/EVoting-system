@@ -86,17 +86,25 @@ router.get('/audit/:electionId', verifyAuth, requireAdmin, async (req, res) => {
 // Bulk upload voters
 router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const voters = req.body;
+    const { filename, voters } = req.body;
     if (!Array.isArray(voters)) {
       return res.status(400).json({ status: 'error', message: 'Invalid data format. Expected an array of voters.' });
     }
 
+    const uploadRef = db.collection('uploads').doc();
+    const uploadId = uploadRef.id;
+
     const usersRef = db.collection('users');
     let added = 0;
     let skipped = 0;
+    const unsuccessful = [];
 
     for (const voter of voters) {
-      if (!voter.id || !voter.name || !voter.email) {
+      if (!voter.id || !voter.name) {
+        unsuccessful.push({
+          ...voter,
+          reason: 'Missing ID or Name'
+        });
         skipped++;
         continue;
       }
@@ -104,28 +112,87 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
       const docRef = usersRef.doc(voter.id);
       const existing = await docRef.get();
       if (existing.exists) {
+        unsuccessful.push({
+          ...voter,
+          reason: 'Student ID already exists in database'
+        });
         skipped++;
       } else {
         await docRef.set({
           name: voter.name,
           studentId: voter.id,
           email: voter.email,
+          programme: voter.programme || '',
+          level: voter.level || '',
           role: 'voter',
           isRegistered: false,
+          uploadId: uploadId,
           createdAt: Date.now()
         });
         added++;
       }
     }
 
+    // Save upload metadata
+    await uploadRef.set({
+      filename: filename || 'unknown_upload.csv',
+      timestamp: Date.now(),
+      added,
+      skipped
+    });
+
     res.status(200).json({ 
       status: 'success', 
       message: `Processed ${voters.length} records. Added ${added} new voters, skipped ${skipped}.`,
-      data: { added, skipped }
+      data: { added, skipped, unsuccessful }
     });
   } catch (error) {
     console.error('Error in bulk voter upload:', error);
     res.status(500).json({ status: 'error', message: 'Failed to process bulk upload' });
+  }
+});
+
+// Get voter upload history
+router.get('/voters/uploads', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const snapshot = await db.collection('uploads').orderBy('timestamp', 'desc').get();
+    const uploads = [];
+    snapshot.forEach(doc => {
+      uploads.push({ id: doc.id, ...doc.data() });
+    });
+    res.status(200).json({ status: 'success', data: uploads });
+  } catch (error) {
+    console.error('Error fetching uploads list:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch upload history' });
+  }
+});
+
+// Delete an upload and all associated voters
+router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const { uploadId } = req.params;
+
+    // 1. Delete associated voters
+    const votersSnapshot = await db.collection('users').where('uploadId', '==', uploadId).get();
+    if (!votersSnapshot.empty) {
+      const batch = db.batch();
+      votersSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      console.log(`[Admin Upload Cleanup] Deleted ${votersSnapshot.size} voters linked to upload: ${uploadId}`);
+    }
+
+    // 2. Delete upload metadata
+    await db.collection('uploads').doc(uploadId).delete();
+
+    res.status(200).json({
+      status: 'success',
+      message: `Upload and ${votersSnapshot.size} associated voter records deleted successfully.`
+    });
+  } catch (error) {
+    console.error('Error deleting upload:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to delete upload and linked records' });
   }
 });
 

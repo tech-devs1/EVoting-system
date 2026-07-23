@@ -537,7 +537,7 @@ export default function RegisterPage() {
 
         <div className="auth-security-badge" style={{ marginTop: 'var(--space-6)' }}>
           <ShieldCheck size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} /> 
-          Protected by COMPSSA ✓ Security
+          Protected by TECHDEVS STUDIO ✓
         </div>
       </div>
     </div>
