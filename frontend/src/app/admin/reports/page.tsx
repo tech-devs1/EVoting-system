@@ -369,18 +369,19 @@ export default function AdminReportPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', fontFamily: 'Arial, sans-serif' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #000000', textAlign: 'left' }}>
-                    <th style={{ padding: '8px 6px', width: '20%' }}>Index Number</th>
-                    <th style={{ padding: '8px 6px', width: '35%' }}>Full Name</th>
-                    <th style={{ padding: '8px 6px', width: '25%' }}>Programme</th>
-                    <th style={{ padding: '8px 6px', width: '10%' }}>Level</th>
-                    <th style={{ padding: '8px 6px', textAlign: 'center', width: '5%' }}>Reg</th>
-                    <th style={{ padding: '8px 6px', textAlign: 'center', width: '5%' }}>Voted</th>
+                    <th style={{ padding: '6px 4px', width: '13%' }}>Index No.</th>
+                    <th style={{ padding: '6px 4px', width: '22%' }}>Full Name</th>
+                    <th style={{ padding: '6px 4px', width: '22%' }}>Email</th>
+                    <th style={{ padding: '6px 4px', width: '25%' }}>Programme</th>
+                    <th style={{ padding: '6px 4px', width: '8%' }}>Level</th>
+                    <th style={{ padding: '6px 4px', textAlign: 'center', width: '5%' }}>Reg</th>
+                    <th style={{ padding: '6px 4px', textAlign: 'center', width: '5%' }}>Voted</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredVoters.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: '#666666' }}>
+                      <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#666666' }}>
                         No voters match the specified criteria.
                       </td>
                     </tr>
@@ -390,26 +391,32 @@ export default function AdminReportPage() {
                         key={voter.id} 
                         style={{ borderBottom: '1px solid #dddddd' }}
                       >
-                        <td style={{ padding: '6px 6px', fontWeight: 'bold' }}>
-                          {voter.studentId}
+                        {/* Index Number */}
+                        <td style={{ padding: '5px 4px', fontWeight: 'bold', fontSize: '11px' }}>
+                          {voter.studentId || '—'}
                         </td>
-                        <td style={{ padding: '6px 6px' }}>
-                          {voter.name}
+                        {/* Full Name */}
+                        <td style={{ padding: '5px 4px', fontSize: '11px' }}>
+                          {voter.name || '—'}
                         </td>
-                        <td style={{ padding: '6px 6px', color: '#333333' }}>
-                          {voter.programme}
+                        {/* Email */}
+                        <td style={{ padding: '5px 4px', fontSize: '10px', color: '#333333', wordBreak: 'break-all' }}>
+                          {voter.email || (voter.studentId ? `${voter.studentId}@htu.edu.gh` : '—')}
                         </td>
-                        <td style={{ padding: '6px 6px', color: '#333333' }}>
-                          {voter.level}
+                        {/* Programme */}
+                        <td style={{ padding: '5px 4px', fontSize: '10px', color: '#333333' }}>
+                          {voter.programme && voter.programme !== 'N/A' ? voter.programme : '—'}
                         </td>
-                        
+                        {/* Level */}
+                        <td style={{ padding: '5px 4px', fontSize: '11px', color: '#333333' }}>
+                          {voter.level && voter.level !== 'N/A' ? voter.level : '—'}
+                        </td>
                         {/* Registration Tick */}
-                        <td style={{ padding: '6px 6px', textAlign: 'center', fontWeight: 'bold' }}>
+                        <td style={{ padding: '5px 4px', textAlign: 'center', fontWeight: 'bold', fontSize: '13px', color: voter.isRegistered ? '#16a34a' : '#dc2626' }}>
                           {voter.isRegistered ? '✓' : '✗'}
                         </td>
-
                         {/* Voted Tick */}
-                        <td style={{ padding: '6px 6px', textAlign: 'center', fontWeight: 'bold' }}>
+                        <td style={{ padding: '5px 4px', textAlign: 'center', fontWeight: 'bold', fontSize: '13px', color: voter.hasVoted ? '#16a34a' : '#dc2626' }}>
                           {voter.hasVoted ? '✓' : '✗'}
                         </td>
                       </tr>
