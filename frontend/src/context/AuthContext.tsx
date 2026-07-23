@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return;
 
     async function loadUser() {
-      const mockToken = localStorage.getItem('Votick_token');
+      const mockToken = localStorage.getItem('COMPSSA_token');
       if (mockToken) {
         try {
           // If we have a mock token, let's fetch current user info from backend
@@ -49,21 +49,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (res.status === 'success') {
             setUser(res.data);
           } else {
-            localStorage.removeItem('Votick_token');
+            localStorage.removeItem('COMPSSA_token');
           }
         } catch (e) {
           console.error('Failed to restore session from token', e);
           // Fallback: try to restore from localStorage if API fails
-          const storedUser = localStorage.getItem('Votick_user');
+          const storedUser = localStorage.getItem('COMPSSA_user');
           if (storedUser) {
             try {
               setUser(JSON.parse(storedUser));
             } catch (parseError) {
               console.error('Failed to parse stored user data', parseError);
-              localStorage.removeItem('Votick_token');
+              localStorage.removeItem('COMPSSA_token');
             }
           } else {
-            localStorage.removeItem('Votick_token');
+            localStorage.removeItem('COMPSSA_token');
           }
         }
       }
@@ -81,9 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
         const mockToken = `MOCK_${uid}`;
-        localStorage.setItem('Votick_token', `Bearer ${mockToken}`);
+        localStorage.setItem('COMPSSA_token', `Bearer ${mockToken}`);
         const userData = { uid, email, name: 'System Administrator', role: 'admin' as const, status: 'active' };
-        localStorage.setItem('Votick_user', JSON.stringify(userData));
+        localStorage.setItem('COMPSSA_user', JSON.stringify(userData));
         setUser(userData);
         console.log('[Auth Context] Admin login successful, token:', `Bearer ${mockToken}`);
         router.push('/admin/dashboard');
@@ -94,8 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { otpRequired: true, email: res.email };
         }
         if (res.status === 'success' && res.token) {
-          localStorage.setItem('Votick_token', `Bearer ${res.token}`);
-          localStorage.setItem('Votick_user', JSON.stringify(res.data));
+          localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);
+          localStorage.setItem('COMPSSA_user', JSON.stringify(res.data));
           setUser(res.data!);
           router.push('/voter/dashboard');
           return {};
@@ -140,8 +140,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/verify-otp', 'POST', { email, otp });
       if (res.status === 'success' && res.token) {
-        localStorage.setItem('Votick_token', `Bearer ${res.token}`);
-        localStorage.setItem('Votick_user', JSON.stringify(res.data));
+        localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);
+        localStorage.setItem('COMPSSA_user', JSON.stringify(res.data));
         setUser(res.data);
         router.push('/voter/dashboard');
       } else {
@@ -156,8 +156,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('Votick_token');
-    localStorage.removeItem('Votick_user');
+    localStorage.removeItem('COMPSSA_token');
+    localStorage.removeItem('COMPSSA_user');
     setUser(null);
     router.push('/login');
   };

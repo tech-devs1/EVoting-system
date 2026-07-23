@@ -21,7 +21,7 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
   }
 
   // Fallback to local storage mock token if user is signed in but no Firebase auth token exists
-  const localToken = typeof window !== 'undefined' ? localStorage.getItem('Votick_token') : null;
+  const localToken = typeof window !== 'undefined' ? localStorage.getItem('COMPSSA_token') : null;
   if (localToken) {
     console.log('[API] Using local token:', localToken.substring(0, 30) + '...');
     return {

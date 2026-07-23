@@ -111,7 +111,7 @@ export default function VoterDashboard() {
         }
 
         // Get total votes cast from local storage history or mock
-        const storedVotes = localStorage.getItem('Votick_voter_votes');
+        const storedVotes = localStorage.getItem('COMPSSA_voter_votes');
         if (storedVotes) {
           const parsed = JSON.parse(storedVotes);
           setTotalVotes(parsed.length);

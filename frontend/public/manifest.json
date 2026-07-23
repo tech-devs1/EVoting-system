@@ -1,6 +1,6 @@
 {
-  "name": "Votick",
-  "short_name": "Votick",
+  "name": "COMPSSA",
+  "short_name": "COMPSSA",
   "description": "Secure online voting platform",
   "start_url": "/?mode=pwa",
   "scope": "/",

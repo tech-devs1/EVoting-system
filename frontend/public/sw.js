@@ -1,4 +1,4 @@
-const CACHE_NAME = 'votick-cache-v1';
+const CACHE_NAME = 'compssa-cache-v1';
 const OFFLINE_URL = '/';
 
 // Files to cache on install

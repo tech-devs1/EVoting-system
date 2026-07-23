@@ -1,4 +1,4 @@
-# 🗳️ Votick – Secure Electronic Voting System
+# 🗳️ COMPSSA – Secure Electronic Voting System
 
 A full-stack, PWA-ready electronic voting platform built for HTU. Features real-time vote tracking, fraud monitoring, admin dashboards, candidate image uploads via ImageKit, and Firebase-backed authentication and data storage.
 
@@ -185,13 +185,13 @@ The frontend will run at **http://localhost:3000**
 ---
 
 ## 🌐 Live App
-The live app is available at: [votick.vercel.app](https://votick.vercel.app)
+The live app is available at: [compssa.vercel.app](https://compssa.vercel.app)
 
 ---
 
 ## 📱 Installing the App (PWA)
 
-Votick is a **Progressive Web App (PWA)** — it can be installed on any device for a native app-like experience.
+COMPSSA is a **Progressive Web App (PWA)** — it can be installed on any device for a native app-like experience.
 
 ### Android (Chrome)
 
@@ -209,14 +209,14 @@ Votick is a **Progressive Web App (PWA)** — it can be installed on any device 
    - Tap the **Share button** (□↑) at the bottom of Safari
    - Scroll down and tap **"Add to Home Screen"**
    - Tap **"Add"** to confirm
-4. The Votick icon appears on your home screen
+4. The COMPSSA icon appears on your home screen
 
 ### Desktop (Chrome / Edge)
 
 1. Open the live app in Chrome or Edge
 2. Look for the **install icon (⊕)** in the right side of the address bar
 3. Click it and confirm installation
-4. Votick opens as a standalone app window
+4. COMPSSA opens as a standalone app window
 
 ---
 
@@ -245,9 +245,9 @@ We used our class list in the database for now.
 
 ## 🔒 Biometric Security (deepface.dev Cloud API)
 
-Votick employs state-of-the-art biometric verification to prevent double-voting and identity spoofing:
+COMPSSA employs state-of-the-art biometric verification to prevent double-voting and identity spoofing:
 - **Enrollment:** During registration, a base64 photo of the voter's face is securely stored in their Firestore document.
-- **Verification:** When casting a ballot, Votick captures a live face snapshot and sends it to the backend. The backend securely queries the **deepface.dev** cloud verification gateway (via `POST https://api.deepface.dev/verify`) using the `Facenet` model and `cosine` distance metric to guarantee that only the owner of the index number can cast the ballot.
+- **Verification:** When casting a ballot, COMPSSA captures a live face snapshot and sends it to the backend. The backend securely queries the **deepface.dev** cloud verification gateway (via `POST https://api.deepface.dev/verify`) using the `Facenet` model and `cosine` distance metric to guarantee that only the owner of the index number can cast the ballot.
 - **Privacy & Security:** Verification is processed on the server-side, protecting the `DEEPFACE_API_KEY` and avoiding heavy browser-side ML resource usage.
 
 ---

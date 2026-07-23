@@ -118,7 +118,7 @@ export default function LoginPage() {
           <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
             <span style={{ fontWeight: 600, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
-              Votick <span style={{ color: 'var(--color-primary)' }}>✓</span>
+              COMPSSA <span style={{ color: 'var(--color-primary)' }}>✓</span>
             </span>
           </div>
           <h2 className="auth-title" style={{ marginTop: 'var(--space-4)' }}>
@@ -304,7 +304,7 @@ export default function LoginPage() {
 
         <div className="auth-security-badge" style={{ marginTop: 'var(--space-6)' }}>
           <ShieldCheck size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
-          Protected by Votick ✓ Security
+          Protected by COMPSSA ✓ Security
         </div>
       </div>
     </div>

@@ -30,12 +30,12 @@ export default function VoteSuccessPage({ params }: { params: Promise<{ id: stri
   };
 
   const handleDownloadReceipt = () => {
-    const text = `Votick ✓ DIGITAL BALLOT RECEIPT\n==================================\nVerification ID: ${verificationId}\nStatus: HASH_VERIFIED\nTimestamp: ${new Date().toISOString()}\n==================================`;
+    const text = `COMPSSA ✓ DIGITAL BALLOT RECEIPT\n==================================\nVerification ID: ${verificationId}\nStatus: HASH_VERIFIED\nTimestamp: ${new Date().toISOString()}\n==================================`;
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Votick-Receipt-${verificationId}.txt`;
+    a.download = `COMPSSA-Receipt-${verificationId}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };

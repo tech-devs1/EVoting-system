@@ -84,7 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <Link href="/admin/dashboard" className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: 700, letterSpacing: '-0.5px' }}>Votick <span style={{ color: 'var(--color-primary)' }}>✓</span></span>
+            <span style={{ fontWeight: 700, letterSpacing: '-0.5px' }}>COMPSSA <span style={{ color: 'var(--color-primary)' }}>✓</span></span>
           </Link>
           <button 
             onClick={() => setIsSidebarOpen(false)}

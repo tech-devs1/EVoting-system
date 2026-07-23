@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // ─── DOM-based install modal — injected directly, bypasses React state issues ───
 function showInstallInstructions(isIOS: boolean) {
   // Remove any existing modal
-  const existing = document.getElementById('votick-install-overlay');
+  const existing = document.getElementById('compssa-install-overlay');
   if (existing) existing.remove();
 
   const isAndroid = !isIOS;
@@ -38,25 +38,25 @@ function showInstallInstructions(isIOS: boolean) {
     .join('');
 
   const html = `
-    <div id="votick-install-overlay" style="position:fixed;inset:0;z-index:9999999;display:flex;align-items:flex-end">
+    <div id="compssa-install-overlay" style="position:fixed;inset:0;z-index:9999999;display:flex;align-items:flex-end">
       <!-- Backdrop -->
-      <div id="votick-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px)"></div>
+      <div id="compssa-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px)"></div>
       <!-- Sheet -->
-      <div id="votick-sheet" style="position:relative;width:100%;background:linear-gradient(160deg,#0f172a 0%,#1a2a5e 100%);border-radius:28px 28px 0 0;padding:12px 24px 48px;box-shadow:0 -8px 60px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">
+      <div id="compssa-sheet" style="position:relative;width:100%;background:linear-gradient(160deg,#0f172a 0%,#1a2a5e 100%);border-radius:28px 28px 0 0;padding:12px 24px 48px;box-shadow:0 -8px 60px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">
         <!-- Handle -->
         <div style="width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.25);margin:0 auto 24px"></div>
         <!-- Header -->
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px">
           <div style="width:52px;height:52px;border-radius:16px;flex-shrink:0;background:linear-gradient(135deg,#6366f1,#2563eb);display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 4px 20px rgba(99,102,241,0.5)">📲</div>
           <div>
-            <p style="color:#fff;font-weight:700;font-size:1.15rem;margin:0;line-height:1.2;font-family:sans-serif">Install Votick</p>
+            <p style="color:#fff;font-weight:700;font-size:1.15rem;margin:0;line-height:1.2;font-family:sans-serif">Install COMPSSA</p>
             <p style="color:rgba(255,255,255,0.45);font-size:0.82rem;margin:4px 0 0;font-family:sans-serif">${isIOS ? 'Add to your iPhone Home Screen' : 'Add to your Android Home Screen'}</p>
           </div>
         </div>
         <!-- Steps -->
         ${stepsHTML}
         <!-- Button -->
-        <button id="votick-got-it" style="margin-top:16px;width:100%;padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,#6366f1,#2563eb);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:sans-serif;letter-spacing:0.5px">Got it!</button>
+        <button id="compssa-got-it" style="margin-top:16px;width:100%;padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,#6366f1,#2563eb);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:sans-serif;letter-spacing:0.5px">Got it!</button>
       </div>
     </div>
   `;
@@ -66,21 +66,21 @@ function showInstallInstructions(isIOS: boolean) {
   // Animate sheet in
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      const sheet = document.getElementById('votick-sheet');
+      const sheet = document.getElementById('compssa-sheet');
       if (sheet) sheet.style.transform = 'translateY(0)';
     });
   });
 
   // Close handlers
   const close = () => {
-    const sheet = document.getElementById('votick-sheet');
+    const sheet = document.getElementById('compssa-sheet');
     if (sheet) {
       sheet.style.transform = 'translateY(100%)';
-      setTimeout(() => document.getElementById('votick-install-overlay')?.remove(), 350);
+      setTimeout(() => document.getElementById('compssa-install-overlay')?.remove(), 350);
     }
   };
-  document.getElementById('votick-got-it')?.addEventListener('click', close);
-  document.getElementById('votick-backdrop')?.addEventListener('click', close);
+  document.getElementById('compssa-got-it')?.addEventListener('click', close);
+  document.getElementById('compssa-backdrop')?.addEventListener('click', close);
 }
 
 export default function LoadingScreen() {
@@ -104,7 +104,7 @@ export default function LoadingScreen() {
     const handler = (e: Event) => { e.preventDefault(); };
     window.addEventListener('beforeinstallprompt', handler);
 
-    if (sessionStorage.getItem('votick_splash_shown')) {
+    if (sessionStorage.getItem('compssa_splash_shown')) {
       setPhase('hidden');
       return () => window.removeEventListener('beforeinstallprompt', handler);
     }
@@ -114,7 +114,7 @@ export default function LoadingScreen() {
       const toWoezor = setTimeout(() => {
         setPhase('woezor');
         const toDismiss = setTimeout(() => {
-          sessionStorage.setItem('votick_splash_shown', '1');
+          sessionStorage.setItem('compssa_splash_shown', '1');
           setPhase('hidden');
         }, 2500);
         return () => clearTimeout(toDismiss);
@@ -138,7 +138,7 @@ export default function LoadingScreen() {
   };
 
   const handleContinue = () => {
-    sessionStorage.setItem('votick_splash_shown', '1');
+    sessionStorage.setItem('compssa_splash_shown', '1');
     setPhase('hidden');
   };
 
@@ -173,7 +173,7 @@ export default function LoadingScreen() {
           bottom: '15%', right: '15%', filter: 'blur(50px)'
         }} />
 
-        {/* Votick logo */}
+        {/* COMPSSA logo */}
         <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.85 }}
           animate={{ opacity: 1, y: showButtons ? -30 : 0, scale: 1 }}
@@ -446,7 +446,7 @@ export default function LoadingScreen() {
           letterSpacing: '2px', fontFamily: 'var(--font-display), sans-serif', marginBottom: '2rem',
         }}
       >
-        VOTICK <span style={{ color: '#2563eb' }}>✓</span>
+        COMPSSA <span style={{ color: '#2563eb' }}>✓</span>
       </motion.div>
 
       <div style={{ width: '250px', height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>

@@ -106,7 +106,7 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
 
       // Save to local storage voter votes history
       if (typeof window !== 'undefined') {
-        const storedVotes = localStorage.getItem('Votick_voter_votes') || '[]';
+        const storedVotes = localStorage.getItem('COMPSSA_voter_votes') || '[]';
         const parsed = JSON.parse(storedVotes);
         
         responses.forEach((res, i) => {
@@ -121,7 +121,7 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
           }
         });
         
-        localStorage.setItem('Votick_voter_votes', JSON.stringify(parsed));
+        localStorage.setItem('COMPSSA_voter_votes', JSON.stringify(parsed));
       }
 
       // Redirect to success screen
