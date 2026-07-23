@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -12,6 +12,8 @@ interface AuditLog {
   previousHash: string;
   currentHash: string;
   dataPayload: string;
+  candidateName?: string;
+  position?: string;
 }
 
 export default function VoterVerifyPage() {
@@ -79,7 +81,7 @@ export default function VoterVerifyPage() {
         </Link>
         <h2 style={{ marginBottom: 'var(--space-2)' }}>Vote Verification Hub</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
-          Verify that your ballot transaction has been accurately cataloged on the digital audit log ledger without revealing candidate choices.
+          Verify that your ballot transaction has been accurately cataloged on the digital audit log ledger, including the candidate you voted for.
         </p>
       </div>
 
@@ -135,9 +137,15 @@ export default function VoterVerifyPage() {
                 <span style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>{new Date(result.timestamp).toLocaleString()}</span>
               </div>
               <div>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Ballot Choices Status</span>
-                <span style={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-                  <EyeOff size={14} /> Hidden (Anonymized)
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Candidate Voted For</span>
+                <span style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>
+                  {result.candidateName || 'N/A'}
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', display: 'block', marginBottom: 'var(--space-1)' }}>Position</span>
+                <span style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>
+                  {result.position || 'General'}
                 </span>
               </div>
             </div>

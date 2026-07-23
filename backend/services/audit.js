@@ -16,9 +16,10 @@ function generateHash(data) {
  * 
  * @param {Object} voteData The vote payload
  * @param {string} electionId The election ID
+ * @param {Object} [meta] Optional metadata (candidateName, position)
  * @returns {Promise<string>} The transaction/audit ID
  */
-async function recordVoteAudit(voteData, electionId) {
+async function recordVoteAudit(voteData, electionId, meta = {}) {
   // 1. Get the last hash for this election to build the chain
   const auditRef = db.collection('audit_logs');
   
@@ -44,6 +45,8 @@ async function recordVoteAudit(voteData, electionId) {
   const dataString = JSON.stringify({
     electionId: voteData.electionId,
     candidateId: voteData.candidateId,
+    candidateName: meta.candidateName || '',
+    position: meta.position || '',
     timestamp: timestamp,
     // Note: Do NOT include voter ID to maintain anonymity!
   });
@@ -57,6 +60,8 @@ async function recordVoteAudit(voteData, electionId) {
     timestamp,
     previousHash,
     currentHash,
+    candidateName: meta.candidateName || '',
+    position: meta.position || '',
     dataPayload: dataString
   };
 

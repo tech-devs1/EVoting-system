@@ -80,7 +80,8 @@ router.post('/cast', verifyAuth, async (req, res) => {
     await db.collection('votes').add(votePayload);
 
     // 6. Generate Cryptographic Audit Trail (tamper-proof)
-    const auditTxId = await recordVoteAudit(votePayload, electionId);
+    const candidateName = candidateDoc.data().name || '';
+    const auditTxId = await recordVoteAudit(votePayload, electionId, { candidateName, position });
 
     // 7. Mark voter as voted for this position
     await votedRef.set({
