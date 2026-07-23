@@ -83,6 +83,52 @@ router.get('/audit/:electionId', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Bulk upload voters
+router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const voters = req.body;
+    if (!Array.isArray(voters)) {
+      return res.status(400).json({ status: 'error', message: 'Invalid data format. Expected an array of voters.' });
+    }
+
+    const usersRef = db.collection('users');
+    let added = 0;
+    let skipped = 0;
+
+    for (const voter of voters) {
+      if (!voter.id || !voter.name || !voter.email) {
+        skipped++;
+        continue;
+      }
+
+      const docRef = usersRef.doc(voter.id);
+      const existing = await docRef.get();
+      if (existing.exists) {
+        skipped++;
+      } else {
+        await docRef.set({
+          name: voter.name,
+          studentId: voter.id,
+          email: voter.email,
+          role: 'voter',
+          isRegistered: false,
+          createdAt: Date.now()
+        });
+        added++;
+      }
+    }
+
+    res.status(200).json({ 
+      status: 'success', 
+      message: `Processed ${voters.length} records. Added ${added} new voters, skipped ${skipped}.`,
+      data: { added, skipped }
+    });
+  } catch (error) {
+    console.error('Error in bulk voter upload:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to process bulk upload' });
+  }
+});
+
 // Get Fraud Alerts
 router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
   try {

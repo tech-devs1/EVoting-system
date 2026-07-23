@@ -16,7 +16,8 @@ import {
   Sun, 
   Moon,
   Menu,
-  X
+  X,
+  Users
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -54,6 +55,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navLinks = [
     { label: "Executive Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+    { label: "Voter Database", href: "/admin/voters", icon: Users },
     { label: "Manage Elections", href: "/admin/elections", icon: Settings },
     { label: "Live Results", href: "/admin/results", icon: Activity },
     { label: "Verify Vote", href: "/admin/audit", icon: Database }
