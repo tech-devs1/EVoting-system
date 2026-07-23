@@ -72,130 +72,147 @@ export default function AdminVotersPage() {
       const text = event.target?.result as string;
       if (!text) return;
 
-      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+      const rawLines = text.split(/\r?\n/).filter(l => l.trim() !== '');
       const data: ParsedVoter[] = [];
 
-      // Strip surrounding quotes and whitespace
-      const clean = (s: string) => s.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+      // Remove surrounding quotes / apostrophes / whitespace
+      const clean = (s: string): string =>
+        s ? s.replace(/^["'\s\t]+|["'\s\t]+$/g, '').trim() : '';
 
-      // Parse a CSV line respecting quoted fields
-      const parseLine = (lineText: string): string[] => {
-        const cols: string[] = [];
-        let inQuote = false;
-        let cur = '';
-        for (let j = 0; j < lineText.length; j++) {
-          const ch = lineText[j];
-          if (ch === '"') { inQuote = !inQuote; }
-          else if (ch === ',' && !inQuote) { cols.push(clean(cur)); cur = ''; }
+      // Pick the most-frequent separator character
+      const detectDelim = (line: string): string => {
+        const c: Record<string, number> = { ',': 0, ';': 0, '\t': 0 };
+        for (const ch of line) if (ch in c) c[ch]++;
+        return Object.entries(c).sort((a, b) => b[1] - a[1])[0][0];
+      };
+      const delim = rawLines.length > 0 ? detectDelim(rawLines[0]) : ',';
+
+      // Split one CSV line honouring quoted fields
+      const splitLine = (line: string): string[] => {
+        const out: string[] = [];
+        let inQ = false, cur = '';
+        for (const ch of line) {
+          if (ch === '"') { inQ = !inQ; }
+          else if (ch === delim && !inQ) { out.push(clean(cur)); cur = ''; }
           else { cur += ch; }
         }
-        cols.push(clean(cur));
-        return cols;
+        out.push(clean(cur));
+        return out;
       };
 
-      // Is this value a student index number? (pure digits, 6-12 chars)
-      const isIndexNumber = (s: string) => /^\d{6,12}$/.test(s);
-
-      // Is this value a level?
-      const isLevel = (s: string) => {
-        if (!s) return false;
-        const sl = s.toLowerCase();
-        return sl.includes('level') || sl.includes('lvl') || /^[1-4]00$/.test(s);
+      // Purely-numeric 6-14 digit string → student ID
+      const isId   = (s: string) => /^\d{6,14}$/.test(s);
+      // Contains level keyword or 100/200/300/400 pattern
+      const isLvl  = (s: string) => /level|lvl/i.test(s) || /^[1-4]00$/.test(s);
+      // Contains an academic programme keyword
+      const isProg = (s: string) => {
+        const l = s.toLowerCase();
+        return ['btech','b.tech','bsc','b.sc','hnd','msc','phd','computer','engineering',
+                'science','business','ict','technology','accounting','management',
+                'education','nursing','health','information','mathematics',
+                'statistics','economics','arts','law','commerce'].some(k => l.includes(k));
       };
 
-      // Is this a phone number AND not an index number?
-      // Phone numbers usually have spaces, dashes, or a + prefix, or are 11+ digits
-      const isPhoneNotIndex = (s: string) =>
-        /^\+/.test(s) ||              // starts with +
-        /[\s\-]/.test(s) ||           // has spaces or dashes
-        /^\d{11,}$/.test(s);          // more than 10 digits (unlikely to be index)
+      // ── HEADER SCAN ──────────────────────────────────────────────────────
+      let startRow = 0;
+      let hIdx = -1, hSur = -1, hFirst = -1, hFull = -1, hProg = -1, hLvl = -1;
 
-      // Skip header row
-      let startIndex = 0;
-      if (lines.length > 0) {
-        const fl = lines[0].toLowerCase();
-        if (fl.includes('index') || fl.includes('name') || fl.includes('programme') || fl.includes('level') || fl.includes('phone') || fl.includes('student')) {
-          startIndex = 1;
-        }
+      const row0 = splitLine(rawLines[0]).map(c => c.toLowerCase());
+      const isHeaderRow = row0.some(c =>
+        ['index','surname','name','programme','level','student','id'].some(k => c.includes(k))
+      );
+
+      if (isHeaderRow) {
+        startRow = 1;
+        row0.forEach((col, i) => {
+          const c = col.replace(/\s+/g, ' ').trim();
+          if (['index','student id','student no','matric','id'].some(k => c.includes(k)))           hIdx   = i;
+          else if (['surname','last name','family name'].some(k => c.includes(k)))                   hSur   = i;
+          else if (['first name','other name','given name','firstname','othername'].some(k => c.includes(k))) hFirst = i;
+          else if (['full name','fullname'].some(k => c.includes(k)) || c === 'name')               hFull  = i;
+          else if (['programme','program','course'].some(k => c.includes(k)))                        hProg  = i;
+          else if (['level','lvl','year'].some(k => c.includes(k)))                                  hLvl   = i;
+        });
       }
 
-      for (let i = startIndex; i < lines.length; i++) {
-        const cols = parseLine(lines[i]);
-        if (cols.length < 2) continue;
+      // Fallback programme = filename (without extension, underscores → spaces)
+      const fallback = file.name.replace(/\.(csv|xlsx|txt)$/i, '').replace(/_/g, ' ').trim();
 
-        // Step 1: Find index number column
-        let indexCol = -1;
-        for (let c = 0; c < cols.length; c++) {
-          if (isIndexNumber(cols[c])) { indexCol = c; break; }
-        }
-        if (indexCol === -1) continue; // skip rows with no index number
+      // ── DATA ROWS ────────────────────────────────────────────────────────
+      for (let i = startRow; i < rawLines.length; i++) {
+        const cols = splitLine(rawLines[i]);
+        if (cols.filter(Boolean).length < 2) continue;
 
-        const indexNumber = cols[indexCol];
+        let idx = '', name = '', prog = '', lvl = '';
 
-        // Step 2: Remove index column AND any phone columns from remaining
-        const remaining = cols
-          .filter((val, c) => c !== indexCol)
-          .filter(val => !isPhoneNotIndex(val));
+        // PATH A – header column positions known
+        if (hIdx !== -1) {
+          idx = cols[hIdx] || '';
 
-        // Step 3: Find and extract level
-        let levelVal = '';
-        const afterLevel = remaining.filter(val => {
-          if (!levelVal && isLevel(val)) { levelVal = val; return false; }
-          return true;
-        });
-
-        // Step 4: Identify programme vs name parts
-        // A field is ONLY a programme if it explicitly contains known academic programme keywords
-        const isProgramme = (s: string) => {
-          const sl = s.toLowerCase();
-          return sl.includes('btech') || sl.includes('bsc') || sl.includes('ba ') ||
-                 sl.includes('hnd') || sl.includes('msc') || sl.includes('phd') ||
-                 sl.includes('computer') || sl.includes('engineering') ||
-                 sl.includes('science') || sl.includes('business') ||
-                 sl.includes('accounting') || sl.includes('management') ||
-                 sl.includes('education') || sl.includes('nursing') ||
-                 sl.includes('health') || sl.includes('information') ||
-                 sl.includes('technology') || sl.includes('mathematics') ||
-                 sl.includes('physics') || sl.includes('chemistry') ||
-                 sl.includes('statistics') || sl.includes('economics') ||
-                 sl.includes('arts') || sl.includes('law') || sl.includes('commerce');
-        };
-
-        let programmeVal = '';
-        let nameParts: string[] = [];
-
-        // Find programme by keyword match only — everything else is a name part
-        const progIndex = afterLevel.findIndex(v => isProgramme(v));
-        if (progIndex >= 0) {
-          programmeVal = afterLevel[progIndex];
-          nameParts = afterLevel.filter((_, idx) => idx !== progIndex);
-        } else {
-          // No programme keyword found in this row — all remaining fields are name parts.
-          // Use the CSV filename (minus extension) as the programme fallback.
-          programmeVal = file.name.replace(/\.csv$/i, '').trim();
-          nameParts = afterLevel;
+          if (hSur !== -1 && hFirst !== -1) {
+            const s = cols[hSur] || '', f = cols[hFirst] || '';
+            name = s && f ? `${s}, ${f}` : (s || f);
+          } else if (hFull !== -1) {
+            name = cols[hFull] || '';
+          } else {
+            // Collect all columns that are not ID / programme / level
+            name = cols
+              .filter((_, ci) => ci !== hIdx && ci !== hProg && ci !== hLvl)
+              .filter(v => v && !isId(v) && !isLvl(v) && !isProg(v))
+              .join(', ');
+          }
+          prog = hProg !== -1 ? (cols[hProg] || '') : '';
+          lvl  = hLvl  !== -1 ? (cols[hLvl]  || '') : '';
         }
 
-        const fullName = nameParts.join(', ');
+        // PATH B – no header mapping; auto-detect columns
+        if (!idx) {
+          // Find student ID: first purely-numeric 6-14 digit field
+          let idCol = -1;
+          for (let c = 0; c < cols.length; c++) {
+            if (isId(cols[c])) { idCol = c; break; }
+          }
+          if (idCol === -1) continue; // no student ID in this row — skip
 
-        if (indexNumber && fullName) {
-          data.push({
-            id: indexNumber,
-            name: fullName,
-            programme: programmeVal,
-            level: levelVal,
-            email: `${indexNumber}@htu.edu.gh`
+          idx = cols[idCol];
+          const rest = cols.filter((_, c) => c !== idCol);
+
+          // Extract level value
+          let lv = '';
+          const noLvl = rest.filter(v => {
+            if (!lv && isLvl(v)) { lv = v; return false; }
+            return true;
           });
+          lvl = lv;
+
+          // Extract programme (search right-to-left for keyword match)
+          let pr = '', prI = -1;
+          for (let c = noLvl.length - 1; c >= 0; c--) {
+            if (isProg(noLvl[c])) { pr = noLvl[c]; prI = c; break; }
+          }
+          prog = pr;
+
+          // Name = everything remaining (in original CSV order)
+          name = noLvl.filter((_, c) => c !== prI).filter(Boolean).join(', ');
+        }
+
+        // ── FALLBACKS & CLEANUP ─────────────────────────────────────────
+        if (!prog) prog = fallback;
+        idx  = idx.replace(/^["'\s,]+|["'\s,]+$/g, '').trim();
+        name = name.replace(/^["'\s,]+|["'\s,]+$/g, '').trim();
+
+        if (idx && name) {
+          data.push({ id: idx, name, programme: prog, level: lvl, email: `${idx}@htu.edu.gh` });
         }
       }
 
       setParsedData(data);
     };
-    reader.onerror = () => {
-      setMessage({ type: 'error', text: 'Failed to read the file.' });
-    };
+
+    reader.onerror = () => setMessage({ type: 'error', text: 'Failed to read the CSV file.' });
     reader.readAsText(file);
   };
+
 
   const handleUpload = async () => {
     if (parsedData.length === 0 || !file) {

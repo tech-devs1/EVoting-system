@@ -279,14 +279,14 @@ export default function AdminReportPage() {
               lineHeight: 1.6
             }}
           >
-            {/* COMPSSA Logo Header */}
+            {/* Ho Technical University Crest Header Logo */}
             <div style={{ textAlign: 'center', marginBottom: '24px' }}>
               <img 
-                src="/compssa_logo.png" 
-                alt="COMPSSA Logo" 
+                src="/htu_logo.png" 
+                alt="Ho Technical University Logo" 
                 style={{ 
-                  maxHeight: '75px', 
-                  maxWidth: '240px',
+                  maxHeight: '110px', 
+                  maxWidth: '220px',
                   objectFit: 'contain', 
                   margin: '0 auto 12px auto', 
                   display: 'block' 
