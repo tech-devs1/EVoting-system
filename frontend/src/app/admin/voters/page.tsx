@@ -75,10 +75,10 @@ export default function AdminVotersPage() {
       const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
       const data: ParsedVoter[] = [];
 
-      // Helper: strip surrounding quotes and whitespace
+      // Strip surrounding quotes and whitespace
       const clean = (s: string) => s.replace(/^["'\s]+|["'\s]+$/g, '').trim();
 
-      // Helper: parse a CSV line respecting quoted fields
+      // Parse a CSV line respecting quoted fields
       const parseLine = (lineText: string): string[] => {
         const cols: string[] = [];
         let inQuote = false;
@@ -93,101 +93,83 @@ export default function AdminVotersPage() {
         return cols;
       };
 
-      // Helper: check if a string looks like an index/student number
-      // Index numbers are typically 9-10 digit numbers or alphanumeric codes like HTU-2026-XXXX
-      const isIndexNumber = (s: string) => /^\d{7,12}$/.test(s) || /^[A-Z0-9]{3,}-\d{4}-\d+$/i.test(s);
+      // Is this value a student index number? (pure digits, 6-12 chars)
+      const isIndexNumber = (s: string) => /^\d{6,12}$/.test(s);
 
-      // Helper: check if a string looks like a level value
+      // Is this value a level?
       const isLevel = (s: string) => {
         if (!s) return false;
         const sl = s.toLowerCase();
-        return sl.includes('level') || sl.includes('lvl') || /^\d{3}$/.test(s) || /^[1-4]00$/.test(s);
+        return sl.includes('level') || sl.includes('lvl') || /^[1-4]00$/.test(s);
       };
 
-      // Helper: check if a value looks like a phone number (7+ digits, possibly with +)
-      const isPhone = (s: string) => /^\+?[\d\s\-]{7,}$/.test(s) && s.replace(/\D/g,'').length >= 7;
+      // Is this a phone number AND not an index number?
+      // Phone numbers usually have spaces, dashes, or a + prefix, or are 11+ digits
+      const isPhoneNotIndex = (s: string) =>
+        /^\+/.test(s) ||              // starts with +
+        /[\s\-]/.test(s) ||           // has spaces or dashes
+        /^\d{11,}$/.test(s);          // more than 10 digits (unlikely to be index)
 
-      // Detect and skip header row
+      // Skip header row
       let startIndex = 0;
       if (lines.length > 0) {
-        const firstLower = lines[0].toLowerCase();
-        if (firstLower.includes('index') || firstLower.includes('name') || firstLower.includes('programme') || firstLower.includes('level') || firstLower.includes('phone')) {
+        const fl = lines[0].toLowerCase();
+        if (fl.includes('index') || fl.includes('name') || fl.includes('programme') || fl.includes('level') || fl.includes('phone') || fl.includes('student')) {
           startIndex = 1;
         }
       }
 
       for (let i = startIndex; i < lines.length; i++) {
         const cols = parseLine(lines[i]);
-        if (cols.length < 4) continue;
+        if (cols.length < 2) continue;
 
-        // Filter out phone number columns (so they don't pollute name/programme detection)
-        const filteredCols = cols.filter(c => !isPhone(c));
-
-        // Find the index number column — it's the one that looks like a student ID
+        // Step 1: Find index number column
         let indexCol = -1;
-        for (let c = 0; c < filteredCols.length; c++) {
-          if (isIndexNumber(filteredCols[c])) { indexCol = c; break; }
+        for (let c = 0; c < cols.length; c++) {
+          if (isIndexNumber(cols[c])) { indexCol = c; break; }
         }
+        if (indexCol === -1) continue; // skip rows with no index number
 
-        // If no numeric index found, skip
-        if (indexCol === -1) continue;
+        const indexNumber = cols[indexCol];
 
-        const indexNumber = filteredCols[indexCol];
-        const remaining = filteredCols.filter((_, c) => c !== indexCol);
+        // Step 2: Remove index column AND any phone columns from remaining
+        const remaining = cols
+          .filter((val, c) => c !== indexCol)
+          .filter(val => !isPhoneNotIndex(val));
 
-        // Find the level column
-        let levelCol = -1;
-        for (let c = 0; c < remaining.length; c++) {
-          if (isLevel(remaining[c])) { levelCol = c; break; }
-        }
+        // Step 3: Find and extract level
+        let levelVal = '';
+        const afterLevel = remaining.filter(val => {
+          if (!levelVal && isLevel(val)) { levelVal = val; return false; }
+          return true;
+        });
 
-        const level = levelCol >= 0 ? remaining[levelCol] : '';
-        const nonLevel = remaining.filter((_, c) => c !== levelCol);
-
-        // After removing index and level, we expect: [name parts..., programme]
-        // Programme is typically the last remaining non-name field
-        // Name fields come before programme, programme is usually a known keyword
-        const isProgramme = (s: string) => {
-          const sl = s.toLowerCase();
-          return sl.includes('computer') || sl.includes('engineering') || sl.includes('science') ||
-                 sl.includes('business') || sl.includes('arts') || sl.includes('accounting') ||
-                 sl.includes('management') || sl.includes('education') || sl.includes('law') ||
-                 sl.includes('nursing') || sl.includes('health') || sl.includes('information') ||
-                 sl.includes('technology') || sl.includes('mathematics') || sl.includes('physics') ||
-                 sl.includes('chemistry') || sl.includes('statistics') || sl.includes('economics') ||
-                 sl.length > 8; // Longer fields are likely programme names
-        };
-
-        let programme = '';
+        // Step 4: Find programme — usually the longest text field remaining
+        // Sort by length descending, pick the longest as programme
+        let programmeVal = '';
         let nameParts: string[] = [];
 
-        // Find programme — scan from the end (it usually comes last before level was removed)
-        let progCol = -1;
-        for (let c = nonLevel.length - 1; c >= 0; c--) {
-          if (isProgramme(nonLevel[c]) && !/^\d+$/.test(nonLevel[c])) {
-            progCol = c;
-            break;
-          }
-        }
-
-        if (progCol >= 0) {
-          programme = nonLevel[progCol];
-          nameParts = nonLevel.filter((_, c) => c !== progCol);
+        if (afterLevel.length === 0) {
+          // No remaining fields after removing level
+          nameParts = [];
+        } else if (afterLevel.length === 1) {
+          // Only one field — it's the name
+          nameParts = afterLevel;
         } else {
-          // fallback: last element is programme
-          programme = nonLevel[nonLevel.length - 1] || '';
-          nameParts = nonLevel.slice(0, nonLevel.length - 1);
+          // Multiple fields: longest is programme, rest are name parts
+          const sorted = [...afterLevel].sort((a, b) => b.length - a.length);
+          programmeVal = sorted[0];
+          nameParts = afterLevel.filter(v => v !== programmeVal);
         }
 
-        // Combine name parts: "Surname, First Name" or just the full combined string
         const fullName = nameParts.join(', ');
 
         if (indexNumber && fullName) {
           data.push({
             id: indexNumber,
             name: fullName,
-            programme,
-            level,
+            programme: programmeVal,
+            level: levelVal,
             email: `${indexNumber}@htu.edu.gh`
           });
         }
