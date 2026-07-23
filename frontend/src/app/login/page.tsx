@@ -122,7 +122,7 @@ export default function LoginPage() {
             </span>
           </div>
           <h2 className="auth-title" style={{ marginTop: 'var(--space-4)' }}>
-            {step === 'credentials' ? 'Voter & Admin Portal' : 'Verify Your Identity'}
+            {step === 'credentials' ? 'Secure Sign In' : 'Verify Your Identity'}
           </h2>
           <p className="auth-subtitle">
             {step === 'credentials'
