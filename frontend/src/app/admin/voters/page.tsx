@@ -298,6 +298,22 @@ export default function AdminVotersPage() {
     }
   };
 
+  const handleClearDatabase = async () => {
+    if (!confirm('WARNING: This will permanently delete ALL voters, upload history, and registered voters from the database. This action cannot be undone. Are you sure you want to completely clear the voter database?')) {
+      return;
+    }
+
+    try {
+      const res = await apiRequest<{ status: string; message: string }>('/admin/voters/clear', 'POST');
+      if (res.status === 'success') {
+        fetchUploadHistory();
+        alert(res.message);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to clear database.');
+    }
+  };
+
   const downloadUnsuccessfulCSV = () => {
     if (unsuccessfulRecords.length === 0) return;
 
@@ -333,6 +349,19 @@ export default function AdminVotersPage() {
             Bulk import and manage eligible voters rosters
           </p>
         </div>
+        <button 
+          className="btn btn-outline" 
+          onClick={handleClearDatabase}
+          style={{ 
+            borderColor: 'var(--color-danger)', 
+            color: 'var(--color-danger)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <Trash2 size={16} /> Clear Database
+        </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
@@ -470,6 +499,7 @@ export default function AdminVotersPage() {
                     <tr style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                       <th style={{ padding: '8px 12px' }}>Index Number</th>
                       <th style={{ padding: '8px 12px' }}>Full Name</th>
+                      <th style={{ padding: '8px 12px' }}>Email</th>
                       <th style={{ padding: '8px 12px' }}>Programme</th>
                       <th style={{ padding: '8px 12px' }}>Level</th>
                     </tr>
@@ -479,6 +509,7 @@ export default function AdminVotersPage() {
                       <tr key={idx} style={{ borderBottom: idx < parsedData.slice(0, 5).length - 1 ? '1px solid var(--border-color)' : 'none' }}>
                         <td style={{ padding: '8px 12px', fontWeight: 600 }}>{voter.id}</td>
                         <td style={{ padding: '8px 12px' }}>{voter.name}</td>
+                        <td style={{ padding: '8px 12px', color: 'var(--text-secondary)' }}>{voter.email}</td>
                         <td style={{ padding: '8px 12px' }}>{voter.programme}</td>
                         <td style={{ padding: '8px 12px' }}>{voter.level}</td>
                       </tr>

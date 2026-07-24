@@ -387,4 +387,55 @@ router.get('/live-votes', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Clear all voter database records, upload history, and voted records (excluding admins)
+router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    // 1. Delete all voters (users whose role !== 'admin')
+    const usersSnap = await db.collection('users').get();
+    let deletedVotersCount = 0;
+    if (!usersSnap.empty) {
+      const batch = db.batch();
+      usersSnap.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.role !== 'admin') {
+          batch.delete(doc.ref);
+          deletedVotersCount++;
+        }
+      });
+      if (deletedVotersCount > 0) {
+        await batch.commit();
+      }
+    }
+
+    // 2. Clear upload history
+    const uploadsSnap = await db.collection('uploads').get();
+    if (!uploadsSnap.empty) {
+      const batch = db.batch();
+      uploadsSnap.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+    }
+
+    // 3. Clear voted records
+    const votedSnap = await db.collection('voted_voters').get();
+    if (!votedSnap.empty) {
+      const batch = db.batch();
+      votedSnap.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: `Database cleared successfully. Deleted ${deletedVotersCount} voter records, all upload histories, and voting records.`
+    });
+  } catch (error) {
+    console.error('Error clearing voter database:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to clear voter database' });
+  }
+});
+
 module.exports = router;
+
