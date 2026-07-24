@@ -57,9 +57,16 @@ export default function RegisterPage() {
       return;
     }
     
+    // Auto-prefix with 0 if it's purely numeric and doesn't start with 0
+    let formattedId = studentId.trim();
+    if (!formattedId.startsWith('0') && /^\d+$/.test(formattedId)) {
+      formattedId = '0' + formattedId;
+      setStudentId(formattedId); // Update the state so the user sees it too
+    }
+    
     // Validate student ID - only allow alphanumeric and basic characters
     const studentIdRegex = /^[a-zA-Z0-9-]+$/;
-    if (!studentIdRegex.test(studentId)) {
+    if (!studentIdRegex.test(formattedId)) {
       setError('Student ID contains invalid characters. Only letters, numbers, and hyphens are allowed.');
       return;
     }
@@ -68,7 +75,7 @@ export default function RegisterPage() {
     setInfoMessage('');
     setLoading(true);
     try {
-      const res = await apiRequest<{ status: string; data: { name: string; email: string }; message?: string }>('/auth/verify-student', 'POST', { studentId });
+      const res = await apiRequest<{ status: string; data: { name: string; email: string }; message?: string }>('/auth/verify-student', 'POST', { studentId: formattedId });
       if (res.status === 'success') {
         setName(res.data.name);
         setEmail(res.data.email);
@@ -276,19 +283,27 @@ export default function RegisterPage() {
           {currentStep === 1 && (
             <form onSubmit={handleStep1Submit}>
               <div className="form-group">
-                <label className="form-label" htmlFor="reg-id">Student ID / Employee Code</label>
+                <label className="form-label" htmlFor="reg-id">Student Index Number</label>
                 <div className="form-input-container">
                   <Hash size={18} className="form-input-icon" />
                   <input 
                     type="text" 
                     id="reg-id" 
                     className="form-input form-input-with-icon" 
-                    placeholder="HTU-2026-8849" 
+                    placeholder="e.g. 0324080516" 
                     required 
                     value={studentId}
                     onChange={(e) => setStudentId(e.target.value)}
                   />
                 </div>
+                <p style={{ 
+                  marginTop: 'var(--space-2)', 
+                  fontSize: 'var(--text-xs)', 
+                  color: 'var(--text-tertiary)',
+                  lineHeight: '1.4' 
+                }}>
+                  * Please ensure your index number is prefixed with a 0 (e.g. 0324080516). We will automatically add it for you if missing.
+                </p>
               </div>
               <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading} style={{ marginTop: 'var(--space-4)' }}>
                 {loading ? 'Verifying...' : 'Verify Student Record'} <ArrowRight size={18} style={{ marginLeft: '8px', display: 'inline-block', verticalAlign: 'middle' }} />

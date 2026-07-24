@@ -208,10 +208,20 @@ export default function AdminVotersPage() {
         idx  = idx.replace(/^["'\s,]+|["'\s,]+$/g, '').trim();
         name = name.replace(/^["'\s,]+|["'\s,]+$/g, '').trim();
         
+        // Ensure index number starts with '0' if numeric (e.g., 325050184 -> 0325050184)
+        if (idx && !idx.startsWith('0') && /^\d+$/.test(idx)) {
+          idx = '0' + idx;
+        }
+
         if (!email) {
           email = `${idx}@htu.edu.gh`;
         } else {
           email = email.replace(/^["'\s,]+|["'\s,]+$/g, '').trim();
+          // Ensure email local part starts with '0' if numeric
+          const [localPart, domain] = email.split('@');
+          if (localPart && !localPart.startsWith('0') && /^\d+$/.test(localPart)) {
+            email = `0${localPart}@${domain || 'htu.edu.gh'}`;
+          }
         }
 
         if (idx && name) {

@@ -28,19 +28,25 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     
+    // Auto-prefix with 0 if it's a numeric email that starts without 0
+    let formattedEmail = email.trim();
+    const [localPart, domain] = formattedEmail.split('@');
+    if (localPart && !localPart.startsWith('0') && /^\d+$/.test(localPart)) {
+      formattedEmail = `0${localPart}@${domain || 'htu.edu.gh'}`;
+      setEmail(formattedEmail);
+    }
+    
     // Validate email - only allow alphanumeric, @, ., -, _
     const emailRegex = /^[a-zA-Z0-9@._-]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(formattedEmail)) {
       setError('Email contains invalid characters. Only letters, numbers, @, ., -, and _ are allowed.');
       return;
     }
     
-
-    
     setLoading(true);
     try {
-      const role = email.includes('admin') ? 'admin' : 'voter';
-      const result = await login(email, password, role);
+      const role = formattedEmail.includes('admin') ? 'admin' : 'voter';
+      const result = await login(formattedEmail, password, role);
       if (result?.otpRequired && result.email) {
         setOtpEmail(result.email);
         setStep('otp');
