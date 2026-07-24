@@ -72,7 +72,12 @@ export default function AdminVotersPage() {
       const text = event.target?.result as string;
       if (!text) return;
 
-      const rawLines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+      const rawLines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim() !== '');
+      if (rawLines.length < 2) {
+        setMessage({ type: 'error', text: 'CSV file is empty or has only one row.' });
+        return;
+      }
+
       const data: ParsedVoter[] = [];
 
       // Remove surrounding quotes / apostrophes / whitespace
@@ -115,23 +120,24 @@ export default function AdminVotersPage() {
 
       // ── HEADER SCAN ──────────────────────────────────────────────────────
       let startRow = 0;
-      let hIdx = -1, hSur = -1, hFirst = -1, hFull = -1, hProg = -1, hLvl = -1;
+      let hIdx = -1, hSur = -1, hFirst = -1, hFull = -1, hProg = -1, hLvl = -1, hEmail = -1;
 
       const row0 = splitLine(rawLines[0]).map(c => c.toLowerCase());
       const isHeaderRow = row0.some(c =>
-        ['index','surname','name','programme','level','student','id'].some(k => c.includes(k))
+        ['index','surname','name','programme','level','student','id','email'].some(k => c.includes(k))
       );
 
       if (isHeaderRow) {
         startRow = 1;
         row0.forEach((col, i) => {
           const c = col.replace(/\s+/g, ' ').trim();
-          if (['index','student id','student no','matric','id'].some(k => c.includes(k)))           hIdx   = i;
+          if (['index no','index','student id','student no','matric','id'].some(k => c.includes(k))) hIdx   = i;
           else if (['surname','last name','family name'].some(k => c.includes(k)))                   hSur   = i;
           else if (['first name','other name','given name','firstname','othername'].some(k => c.includes(k))) hFirst = i;
           else if (['full name','fullname'].some(k => c.includes(k)) || c === 'name')               hFull  = i;
           else if (['programme','program','course'].some(k => c.includes(k)))                        hProg  = i;
           else if (['level','lvl','year'].some(k => c.includes(k)))                                  hLvl   = i;
+          else if (c.includes('email'))                                                              hEmail = i;
         });
       }
 
@@ -143,26 +149,27 @@ export default function AdminVotersPage() {
         const cols = splitLine(rawLines[i]);
         if (cols.filter(Boolean).length < 2) continue;
 
-        let idx = '', name = '', prog = '', lvl = '';
+        let idx = '', name = '', prog = '', lvl = '', email = '';
 
         // PATH A – header column positions known
         if (hIdx !== -1) {
           idx = cols[hIdx] || '';
 
-          if (hSur !== -1 && hFirst !== -1) {
+          if (hFull !== -1 && cols[hFull]) {
+            name = cols[hFull] || '';
+          } else if (hSur !== -1 && hFirst !== -1) {
             const s = cols[hSur] || '', f = cols[hFirst] || '';
             name = s && f ? `${s}, ${f}` : (s || f);
-          } else if (hFull !== -1) {
-            name = cols[hFull] || '';
           } else {
-            // Collect all columns that are not ID / programme / level
+            // Collect all columns that are not ID / programme / level / email
             name = cols
-              .filter((_, ci) => ci !== hIdx && ci !== hProg && ci !== hLvl)
+              .filter((_, ci) => ci !== hIdx && ci !== hProg && ci !== hLvl && ci !== hEmail)
               .filter(v => v && !isId(v) && !isLvl(v) && !isProg(v))
               .join(', ');
           }
           prog = hProg !== -1 ? (cols[hProg] || '') : '';
           lvl  = hLvl  !== -1 ? (cols[hLvl]  || '') : '';
+          email = hEmail !== -1 ? (cols[hEmail] || '') : '';
         }
 
         // PATH B – no header mapping; auto-detect columns
@@ -200,9 +207,15 @@ export default function AdminVotersPage() {
         if (!prog) prog = fallback;
         idx  = idx.replace(/^["'\s,]+|["'\s,]+$/g, '').trim();
         name = name.replace(/^["'\s,]+|["'\s,]+$/g, '').trim();
+        
+        if (!email) {
+          email = `${idx}@htu.edu.gh`;
+        } else {
+          email = email.replace(/^["'\s,]+|["'\s,]+$/g, '').trim();
+        }
 
         if (idx && name) {
-          data.push({ id: idx, name, programme: prog, level: lvl, email: `${idx}@htu.edu.gh` });
+          data.push({ id: idx, name, programme: prog, level: lvl, email });
         }
       }
 
@@ -212,6 +225,7 @@ export default function AdminVotersPage() {
     reader.onerror = () => setMessage({ type: 'error', text: 'Failed to read the CSV file.' });
     reader.readAsText(file);
   };
+
 
 
   const handleUpload = async () => {
