@@ -1,4 +1,4 @@
-const express = require('express');
+[7/25/2026 2:52 PM] Sheriff: const express = require('express');
 const router = express.Router();
 const { db } = require('../services/firebase');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
@@ -26,7 +26,6 @@ router.get('/', async (req, res) => {
     
     snapshot.forEach(doc => {
       const electionData = doc.data();
-      // Auto-update status based on time
       let updatedStatus = electionData.status;
       
       const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
@@ -34,11 +33,9 @@ router.get('/', async (req, res) => {
 
       if (electionData.status === 'active' && electionData.endDate && endTime < now) {
         updatedStatus = 'completed';
-        // Update the election status in background
         db.collection('elections').doc(doc.id).update({ status: 'completed' });
       } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
         updatedStatus = 'active';
-        // Update the election status in background
         db.collection('elections').doc(doc.id).update({ status: 'active' });
       }
       
@@ -87,11 +84,10 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const { title, description, startDate, endDate, organizationId, type, department, showResults } = req.body;
     
-    if (!title || !startDate || !endDate) {
+    if (!title  !startDate  !endDate) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
-    // Build a type-specific description if not provided or still generic
     const electionType = type || 'src';
     const deptLabel = (department || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const dateLabel = startDate
@@ -99,8 +95,8 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       : new Date().toLocaleDateString();
 
     const autoDesc = electionType === 'src'
-      ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
-      : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
+[7/25/2026 2:52 PM] Sheriff: ? This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.
+      : This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.;
 
     const finalDescription = (description && !description.startsWith('Automated')) ? description : autoDesc;
 
@@ -112,7 +108,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       organizationId: organizationId || 'default',
       type: electionType,
       department: department || '',
-      status: 'draft', // draft, active, completed
+      status: 'draft',
       showResults: showResults === true,
       createdBy: 'admin',
       createdAt: Date.now()
@@ -126,7 +122,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Migrate existing elections to have proper type-specific descriptions (Admin only)
+// Migrate existing elections (Admin only)
 router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const snapshot = await db.collection('elections').get();
@@ -134,7 +130,6 @@ router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) 
 
     snapshot.forEach(doc => {
       const data = doc.data();
-      // Only fix elections with missing or generic "Automated" descriptions
       if (!data.description || data.description.startsWith('Automated')) {
         const electionType = data.type || 'src';
         const deptLabel = (data.department || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -143,15 +138,15 @@ router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) 
           : 'a scheduled date';
 
         const newDesc = electionType === 'src'
-          ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
-          : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
+          ? This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.
+          : This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.;
 
         updates.push(db.collection('elections').doc(doc.id).update({ description: newDesc }));
       }
     });
 
     await Promise.all(updates);
-    res.status(200).json({ status: 'success', message: `Updated ${updates.length} election(s)` });
+    res.status(200).json({ status: 'success', message: Updated ${updates.length} election(s) });
   } catch (error) {
     console.error('Error migrating descriptions:', error);
     res.status(500).json({ status: 'error', message: 'Migration failed' });
@@ -183,14 +178,13 @@ router.patch('/:id/status', verifyAuth, requireAdmin, async (req, res) => {
     }
 
     await db.collection('elections').doc(req.params.id).update({ status });
-    res.status(200).json({ status: 'success', message: `Election status updated to ${status}` });
+    res.status(200).json({ status: 'success', message: Election status updated to ${status} });
   } catch (error) {
     console.error('Error updating election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to update election' });
   }
 });
-
-// Toggle showResults status (Admin only)
+[7/25/2026 2:52 PM] Sheriff: // Toggle showResults status (Admin only)
 router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const { showResults } = req.body;
@@ -199,7 +193,7 @@ router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) =
     }
 
     await db.collection('elections').doc(req.params.id).update({ showResults });
-    res.status(200).json({ status: 'success', message: `Voter results visibility updated to ${showResults}` });
+    res.status(200).json({ status: 'success', message: Voter results visibility updated to ${showResults} });
   } catch (error) {
     console.error('Error toggling results visibility:', error);
     res.status(500).json({ status: 'error', message: 'Failed to update results visibility' });
@@ -217,34 +211,33 @@ router.delete('/:id', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Generate election report (Admin only)
+// Generate election report JSON (Admin only) - OPTIMIZED FOR LOW READS
 router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
     
-    // Get election details
+    // 1. Get election details (1 Read)
     const electionDoc = await db.collection('elections').doc(electionId).get();
     if (!electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
     const election = { id: electionId, ...electionDoc.data() };
     
-    // Get candidates for this election
+    // 2. Get candidates (1 Read per candidate, usually ~10 Reads)
     const candidatesSnapshot = await db.collection('candidates').where('electionId', '==', electionId).get();
     const candidates = [];
     candidatesSnapshot.forEach(doc => {
       candidates.push({ id: doc.id, ...doc.data() });
     });
     
-    // Get total votes cast
-    const votesSnapshot = await db.collection('votes').where('electionId', '==', electionId).get();
-    const totalVotes = votesSnapshot.size;
+    // 3. OPTIMIZED: Get total votes cast using count() (~2 Reads instead of 2,000 Reads)
+    const votesCountSnap = await db.collection('votes').where('electionId', '==', electionId).count().get();
+    const totalVotes = votesCountSnap.data().count;
     
-    // Get unique voters who voted
-    const votedVotersSnapshot = await db.collection('voted_voters').where('electionId', '==', electionId).get();
-    const uniqueVoters = votedVotersSnapshot.size;
+    // 4. OPTIMIZED: Get unique voters count using count() (~2 Reads instead of 2,000 Reads)
+    const votedVotersCountSnap = await db.collection('voted_voters').where('electionId', '==', electionId).count().get();
+    const uniqueVoters = votedVotersCountSnap.data().count;
     
-    // Generate report data
     const report = {
       election: {
         title: election.title,
@@ -278,67 +271,63 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Download election report as PDF (Admin only)
+// Download election report as PDF (Admin only) - OPTIMIZED FOR LOW READS & PAGINATION
 router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
-  try {
+[7/25/2026 2:52 PM] Sheriff: try {
     const electionId = req.params.id;
     
-    // Get election details
+    // 1. Get election details
     const electionDoc = await db.collection('elections').doc(electionId).get();
     if (!electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
     const election = { id: electionId, ...electionDoc.data() };
     
-    // Get candidates for this election
+    // 2. Get candidates
     const candidatesSnapshot = await db.collection('candidates').where('electionId', '==', electionId).get();
     const candidates = [];
     candidatesSnapshot.forEach(doc => {
       candidates.push({ id: doc.id, ...doc.data() });
     });
     
-    // Get total votes cast
-    const votesSnapshot = await db.collection('votes').where('electionId', '==', electionId).get();
-    const totalVotes = votesSnapshot.size;
+    // 3. OPTIMIZED: Fast aggregation count for total votes
+    const votesCountSnap = await db.collection('votes').where('electionId', '==', electionId).count().get();
+    const totalVotes = votesCountSnap.data().count;
     
-    // Get unique voters who voted
-    const votedVotersSnapshot = await db.collection('voted_voters').where('electionId', '==', electionId).get();
-    const uniqueVoters = votedVotersSnapshot.size;
+    // 4. OPTIMIZED: Fast aggregation count for unique voters
+    const votedVotersCountSnap = await db.collection('voted_voters').where('electionId', '==', electionId).count().get();
+    const uniqueVoters = votedVotersCountSnap.data().count;
     
-    // Generate PDF
+    // 5. Generate PDF Document
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
     
-    // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${election.title.replace(/[^a-zA-Z0-9]/g, '_')}_report.pdf"`);
+    res.setHeader('Content-Disposition', attachment; filename="${election.title.replace(/[^a-zA-Z0-9]/g, '_')}_report.pdf");
     
-    // Pipe PDF to response
     doc.pipe(res);
     
-    // Add content to PDF
     doc.fontSize(24).font('Helvetica-Bold').text('Election Report', { align: 'center' });
     doc.moveDown();
     
     doc.fontSize(18).font('Helvetica-Bold').text(election.title);
     doc.moveDown();
     
-    doc.fontSize(12).font('Helvetica').text(`Description: ${election.description || 'N/A'}`);
-    doc.text(`Start Date: ${new Date(election.startDate).toLocaleString()}`);
-    doc.text(`End Date: ${new Date(election.endDate).toLocaleString()}`);
-    doc.text(`Status: ${election.status.toUpperCase()}`);
-    doc.text(`Type: ${election.type || 'N/A'}`);
-    doc.text(`Department: ${election.department || 'N/A'}`);
+    doc.fontSize(12).font('Helvetica').text(Description: ${election.description || 'N/A'});
+    doc.text(Start Date: ${new Date(election.startDate).toLocaleString()});
+    doc.text(End Date: ${new Date(election.endDate).toLocaleString()});
+    doc.text(Status: ${election.status.toUpperCase()});
+    doc.text(Type: ${election.type || 'N/A'});
+    doc.text(Department: ${election.department || 'N/A'});
     doc.moveDown();
     
     // Statistics section
     doc.fontSize(16).font('Helvetica-Bold').text('Statistics', { underline: true });
     doc.moveDown();
-    doc.fontSize(12).font('Helvetica').text(`Total Candidates: ${candidates.length}`);
-    doc.text(`Total Votes Cast: ${totalVotes}`);
-    doc.text(`Unique Voters: ${uniqueVoters}`);
-    doc.text(`Report Generated: ${new Date().toLocaleString()}`);
+    doc.fontSize(12).font('Helvetica').text(Total Candidates: ${candidates.length});
+    doc.text(Total Votes Cast: ${totalVotes});
+    doc.text(Unique Voters: ${uniqueVoters});
+    doc.text(Report Generated: ${new Date().toLocaleString()});
     doc.moveDown();
-    
 
     // Candidates section
     doc.fontSize(16).font('Helvetica-Bold').text('Candidate Results', { underline: true });
@@ -346,18 +335,22 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     
     candidates.forEach((candidate, index) => {
       const percentage = totalVotes > 0 ? ((candidate.votes || 0) / totalVotes * 100).toFixed(2) : '0.00';
-      doc.fontSize(14).font('Helvetica-Bold').text(`${index + 1}. ${candidate.name}`);
-      doc.fontSize(12).font('Helvetica').text(`   Position: ${candidate.position}`);
+      doc.fontSize(14).font('Helvetica-Bold').text(${index + 1}. ${candidate.name});
+      doc.fontSize(12).font('Helvetica').text(   Position: ${candidate.position});
       if (candidate.isIndependent) {
-        doc.text(`   Yes Votes: ${candidate.votes || 0} | No Votes: ${candidate.noVotes || 0}`);
+        doc.text(   Yes Votes: ${candidate.votes || 0} | No Votes: ${candidate.noVotes || 0});
       } else {
-        doc.text(`   Votes: ${candidate.votes || 0} (${percentage}%)`);
+        doc.text(   Votes: ${candidate.votes || 0} (${percentage}%));
       }
       doc.moveDown();
     });
 
-    // Cryptographic Hashed Verification IDs Section
-    const verificationLogsSnap = await db.collection('voted_voters').where('electionId', '==', electionId).get();
+    // OPTIMIZED: Fetch ONLY the 50 most recent verification hashes to prevent PDF overload & quota exhaustion
+    const verificationLogsSnap = await db.collection('voted_voters')
+      .where('electionId', '==', electionId)
+      .limit(50)
+      .get();
+
     const verificationIds = [];
     verificationLogsSnap.forEach(doc => {
       const data = doc.data();
@@ -369,24 +362,22 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     });
 
     if (doc.y > 650) doc.addPage();
-    doc.fontSize(16).font('Helvetica-Bold').text('Cryptographic Voter Verification Ledger', { underline: true });
+    doc.fontSize(16).font('Helvetica-Bold').text('Cryptographic Voter Verification Ledger (Recent 50)', { underline: true });
     doc.moveDown();
     doc.fontSize(10).font('Helvetica').text('Cryptographic audit hashes generated for verified ballots:');
     doc.moveDown();
-
-    if (verificationIds.length === 0) {
+[7/25/2026 2:52 PM] Sheriff: if (verificationIds.length === 0) {
       doc.text('No verified ballot hashes recorded yet.');
     } else {
       verificationIds.forEach((v, index) => {
-        doc.fontSize(9).font('Courier').text(`${index + 1}. [HASH]: ${v.id} | [Pos]: ${v.position} | [Time]: ${v.timestamp}`);
+        doc.fontSize(9).font('Courier').text(${index + 1}. [HASH]: ${v.id} | [Pos]: ${v.position} | [Time]: ${v.timestamp});
       });
     }
     doc.moveDown();
     
-    // Footer
     doc.fontSize(10).font('Helvetica').text('Generated by COMPSSA ELECTIONS SYSTEM', { align: 'center' });
-    
     doc.end();
+
   } catch (error) {
     console.error('Error generating PDF report:', error);
     res.status(500).json({ status: 'error', message: 'Failed to generate PDF report' });

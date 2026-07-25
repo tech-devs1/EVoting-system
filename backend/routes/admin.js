@@ -1,68 +1,37 @@
-const express = require('express');
+[7/25/2026 2:56 PM] Sheriff: const express = require('express');
 const router = express.Router();
 const { db } = require('../services/firebase');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const { verifyElectionIntegrity } = require('../services/audit');
 
-// Get Dashboard Analytics
+// Get Dashboard Analytics - OPTIMIZED WITH AGGREGATIONS
 router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    // In a real database, use aggregations. Using mock get() here.
-    const electionsDoc = await db.collection('elections').get();
-    const votersDoc = await db.collection('users').where('isRegistered', '==', true).get();
-    const votesDoc = await db.collection('votes').get();
+    // 1. Server-side aggregations for total counts (~1 Read per collection)
+    const electionsCountSnap = await db.collection('elections').count().get();
+    const votersCountSnap = await db.collection('users').where('isRegistered', '==', true).count().get();
+    const votesCountSnap = await db.collection('votes').count().get();
 
-    console.log('[Admin Dashboard] Total elections:', electionsDoc.docs.length);
-    console.log('[Admin Dashboard] Total registered voters (isRegistered=true):', votersDoc.docs.length);
-    console.log('[Admin Dashboard] Total votes:', votesDoc.docs.length);
+    const totalElections = electionsCountSnap.data().count;
+    const totalVoters = votersCountSnap.data().count;
+    const totalVotesCast = votesCountSnap.data().count;
 
-    // Debug: Count all users and their isRegistered status
-    const allUsersDoc = await db.collection('users').get();
-    let registeredCount = 0;
-    let unregisteredCount = 0;
-    let noFieldCount = 0;
-    
-    allUsersDoc.forEach(doc => {
-      const data = doc.data();
-      if (data.isRegistered === true) {
-        registeredCount++;
-      } else if (data.isRegistered === false) {
-        unregisteredCount++;
-      } else {
-        noFieldCount++;
-      }
-    });
+    // 2. Fetch election statuses cleanly
+    const activeElectionsSnap = await db.collection('elections').where('status', '==', 'active').count().get();
+    const completedElectionsSnap = await db.collection('elections').where('status', '==', 'completed').count().get();
 
-    console.log('[Admin Dashboard] All users breakdown:');
-    console.log('  - isRegistered=true:', registeredCount);
-    console.log('  - isRegistered=false:', unregisteredCount);
-    console.log('  - no isRegistered field:', noFieldCount);
-    console.log('  - Total:', allUsersDoc.docs.length);
+    const activeElectionsCount = activeElectionsSnap.data().count;
+    const completedElectionsCount = completedElectionsSnap.data().count;
 
-    // Calculate election statuses
-    let activeElectionsCount = 0;
-    let completedElectionsCount = 0;
-    electionsDoc.forEach(doc => {
-      const status = doc.data().status;
-      if (status === 'active') {
-        activeElectionsCount++;
-      } else if (status === 'completed') {
-        completedElectionsCount++;
-      }
-    });
+    // 3. Selective document reads for user roles (~1 Read per non-admin check)
+    const allUsersSnap = await db.collection('users').select('role').get();
+    const totalStudents = allUsersSnap.docs.filter(d => d.data().role !== 'admin').length;
 
-    // Query unique voters who actually cast a ballot from voted_voters collection
-    const votedVotersDoc = await db.collection('voted_voters').get();
-    const uniqueVotersSet = new Set();
-    votedVotersDoc.forEach(doc => {
-      const voterId = doc.data().voterId;
-      if (voterId) {
-        uniqueVotersSet.add(voterId);
-      }
-    });
-    const uniqueVotersCount = uniqueVotersSet.size;
+    // 4. Unique voters count using count aggregation
+    const uniqueVotersSnap = await db.collection('voted_voters').count().get();
+    const uniqueVotersCount = uniqueVotersSnap.data().count;
 
-    // Fetch candidates for real-time chart
+    // 5. Fetch top 10 candidates for chart (10 Reads)
     const candidatesDoc = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();
     const topCandidates = [];
     candidatesDoc.forEach(doc => {
@@ -76,11 +45,11 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        totalElections: electionsDoc.empty ? 0 : electionsDoc.docs.length,
-        totalVoters: votersDoc.empty ? 0 : votersDoc.docs.length,
-        totalVotesCast: votesDoc.empty ? 0 : votesDoc.docs.length,
+        totalElections,
+        totalVoters,
+        totalVotesCast,
         activeAlerts: 0,
-        totalStudents: allUsersDoc.empty ? 0 : allUsersDoc.docs.filter(d => d.data().role !== 'admin').length,
+        totalStudents,
         uniqueVotersCount,
         activeElectionsCount,
         completedElectionsCount,
@@ -96,15 +65,15 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
 // Get Comprehensive Voter & Election Activity Report
 router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    // 1. Fetch all user records (voters from CSV)
+    // 1. Fetch user records
     const usersSnap = await db.collection('users').get();
     
     let totalVotersFromCSV = 0;
     let totalRegisteredVoters = 0;
     const voterList = [];
 
-    // 2. Fetch voted_voters to determine unique voters who voted
-    const votedSnap = await db.collection('voted_voters').get();
+    // 2. Fetch voted_voters to check unique voters
+    const votedSnap = await db.collection('voted_voters').select('voterId').get();
     const votedVoterIds = new Set();
     votedSnap.forEach(doc => {
       const data = doc.data();
@@ -115,7 +84,6 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
 
     usersSnap.forEach(doc => {
       const data = doc.data();
-      // Exclude admin accounts if role is explicitly 'admin'
       if (data.role !== 'admin') {
         totalVotersFromCSV++;
         const isReg = data.isRegistered === true;
@@ -137,9 +105,7 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
     });
 
     const totalVoted = votedVoterIds.size;
-
-    // Field status checks (Tick ✓ vs Cross ✗)
-    const summary = {
+[7/25/2026 2:56 PM] Sheriff: const summary = {
       field1_totalVoters: {
         label: 'Number of Voters (from CSV file)',
         count: totalVotersFromCSV,
@@ -243,7 +209,6 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
       }
     }
 
-    // Save upload metadata
     await uploadRef.set({
       filename: filename || 'unknown_upload.csv',
       timestamp: Date.now(),
@@ -253,7 +218,7 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
 
     res.status(200).json({ 
       status: 'success', 
-      message: `Processed ${voters.length} records. Added ${added} new voters, skipped ${skipped}.`,
+      message: Processed ${voters.length} records. Added ${added} new voters, skipped ${skipped}.,
       data: { added, skipped, unsuccessful }
     });
   } catch (error) {
@@ -268,7 +233,7 @@ router.get('/voters/uploads', verifyAuth, requireAdmin, async (req, res) => {
     const snapshot = await db.collection('uploads').orderBy('timestamp', 'desc').get();
     const uploads = [];
     snapshot.forEach(doc => {
-      uploads.push({ id: doc.id, ...doc.data() });
+[7/25/2026 2:56 PM] Sheriff: uploads.push({ id: doc.id, ...doc.data() });
     });
     res.status(200).json({ status: 'success', data: uploads });
   } catch (error) {
@@ -282,7 +247,6 @@ router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req,
   try {
     const { uploadId } = req.params;
 
-    // 1. Delete associated voters
     const votersSnapshot = await db.collection('users').where('uploadId', '==', uploadId).get();
     if (!votersSnapshot.empty) {
       const batch = db.batch();
@@ -290,15 +254,13 @@ router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req,
         batch.delete(doc.ref);
       });
       await batch.commit();
-      console.log(`[Admin Upload Cleanup] Deleted ${votersSnapshot.size} voters linked to upload: ${uploadId}`);
     }
 
-    // 2. Delete upload metadata
     await db.collection('uploads').doc(uploadId).delete();
 
     res.status(200).json({
       status: 'success',
-      message: `Upload and ${votersSnapshot.size} associated voter records deleted successfully.`
+      message: Upload and ${votersSnapshot.size} associated voter records deleted successfully.
     });
   } catch (error) {
     console.error('Error deleting upload:', error);
@@ -329,7 +291,7 @@ router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Get Flagged Users — those not in the database who attempted registration
+// Get Flagged Users
 router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const alertsDoc = await db.collection('fraud_alerts').get();
@@ -344,7 +306,7 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
         flagged.push({
           id: doc.id,
           studentId: data.metadata?.studentId || 'Unknown',
-          attemptedAt: data.metadata?.attemptedAt || new Date(data.timestamp || Date.now()).toISOString(),
+          attemptedAt: data.metadata?.attemptedAt  new Date(data.timestamp  Date.now()).toISOString(),
           ipAddress: data.metadata?.ipAddress || 'Unknown',
           timestamp: data.timestamp || Date.now(),
           status: data.status || 'unresolved'
@@ -352,8 +314,7 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
       }
     });
 
-    // Sort by most recent first
-    flagged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    flagged.sort((a, b) => (b.timestamp  0) - (a.timestamp  0));
 
     res.status(200).json({ status: 'success', data: flagged });
   } catch (error) {
@@ -361,10 +322,10 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to fetch flagged users' });
   }
 });
+
 // Get Analytics Data
 router.get('/analytics', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    // Return mock analytics data matching frontend structures
     const analyticsData = {
       departmentParticipation: {
         labels: ['Computer Science', 'Engineering', 'Business School', 'Design & Arts', 'Medical Sci'],
@@ -385,7 +346,7 @@ router.get('/analytics', verifyAuth, requireAdmin, async (req, res) => {
           tension: 0.3,
           fill: true
         }]
-      },
+[7/25/2026 2:56 PM] Sheriff: },
       performanceSummary: [
         { name: 'University Student Council Presidential Election', total: 2840, cast: 2085, rate: '73.4%', status: 'active' },
         { name: 'Department of Computer Science Representative', total: 450, cast: 394, rate: '87.6%', status: 'active' },
@@ -408,25 +369,25 @@ router.get('/export/:format', verifyAuth, requireAdmin, async (req, res) => {
     if (!['pdf', 'csv', 'excel'].includes(format)) {
       return res.status(400).json({ status: 'error', message: 'Invalid export format' });
     }
-    // In a real application, this would generate and return a file buffer/stream
     res.status(200).json({ 
       status: 'success', 
-      message: `Export generated in ${format.toUpperCase()} format`,
-      downloadUrl: `/mock-downloads/report.${format}` 
+      message: Export generated in ${format.toUpperCase()} format,
+      downloadUrl: /mock-downloads/report.${format} 
     });
   } catch (error) {
-    console.error(`Error exporting ${req.params.format}:`, error);
-    res.status(500).json({ status: 'error', message: `Failed to export ${req.params.format}` });
+    console.error(Error exporting ${req.params.format}:, error);
+    res.status(500).json({ status: 'error', message: Failed to export ${req.params.format} });
   }
 });
 
-// Live votes count endpoint – returns total votes cast across all elections and top candidates
+// Live votes count endpoint - OPTIMIZED WITH AGGREGATIONS
 router.get('/live-votes', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const votesSnap = await db.collection('votes').get();
-    const liveVotesCount = votesSnap.empty ? 0 : votesSnap.docs.length;
+    // 1. Fast count aggregation (~1 Read instead of reading every vote doc)
+    const votesCountSnap = await db.collection('votes').count().get();
+    const liveVotesCount = votesCountSnap.data().count;
     
-    // Fetch candidates for real-time chart
+    // 2. Fetch top candidates (10 Reads)
     const candidatesDoc = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();
     const topCandidates = [];
     candidatesDoc.forEach(doc => {
@@ -450,7 +411,7 @@ router.get('/live-votes', verifyAuth, requireAdmin, async (req, res) => {
 // Clear all voter database records, upload history, and voted records (excluding admins)
 router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    // 1. Delete all voters (users whose role !== 'admin')
+    // 1. Delete all non-admin voters
     const usersSnap = await db.collection('users').get();
     let deletedVotersCount = 0;
     if (!usersSnap.empty) {
@@ -489,7 +450,7 @@ router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      message: `Database cleared successfully. Deleted ${deletedVotersCount} voter records, all upload histories, and voting records.`
+      message: Database cleared successfully. Deleted ${deletedVotersCount} voter records, all upload histories, and voting records.
     });
   } catch (error) {
     console.error('Error clearing voter database:', error);
@@ -498,4 +459,3 @@ router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
 });
 
 module.exports = router;
-
