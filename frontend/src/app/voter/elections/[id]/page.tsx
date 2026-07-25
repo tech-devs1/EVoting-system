@@ -12,12 +12,16 @@ interface Candidate {
   position: string;
   manifesto: string;
   photoUrl: string;
+  isIndependent?: boolean;
 }
 
 interface Election {
   id: string;
   title: string;
   description: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
 }
 
 export default function CandidateSelectionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -29,7 +33,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Map of position -> selected candidateId
+  // Map of position -> selected candidateId (or candidateId:yes / candidateId:no)
   const [selections, setSelections] = useState<Record<string, string>>({});
 
   // Modals state
@@ -53,6 +57,26 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
     }
     fetchData();
   }, [electionId]);
+
+  // Preserve selections when returning from Confirm Page via Go Back button
+  useEffect(() => {
+    if (typeof window !== 'undefined' && candidates.length > 0) {
+      const search = new URLSearchParams(window.location.search);
+      const paramCandIds = search.getAll('candidateId');
+      if (paramCandIds.length > 0) {
+        const restored: Record<string, string> = {};
+        candidates.forEach(cand => {
+          const matched = paramCandIds.find(id => id === cand.id || id.startsWith(`${cand.id}:`));
+          if (matched) {
+            restored[cand.position] = matched;
+          }
+        });
+        if (Object.keys(restored).length > 0) {
+          setSelections(prev => ({ ...restored, ...prev }));
+        }
+      }
+    }
+  }, [candidates]);
 
   if (loading) {
     return <p style={{ color: 'var(--text-secondary)' }}>Synchronizing candidate profiles...</p>;
@@ -115,6 +139,15 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
     router.push(`/voter/elections/${electionId}/confirm?${params.toString()}`);
   };
 
+  // Time & Duration enforcement
+  const now = Date.now();
+  const startTime = election?.startDate ? new Date(election.startDate).getTime() : 0;
+  const endTime = election?.endDate ? new Date(election.endDate).getTime() : Infinity;
+
+  const isBeforeStart = startTime > 0 && now < startTime;
+  const isAfterEnd = endTime < Infinity && now > endTime;
+  const isVotingAllowed = !isBeforeStart && !isAfterEnd && election?.status !== 'completed';
+
   return (
     <div className="candidate-selection-container animate-page-enter">
       {/* Header */}
@@ -125,6 +158,18 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
         <h2 style={{ marginBottom: 'var(--space-2)' }}>{election.title}</h2>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', maxWidth: '700px' }}>{election.description}</p>
       </div>
+
+      {/* Time Enforcement Banners */}
+      {isBeforeStart && (
+        <div className="alert alert-warning" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-4)' }}>
+          ⚠️ <strong>Voting Not Yet Open:</strong> This election is scheduled to start on {new Date(election.startDate!).toLocaleString()}. Voting is currently disabled.
+        </div>
+      )}
+      {isAfterEnd && (
+        <div className="alert alert-danger" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-4)', background: 'var(--color-danger-bg)', color: 'var(--color-danger)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 'var(--radius-md)' }}>
+          🔒 <strong>Voting Duration Has Ended:</strong> The voting window for this election closed on {new Date(election.endDate!).toLocaleString()}. Further votes cannot be submitted.
+        </div>
+      )}
 
       {/* Position sections */}
       {positions.map(position => {
@@ -173,7 +218,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                     color: 'var(--color-success, #22c55e)',
                     fontWeight: 'var(--weight-semibold)'
                   }}>
-                    ✓ Selected
+                    ✓ Selected {selectedId.endsWith(':yes') ? '(Yes)' : selectedId.endsWith(':no') ? '(No)' : ''}
                   </span>
                 )}
               </div>
@@ -231,23 +276,27 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
             {/* Candidate cards grid */}
             <div className="candidate-grid">
               {group.map(cand => {
-                const isSelected = selectedId === cand.id;
+                const isSelected = selectedId === cand.id || selectedId === `${cand.id}:yes` || selectedId === `${cand.id}:no`;
+                const isIndie = cand.isIndependent || group.length === 1;
+
                 return (
                   <div
                     className={`card candidate-card ${isSelected ? 'selected' : ''}`}
                     key={cand.id}
-                    onClick={() => handleCardClick(position, cand.id)}
-                    style={{ cursor: 'pointer' }}
+                    onClick={() => !isIndie && handleCardClick(position, cand.id)}
+                    style={{ cursor: isIndie ? 'default' : 'pointer' }}
                   >
-                    <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10 }}>
-                      <input 
-                        type="checkbox" 
-                        checked={isSelected} 
-                        readOnly
-                        style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: 'var(--color-primary)' }}
-                      />
-                    </div>
-                    {/* Photo wrapper — fixed size so image is always fully visible */}
+                    {!isIndie && (
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10 }}>
+                        <input 
+                          type="checkbox" 
+                          checked={isSelected} 
+                          readOnly
+                          style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: 'var(--color-primary)' }}
+                        />
+                      </div>
+                    )}
+                    {/* Photo wrapper */}
                     <div className="candidate-photo-wrap">
                       <img
                         src={cand.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'}
@@ -259,9 +308,33 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                     {/* Content wrapper */}
                     <div className="candidate-content">
                       <div className="candidate-info">
-                        <h4 className="candidate-name">{cand.name}</h4>
+                        <h4 className="candidate-name">
+                          {cand.name} {isIndie && <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 'bold' }}>(Independent)</span>}
+                        </h4>
                         <span className="candidate-position">{cand.position}</span>
                       </div>
+
+                      {/* Independent Yes / No Choice Buttons */}
+                      {isIndie ? (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: 'var(--space-3)' }} onClick={e => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className={`btn btn-sm ${selections[position] === `${cand.id}:yes` ? 'btn-success' : 'btn-outline'}`}
+                            onClick={() => handleCardClick(position, `${cand.id}:yes`)}
+                            style={{ flex: 1, padding: '6px 4px', fontSize: '12px' }}
+                          >
+                            ✓ Vote Yes
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn btn-sm ${selections[position] === `${cand.id}:no` ? 'btn-danger' : 'btn-outline'}`}
+                            onClick={() => handleCardClick(position, `${cand.id}:no`)}
+                            style={{ flex: 1, padding: '6px 4px', fontSize: '12px', color: selections[position] === `${cand.id}:no` ? '#fff' : 'var(--color-danger)' }}
+                          >
+                            ✗ Vote No
+                          </button>
+                        </div>
+                      ) : null}
 
                       <div className="candidate-actions" style={{ marginTop: 'var(--space-2)' }}>
                         <button
@@ -319,10 +392,10 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
         <Link href="/voter/elections" className="btn btn-secondary">Cancel</Link>
         <button
           className="btn btn-primary"
-          disabled={Object.keys(selections).length === 0}
+          disabled={!isVotingAllowed || Object.keys(selections).length === 0}
           onClick={handleProceed}
           style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          title={Object.keys(selections).length === 0 ? `Please select at least one candidate` : ''}
+          title={!isVotingAllowed ? 'Voting is closed or not yet open' : Object.keys(selections).length === 0 ? 'Please select at least one candidate' : ''}
         >
           Review Selection <ArrowRight size={16} />
         </button>

@@ -301,6 +301,39 @@ router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to fetch fraud alerts' });
   }
 });
+
+// Get Flagged Users — those not in the database who attempted registration
+router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const alertsDoc = await db.collection('fraud_alerts').get();
+    if (alertsDoc.empty) {
+      return res.status(200).json({ status: 'success', data: [] });
+    }
+
+    const flagged = [];
+    alertsDoc.forEach(doc => {
+      const data = doc.data();
+      if (data.type === 'UNRECOGNIZED_STUDENT') {
+        flagged.push({
+          id: doc.id,
+          studentId: data.metadata?.studentId || 'Unknown',
+          attemptedAt: data.metadata?.attemptedAt || new Date(data.timestamp || Date.now()).toISOString(),
+          ipAddress: data.metadata?.ipAddress || 'Unknown',
+          timestamp: data.timestamp || Date.now(),
+          status: data.status || 'unresolved'
+        });
+      }
+    });
+
+    // Sort by most recent first
+    flagged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    res.status(200).json({ status: 'success', data: flagged });
+  } catch (error) {
+    console.error('Error fetching flagged users:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch flagged users' });
+  }
+});
 // Get Analytics Data
 router.get('/analytics', verifyAuth, requireAdmin, async (req, res) => {
   try {

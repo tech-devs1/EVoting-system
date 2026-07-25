@@ -12,7 +12,9 @@ import {
   RefreshCw, 
   Check,
   Settings,
-  Trophy
+  Trophy,
+  AlertTriangle,
+  ShieldAlert
 } from 'lucide-react';
 import { 
   Chart as ChartJS, 
@@ -45,6 +47,8 @@ interface Candidate {
   name: string;
   position: string;
   votes: number;
+  noVotes?: number;
+  isIndependent?: boolean;
 }
 
 interface Election {
@@ -68,14 +72,33 @@ interface KPIStats {
 
 function ElectionDashboardChart({ result }: { result: ElectionResult }) {
   const { election, candidates, totalVotes } = result;
-  const sorted = [...candidates].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+
+  const chartLabels: string[] = [];
+  const chartVotes: number[] = [];
+  const chartColors: string[] = [];
+
+  candidates.forEach((c, i) => {
+    if (c.isIndependent) {
+      chartLabels.push(`${c.name} (Yes)`);
+      chartVotes.push(c.votes || 0);
+      chartColors.push('#10B981');
+
+      chartLabels.push(`${c.name} (No)`);
+      chartVotes.push(c.noVotes || 0);
+      chartColors.push('#EF4444');
+    } else {
+      chartLabels.push(c.name);
+      chartVotes.push(c.votes || 0);
+      chartColors.push(COLORS[i % COLORS.length]);
+    }
+  });
 
   const barData = {
-    labels: sorted.map(c => c.name),
+    labels: chartLabels,
     datasets: [{
       label: 'Votes',
-      data: sorted.map(c => c.votes || 0),
-      backgroundColor: sorted.map((_, i) => COLORS[i % COLORS.length]),
+      data: chartVotes,
+      backgroundColor: chartColors,
       borderRadius: 6,
       borderSkipped: false as const,
     }],
@@ -164,6 +187,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeElectionsCount, setActiveElectionsCount] = useState(0);
   const [results, setResults] = useState<ElectionResult[]>([]);
+  const [flaggedUsers, setFlaggedUsers] = useState<{id: string; studentId: string; attemptedAt: string; ipAddress: string; timestamp: number}[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   async function fetchDashboardData() {
@@ -196,9 +220,19 @@ export default function AdminDashboardPage() {
           return { election, candidates, totalVotes };
         });
 
-        setResults(newResults);
+      setResults(newResults);
       } else {
         setResults([]);
+      }
+
+      // Fetch flagged users (not in database)
+      try {
+        const flaggedRes = await apiRequest<{ status: string; data: any[] }>('/admin/flagged-users');
+        if (flaggedRes.status === 'success') {
+          setFlaggedUsers(flaggedRes.data);
+        }
+      } catch (flaggedErr) {
+        console.error('[Admin Dashboard] Error fetching flagged users:', flaggedErr);
       }
     } catch (err) {
       console.error('[Admin Dashboard] Error fetching dashboard data:', err);
@@ -309,6 +343,64 @@ export default function AdminDashboardPage() {
           results.map(result => (
             <ElectionDashboardChart key={result.election.id} result={result} />
           ))
+        )}
+      </div>
+
+      {/* Flagged Users Section */}
+      <div style={{ marginTop: 'var(--space-10)' }}>
+        <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, margin: '0 0 var(--space-4) 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ShieldAlert size={18} color="#EF4444" />
+          Flagged Users
+          {flaggedUsers.length > 0 && (
+            <span className="badge" style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', fontSize: '10px', border: '1px solid rgba(239,68,68,0.3)' }}>
+              {flaggedUsers.length} flagged
+            </span>
+          )}
+        </h3>
+        {flaggedUsers.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: 'var(--space-6)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)' }}>
+            <AlertTriangle size={20} style={{ color: 'var(--text-tertiary)' }} />
+            <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No flagged users detected. All access attempts are matching the database.</p>
+          </div>
+        ) : (
+          <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
+            <div style={{ padding: 'var(--space-3) var(--space-4)', background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle size={14} color="#EF4444" />
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#EF4444' }}>
+                These individuals attempted to access the system but their IDs were not found in the registered student database.
+              </span>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-input)' }}>
+                  <th style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'left', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Student ID Attempted</th>
+                  <th style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'left', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time of Attempt</th>
+                  <th style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'left', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>IP Address</th>
+                  <th style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'left', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flaggedUsers.map((fu, index) => (
+                  <tr key={fu.id} style={{ borderTop: '1px solid var(--border-color)', background: index % 2 === 0 ? 'transparent' : 'var(--bg-input)' }}>
+                    <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)', fontFamily: 'monospace', color: '#EF4444', fontWeight: 600 }}>
+                      {fu.studentId}
+                    </td>
+                    <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                      {fu.attemptedAt ? new Date(fu.attemptedAt).toLocaleString() : 'N/A'}
+                    </td>
+                    <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                      {fu.ipAddress}
+                    </td>
+                    <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.25)', fontWeight: 600 }}>
+                        {fu.status || 'unresolved'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

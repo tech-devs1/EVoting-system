@@ -75,6 +75,7 @@ export default function VoterDashboard() {
   const { user } = useAuth();
   const [elections, setElections] = useState<Election[]>([]);
   const [upcomingElections, setUpcomingElections] = useState<Election[]>([]);
+  const [publishedResultsElections, setPublishedResultsElections] = useState<Election[]>([]);
   const [votedElectionIds, setVotedElectionIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalVotes, setTotalVotes] = useState(0);
@@ -98,6 +99,7 @@ export default function VoterDashboard() {
           const adminElections = res.data.filter(el => el.createdBy === 'admin');
           setElections(adminElections.filter(el => el.status === 'active'));
           setUpcomingElections(adminElections.filter(el => el.status === 'draft'));
+          setPublishedResultsElections(adminElections.filter(el => el.showResults === true));
         }
 
         // Fetch user voted elections
@@ -243,6 +245,37 @@ export default function VoterDashboard() {
                     <button className="btn btn-secondary btn-sm" disabled style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.6 }}>
                       Not Yet Open
                     </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Published Election Results Section */}
+        {publishedResultsElections.length > 0 && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                📊 Published Election Results
+              </h3>
+              <Link href="/voter/elections" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>View All</Link>
+            </div>
+            <div className="election-grid">
+              {publishedResultsElections.map(el => (
+                <div className="card election-card card-hover" key={el.id} style={{ border: '1px solid rgba(99,102,241,0.3)' }}>
+                  <div className="election-card-header">
+                    <h4 className="election-card-title">{el.title}</h4>
+                    <span className="badge badge-success">Results Available</span>
+                  </div>
+                  <p className="election-card-desc">{el.description}</p>
+                  <div className="election-card-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>
+                      Status: {el.status}
+                    </span>
+                    <Link href={`/voter/elections/${el.id}/results`} className="btn btn-primary btn-sm">
+                      View Results
+                    </Link>
                   </div>
                 </div>
               ))}

@@ -27,6 +27,8 @@ interface Candidate {
   name: string;
   position: string;
   votes: number;
+  noVotes?: number;
+  isIndependent?: boolean;
 }
 
 interface Election {
@@ -52,18 +54,38 @@ function PositionChart({
   colorOffset: number;
 }) {
   const sorted = [...candidates].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-  const positionTotal = sorted.reduce((s, c) => s + (c.votes || 0), 0);
+  const positionTotal = sorted.reduce((s, c) => s + (c.votes || 0) + (c.noVotes || 0), 0);
 
   // Tie detection: multiple candidates share the highest vote count
   const topVotes = sorted[0]?.votes || 0;
   const isTied = positionTotal > 0 && sorted.filter(c => (c.votes || 0) === topVotes).length > 1;
 
+  const chartLabels: string[] = [];
+  const chartVotes: number[] = [];
+  const chartColors: string[] = [];
+
+  sorted.forEach((c, i) => {
+    if (c.isIndependent) {
+      chartLabels.push(`${c.name} (Yes)`);
+      chartVotes.push(c.votes || 0);
+      chartColors.push('#10B981');
+
+      chartLabels.push(`${c.name} (No)`);
+      chartVotes.push(c.noVotes || 0);
+      chartColors.push('#EF4444');
+    } else {
+      chartLabels.push(c.name);
+      chartVotes.push(c.votes || 0);
+      chartColors.push(COLORS[(colorOffset + i) % COLORS.length]);
+    }
+  });
+
   const barData = {
-    labels: sorted.map(c => c.name),
+    labels: chartLabels,
     datasets: [{
       label: 'Votes',
-      data: sorted.map(c => c.votes || 0),
-      backgroundColor: sorted.map((_, i) => COLORS[(colorOffset + i) % COLORS.length]),
+      data: chartVotes,
+      backgroundColor: chartColors,
       borderRadius: 6,
       borderSkipped: false as const,
     }],

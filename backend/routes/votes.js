@@ -29,19 +29,34 @@ router.get('/voted-elections', verifyAuth, async (req, res) => {
 // Cast a vote
 router.post('/cast', verifyAuth, async (req, res) => {
   try {
-    const { electionId, candidateId } = req.body;
+    let { electionId, candidateId, choice } = req.body;
     const voterId = req.user.uid;
 
-    console.log('[Cast Vote] Vote attempt:', { electionId, candidateId, voterId });
+    if (candidateId && (candidateId.endsWith(':yes') || candidateId.endsWith(':no'))) {
+      const parts = candidateId.split(':');
+      candidateId = parts[0];
+      choice = parts[1];
+    }
+
+    console.log('[Cast Vote] Vote attempt:', { electionId, candidateId, choice, voterId });
 
     if (!electionId || !candidateId) {
       return res.status(400).json({ status: 'error', message: 'Missing election or candidate ID' });
     }
 
-    // 1. Check if election is active
+    // 1. Check if election is active and within valid time window
     const electionDoc = await db.collection('elections').doc(electionId).get();
     if (!electionDoc.exists || electionDoc.data().status !== 'active') {
       return res.status(400).json({ status: 'error', message: 'Election is not active' });
+    }
+
+    const electionData = electionDoc.data();
+    const now = Date.now();
+    if (electionData.startDate && now < new Date(electionData.startDate).getTime()) {
+      return res.status(400).json({ status: 'error', message: 'Voting for this election has not started yet.' });
+    }
+    if (electionData.endDate && now > new Date(electionData.endDate).getTime()) {
+      return res.status(400).json({ status: 'error', message: 'Voting duration for this election has expired.' });
     }
 
     // 2. Fetch candidate and verify it belongs to this election
@@ -59,16 +74,19 @@ router.post('/cast', verifyAuth, async (req, res) => {
 
     if (votedDoc.exists) {
       console.log('[Cast Vote] User already voted for position:', position);
-      // Log fraud alert for duplicate voting attempt in the same category
       await logFraudAlert('DUPLICATE_VOTE', `Voter tried to vote twice in the same category (${position})`, { voterId, electionId, candidateId, position });
       return res.status(403).json({ status: 'error', message: `User has already voted for position ${position} in this election` });
     }
 
-    // 4. Increment Candidate Vote Count safely
-    const currentVotes = candidateDoc.data().votes || 0;
-    console.log('[Cast Vote] Current votes before increment:', currentVotes);
-    await candidateRef.update({ votes: currentVotes + 1 });
-    console.log('[Cast Vote] Votes incremented to:', currentVotes + 1);
+    // 4. Increment Candidate Vote Count safely (Yes or No)
+    if (choice === 'no') {
+      const currentNoVotes = candidateDoc.data().noVotes || 0;
+      await candidateRef.update({ noVotes: currentNoVotes + 1 });
+    } else {
+      const currentVotes = candidateDoc.data().votes || 0;
+      await candidateRef.update({ votes: currentVotes + 1 });
+    }
+    console.log('[Cast Vote] Vote recorded for candidate:', candidateId, 'choice:', choice || 'yes');
 
     // 5. Create Anonymized Vote Record
     const votePayload = {
@@ -92,7 +110,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
       auditTxId
     });
 
-    console.log('[Cast Vote] Vote cast successfully:', { voterId, candidateId, position, newVoteCount: currentVotes + 1 });
+    console.log('[Cast Vote] Vote cast successfully:', { voterId, candidateId, position, choice: choice || 'yes' });
 
     res.status(200).json({ 
       status: 'success', 

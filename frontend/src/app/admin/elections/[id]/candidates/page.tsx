@@ -13,6 +13,8 @@ interface Candidate {
   manifesto: string;
   photoUrl: string;
   votes: number;
+  noVotes?: number;
+  isIndependent?: boolean;
 }
 
 interface Election {
@@ -41,6 +43,7 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   const [formName, setFormName] = useState('');
   const [formPosSelect, setFormPosSelect] = useState('');   // dropdown value
   const [formPosCustom, setFormPosCustom] = useState('');   // free-text when "custom"
+  const [formIsIndependent, setFormIsIndependent] = useState(false);
   const [formManifesto, setFormManifesto] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -158,12 +161,13 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
         manifesto: formManifesto,
         photoUrl,
         electionId,
+        isIndependent: formIsIndependent,
       });
 
       if (res.status === 'success') {
         setCandidates(prev => [...prev, res.data]);
         setIsModalOpen(false);
-        setFormName(''); setFormPosSelect(''); setFormPosCustom(''); clearAddManifestoEditor();
+        setFormName(''); setFormPosSelect(''); setFormPosCustom(''); setFormIsIndependent(false); clearAddManifestoEditor();
         setPhotoFile(null);
       } else {
         alert('Failed to add candidate: ' + (res as any).message || 'Unknown error');
@@ -223,11 +227,19 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               {/* Content */}
               <div className="candidate-content">
                 <div className="candidate-info">
-                  <h4 className="candidate-name">{cand.name}</h4>
+                  <h4 className="candidate-name">
+                    {cand.name} {cand.isIndependent && <span style={{ fontSize: '11px', color: 'var(--color-primary)' }}>(Independent)</span>}
+                  </h4>
                   <span className="candidate-position">{cand.position}</span>
-                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)', display: 'block' }}>
-                    Votes: <strong style={{ color: 'var(--text-primary)' }}>{cand.votes || 0}</strong>
-                  </span>
+                  {cand.isIndependent ? (
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)', display: 'block' }}>
+                      Yes: <strong style={{ color: 'var(--color-success, #22c55e)' }}>{cand.votes || 0}</strong> | No: <strong style={{ color: 'var(--color-danger, #ef4444)' }}>{cand.noVotes || 0}</strong>
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)', display: 'block' }}>
+                      Votes: <strong style={{ color: 'var(--text-primary)' }}>{cand.votes || 0}</strong>
+                    </span>
+                  )}
                 </div>
 
                 <div className="candidate-actions">
@@ -311,6 +323,17 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                       style={{ width: '100%', marginTop: 'var(--space-2)', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-primary, #6366f1)', background: 'var(--bg-input)', color: 'var(--text-primary)', outline: 'none' }}
                     />
                   )}
+                </div>
+                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>
+                    <input
+                      type="checkbox"
+                      checked={formIsIndependent}
+                      onChange={e => setFormIsIndependent(e.target.checked)}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-primary)' }}
+                    />
+                    Independent / Unopposed Candidate (Yes / No Vote)
+                  </label>
                 </div>
                 <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
                   <label style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)' }}>

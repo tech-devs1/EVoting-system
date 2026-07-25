@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { db } = require('../services/firebase');
 const { verifyAuth } = require('../middleware/auth');
+const { logFraudAlert } = require('../services/fraud');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 
@@ -66,6 +67,12 @@ router.post('/verify-student', async (req, res) => {
     const studentDoc = await studentDocRef.get();
 
     if (!studentDoc.exists) {
+      // Log flagged user — student ID not in the database
+      await logFraudAlert('UNRECOGNIZED_STUDENT', `Unrecognized student ID attempted registration: ${studentId}`, {
+        studentId,
+        attemptedAt: new Date().toISOString(),
+        ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown'
+      });
       return res.status(404).json({ status: 'error', message: 'Student ID not found in school records.' });
     }
 

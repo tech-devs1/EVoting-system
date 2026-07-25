@@ -202,9 +202,15 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
 
       {/* Submit Items Actions */}
       <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'center' }}>
-        <Link href={`/voter/elections/${electionId}`} className="btn btn-secondary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <ArrowLeft size={18} /> Go Back
-        </Link>
+        {(() => {
+          const backParams = new URLSearchParams();
+          candidateIds.forEach(id => backParams.append('candidateId', id));
+          return (
+            <Link href={`/voter/elections/${electionId}?${backParams.toString()}`} className="btn btn-secondary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <ArrowLeft size={18} /> Go Back
+            </Link>
+          );
+        })()}
         <button 
           className="btn btn-primary btn-lg" 
           onClick={handleCastBallot} 
