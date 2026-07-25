@@ -150,7 +150,7 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await studentDocRef.set({
-      isRegistered: false,
+      isRegistered: true,
       password: hashedPassword,
       name: name || studentData.name,
       uid: studentId,
@@ -159,22 +159,9 @@ router.post('/register', async (req, res) => {
       faceEmbedding: faceEmbedding || null,
     }, { merge: true });
 
-    // Attempt to send OTP — don't fail the entire registration if email fails
-    let otpSent = true;
-    try {
-      await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
-    } catch (emailErr) {
-      console.error('OTP email failed during registration (user can resend):', emailErr.message || emailErr);
-      otpSent = false;
-    }
-
-    // Always proceed to OTP step — user can use "Resend Code" if email didn't arrive
     res.status(201).json({
-      status: 'otp_required',
-      email: studentData.email,
-      message: otpSent
-        ? 'OTP sent to your school email. Please verify.'
-        : 'Registration saved. We could not send the verification code right now — please use "Resend Code" on the next screen.'
+      status: 'success',
+      message: 'Registration successful. You can now log in.'
     });
   } catch (error) {
     console.error('Error registering user:', error);

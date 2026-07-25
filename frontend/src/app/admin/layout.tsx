@@ -121,6 +121,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             );
           })}
         </nav>
+        
+        <div style={{ padding: 'var(--space-4)', borderTop: '1px solid var(--border-color)', marginTop: 'auto' }}>
+          <button 
+            onClick={logout}
+            className="sidebar-link" 
+            style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 'var(--space-3)', color: 'var(--color-danger)' }}
+          >
+            <LogOut size={18} />
+            <span>Sign Out</span>
+          </button>
+        </div>
 
       </aside>
 

@@ -80,7 +80,14 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
   const allSelected = positions.every(p => !!selections[p]);
 
   const handleCardClick = (position: string, candId: string) => {
-    setSelections(prev => ({ ...prev, [position]: candId }));
+    setSelections(prev => {
+      if (prev[position] === candId) {
+        const next = { ...prev };
+        delete next[position];
+        return next;
+      }
+      return { ...prev, [position]: candId };
+    });
   };
 
   const openProfileModal = (cand: Candidate, e: React.MouseEvent) => {
@@ -232,8 +239,13 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                     onClick={() => handleCardClick(position, cand.id)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <div className="candidate-select-indicator" style={{ display: isSelected ? 'flex' : 'none' }}>
-                      <Check size={14} />
+                    <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected} 
+                        readOnly
+                        style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: 'var(--color-primary)' }}
+                      />
                     </div>
                     {/* Photo wrapper — fixed size so image is always fully visible */}
                     <div className="candidate-photo-wrap">
@@ -307,10 +319,10 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
         <Link href="/voter/elections" className="btn btn-secondary">Cancel</Link>
         <button
           className="btn btn-primary"
-          disabled={!allSelected}
+          disabled={Object.keys(selections).length === 0}
           onClick={handleProceed}
           style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          title={!allSelected ? `Please select a candidate for every position` : ''}
+          title={Object.keys(selections).length === 0 ? `Please select at least one candidate` : ''}
         >
           Review Selection <ArrowRight size={16} />
         </button>
