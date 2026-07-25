@@ -39,6 +39,29 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
     console.log('  - no isRegistered field:', noFieldCount);
     console.log('  - Total:', allUsersDoc.docs.length);
 
+    // Calculate election statuses
+    let activeElectionsCount = 0;
+    let completedElectionsCount = 0;
+    electionsDoc.forEach(doc => {
+      const status = doc.data().status;
+      if (status === 'active') {
+        activeElectionsCount++;
+      } else if (status === 'completed') {
+        completedElectionsCount++;
+      }
+    });
+
+    // Query unique voters who actually cast a ballot from voted_voters collection
+    const votedVotersDoc = await db.collection('voted_voters').get();
+    const uniqueVotersSet = new Set();
+    votedVotersDoc.forEach(doc => {
+      const voterId = doc.data().voterId;
+      if (voterId) {
+        uniqueVotersSet.add(voterId);
+      }
+    });
+    const uniqueVotersCount = uniqueVotersSet.size;
+
     // Fetch candidates for real-time chart
     const candidatesDoc = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();
     const topCandidates = [];
@@ -56,7 +79,11 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
         totalElections: electionsDoc.empty ? 0 : electionsDoc.docs.length,
         totalVoters: votersDoc.empty ? 0 : votersDoc.docs.length,
         totalVotesCast: votesDoc.empty ? 0 : votesDoc.docs.length,
-        activeAlerts: 0, // Mock for now
+        activeAlerts: 0,
+        totalStudents: allUsersDoc.empty ? 0 : allUsersDoc.docs.filter(d => d.data().role !== 'admin').length,
+        uniqueVotersCount,
+        activeElectionsCount,
+        completedElectionsCount,
         topCandidates
       }
     });
