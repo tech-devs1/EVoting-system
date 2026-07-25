@@ -164,7 +164,7 @@ function ElectionDashboardChart({ result }: { result: ElectionResult }) {
         </span>
       </div>
 
-      <div style={{ height: `${Math.max(220, sorted.length * 40)}px`, position: 'relative' }}>
+      <div style={{ height: `${Math.max(220, candidates.length * 40)}px`, position: 'relative' }}>
         {candidates.length > 0 ? (
           <Bar data={barData} options={barOptions} />
         ) : (
@@ -187,7 +187,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeElectionsCount, setActiveElectionsCount] = useState(0);
   const [results, setResults] = useState<ElectionResult[]>([]);
-  const [flaggedUsers, setFlaggedUsers] = useState<{id: string; studentId: string; attemptedAt: string; ipAddress: string; timestamp: number}[]>([]);
+  const [flaggedUsers, setFlaggedUsers] = useState<{id: string; studentId: string; attemptedAt: string; ipAddress: string; timestamp: number; status?: string}[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   async function fetchDashboardData() {
