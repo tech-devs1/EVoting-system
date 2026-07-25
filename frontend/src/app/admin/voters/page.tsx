@@ -374,7 +374,7 @@ export default function AdminVotersPage() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
+      <div className="admin-voters-grid">
         
         {/* Upload Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>

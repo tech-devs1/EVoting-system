@@ -327,3 +327,17 @@
   background: var(--gradient-primary);
   transition: width 1s var(--ease-out);
 }
+
+/* ---- Voter Database Grid ---- */
+.admin-voters-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .admin-voters-grid {
+    grid-template-columns: 1fr;
+  }
+}
