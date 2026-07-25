@@ -29,15 +29,11 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   // Predefined positions list
   const PRESET_POSITIONS = [
     'President',
-    'Vice President',
-    'Secretary',
-    'Treasurer',
-    'Public Relations Officer',
-    'Academic Affairs Officer',
-    'Social Affairs Officer',
-    'Sports Officer',
-    'Media Officer',
-    'Student Representative',
+    'Financial Secretary',
+    ' General Secretary',
+    'Organizing Secretary',
+    'Public Relations Officer (PRO)',
+    'WOCOM',
   ];
 
   // Add candidate modal
