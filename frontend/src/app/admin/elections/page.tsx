@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
-import { Plus, FolderOpen, Settings, Activity, Trash, ArrowLeft, Download } from 'lucide-react';
+import { Plus, FolderOpen, Settings, Activity, Trash, ArrowLeft, Download, Clock } from 'lucide-react';
 
 interface Election {
   id: string;
@@ -39,6 +39,12 @@ export default function AdminElectionsPage() {
   const [formShowResults, setFormShowResults] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
+  const [isEditTimeModalOpen, setIsEditTimeModalOpen] = useState(false);
+  const [editElectionId, setEditElectionId] = useState<string | null>(null);
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [editingTime, setEditingTime] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -170,6 +176,39 @@ export default function AdminElectionsPage() {
     }
   };
 
+  const openEditTimeModal = (el: Election) => {
+    setEditElectionId(el.id);
+    setEditStartDate(el.startDate);
+    setEditEndDate(el.endDate);
+    setIsEditTimeModalOpen(true);
+  };
+
+  const handleEditTimeWindow = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editElectionId) return;
+    setEditingTime(true);
+    try {
+      const res = await apiRequest<{ status: string }>(`/elections/${editElectionId}/time-window`, 'PATCH', {
+        startDate: editStartDate,
+        endDate: editEndDate,
+      });
+      if (res.status === 'success') {
+        setElections(prev => prev.map(el => 
+          el.id === editElectionId ? { ...el, startDate: editStartDate, endDate: editEndDate } : el
+        ));
+        setIsEditTimeModalOpen(false);
+        alert('Election time window updated successfully!');
+      } else {
+        alert('Failed to update time window: ' + (res as any).message || 'Unknown error');
+      }
+    } catch (err: any) {
+      console.error('Error updating time window:', err);
+      alert('Failed to update time window: ' + err.message);
+    } finally {
+      setEditingTime(false);
+    }
+  };
+
   return (
     <div className="animate-page-enter">
       {/* Header */}
@@ -237,6 +276,9 @@ export default function AdminElectionsPage() {
                 <Link href={`/admin/elections/${el.id}/candidates`} className="btn btn-outline btn-sm" style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Settings size={12} /> Manage Candidates
                 </Link>
+                <button className="btn btn-outline btn-sm" onClick={() => openEditTimeModal(el)} style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Clock size={12} /> Edit Time
+                </button>
                 <Link href={`/admin/results`} className="btn btn-primary btn-sm" style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Activity size={12} /> View Results
                 </Link>
@@ -312,6 +354,51 @@ export default function AdminElectionsPage() {
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
                   {submitting ? 'Creating...' : 'Create Election'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+      {mounted && isEditTimeModalOpen && createPortal(
+        <div
+          onClick={() => setIsEditTimeModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9000,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            padding: '80px 16px 88px 16px',
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            className="modal-container"
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '400px', maxHeight: 'calc(100dvh - 180px)' }}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Election Time Window</h3>
+              <button className="modal-close" onClick={() => setIsEditTimeModalOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleEditTimeWindow} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label" htmlFor="edit-start">Start Date</label>
+                  <input type="datetime-local" id="edit-start" className="form-input" required value={editStartDate} onChange={e => setEditStartDate(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="edit-end">End Date</label>
+                  <input type="datetime-local" id="edit-end" className="form-input" required value={editEndDate} onChange={e => setEditEndDate(e.target.value)} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsEditTimeModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={editingTime}>
+                  {editingTime ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>

@@ -4,7 +4,7 @@ import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
-import { ArrowLeft, Columns2, Check, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Check, ArrowRight } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -39,7 +39,6 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
   // Modals state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [activeProfileCandidate, setActiveProfileCandidate] = useState<Candidate | null>(null);
-  const [isComparePosition, setIsComparePosition] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -56,6 +55,8 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
       }
     }
     fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, [electionId]);
 
   // Preserve selections when returning from Confirm Page via Go Back button
@@ -127,11 +128,6 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
     }
   };
 
-  const selectFromCompare = (cand: Candidate) => {
-    setSelections(prev => ({ ...prev, [cand.position]: cand.id }));
-    setIsComparePosition(null);
-  };
-
   const handleProceed = () => {
     // Pass all selections as query params
     const params = new URLSearchParams();
@@ -175,7 +171,6 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
       {positions.map(position => {
         const group = positionGroups[position];
         const selectedId = selections[position];
-        const compareCands = isComparePosition === position;
 
         return (
           <div key={position} style={{ marginBottom: 'var(--space-10)' }}>
@@ -222,56 +217,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                   </span>
                 )}
               </div>
-              {group.length > 1 && (
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setIsComparePosition(compareCands ? null : position)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Columns2 size={14} />
-                  {compareCands ? 'Close Compare' : 'Compare'}
-                </button>
-              )}
             </div>
-
-            {/* Inline compare panel */}
-            {compareCands && (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(${Math.min(group.length, 3)}, 1fr)`,
-                gap: 'var(--space-4)',
-                marginBottom: 'var(--space-6)',
-                padding: 'var(--space-4)',
-                background: 'var(--bg-card)',
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid var(--border-color)'
-              }}>
-                {group.map(cand => (
-                  <div key={cand.id} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                    <img
-                      src={cand.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'}
-                      alt={cand.name}
-                      style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: 'var(--radius-md)' }}
-                    />
-                    <h4 style={{ margin: 0 }}>{cand.name}</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={(e) => { setIsComparePosition(null); openProfileModal(cand, e); }}
-                      >
-                        Read Manifesto
-                      </button>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => selectFromCompare(cand)}
-                      >
-                        Select
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Candidate cards grid */}
             <div className="candidate-grid">

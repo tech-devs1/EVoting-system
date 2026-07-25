@@ -28,11 +28,15 @@ router.get('/', async (req, res) => {
       const electionData = doc.data();
       // Auto-update status based on time
       let updatedStatus = electionData.status;
-      if (electionData.status === 'active' && electionData.endDate && electionData.endDate < now) {
+      
+      const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
+      const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
+
+      if (electionData.status === 'active' && electionData.endDate && endTime < now) {
         updatedStatus = 'completed';
         // Update the election status in background
         db.collection('elections').doc(doc.id).update({ status: 'completed' });
-      } else if (electionData.status === 'draft' && electionData.startDate && electionData.startDate <= now) {
+      } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
         updatedStatus = 'active';
         // Update the election status in background
         db.collection('elections').doc(doc.id).update({ status: 'active' });
@@ -55,7 +59,23 @@ router.get('/:id', async (req, res) => {
     if (!doc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
-    res.status(200).json({ status: 'success', data: { id: doc.id, ...doc.data() } });
+    
+    let electionData = doc.data();
+    const now = Date.now();
+    let updatedStatus = electionData.status;
+    
+    const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
+    const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
+
+    if (electionData.status === 'active' && electionData.endDate && endTime < now) {
+      updatedStatus = 'completed';
+      db.collection('elections').doc(doc.id).update({ status: 'completed' });
+    } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
+      updatedStatus = 'active';
+      db.collection('elections').doc(doc.id).update({ status: 'active' });
+    }
+
+    res.status(200).json({ status: 'success', data: { id: doc.id, ...electionData, status: updatedStatus } });
   } catch (error) {
     console.error('Error fetching election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch election' });
@@ -135,6 +155,22 @@ router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) 
   } catch (error) {
     console.error('Error migrating descriptions:', error);
     res.status(500).json({ status: 'error', message: 'Migration failed' });
+  }
+});
+
+// Update election time window (Admin only)
+router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ status: 'error', message: 'startDate and endDate are required' });
+    }
+
+    await db.collection('elections').doc(req.params.id).update({ startDate, endDate });
+    res.status(200).json({ status: 'success', message: 'Election time window updated' });
+  } catch (error) {
+    console.error('Error updating election time window:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update time window' });
   }
 });
 

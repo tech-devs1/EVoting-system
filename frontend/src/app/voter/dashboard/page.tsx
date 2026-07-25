@@ -128,6 +128,8 @@ export default function VoterDashboard() {
     }
 
     fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, [mounted]);
 
   const userName = user?.name || "";

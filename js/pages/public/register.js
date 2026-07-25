@@ -168,7 +168,7 @@ function renderRegisterPage() {
         <div id="register-card-body"></div>
 
         <div class="auth-security-badge" style="margin-top: var(--space-6);">
-          <i data-lucide="shield-check"></i> Protected by VoteTrust AI Security
+          <i data-lucide="shield-check"></i> Protected by TECHDEVS Security
         </div>
       </div>
     </div>
