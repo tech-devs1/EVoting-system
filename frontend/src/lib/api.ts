@@ -52,6 +52,18 @@ export async function apiRequest<T>(
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+  
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    console.error('[API] Non-JSON response:', text.substring(0, 200));
+    throw new Error(
+      response.status === 413
+        ? 'The file is too large. Try splitting it into smaller CSV files.'
+        : `Server returned an unexpected response (${response.status}). Please check that the backend is running.`
+    );
+  }
+  
   const data = await response.json();
 
   if (!response.ok) {
