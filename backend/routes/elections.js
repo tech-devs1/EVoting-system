@@ -1,4 +1,4 @@
-[7/25/2026 2:52 PM] Sheriff: const express = require('express');
+ const express = require('express');
 const router = express.Router();
 const { db } = require('../services/firebase');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
@@ -95,7 +95,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       : new Date().toLocaleDateString();
 
     const autoDesc = electionType === 'src'
-[7/25/2026 2:52 PM] Sheriff: ? This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.
+ ? This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.
       : This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.;
 
     const finalDescription = (description && !description.startsWith('Automated')) ? description : autoDesc;
@@ -184,7 +184,7 @@ router.patch('/:id/status', verifyAuth, requireAdmin, async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to update election' });
   }
 });
-[7/25/2026 2:52 PM] Sheriff: // Toggle showResults status (Admin only)
+ // Toggle showResults status (Admin only)
 router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const { showResults } = req.body;

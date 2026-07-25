@@ -1,4 +1,4 @@
-[7/25/2026 2:56 PM] Sheriff: const express = require('express');
+ const express = require('express');
 const router = express.Router();
 const { db } = require('../services/firebase');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
@@ -105,7 +105,7 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
     });
 
     const totalVoted = votedVoterIds.size;
-[7/25/2026 2:56 PM] Sheriff: const summary = {
+ const summary = {
       field1_totalVoters: {
         label: 'Number of Voters (from CSV file)',
         count: totalVotersFromCSV,
@@ -233,7 +233,7 @@ router.get('/voters/uploads', verifyAuth, requireAdmin, async (req, res) => {
     const snapshot = await db.collection('uploads').orderBy('timestamp', 'desc').get();
     const uploads = [];
     snapshot.forEach(doc => {
-[7/25/2026 2:56 PM] Sheriff: uploads.push({ id: doc.id, ...doc.data() });
+       uploads.push({ id: doc.id, ...doc.data() });
     });
     res.status(200).json({ status: 'success', data: uploads });
   } catch (error) {
@@ -346,7 +346,7 @@ router.get('/analytics', verifyAuth, requireAdmin, async (req, res) => {
           tension: 0.3,
           fill: true
         }]
-[7/25/2026 2:56 PM] Sheriff: },
+
       performanceSummary: [
         { name: 'University Student Council Presidential Election', total: 2840, cast: 2085, rate: '73.4%', status: 'active' },
         { name: 'Department of Computer Science Representative', total: 450, cast: 394, rate: '87.6%', status: 'active' },

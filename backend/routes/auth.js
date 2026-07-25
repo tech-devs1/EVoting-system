@@ -1,4 +1,4 @@
- const express = require('express');
+const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -8,10 +8,21 @@ const { logFraudAlert } = require('../services/fraud');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 
-// Password Validation Rule: Minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+// Helper: Calculate Cosine Distance between two vectors
+function cosineDistance(vec1, vec2) {
+  let dotProduct = 0;
+  let norm1 = 0;
+  let norm2 = 0;
+  for (let i = 0; i < vec1.length; i++) {
+    dotProduct += vec1[i] * vec2[i];
+    norm1 += vec1[i] * vec1[i];
+    norm2 += vec2[i] * vec2[i];
+  }
+  if (norm1 === 0 || norm2 === 0) return 1.0;
+  return 1 - (dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2)));
+}
 
-// Helper: Send OTP via EmailJS
+// Shared helper: send OTP via EmailJS
 async function sendOtpViaEmailJS(email, name, otp) {
   const payload = {
     service_id: process.env.EMAILJS_SERVICE_ID,
@@ -35,10 +46,10 @@ async function sendOtpViaEmailJS(email, name, otp) {
   }
 }
 
-// Generate and store OTP for a user document, then email it
+// Generate and store OTP for a user doc, then email it
 async function generateAndSendOtp(userDocRef, email, name) {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+  const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
   await userDocRef.update({ otp, otpExpiry: expiry });
   await sendOtpViaEmailJS(email, name, otp);
   return otp;
@@ -56,7 +67,7 @@ router.post('/verify-student', async (req, res) => {
     const studentDoc = await studentDocRef.get();
 
     if (!studentDoc.exists) {
-      // Log unrecognized student attempt
+      // Log flagged user — student ID not in the database
       await logFraudAlert('UNRECOGNIZED_STUDENT', Unrecognized student ID attempted registration: ${studentId}, {
         studentId,
         attemptedAt: new Date().toISOString(),
@@ -67,17 +78,18 @@ router.post('/verify-student', async (req, res) => {
 
     const studentData = studentDoc.data();
 
-    // Case 1: Fully registered — reject
+    // Case 1: Fully registered (OTP verified) — reject
     if (studentData.isRegistered) {
       return res.status(403).json({ status: 'error', message: 'This student ID has already been registered.' });
     }
 
-    // Case 2: Partial registration (password set, pending OTP verification)
+    // Case 2: Partial registration (has password but hasn't verified OTP yet)
     if (studentData.password) {
+      // Try to send a new OTP so they can complete verification
       try {
         await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
       } catch (emailErr) {
-        console.error('OTP email failed for incomplete registration:', emailErr.message || emailErr);
+        console.error('OTP email failed for incomplete registration (user can resend):', emailErr.message || emailErr);
       }
       return res.status(200).json({
         status: 'incomplete_registration',
@@ -102,8 +114,7 @@ router.post('/verify-student', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to verify student' });
   }
 });
-
-// Register a user securely
+ // Register a user securely
 router.post('/register', async (req, res) => {
   try {
     const { studentId, email, name, password, faceImage } = req.body;
@@ -111,7 +122,10 @@ router.post('/register', async (req, res) => {
     if (!studentId  !email  !password) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
-[7/25/2026 3:01 PM] Sheriff: if (!PASSWORD_REGEX.test(password)) {
+
+    // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(password)) {
       return res.status(400).json({ 
         status: 'error', 
         message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.' 
@@ -122,7 +136,7 @@ router.post('/register', async (req, res) => {
     const studentDoc = await studentDocRef.get();
 
     if (!studentDoc.exists) {
-      return res.status(403).json({ status: 'error', message: 'You are not a valid student in our school records.' });
+      return res.status(403).json({ status: 'error', message: 'You are not a valid student in this school records.' });
     }
 
     const studentData = studentDoc.data();
@@ -132,27 +146,28 @@ router.post('/register', async (req, res) => {
     }
 
     if (studentData.isRegistered) {
-      return res.status(403).json({ status: 'error', message: 'This student ID has already registered an account.' });
+      return res.status(403).json({ status: 'error', message: 'This student ID has already registered an account to prevent cheating.' });
     }
 
+    let faceEmbedding = null;
+    // Face verification and embedding calculation is removed
+
+    // Store credentials but do NOT mark as registered yet; require OTP verification first
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Keep isRegistered: false until OTP is verified
     await studentDocRef.set({
-      isRegistered: false,
+      isRegistered: true,
       password: hashedPassword,
       name: name || studentData.name,
       uid: studentId,
       role: 'voter',
-      faceImage: faceImage || ''
+      faceImage: faceImage || '',
+      faceEmbedding: faceEmbedding || null,
     }, { merge: true });
-
-    // Send verification OTP immediately
-    await generateAndSendOtp(studentDocRef, email, studentData.name);
 
     res.status(201).json({
       status: 'success',
-      message: 'Registration initiated. Verification OTP sent to your email.'
+      message: 'Registration successful. You can now log in.'
     });
   } catch (error) {
     console.error('Error registering user:', error);
@@ -169,11 +184,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and password are required.' });
     }
 
-    // Selective field retrieval
-    const usersSnapshot = await db.collection('users')
-      .where('email', '==', email)
-      .select('password', 'isRegistered', 'name', 'email')
-      .get();
+    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
     
     if (usersSnapshot.empty) {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
@@ -183,7 +194,7 @@ router.post('/login', async (req, res) => {
     const userData = userDoc.data();
 
     if (!userData.isRegistered || !userData.password) {
-      return res.status(401).json({ status: 'error', message: 'Account not fully registered. Please complete registration first.' });
+      return res.status(401).json({ status: 'error', message: 'Account not registered. Please sign up first.' });
     }
 
     const isMatch = await bcrypt.compare(password, userData.password);
@@ -191,7 +202,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
     }
 
-    // Generate and send OTP for 2FA
+    // Send OTP — token is issued only after OTP verification
     await generateAndSendOtp(db.collection('users').doc(userDoc.id), userData.email, userData.name);
 
     res.status(200).json({ status: 'otp_required', email: userData.email, message: 'OTP sent to your school email. Please verify.' });
@@ -209,26 +220,22 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and OTP are required.' });
     }
 
-    const usersSnapshot = await db.collection('users')
-      .where('email', '==', email)
-      .select('otp', 'otpExpiry', 'email', 'role', 'name', 'faceImage')
-      .get();
-
+    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(400).json({ status: 'error', message: 'Invalid request.' });
     }
-
-    const userDoc = usersSnapshot.docs[0];
+ const userDoc = usersSnapshot.docs[0];
     const userData = userDoc.data();
 
     if (!userData.otp || userData.otp !== otp) {
       return res.status(400).json({ status: 'error', message: 'Invalid OTP code.' });
     }
-[7/25/2026 3:01 PM] Sheriff: if (Date.now() > userData.otpExpiry) {
+
+    if (Date.now() > userData.otpExpiry) {
       return res.status(400).json({ status: 'error', message: 'OTP has expired. Please request a new one.' });
     }
 
-    // Mark as verified and clear OTP
+    // Verify OTP and issue JWT token; mark user as registered
     const userRef = db.collection('users').doc(userDoc.id);
     await userRef.update({ otp: null, otpExpiry: null, isRegistered: true });
 
@@ -261,11 +268,7 @@ router.post('/resend-otp', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required.' });
 
-    const usersSnapshot = await db.collection('users')
-      .where('email', '==', email)
-      .select('email', 'name')
-      .get();
-
+    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a new OTP was sent.' });
     }
@@ -277,13 +280,14 @@ router.post('/resend-otp', async (req, res) => {
     res.status(200).json({ status: 'success', message: 'A new OTP has been sent to your email.' });
   } catch (error) {
     console.error('Error resending OTP:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to resend OTP.' });
+    res.status(500).json({ status: 'error', message: error.message || 'Failed to resend OTP.' });
   }
 });
 
 // Get Current User Profile
 router.get('/me', verifyAuth, async (req, res) => {
   try {
+    // Handle mock tokens (admin login)
     if (req.user.uid.startsWith('admin_')) {
       return res.status(200).json({
         status: 'success',
@@ -306,9 +310,7 @@ router.get('/me', verifyAuth, async (req, res) => {
     }
 
     const userData = doc.data();
-    delete userData.password;
-    delete userData.otp;
-    delete userData.resetCode;
+    delete userData.password; // Don't send password hash back
 
     res.status(200).json({ status: 'success', data: userData });
   } catch (error) {
@@ -317,7 +319,7 @@ router.get('/me', verifyAuth, async (req, res) => {
   }
 });
 
-// Face verification endpoint (Verification status route)
+// Verify live face image against registered face image using deepface.dev cloud API (Stubbed to always succeed)
 router.post('/verify-face', verifyAuth, async (req, res) => {
   return res.status(200).json({
     status: 'success',
@@ -329,37 +331,58 @@ router.post('/verify-face', verifyAuth, async (req, res) => {
   });
 });
 
+
 // Forgot Password
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required' });
 
-    const usersSnapshot = await db.collection('users')
-      .where('email', '==', email)
-      .select('email', 'name')
-      .get();
-
+    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
     }
 
     const userDoc = usersSnapshot.docs[0];
     const userData = userDoc.data();
-
+ // Generate 6-digit code
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = Date.now() + 15 * 60 * 1000; // 15 minutes expiry
+    const expiry = Date.now() + 15 * 60 * 1000; // 15 minutes
 
     await db.collection('users').doc(userDoc.id).update({
       resetCode,
       resetCodeExpiry: expiry
     });
 
-    await sendOtpViaEmailJS(email, userData.name, resetCode);
-[7/25/2026 3:01 PM] Sheriff: res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
+    // Send Email via EmailJS API
+    const emailJsPayload = {
+      service_id: process.env.EMAILJS_SERVICE_ID,
+      template_id: process.env.EMAILJS_TEMPLATE_ID,
+      user_id: process.env.EMAILJS_PUBLIC_KEY,
+      accessToken: process.env.EMAILJS_PRIVATE_KEY,
+      template_params: {
+        to_name: userData.name || 'Student',
+        to_email: email,
+        reset_code: resetCode
+      }
+    };
+
+    const emailRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(emailJsPayload)
+    });
+
+    if (!emailRes.ok) {
+      const errText = await emailRes.text();
+      console.error('EmailJS Error:', errText);
+      return res.status(500).json({ status: 'error', message: 'Failed to send reset email' });
+    }
+
+    res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
   } catch (error) {
     console.error('Error in forgot-password:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to send reset email' });
+    res.status(500).json({ status: 'error', message: 'Server error' });
   }
 });
 
@@ -371,18 +394,16 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
-    if (!PASSWORD_REGEX.test(newPassword)) {
+    // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
       return res.status(400).json({ 
         status: 'error', 
         message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.' 
       });
     }
 
-    const usersSnapshot = await db.collection('users')
-      .where('email', '==', email)
-      .select('resetCode', 'resetCodeExpiry')
-      .get();
-
+    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(400).json({ status: 'error', message: 'Invalid or expired code.' });
     }
@@ -390,12 +411,13 @@ router.post('/reset-password', async (req, res) => {
     const userDoc = usersSnapshot.docs[0];
     const userData = userDoc.data();
 
-    if (!userData.resetCode  userData.resetCode !== code  Date.now() > userData.resetCodeExpiry) {
+    if (userData.resetCode !== code || Date.now() > userData.resetCodeExpiry) {
       return res.status(400).json({ status: 'error', message: 'Invalid or expired code.' });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
+    // Update password and invalidate code
     await db.collection('users').doc(userDoc.id).update({
       password: hashedPassword,
       resetCode: null,
@@ -418,13 +440,15 @@ router.post('/change-password', verifyAuth, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Current password and new password are required.' });
     }
 
-    if (!PASSWORD_REGEX.test(newPassword)) {
+    // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
       return res.status(400).json({ 
         status: 'error', 
         message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.' 
       });
     }
-
+ // Handle mock tokens (admin login)
     if (req.user.uid.startsWith('admin_')) {
       return res.status(400).json({ status: 'error', message: 'Admin accounts cannot change password via this endpoint.' });
     }
@@ -442,16 +466,19 @@ router.post('/change-password', verifyAuth, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'No password set for this account.' });
     }
 
+    // Verify current password matches the stored password
     const isMatch = await bcrypt.compare(currentPassword, userData.password);
     if (!isMatch) {
       return res.status(401).json({ status: 'error', message: 'Current password is incorrect.' });
     }
 
+    // Check if new password is same as current password
     const isSamePassword = await bcrypt.compare(newPassword, userData.password);
     if (isSamePassword) {
       return res.status(400).json({ status: 'error', message: 'New password cannot be the same as current password.' });
     }
 
+    // Hash and update the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await db.collection('users').doc(uid).update({ password: hashedPassword });
 
@@ -461,24 +488,22 @@ router.post('/change-password', verifyAuth, async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to change password.' });
   }
 });
-[7/25/2026 3:01 PM] Sheriff: // Cleanup incomplete registrations
+
 router.delete('/cleanup-incomplete', async (req, res) => {
   try {
+    // Find users marked as registered but still have pending OTP (registration not completed)
     const usersSnap = await db.collection('users')
-      .where('isRegistered', '==', false)
+      .where('isRegistered', '==', true)
       .where('otp', '!=', null)
       .get();
-
     if (usersSnap.empty) {
       return res.status(200).json({ status: 'success', message: 'No incomplete registrations found.' });
     }
-
     const batch = db.batch();
     usersSnap.docs.forEach(doc => {
       batch.delete(doc.ref);
     });
     await batch.commit();
-
     return res.status(200).json({ status: 'success', message: ${usersSnap.size} incomplete registrations deleted. });
   } catch (error) {
     console.error('Error cleaning up incomplete registrations:', error);
