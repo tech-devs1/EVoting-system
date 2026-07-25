@@ -68,6 +68,21 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
+    // Check if the image/photoUrl is already used in the same election
+    if (photoUrl && photoUrl.trim() !== '') {
+      const duplicatePhotoSnap = await db.collection('candidates')
+        .where('electionId', '==', electionId)
+        .where('photoUrl', '==', photoUrl.trim())
+        .get();
+
+      if (!duplicatePhotoSnap.empty) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'This candidate image is already in use by another candidate in this election.'
+        });
+      }
+    }
+
     const newCandidate = {
       name,
       manifesto: manifesto || '',
@@ -116,6 +131,28 @@ router.patch('/:candidateId', verifyAuth, requireAdmin, async (req, res) => {
     
     if (!updates || Object.keys(updates).length === 0) {
       return res.status(400).json({ status: 'error', message: 'No update fields provided' });
+    }
+
+    if (updates.photoUrl && updates.photoUrl.trim() !== '') {
+      const candRef = db.collection('candidates').doc(candidateId);
+      const candDoc = await candRef.get();
+      if (!candDoc.exists) {
+        return res.status(404).json({ status: 'error', message: 'Candidate not found' });
+      }
+      const electionId = candDoc.data().electionId;
+
+      const duplicatePhotoSnap = await db.collection('candidates')
+        .where('electionId', '==', electionId)
+        .where('photoUrl', '==', updates.photoUrl.trim())
+        .get();
+
+      const otherDuplicates = duplicatePhotoSnap.docs.filter(doc => doc.id !== candidateId);
+      if (otherDuplicates.length > 0) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'This candidate image is already in use by another candidate in this election.'
+        });
+      }
     }
 
     await db.collection('candidates').doc(candidateId).update(updates);
