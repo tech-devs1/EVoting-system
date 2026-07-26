@@ -131,12 +131,19 @@ async function sendSmsViaArkesel(phoneNumber, message) {
 }
 
 // Generate and store OTP for a user doc, then send via SMS
+// Returns { otp, smsSent, smsError } — even if SMS fails, OTP is saved in Firebase
 async function generateAndSendOtp(userDocRef, phoneNumber, name) {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
   await userDocRef.update({ otp, otpExpiry: expiry });
-  await sendOtpViaSMS(phoneNumber, otp);
-  return otp;
+  try {
+    await sendOtpViaSMS(phoneNumber, otp);
+    return { otp, smsSent: true };
+  } catch (smsErr) {
+    // OTP is saved in Firebase — SMS delivery failed (e.g. unregistered Sender ID)
+    console.error('[OTP] SMS delivery failed, OTP saved to Firebase:', smsErr.message);
+    return { otp, smsSent: false, smsError: smsErr.message };
+  }
 }
 
 // Verify student ID and fetch details before registration
@@ -299,17 +306,26 @@ router.post('/login', async (req, res) => {
     if (!userData.phone) {
       return res.status(400).json({ status: 'error', message: 'No phone number on file. Please contact admin.' });
     }
-    await generateAndSendOtp(db.collection('users').doc(userDoc.id), userData.phone, userData.name);
+    const { otp, smsSent, smsError } = await generateAndSendOtp(
+      db.collection('users').doc(userDoc.id), userData.phone, userData.name
+    );
 
     // Mask the phone number for display
     const maskedPhone = userData.phone.replace(/(.{4})(.*)(.{3})/, '$1****$3');
-    res.status(200).json({ status: 'otp_required', email: userData.email, phone: maskedPhone, message: `OTP sent to ${maskedPhone}. Please verify.` });
+    res.status(200).json({
+      status: 'otp_required',
+      email: userData.email,
+      phone: maskedPhone,
+      // If SMS failed, send OTP in response so it can be displayed on screen
+      fallbackOtp: smsSent ? undefined : otp,
+      smsFailed: !smsSent,
+      message: smsSent
+        ? `OTP sent to ${maskedPhone}. Please verify.`
+        : `SMS delivery failed. Use this code: ${otp}`
+    });
   } catch (error) {
     console.error('Error logging in:', error);
-    const errorMsg = error.message && error.message.includes('Arkesel') 
-      ? error.message 
-      : 'Failed to authenticate user.';
-    res.status(500).json({ status: 'error', message: errorMsg });
+    res.status(500).json({ status: 'error', message: 'Failed to authenticate user.' });
   }
 });
 

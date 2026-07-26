@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [otpEmail, setOtpEmail] = useState('');
   const [otpPhone, setOtpPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [fallbackOtp, setFallbackOtp] = useState('');
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [error, setError] = useState('');
@@ -51,6 +52,7 @@ export default function LoginPage() {
       if (result?.otpRequired && result.email) {
         setOtpEmail(result.email);
         setOtpPhone(result.phone || '');
+        setFallbackOtp(result.fallbackOtp || '');
         setStep('otp');
       }
     } catch (err: any) {
@@ -245,6 +247,23 @@ export default function LoginPage() {
                 Check your phone{otpPhone ? ` (${otpPhone})` : ''} — a 6-digit SMS code has been sent. It expires in <strong>10 minutes</strong>.
               </p>
             </div>
+
+            {fallbackOtp && (
+              <div style={{
+                padding: 'var(--space-3) var(--space-4)',
+                borderRadius: 'var(--radius-md)',
+                marginBottom: 'var(--space-4)',
+                fontSize: 'var(--text-sm)',
+                background: 'var(--color-warning-bg) || rgba(245, 158, 11, 0.1)',
+                color: 'var(--color-warning) || rgb(217, 119, 6)',
+                border: '1px solid rgba(245, 158, 11, 0.2)',
+                textAlign: 'center',
+                fontWeight: 500
+              }}>
+                📢 <strong>[Demo Mode Fallback]</strong><br />
+                SMS gateway delayed. Use code: <strong style={{ fontSize: '1.2rem', color: 'var(--color-primary)', letterSpacing: '2px', marginLeft: '4px' }}>{fallbackOtp}</strong>
+              </div>
+            )}
 
             {/* 6-digit OTP boxes */}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: 'var(--space-6)' }}>

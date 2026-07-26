@@ -17,7 +17,7 @@ export interface UserProfile {
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
-  login: (email: string, password?: string, role?: 'voter' | 'admin') => Promise<{ otpRequired?: boolean; email?: string; phone?: string }>;
+  login: (email: string, password?: string, role?: 'voter' | 'admin') => Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>;
   register: (studentId: string, email: string, name: string, password?: string, phone?: string, faceImage?: string) => Promise<{ otpRequired?: boolean; email?: string; phone?: string }>;
 
   verifyOtp: (email: string, otp: string) => Promise<void>;
@@ -89,9 +89,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push('/admin/dashboard');
         return {};
       } else {
-        const res = await apiRequest<{ status: string; data?: UserProfile; token?: string; email?: string; phone?: string }>('/auth/login', 'POST', { email, password });
+        const res = await apiRequest<{ status: string; data?: UserProfile; token?: string; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>('/auth/login', 'POST', { email, password });
         if (res.status === 'otp_required') {
-          return { otpRequired: true, email: res.email, phone: res.phone };
+          return { otpRequired: true, email: res.email, phone: res.phone, fallbackOtp: res.fallbackOtp, smsFailed: res.smsFailed };
         }
         if (res.status === 'success' && res.token) {
           localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);
