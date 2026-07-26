@@ -68,10 +68,10 @@ router.post('/verify-student', async (req, res) => {
 
     if (!studentDoc.exists) {
       // Log flagged user — student ID not in the database
-      await logFraudAlert('UNRECOGNIZED_STUDENT', Unrecognized student ID attempted registration: ${studentId}, {
+      await logFraudAlert('UNRECOGNIZED_STUDENT', `Unrecognized student ID attempted registration: ${studentId}`, {
         studentId,
         attemptedAt: new Date().toISOString(),
-        ipAddress: req.ip  req.headers['x-forwarded-for']  'unknown'
+        ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown'
       });
       return res.status(404).json({ status: 'error', message: 'Student ID not found in school records.' });
     }
@@ -119,7 +119,7 @@ router.post('/register', async (req, res) => {
   try {
     const { studentId, email, name, password, faceImage } = req.body;
 
-    if (!studentId  !email  !password) {
+    if (!studentId || !email || !password) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
@@ -390,7 +390,7 @@ router.post('/forgot-password', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
-    if (!email  !code  !newPassword) {
+    if (!email || !code || !newPassword) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
@@ -504,7 +504,7 @@ router.delete('/cleanup-incomplete', async (req, res) => {
       batch.delete(doc.ref);
     });
     await batch.commit();
-    return res.status(200).json({ status: 'success', message: ${usersSnap.size} incomplete registrations deleted. });
+    return res.status(200).json({ status: 'success', message: `${usersSnap.size} incomplete registrations deleted.` });
   } catch (error) {
     console.error('Error cleaning up incomplete registrations:', error);
     res.status(500).json({ status: 'error', message: 'Failed to clean up registrations' });

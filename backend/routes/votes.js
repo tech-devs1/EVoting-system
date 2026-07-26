@@ -1,4 +1,4 @@
-[7/25/2026 2:58 PM] Sheriff: const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { db, admin } = require('../services/firebase');
 const { verifyAuth } = require('../middleware/auth');
@@ -73,7 +73,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
     const position = candidateDoc.data().position || 'General';
     const candidateName = candidateDoc.data().name || '';
     const positionKey = position.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const votedRef = db.collection('voted_voters').doc(${electionId}_${voterId}_${positionKey});
+    const votedRef = db.collection('voted_voters').doc(`${electionId}_${voterId}_${positionKey}`);
 
     // Prepare Vote Payload
     const votePayload = {
@@ -100,7 +100,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
         : { votes: admin.firestore.FieldValue.increment(1) };
 
       transaction.update(candidateRef, updateData);
-[7/25/2026 2:58 PM] Sheriff: // Create anonymized vote record
+      // Create anonymized vote record
       const votesRef = db.collection('votes').doc();
       transaction.set(votesRef, votePayload);
 

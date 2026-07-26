@@ -84,7 +84,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const { title, description, startDate, endDate, organizationId, type, department, showResults } = req.body;
     
-    if (!title  !startDate  !endDate) {
+    if (!title || !startDate || !endDate) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
@@ -95,8 +95,8 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       : new Date().toLocaleDateString();
 
     const autoDesc = electionType === 'src'
- ? This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.
-      : This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.;
+      ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
+      : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
 
     const finalDescription = (description && !description.startsWith('Automated')) ? description : autoDesc;
 
@@ -138,15 +138,15 @@ router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) 
           : 'a scheduled date';
 
         const newDesc = electionType === 'src'
-          ? This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.
-          : This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.;
+          ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
+          : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
 
         updates.push(db.collection('elections').doc(doc.id).update({ description: newDesc }));
       }
     });
 
     await Promise.all(updates);
-    res.status(200).json({ status: 'success', message: Updated ${updates.length} election(s) });
+    res.status(200).json({ status: 'success', message: `Updated ${updates.length} election(s)` });
   } catch (error) {
     console.error('Error migrating descriptions:', error);
     res.status(500).json({ status: 'error', message: 'Migration failed' });
@@ -178,7 +178,7 @@ router.patch('/:id/status', verifyAuth, requireAdmin, async (req, res) => {
     }
 
     await db.collection('elections').doc(req.params.id).update({ status });
-    res.status(200).json({ status: 'success', message: Election status updated to ${status} });
+    res.status(200).json({ status: 'success', message: `Election status updated to ${status}` });
   } catch (error) {
     console.error('Error updating election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to update election' });
@@ -193,7 +193,7 @@ router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) =
     }
 
     await db.collection('elections').doc(req.params.id).update({ showResults });
-    res.status(200).json({ status: 'success', message: Voter results visibility updated to ${showResults} });
+    res.status(200).json({ status: 'success', message: `Voter results visibility updated to ${showResults}` });
   } catch (error) {
     console.error('Error toggling results visibility:', error);
     res.status(500).json({ status: 'error', message: 'Failed to update results visibility' });
@@ -273,7 +273,7 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
 
 // Download election report as PDF (Admin only) - OPTIMIZED FOR LOW READS & PAGINATION
 router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
-[7/25/2026 2:52 PM] Sheriff: try {
+  try {
     const electionId = req.params.id;
     
     // 1. Get election details
@@ -302,7 +302,7 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
     
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', attachment; filename="${election.title.replace(/[^a-zA-Z0-9]/g, '_')}_report.pdf");
+    res.setHeader('Content-Disposition', `attachment; filename="${election.title.replace(/[^a-zA-Z0-9]/g, '_')}_report.pdf"`);
     
     doc.pipe(res);
     
@@ -312,21 +312,21 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     doc.fontSize(18).font('Helvetica-Bold').text(election.title);
     doc.moveDown();
     
-    doc.fontSize(12).font('Helvetica').text(Description: ${election.description || 'N/A'});
-    doc.text(Start Date: ${new Date(election.startDate).toLocaleString()});
-    doc.text(End Date: ${new Date(election.endDate).toLocaleString()});
-    doc.text(Status: ${election.status.toUpperCase()});
-    doc.text(Type: ${election.type || 'N/A'});
-    doc.text(Department: ${election.department || 'N/A'});
+    doc.fontSize(12).font('Helvetica').text(`Description: ${election.description || 'N/A'}`);
+    doc.text(`Start Date: ${new Date(election.startDate).toLocaleString()}`);
+    doc.text(`End Date: ${new Date(election.endDate).toLocaleString()}`);
+    doc.text(`Status: ${election.status.toUpperCase()}`);
+    doc.text(`Type: ${election.type || 'N/A'}`);
+    doc.text(`Department: ${election.department || 'N/A'}`);
     doc.moveDown();
     
     // Statistics section
     doc.fontSize(16).font('Helvetica-Bold').text('Statistics', { underline: true });
     doc.moveDown();
-    doc.fontSize(12).font('Helvetica').text(Total Candidates: ${candidates.length});
-    doc.text(Total Votes Cast: ${totalVotes});
-    doc.text(Unique Voters: ${uniqueVoters});
-    doc.text(Report Generated: ${new Date().toLocaleString()});
+    doc.fontSize(12).font('Helvetica').text(`Total Candidates: ${candidates.length}`);
+    doc.text(`Total Votes Cast: ${totalVotes}`);
+    doc.text(`Unique Voters: ${uniqueVoters}`);
+    doc.text(`Report Generated: ${new Date().toLocaleString()}`);
     doc.moveDown();
 
     // Candidates section
@@ -335,12 +335,12 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     
     candidates.forEach((candidate, index) => {
       const percentage = totalVotes > 0 ? ((candidate.votes || 0) / totalVotes * 100).toFixed(2) : '0.00';
-      doc.fontSize(14).font('Helvetica-Bold').text(${index + 1}. ${candidate.name});
-      doc.fontSize(12).font('Helvetica').text(   Position: ${candidate.position});
+      doc.fontSize(14).font('Helvetica-Bold').text(`${index + 1}. ${candidate.name}`);
+      doc.fontSize(12).font('Helvetica').text(`   Position: ${candidate.position}`);
       if (candidate.isIndependent) {
-        doc.text(   Yes Votes: ${candidate.votes || 0} | No Votes: ${candidate.noVotes || 0});
+        doc.text(`   Yes Votes: ${candidate.votes || 0} | No Votes: ${candidate.noVotes || 0}`);
       } else {
-        doc.text(   Votes: ${candidate.votes || 0} (${percentage}%));
+        doc.text(`   Votes: ${candidate.votes || 0} (${percentage}%)`);
       }
       doc.moveDown();
     });
@@ -366,11 +366,11 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     doc.moveDown();
     doc.fontSize(10).font('Helvetica').text('Cryptographic audit hashes generated for verified ballots:');
     doc.moveDown();
-[7/25/2026 2:52 PM] Sheriff: if (verificationIds.length === 0) {
+    if (verificationIds.length === 0) {
       doc.text('No verified ballot hashes recorded yet.');
     } else {
       verificationIds.forEach((v, index) => {
-        doc.fontSize(9).font('Courier').text(${index + 1}. [HASH]: ${v.id} | [Pos]: ${v.position} | [Time]: ${v.timestamp});
+        doc.fontSize(9).font('Courier').text(`${index + 1}. [HASH]: ${v.id} | [Pos]: ${v.position} | [Time]: ${v.timestamp}`);
       });
     }
     doc.moveDown();

@@ -218,7 +218,7 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
 
     res.status(200).json({ 
       status: 'success', 
-      message: Processed ${voters.length} records. Added ${added} new voters, skipped ${skipped}.,
+      message: `Processed ${voters.length} records. Added ${added} new voters, skipped ${skipped}.`,
       data: { added, skipped, unsuccessful }
     });
   } catch (error) {
@@ -260,7 +260,7 @@ router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req,
 
     res.status(200).json({
       status: 'success',
-      message: Upload and ${votersSnapshot.size} associated voter records deleted successfully.
+      message: `Upload and ${votersSnapshot.size} associated voter records deleted successfully.`
     });
   } catch (error) {
     console.error('Error deleting upload:', error);
@@ -306,7 +306,7 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
         flagged.push({
           id: doc.id,
           studentId: data.metadata?.studentId || 'Unknown',
-          attemptedAt: data.metadata?.attemptedAt  new Date(data.timestamp  Date.now()).toISOString(),
+          attemptedAt: data.metadata?.attemptedAt || new Date(data.timestamp || Date.now()).toISOString(),
           ipAddress: data.metadata?.ipAddress || 'Unknown',
           timestamp: data.timestamp || Date.now(),
           status: data.status || 'unresolved'
@@ -314,7 +314,7 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
       }
     });
 
-    flagged.sort((a, b) => (b.timestamp  0) - (a.timestamp  0));
+    flagged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
     res.status(200).json({ status: 'success', data: flagged });
   } catch (error) {
@@ -346,7 +346,7 @@ router.get('/analytics', verifyAuth, requireAdmin, async (req, res) => {
           tension: 0.3,
           fill: true
         }]
-
+      },
       performanceSummary: [
         { name: 'University Student Council Presidential Election', total: 2840, cast: 2085, rate: '73.4%', status: 'active' },
         { name: 'Department of Computer Science Representative', total: 450, cast: 394, rate: '87.6%', status: 'active' },
@@ -371,12 +371,12 @@ router.get('/export/:format', verifyAuth, requireAdmin, async (req, res) => {
     }
     res.status(200).json({ 
       status: 'success', 
-      message: Export generated in ${format.toUpperCase()} format,
-      downloadUrl: /mock-downloads/report.${format} 
+      message: `Export generated in ${format.toUpperCase()} format`,
+      downloadUrl: `/mock-downloads/report.${format}`
     });
   } catch (error) {
-    console.error(Error exporting ${req.params.format}:, error);
-    res.status(500).json({ status: 'error', message: Failed to export ${req.params.format} });
+    console.error(`Error exporting ${req.params.format}:`, error);
+    res.status(500).json({ status: 'error', message: `Failed to export ${req.params.format}` });
   }
 });
 
@@ -450,7 +450,7 @@ router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      message: Database cleared successfully. Deleted ${deletedVotersCount} voter records, all upload histories, and voting records.
+      message: `Database cleared successfully. Deleted ${deletedVotersCount} voter records, all upload histories, and voting records.`
     });
   } catch (error) {
     console.error('Error clearing voter database:', error);
