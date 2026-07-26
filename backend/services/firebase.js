@@ -134,6 +134,7 @@ class MockFirestore {
         }));
         return { docs, empty: docs.length === 0, size: docs.length, forEach: (cb) => docs.forEach(cb) };
       },
+      select: function() { return this; },
       count: function() {
         return {
           get: async () => ({
@@ -164,6 +165,7 @@ class MockFirestore {
             if (op2 === 'in') return Array.isArray(v2) && v2.includes(doc[f2]);
             return false;
           })),
+          select: function() { return this; },
           orderBy: function() { return this; },
           limit: function() { return this; },
           count: function() {

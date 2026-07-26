@@ -7,34 +7,57 @@ const { verifyElectionIntegrity } = require('../services/audit');
 // Get Dashboard Analytics - OPTIMIZED WITH AGGREGATIONS
 router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    // 1. Server-side aggregations for total counts (~1 Read per collection)
+    // 1. Get active elections
+    const activeElectionsSnapForQuery = await db.collection('elections').where('status', '==', 'active').get();
+    const activeElectionIds = [];
+    activeElectionsSnapForQuery.forEach(doc => {
+      activeElectionIds.push(doc.id);
+    });
+
+    // 2. Server-side aggregations for total counts (~1 Read per collection)
     const electionsCountSnap = await db.collection('elections').count().get();
     const votersCountSnap = await db.collection('users').where('isRegistered', '==', true).count().get();
-    const votesCountSnap = await db.collection('votes').count().get();
-
+    
     const totalElections = electionsCountSnap.data().count;
     const totalVoters = votersCountSnap.data().count;
-    const totalVotesCast = votesCountSnap.data().count;
 
-    // 2. Fetch election statuses cleanly
-    const activeElectionsSnap = await db.collection('elections').where('status', '==', 'active').count().get();
+    let totalVotesCast = 0;
+    let uniqueVotersCount = 0;
+
+    if (activeElectionIds.length > 0) {
+      // Get counts for active election(s) specifically
+      const votesCountSnap = await db.collection('votes').where('electionId', 'in', activeElectionIds).count().get();
+      totalVotesCast = votesCountSnap.data().count;
+
+      const uniqueVotersSnap = await db.collection('voted_voters').where('electionId', 'in', activeElectionIds).select('voterId').get();
+      const votedVoterIds = new Set();
+      uniqueVotersSnap.forEach(doc => {
+        const data = doc.data();
+        if (data.voterId) votedVoterIds.add(data.voterId);
+      });
+      uniqueVotersCount = votedVoterIds.size;
+    } else {
+      // Fallback to global counts
+      const votesCountSnap = await db.collection('votes').count().get();
+      totalVotesCast = votesCountSnap.data().count;
+
+      const uniqueVotersSnap = await db.collection('voted_voters').select('voterId').get();
+      const votedVoterIds = new Set();
+      uniqueVotersSnap.forEach(doc => {
+        const data = doc.data();
+        if (data.voterId) votedVoterIds.add(data.voterId);
+      });
+      uniqueVotersCount = votedVoterIds.size;
+    }
+
+    // 3. Fetch election statuses cleanly
     const completedElectionsSnap = await db.collection('elections').where('status', '==', 'completed').count().get();
-
-    const activeElectionsCount = activeElectionsSnap.data().count;
+    const activeElectionsCount = activeElectionIds.length;
     const completedElectionsCount = completedElectionsSnap.data().count;
 
-    // 3. Count non-admin students using count aggregation (1 Read)
+    // 4. Count non-admin students using count aggregation (1 Read)
     const totalStudentsSnap = await db.collection('users').where('role', '!=', 'admin').count().get();
     const totalStudents = totalStudentsSnap.data().count;
-
-    // 4. Unique voters count (deduplicate voter IDs to get true human voter count)
-    const uniqueVotersSnap = await db.collection('voted_voters').select('voterId').get();
-    const votedVoterIds = new Set();
-    uniqueVotersSnap.forEach(doc => {
-      const data = doc.data();
-      if (data.voterId) votedVoterIds.add(data.voterId);
-    });
-    const uniqueVotersCount = votedVoterIds.size;
 
     // 5. Fetch top 10 candidates for chart (10 Reads)
     const candidatesDoc = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();

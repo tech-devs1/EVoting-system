@@ -220,7 +220,7 @@ export default function AdminDashboardPage() {
           const candidates = resVal.status === 'fulfilled' && resVal.value.status === 'success'
             ? resVal.value.data
             : [];
-          const totalVotes = candidates.reduce((s, c) => s + (c.votes || 0), 0);
+          const totalVotes = candidates.reduce((s, c) => s + (c.votes || 0) + (c.noVotes || 0), 0);
           return { election, candidates, totalVotes };
         });
 
