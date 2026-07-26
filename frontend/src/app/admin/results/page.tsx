@@ -372,8 +372,28 @@ export default function AdminResultsPage() {
 
   useEffect(() => {
     fetchAll();
-    intervalRef.current = setInterval(fetchAll, 5000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      } else {
+        fetchAll();
+        if (!intervalRef.current) {
+          intervalRef.current = setInterval(fetchAll, 30000);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    intervalRef.current = setInterval(fetchAll, 30000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const handleDownloadPdf = async (elId: string, elTitle: string) => {

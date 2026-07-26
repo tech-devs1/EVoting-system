@@ -377,7 +377,7 @@ export default function AdminVotersPage() {
       <div className="admin-voters-grid">
         
         {/* Upload Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', minWidth: 0, width: '100%' }}>
           {/* Upload Form Card */}
           <div className="card">
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -498,7 +498,7 @@ export default function AdminVotersPage() {
 
           {/* Import Preview panel (if file selected) */}
           {parsedData.length > 0 && (
-            <div className="card animate-fade-in" style={{ maxHeight: '350px', display: 'flex', flexDirection: 'column' }}>
+            <div className="card animate-fade-in" style={{ maxHeight: '350px', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
               <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Eye size={20} className="text-primary" />
                 Previewing Roster (First 5 records)
@@ -537,7 +537,7 @@ export default function AdminVotersPage() {
         </div>
 
         {/* History Column */}
-        <div className="card" style={{ alignSelf: 'stretch', display: 'flex', flexDirection: 'column' }}>
+        <div className="card" style={{ alignSelf: 'stretch', display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
               <Calendar size={20} className="text-primary" />

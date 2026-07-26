@@ -128,8 +128,29 @@ export default function VoterDashboard() {
     }
 
     fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+
+    let intervalId: NodeJS.Timeout | null = setInterval(fetchData, 60000);
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      } else {
+        fetchData();
+        if (!intervalId) {
+          intervalId = setInterval(fetchData, 60000);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [mounted]);
 
   const userName = user?.name || "";

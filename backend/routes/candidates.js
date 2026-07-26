@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../services/firebase');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
+const cache = require('../services/cache');
 
-// Get all candidates for a specific election (Public/Voter access)
+// Get all candidates for a specific election (Public/Voter access) - CACHED
 router.get('/election/:electionId', async (req, res) => {
   try {
     const { electionId } = req.params;
@@ -29,29 +30,39 @@ router.get('/election/:electionId', async (req, res) => {
       }
     }
 
-    // Fetch election to see if live charts are published to voters
-    const electionDoc = await db.collection('elections').doc(electionId).get();
-    if (!electionDoc.exists) {
-      return res.status(404).json({ status: 'error', message: 'Election not found' });
-    }
-    const electionData = electionDoc.data();
-    const showResults = electionData.showResults === true;
+    const cacheKey = `candidates:election:${electionId}:${isAdmin ? 'admin' : 'voter'}`;
 
-    const candidatesRef = db.collection('candidates');
-    const snapshot = await candidatesRef.where('electionId', '==', electionId).get();
-    
-    const candidates = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      // Hide votes from API response if not admin and showResults is false
-      if (!isAdmin && !showResults) {
-        data.votes = 0;
+    const candidates = await cache.getOrSet(cacheKey, async () => {
+      // Fetch election to see if live charts are published to voters
+      const electionDoc = await db.collection('elections').doc(electionId).get();
+      if (!electionDoc.exists) {
+        throw new Error('ELECTION_NOT_FOUND');
       }
-      candidates.push({ id: doc.id, ...data });
-    });
+      const electionData = electionDoc.data();
+      const showResults = electionData.showResults === true;
+
+      const candidatesRef = db.collection('candidates');
+      const snapshot = await candidatesRef.where('electionId', '==', electionId).get();
+      
+      const list = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        // Hide votes from API response if not admin and showResults is false
+        if (!isAdmin && !showResults) {
+          data.votes = 0;
+          data.noVotes = 0;
+        }
+        list.push({ id: doc.id, ...data });
+      });
+
+      return list;
+    }, 10000); // Cache for 10 seconds
 
     res.status(200).json({ status: 'success', data: candidates });
   } catch (error) {
+    if (error.message === 'ELECTION_NOT_FOUND') {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
     console.error('Error fetching candidates:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch candidates' });
   }
@@ -100,6 +111,10 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
     const docRef = await db.collection('candidates').add(newCandidate);
     console.log('[Add Candidate] Candidate created with ID:', docRef.id);
     
+    // Invalidate caches
+    cache.invalidatePrefix(`candidates:election:${electionId}`);
+    cache.invalidate('admin:dashboard-full');
+
     res.status(201).json({ status: 'success', data: { id: docRef.id, ...newCandidate } });
   } catch (error) {
     console.error('[Add Candidate] Error:', error);
@@ -113,9 +128,16 @@ router.delete('/:candidateId', verifyAuth, requireAdmin, async (req, res) => {
     const { candidateId } = req.params;
     console.log('[Delete Candidate] Deleting candidate:', candidateId);
     
-    await db.collection('candidates').doc(candidateId).delete();
-    console.log('[Delete Candidate] Candidate deleted successfully');
+    // Retrieve candidate first to get electionId for cache invalidation
+    const candDoc = await db.collection('candidates').doc(candidateId).get();
+    if (candDoc.exists) {
+      const electionId = candDoc.data().electionId;
+      await db.collection('candidates').doc(candidateId).delete();
+      cache.invalidatePrefix(`candidates:election:${electionId}`);
+      cache.invalidate('admin:dashboard-full');
+    }
     
+    console.log('[Delete Candidate] Candidate deleted successfully');
     res.status(200).json({ status: 'success', message: 'Candidate deleted successfully' });
   } catch (error) {
     console.error('[Delete Candidate] Error:', error);
@@ -133,14 +155,14 @@ router.patch('/:candidateId', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'No update fields provided' });
     }
 
-    if (updates.photoUrl && updates.photoUrl.trim() !== '') {
-      const candRef = db.collection('candidates').doc(candidateId);
-      const candDoc = await candRef.get();
-      if (!candDoc.exists) {
-        return res.status(404).json({ status: 'error', message: 'Candidate not found' });
-      }
-      const electionId = candDoc.data().electionId;
+    const candRef = db.collection('candidates').doc(candidateId);
+    const candDoc = await candRef.get();
+    if (!candDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Candidate not found' });
+    }
+    const electionId = candDoc.data().electionId;
 
+    if (updates.photoUrl && updates.photoUrl.trim() !== '') {
       const duplicatePhotoSnap = await db.collection('candidates')
         .where('electionId', '==', electionId)
         .where('photoUrl', '==', updates.photoUrl.trim())
@@ -155,7 +177,12 @@ router.patch('/:candidateId', verifyAuth, requireAdmin, async (req, res) => {
       }
     }
 
-    await db.collection('candidates').doc(candidateId).update(updates);
+    await candRef.update(updates);
+    
+    // Invalidate caches
+    cache.invalidatePrefix(`candidates:election:${electionId}`);
+    cache.invalidate('admin:dashboard-full');
+
     res.status(200).json({ status: 'success', message: 'Candidate updated successfully' });
   } catch (error) {
     console.error('[Update Candidate] Error:', error);

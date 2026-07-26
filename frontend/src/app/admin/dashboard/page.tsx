@@ -193,50 +193,24 @@ export default function AdminDashboardPage() {
   const [results, setResults] = useState<ElectionResult[]>([]);
   const [flaggedUsers, setFlaggedUsers] = useState<{id: string; studentId: string; attemptedAt: string; ipAddress: string; timestamp: number; status?: string}[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  async function fetchDashboardData() {
+  async function fetchDashboardData() {
     try {
-      console.log('[Admin Dashboard] Fetching static KPIs...');
-      const res = await apiRequest<{ status: string; data: KPIStats }>('/admin/dashboard');
+      console.log('[Admin Dashboard] Fetching full unified dashboard data...');
+      const res = await apiRequest<{
+        status: string;
+        data: {
+          stats: KPIStats;
+          electionResults: ElectionResult[];
+          flaggedUsers: any[];
+        };
+      }>('/admin/dashboard-full');
+
       if (res.status === 'success') {
-        setStats(res.data);
-      }
-
-      // Fetch all elections and their candidates in parallel for real-time charts
-      const electionsRes = await apiRequest<{ status: string; data: Election[] }>('/elections');
-      if (electionsRes.status === 'success' && electionsRes.data.length > 0) {
-        const elections = electionsRes.data;
-        const activeCount = elections.filter(e => e.status === 'active').length;
-        setActiveElectionsCount(activeCount);
-
-        const settled = await Promise.allSettled(
-          elections.map(election =>
-            apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${election.id}`)
-          )
-        );
-
-        const newResults: ElectionResult[] = elections.map((election, i) => {
-          const resVal = settled[i];
-          const candidates = resVal.status === 'fulfilled' && resVal.value.status === 'success'
-            ? resVal.value.data
-            : [];
-          const totalVotes = candidates.reduce((s, c) => s + (c.votes || 0) + (c.noVotes || 0), 0);
-          return { election, candidates, totalVotes };
-        });
-
-      setResults(newResults);
-      } else {
-        setResults([]);
-      }
-
-      // Fetch flagged users (not in database)
-      try {
-        const flaggedRes = await apiRequest<{ status: string; data: any[] }>('/admin/flagged-users');
-        if (flaggedRes.status === 'success') {
-          setFlaggedUsers(flaggedRes.data);
-        }
-      } catch (flaggedErr) {
-        console.error('[Admin Dashboard] Error fetching flagged users:', flaggedErr);
+        const { stats, electionResults, flaggedUsers } = res.data;
+        setStats(stats);
+        setResults(electionResults);
+        setFlaggedUsers(flaggedUsers);
+        setActiveElectionsCount(stats.activeElectionsCount || 0);
       }
     } catch (err) {
       console.error('[Admin Dashboard] Error fetching dashboard data:', err);
@@ -247,12 +221,30 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
-    // Poll stats and charts data every 15 seconds (optimized for real-time updates while saving Firebase reads)
-    intervalRef.current = setInterval(fetchDashboardData, 15000);
+
+    // Reduce polling to 30 seconds and respect Page Visibility API to save Firebase reads
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      } else {
+        fetchDashboardData();
+        if (!intervalRef.current) {
+          intervalRef.current = setInterval(fetchDashboardData, 30000);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    intervalRef.current = setInterval(fetchDashboardData, 30000);
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, []);;
 
   return (
     <div className="animate-page-enter">

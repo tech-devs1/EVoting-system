@@ -45,8 +45,29 @@ export default function AdminFraudPage() {
     }
     
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 5000);
-    return () => clearInterval(interval);
+
+    let intervalId: NodeJS.Timeout | null = setInterval(fetchAlerts, 30000);
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      } else {
+        fetchAlerts();
+        if (!intervalId) {
+          intervalId = setInterval(fetchAlerts, 30000);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const uniqueVotersCount = new Set(alerts.map(a => a.metadata?.voterId).filter(Boolean)).size;

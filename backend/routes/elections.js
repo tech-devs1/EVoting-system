@@ -1,46 +1,64 @@
- const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { db } = require('../services/firebase');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
+const cache = require('../services/cache');
 
-// Get elections (optional status filter)
+// Get elections (optional status filter) - CACHED & WRITE OPTIMIZED
 router.get('/', async (req, res) => {
   try {
-    const electionsRef = db.collection('elections');
     const { status } = req.query;
-    
-    let snapshot;
-    if (status) {
-      snapshot = await electionsRef.where('status', '==', status).get();
-    } else {
-      snapshot = await electionsRef.get();
-    }
-    
-    if (snapshot.empty) {
-      return res.status(200).json({ status: 'success', data: [] });
-    }
+    const cacheKey = `elections:list:${status || 'all'}`;
 
-    const elections = [];
-    const now = Date.now();
-    
-    snapshot.forEach(doc => {
-      const electionData = doc.data();
-      let updatedStatus = electionData.status;
-      
-      const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
-      const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
-
-      if (electionData.status === 'active' && electionData.endDate && endTime < now) {
-        updatedStatus = 'completed';
-        db.collection('elections').doc(doc.id).update({ status: 'completed' });
-      } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
-        updatedStatus = 'active';
-        db.collection('elections').doc(doc.id).update({ status: 'active' });
+    const elections = await cache.getOrSet(cacheKey, async () => {
+      const electionsRef = db.collection('elections');
+      let snapshot;
+      if (status) {
+        snapshot = await electionsRef.where('status', '==', status).get();
+      } else {
+        snapshot = await electionsRef.get();
       }
       
-      elections.push({ id: doc.id, ...electionData, status: updatedStatus });
-    });
+      if (snapshot.empty) {
+        return [];
+      }
+
+      const list = [];
+      const now = Date.now();
+      const dbUpdates = [];
+      
+      snapshot.forEach(doc => {
+        const electionData = doc.data();
+        let updatedStatus = electionData.status;
+        
+        const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
+        const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
+
+        if (electionData.status === 'active' && electionData.endDate && endTime < now) {
+          updatedStatus = 'completed';
+          dbUpdates.push(db.collection('elections').doc(doc.id).update({ status: 'completed' }));
+        } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
+          updatedStatus = 'active';
+          dbUpdates.push(db.collection('elections').doc(doc.id).update({ status: 'active' }));
+        }
+        
+        list.push({ id: doc.id, ...electionData, status: updatedStatus });
+      });
+
+      // Execute status updates in background if any occurred
+      if (dbUpdates.length > 0) {
+        Promise.all(dbUpdates)
+          .then(() => {
+            // Invalidate elections list & detail caches
+            cache.invalidatePrefix('elections:');
+            cache.invalidatePrefix('admin:');
+          })
+          .catch(err => console.error('Error updating election status in background:', err));
+      }
+
+      return list;
+    }, 10000); // Cache for 10 seconds
 
     res.status(200).json({ status: 'success', data: elections });
   } catch (error) {
@@ -49,31 +67,47 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get specific election details
+// Get specific election details - CACHED & WRITE OPTIMIZED
 router.get('/:id', async (req, res) => {
   try {
-    const doc = await db.collection('elections').doc(req.params.id).get();
-    if (!doc.exists) {
+    const electionId = req.params.id;
+    const cacheKey = `elections:detail:${electionId}`;
+
+    const election = await cache.getOrSet(cacheKey, async () => {
+      const doc = await db.collection('elections').doc(electionId).get();
+      if (!doc.exists) {
+        throw new Error('NOT_FOUND');
+      }
+      
+      let electionData = doc.data();
+      const now = Date.now();
+      let updatedStatus = electionData.status;
+      
+      const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
+      const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
+
+      if (electionData.status === 'active' && electionData.endDate && endTime < now) {
+        updatedStatus = 'completed';
+        await db.collection('elections').doc(doc.id).update({ status: 'completed' });
+        // Invalidate caches
+        cache.invalidatePrefix('elections:');
+        cache.invalidatePrefix('admin:');
+      } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
+        updatedStatus = 'active';
+        await db.collection('elections').doc(doc.id).update({ status: 'active' });
+        // Invalidate caches
+        cache.invalidatePrefix('elections:');
+        cache.invalidatePrefix('admin:');
+      }
+
+      return { id: doc.id, ...electionData, status: updatedStatus };
+    }, 10000); // Cache for 10 seconds
+
+    res.status(200).json({ status: 'success', data: election });
+  } catch (error) {
+    if (error.message === 'NOT_FOUND') {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
-    
-    let electionData = doc.data();
-    const now = Date.now();
-    let updatedStatus = electionData.status;
-    
-    const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
-    const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
-
-    if (electionData.status === 'active' && electionData.endDate && endTime < now) {
-      updatedStatus = 'completed';
-      db.collection('elections').doc(doc.id).update({ status: 'completed' });
-    } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
-      updatedStatus = 'active';
-      db.collection('elections').doc(doc.id).update({ status: 'active' });
-    }
-
-    res.status(200).json({ status: 'success', data: { id: doc.id, ...electionData, status: updatedStatus } });
-  } catch (error) {
     console.error('Error fetching election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch election' });
   }
@@ -115,6 +149,11 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
     };
 
     const docRef = await db.collection('elections').add(newElection);
+
+    // Invalidate election list caches
+    cache.invalidatePrefix('elections:');
+    cache.invalidatePrefix('admin:');
+
     res.status(201).json({ status: 'success', data: { id: docRef.id, ...newElection } });
   } catch (error) {
     console.error('Error creating election:', error);
@@ -146,6 +185,11 @@ router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) 
     });
 
     await Promise.all(updates);
+    
+    // Invalidate election caches
+    cache.invalidatePrefix('elections:');
+    cache.invalidatePrefix('admin:');
+
     res.status(200).json({ status: 'success', message: `Updated ${updates.length} election(s)` });
   } catch (error) {
     console.error('Error migrating descriptions:', error);
@@ -162,6 +206,11 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
     }
 
     await db.collection('elections').doc(req.params.id).update({ startDate, endDate });
+
+    // Invalidate caches
+    cache.invalidatePrefix('elections:');
+    cache.invalidatePrefix('admin:');
+
     res.status(200).json({ status: 'success', message: 'Election time window updated' });
   } catch (error) {
     console.error('Error updating election time window:', error);
@@ -178,13 +227,19 @@ router.patch('/:id/status', verifyAuth, requireAdmin, async (req, res) => {
     }
 
     await db.collection('elections').doc(req.params.id).update({ status });
+
+    // Invalidate caches
+    cache.invalidatePrefix('elections:');
+    cache.invalidatePrefix('admin:');
+
     res.status(200).json({ status: 'success', message: `Election status updated to ${status}` });
   } catch (error) {
     console.error('Error updating election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to update election' });
   }
 });
- // Toggle showResults status (Admin only)
+
+// Toggle showResults status (Admin only)
 router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const { showResults } = req.body;
@@ -193,6 +248,12 @@ router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) =
     }
 
     await db.collection('elections').doc(req.params.id).update({ showResults });
+
+    // Invalidate caches
+    cache.invalidatePrefix('elections:');
+    cache.invalidatePrefix('admin:');
+    cache.invalidatePrefix('candidates:'); // Voters fetch candidates check results visibility
+
     res.status(200).json({ status: 'success', message: `Voter results visibility updated to ${showResults}` });
   } catch (error) {
     console.error('Error toggling results visibility:', error);
@@ -204,6 +265,11 @@ router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) =
 router.delete('/:id', verifyAuth, requireAdmin, async (req, res) => {
   try {
     await db.collection('elections').doc(req.params.id).delete();
+
+    // Invalidate caches
+    cache.invalidatePrefix('elections:');
+    cache.invalidatePrefix('admin:');
+
     res.status(200).json({ status: 'success', message: 'Election deleted' });
   } catch (error) {
     console.error('Error deleting election:', error);
@@ -211,94 +277,129 @@ router.delete('/:id', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Generate election report JSON (Admin only) - OPTIMIZED FOR LOW READS
+// Generate election report JSON (Admin only) - CACHED
 router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
-    
-    // 1. Get election details (1 Read)
-    const electionDoc = await db.collection('elections').doc(electionId).get();
-    if (!electionDoc.exists) {
-      return res.status(404).json({ status: 'error', message: 'Election not found' });
-    }
-    const election = { id: electionId, ...electionDoc.data() };
-    
-    // 2. Get candidates (1 Read per candidate, usually ~10 Reads)
-    const candidatesSnapshot = await db.collection('candidates').where('electionId', '==', electionId).get();
-    const candidates = [];
-    candidatesSnapshot.forEach(doc => {
-      candidates.push({ id: doc.id, ...doc.data() });
-    });
-    
-    // 3. OPTIMIZED: Get total votes cast using count() (~2 Reads instead of 2,000 Reads)
-    const votesCountSnap = await db.collection('votes').where('electionId', '==', electionId).count().get();
-    const totalVotes = votesCountSnap.data().count;
-    
-    // 4. OPTIMIZED: Get unique voters count using count() (~2 Reads instead of 2,000 Reads)
-    const votedVotersCountSnap = await db.collection('voted_voters').where('electionId', '==', electionId).count().get();
-    const uniqueVoters = votedVotersCountSnap.data().count;
-    
-    const report = {
-      election: {
-        title: election.title,
-        description: election.description,
-        startDate: new Date(election.startDate).toLocaleString(),
-        endDate: new Date(election.endDate).toLocaleString(),
-        status: election.status,
-        type: election.type,
-        department: election.department,
-        createdAt: new Date(election.createdAt).toLocaleString()
-      },
-      statistics: {
-        totalCandidates: candidates.length,
-        totalVotesCast: totalVotes,
-        uniqueVoters: uniqueVoters,
-        reportGeneratedAt: new Date().toLocaleString()
-      },
-      candidates: candidates.map(c => ({
-        name: c.name,
-        position: c.position,
-        manifesto: c.manifesto,
-        votes: c.votes || 0,
-        percentage: totalVotes > 0 ? ((c.votes || 0) / totalVotes * 100).toFixed(2) : '0.00'
-      })).sort((a, b) => b.votes - a.votes)
-    };
-    
+    const cacheKey = `elections:report:${electionId}`;
+
+    const report = await cache.getOrSet(cacheKey, async () => {
+      // 1. Get election details (1 Read)
+      const electionDoc = await db.collection('elections').doc(electionId).get();
+      if (!electionDoc.exists) {
+        throw new Error('NOT_FOUND');
+      }
+      const election = { id: electionId, ...electionDoc.data() };
+      
+      // 2. Get candidates (1 Read per candidate, usually ~10 Reads)
+      const candidatesSnapshot = await db.collection('candidates').where('electionId', '==', electionId).get();
+      const candidates = [];
+      candidatesSnapshot.forEach(doc => {
+        candidates.push({ id: doc.id, ...doc.data() });
+      });
+      
+      // 3. OPTIMIZED: Get total votes cast using count() (~2 Reads instead of 2,000 Reads)
+      const votesCountSnap = await db.collection('votes').where('electionId', '==', electionId).count().get();
+      const totalVotes = votesCountSnap.data().count;
+      
+      // 4. OPTIMIZED: Get unique voters count using count() (~2 Reads instead of 2,000 Reads)
+      const votedVotersCountSnap = await db.collection('voted_voters').where('electionId', '==', electionId).count().get();
+      const uniqueVoters = votedVotersCountSnap.data().count;
+      
+      return {
+        election: {
+          title: election.title,
+          description: election.description,
+          startDate: new Date(election.startDate).toLocaleString(),
+          endDate: new Date(election.endDate).toLocaleString(),
+          status: election.status,
+          type: election.type,
+          department: election.department,
+          createdAt: new Date(election.createdAt).toLocaleString()
+        },
+        statistics: {
+          totalCandidates: candidates.length,
+          totalVotesCast: totalVotes,
+          uniqueVoters: uniqueVoters,
+          reportGeneratedAt: new Date().toLocaleString()
+        },
+        candidates: candidates.map(c => ({
+          name: c.name,
+          position: c.position,
+          manifesto: c.manifesto,
+          votes: c.votes || 0,
+          percentage: totalVotes > 0 ? ((c.votes || 0) / totalVotes * 100).toFixed(2) : '0.00'
+        })).sort((a, b) => b.votes - a.votes)
+      };
+    }, 15000); // Cache for 15 seconds
+
     res.status(200).json({ status: 'success', data: report });
   } catch (error) {
+    if (error.message === 'NOT_FOUND') {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
     console.error('Error generating election report:', error);
     res.status(500).json({ status: 'error', message: 'Failed to generate election report' });
   }
 });
 
-// Download election report as PDF (Admin only) - OPTIMIZED FOR LOW READS & PAGINATION
+// Download election report as PDF (Admin only) - CACHED
 router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
+    const cacheKey = `elections:report:pdf:${electionId}`;
+
+    const reportData = await cache.getOrSet(cacheKey, async () => {
+      // 1. Get election details
+      const electionDoc = await db.collection('elections').doc(electionId).get();
+      if (!electionDoc.exists) {
+        throw new Error('NOT_FOUND');
+      }
+      const election = { id: electionId, ...electionDoc.data() };
+      
+      // 2. Get candidates
+      const candidatesSnapshot = await db.collection('candidates').where('electionId', '==', electionId).get();
+      const candidates = [];
+      candidatesSnapshot.forEach(doc => {
+        candidates.push({ id: doc.id, ...doc.data() });
+      });
+      
+      // 3. OPTIMIZED: Fast aggregation count for total votes
+      const votesCountSnap = await db.collection('votes').where('electionId', '==', electionId).count().get();
+      const totalVotes = votesCountSnap.data().count;
+      
+      // 4. OPTIMIZED: Fast aggregation count for unique voters
+      const votedVotersCountSnap = await db.collection('voted_voters').where('electionId', '==', electionId).count().get();
+      const uniqueVoters = votedVotersCountSnap.data().count;
+
+      // 5. Fetch ONLY the 50 most recent verification hashes to prevent PDF overload & quota exhaustion
+      const verificationLogsSnap = await db.collection('voted_voters')
+        .where('electionId', '==', electionId)
+        .limit(50)
+        .get();
+
+      const verificationIds = [];
+      verificationLogsSnap.forEach(doc => {
+        const data = doc.data();
+        verificationIds.push({
+          id: data.auditTxId || doc.id,
+          position: data.position || 'General',
+          timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : 'N/A'
+        });
+      });
+
+      return {
+        election,
+        candidates,
+        totalVotes,
+        uniqueVoters,
+        verificationIds
+      };
+    }, 30000); // Cache pdf data for 30s
+
+    const { election, candidates, totalVotes, uniqueVoters, verificationIds } = reportData;
     
-    // 1. Get election details
-    const electionDoc = await db.collection('elections').doc(electionId).get();
-    if (!electionDoc.exists) {
-      return res.status(404).json({ status: 'error', message: 'Election not found' });
-    }
-    const election = { id: electionId, ...electionDoc.data() };
-    
-    // 2. Get candidates
-    const candidatesSnapshot = await db.collection('candidates').where('electionId', '==', electionId).get();
-    const candidates = [];
-    candidatesSnapshot.forEach(doc => {
-      candidates.push({ id: doc.id, ...doc.data() });
-    });
-    
-    // 3. OPTIMIZED: Fast aggregation count for total votes
-    const votesCountSnap = await db.collection('votes').where('electionId', '==', electionId).count().get();
-    const totalVotes = votesCountSnap.data().count;
-    
-    // 4. OPTIMIZED: Fast aggregation count for unique voters
-    const votedVotersCountSnap = await db.collection('voted_voters').where('electionId', '==', electionId).count().get();
-    const uniqueVoters = votedVotersCountSnap.data().count;
-    
-    // 5. Generate PDF Document
+    // Generate PDF Document
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
     
     res.setHeader('Content-Type', 'application/pdf');
@@ -345,22 +446,6 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
       doc.moveDown();
     });
 
-    // OPTIMIZED: Fetch ONLY the 50 most recent verification hashes to prevent PDF overload & quota exhaustion
-    const verificationLogsSnap = await db.collection('voted_voters')
-      .where('electionId', '==', electionId)
-      .limit(50)
-      .get();
-
-    const verificationIds = [];
-    verificationLogsSnap.forEach(doc => {
-      const data = doc.data();
-      verificationIds.push({
-        id: data.auditTxId || doc.id,
-        position: data.position || 'General',
-        timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : 'N/A'
-      });
-    });
-
     if (doc.y > 650) doc.addPage();
     doc.fontSize(16).font('Helvetica-Bold').text('Cryptographic Voter Verification Ledger (Recent 50)', { underline: true });
     doc.moveDown();
@@ -379,6 +464,9 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     doc.end();
 
   } catch (error) {
+    if (error.message === 'NOT_FOUND') {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
     console.error('Error generating PDF report:', error);
     res.status(500).json({ status: 'error', message: 'Failed to generate PDF report' });
   }

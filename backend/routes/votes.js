@@ -4,33 +4,39 @@ const { db, admin } = require('../services/firebase');
 const { verifyAuth } = require('../middleware/auth');
 const { recordVoteAudit } = require('../services/audit');
 const { logFraudAlert } = require('../services/fraud');
+const cache = require('../services/cache');
 
-// Get list of election IDs the current user has voted in
+// Get list of election IDs the current user has voted in - CACHED
 router.get('/voted-elections', verifyAuth, async (req, res) => {
   try {
     const voterId = req.user.uid;
-    // Selective retrieval to minimize network bandwidth
-    const snapshot = await db.collection('voted_voters')
-      .where('voterId', '==', voterId)
-      .select('electionId')
-      .get();
-    
-    const votedElectionIds = new Set();
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.electionId) {
-        votedElectionIds.add(data.electionId);
-      }
-    });
+    const cacheKey = `votes:voted-elections:${voterId}`;
 
-    res.status(200).json({ status: 'success', data: Array.from(votedElectionIds) });
+    const electionIds = await cache.getOrSet(cacheKey, async () => {
+      // Selective retrieval to minimize network bandwidth
+      const snapshot = await db.collection('voted_voters')
+        .where('voterId', '==', voterId)
+        .select('electionId')
+        .get();
+      
+      const votedElectionIds = new Set();
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.electionId) {
+          votedElectionIds.add(data.electionId);
+        }
+      });
+      return Array.from(votedElectionIds);
+    }, 5000); // Cache for 5 seconds
+
+    res.status(200).json({ status: 'success', data: electionIds });
   } catch (error) {
     console.error('Error fetching voted elections:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch voted status' });
   }
 });
 
-// Cast a vote (ATOMIC TRANSACTION & HIGH CONCURRENCY READY)
+// Cast a vote (ATOMIC TRANSACTION & HIGH CONCURRENCY READY) - CACHE INVALIDATING
 router.post('/cast', verifyAuth, async (req, res) => {
   try {
     let { electionId, candidateId, choice } = req.body;
@@ -49,17 +55,24 @@ router.post('/cast', verifyAuth, async (req, res) => {
     }
 
     // 1. Check if election is active and within valid time window
-    const electionDoc = await db.collection('elections').doc(electionId).get();
-    if (!electionDoc.exists || electionDoc.data().status !== 'active') {
+    // (We get this from Cache to avoid reading elections document every single time a vote is cast!)
+    const election = await cache.getOrSet(`elections:detail:${electionId}`, async () => {
+      const doc = await db.collection('elections').doc(electionId).get();
+      if (!doc.exists) {
+        throw new Error('ELECTION_NOT_FOUND');
+      }
+      return { id: doc.id, ...doc.data() };
+    }, 15000);
+
+    if (election.status !== 'active') {
       return res.status(400).json({ status: 'error', message: 'Election is not active' });
     }
 
-    const electionData = electionDoc.data();
     const now = Date.now();
-    if (electionData.startDate && now < new Date(electionData.startDate).getTime()) {
+    if (election.startDate && now < new Date(election.startDate).getTime()) {
       return res.status(400).json({ status: 'error', message: 'Voting for this election has not started yet.' });
     }
-    if (electionData.endDate && now > new Date(electionData.endDate).getTime()) {
+    if (election.endDate && now > new Date(election.endDate).getTime()) {
       return res.status(400).json({ status: 'error', message: 'Voting duration for this election has expired.' });
     }
 
@@ -116,6 +129,15 @@ router.post('/cast', verifyAuth, async (req, res) => {
 
     console.log('[Cast Vote] Vote cast successfully:', { voterId, candidateId, position, choice: choice || 'yes' });
 
+    // --- INVALIDATE ALL RELATED CACHES FOR REAL-TIME ACCURACY ---
+    cache.invalidate(`votes:voted-elections:${voterId}`);
+    cache.invalidate(`elections:report:${electionId}`);
+    cache.invalidate(`elections:report:pdf:${electionId}`);
+    cache.invalidate(`admin:dashboard`);
+    cache.invalidate(`admin:dashboard-full`);
+    cache.invalidate(`admin:live-votes`);
+    cache.invalidatePrefix(`candidates:election:${electionId}`);
+
     res.status(200).json({ 
       status: 'success', 
       message: 'Vote cast successfully',
@@ -123,6 +145,9 @@ router.post('/cast', verifyAuth, async (req, res) => {
     });
 
   } catch (error) {
+    if (error.message === 'ELECTION_NOT_FOUND') {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
     if (error.message === 'DUPLICATE_VOTE') {
       console.log('[Cast Vote] User already voted.');
       await logFraudAlert('DUPLICATE_VOTE', 'Voter tried to vote twice in the same category', { 
@@ -142,15 +167,21 @@ router.post('/cast', verifyAuth, async (req, res) => {
 router.get('/verify/:auditTxId', async (req, res) => {
   try {
     const { auditTxId } = req.params;
-    const auditDoc = await db.collection('audit_logs').doc(auditTxId).get();
+    const cacheKey = `votes:verify:${auditTxId}`;
 
-    if (!auditDoc.exists) {
+    const auditData = await cache.getOrSet(cacheKey, async () => {
+      const auditDoc = await db.collection('audit_logs').doc(auditTxId).get();
+      if (!auditDoc.exists) {
+        throw new Error('NOT_FOUND');
+      }
+      return auditDoc.data();
+    }, 60000); // Verify requests can be cached for a long time (1 minute)
+
+    res.status(200).json({ status: 'success', data: auditData });
+  } catch (error) {
+    if (error.message === 'NOT_FOUND') {
       return res.status(404).json({ status: 'error', message: 'Verification record not found' });
     }
-
-    // Return the anonymized audit record
-    res.status(200).json({ status: 'success', data: auditDoc.data() });
-  } catch (error) {
     console.error('Error verifying vote:', error);
     res.status(500).json({ status: 'error', message: 'Failed to verify vote' });
   }
