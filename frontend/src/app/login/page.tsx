@@ -17,6 +17,7 @@ export default function LoginPage() {
   // Step 2: OTP
   const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
   const [otpEmail, setOtpEmail] = useState('');
+  const [otpPhone, setOtpPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -49,6 +50,7 @@ export default function LoginPage() {
       const result = await login(formattedEmail, password, role);
       if (result?.otpRequired && result.email) {
         setOtpEmail(result.email);
+        setOtpPhone(result.phone || '');
         setStep('otp');
       }
     } catch (err: any) {
@@ -133,7 +135,9 @@ export default function LoginPage() {
           <p className="auth-subtitle">
             {step === 'credentials'
               ? 'Sign in to review credentials and submit your ballot.'
-              : `Enter the 6-digit code sent to ${otpEmail}`}
+              : otpPhone
+                ? `Enter the 6-digit SMS code sent to your phone (${otpPhone})`
+                : `Enter the 6-digit code sent to ${otpEmail}`}
           </p>
         </div>
 
@@ -238,7 +242,7 @@ export default function LoginPage() {
                 <CheckCircle2 size={30} style={{ color: 'var(--color-primary)' }} />
               </div>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                Check your phone — a 6-digit SMS code has been sent. It expires in <strong>10 minutes</strong>.
+                Check your phone{otpPhone ? ` (${otpPhone})` : ''} — a 6-digit SMS code has been sent. It expires in <strong>10 minutes</strong>.
               </p>
             </div>
 

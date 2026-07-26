@@ -17,8 +17,8 @@ export interface UserProfile {
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
-  login: (email: string, password?: string, role?: 'voter' | 'admin') => Promise<{ otpRequired?: boolean; email?: string }>;
-  register: (studentId: string, email: string, name: string, password?: string, phone?: string, faceImage?: string) => Promise<{ otpRequired?: boolean; email?: string }>;
+  login: (email: string, password?: string, role?: 'voter' | 'admin') => Promise<{ otpRequired?: boolean; email?: string; phone?: string }>;
+  register: (studentId: string, email: string, name: string, password?: string, phone?: string, faceImage?: string) => Promise<{ otpRequired?: boolean; email?: string; phone?: string }>;
 
   verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, [mounted]);
 
-  const login = async (email: string, password?: string, role: 'voter' | 'admin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string }> => {
+  const login = async (email: string, password?: string, role: 'voter' | 'admin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string; phone?: string }> => {
     setLoading(true);
     try {
       if (role === 'admin') {
@@ -89,9 +89,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push('/admin/dashboard');
         return {};
       } else {
-        const res = await apiRequest<{ status: string; data?: UserProfile; token?: string; email?: string }>('/auth/login', 'POST', { email, password });
+        const res = await apiRequest<{ status: string; data?: UserProfile; token?: string; email?: string; phone?: string }>('/auth/login', 'POST', { email, password });
         if (res.status === 'otp_required') {
-          return { otpRequired: true, email: res.email };
+          return { otpRequired: true, email: res.email, phone: res.phone };
         }
         if (res.status === 'success' && res.token) {
           localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);
@@ -110,10 +110,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (studentId: string, email: string, name: string, password?: string, phone?: string, faceImage?: string): Promise<{ otpRequired?: boolean; email?: string }> => {
+  const register = async (studentId: string, email: string, name: string, password?: string, phone?: string, faceImage?: string): Promise<{ otpRequired?: boolean; email?: string; phone?: string }> => {
     setLoading(true);
     try {
-      const res = await apiRequest<{ status: string; email?: string; token?: string; data?: UserProfile }>('/auth/register', 'POST', {
+      const res = await apiRequest<{ status: string; email?: string; phone?: string; token?: string; data?: UserProfile }>('/auth/register', 'POST', {
         studentId,
         email,
         name,
@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         faceImage
       });
       if (res.status === 'otp_required') {
-        return { otpRequired: true, email: res.email };
+        return { otpRequired: true, email: res.email, phone: res.phone };
       }
       if (res.status === 'success') {
         return {};

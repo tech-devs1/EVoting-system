@@ -1,4 +1,8 @@
 import withPWAInit from '@ducanh2912/next-pwa';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const withPWA = withPWAInit({
   dest: 'public',
@@ -7,7 +11,8 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {},
+  // outputFileTracingRoot silences the "multiple lockfiles" warning
+  outputFileTracingRoot: path.join(__dirname, '../'),
 };
 
 export default withPWA(nextConfig);
