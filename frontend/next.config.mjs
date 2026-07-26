@@ -11,7 +11,10 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // outputFileTracingRoot silences the "multiple lockfiles" warning
+  // Required for Vercel (Next.js 16 uses Turbopack by default).
+  // Silences the "webpack config but no turbopack config" build error.
+  turbopack: {},
+  // outputFileTracingRoot silences the "multiple lockfiles" warning locally
   outputFileTracingRoot: path.join(__dirname, '../'),
 };
 
