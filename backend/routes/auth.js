@@ -280,7 +280,10 @@ router.post('/login', async (req, res) => {
     res.status(200).json({ status: 'otp_required', email: userData.email, phone: maskedPhone, message: `OTP sent to ${maskedPhone}. Please verify.` });
   } catch (error) {
     console.error('Error logging in:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to authenticate user.' });
+    const errorMsg = error.message && error.message.includes('Arkesel') 
+      ? error.message 
+      : 'Failed to authenticate user.';
+    res.status(500).json({ status: 'error', message: errorMsg });
   }
 });
 
