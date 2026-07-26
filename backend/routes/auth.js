@@ -7,7 +7,7 @@ const { verifyAuth } = require('../middleware/auth');
 const { logFraudAlert } = require('../services/fraud');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
-const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY || '';
+const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY || 'aU1RbmFFbXFZTUxjSmp1ZmZSSFY';
 const ARKESEL_SENDER_ID = process.env.ARKESEL_SENDER_ID || 'COMPSSA';
 
 // Helper: Calculate Cosine Distance between two vectors
@@ -28,7 +28,7 @@ function cosineDistance(vec1, vec2) {
 async function sendOtpViaSMS(phoneNumber, otp) {
   if (!ARKESEL_API_KEY) {
     console.warn('[Arkesel] No API key set — OTP not sent via SMS. Code:', otp);
-    return;
+    throw new Error('Arkesel SMS configuration error: API key is missing');
   }
 
   // Normalize phone number to include country code
@@ -48,30 +48,43 @@ async function sendOtpViaSMS(phoneNumber, otp) {
 
   console.log(`[Arkesel] Sending OTP ${otp} to ${formattedPhone} using Sender ID ${ARKESEL_SENDER_ID}`);
 
-  const res = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
-    method: 'POST',
-    headers: {
-      'api-key': ARKESEL_API_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
+  try {
+    const res = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
+      method: 'POST',
+      headers: {
+        'api-key': ARKESEL_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000) // Timeout after 8s so it never hangs
+    });
 
-  const responseData = await res.json();
-  console.log('[Arkesel] Response:', JSON.stringify(responseData));
+    const responseText = await res.text();
+    console.log('[Arkesel] Raw Response:', responseText);
 
-  if (!res.ok || responseData.status !== 'success') {
-    throw new Error('Arkesel SMS error: ' + (responseData.message || JSON.stringify(responseData)));
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      throw new Error(`Arkesel returned non-JSON response: ${responseText.substring(0, 100)}`);
+    }
+
+    if (!res.ok || responseData.status !== 'success') {
+      throw new Error('Arkesel API returned error: ' + (responseData.message || responseText));
+    }
+
+    return responseData;
+  } catch (fetchErr) {
+    console.error('[Arkesel Fetch Error]:', fetchErr);
+    throw new Error(`Failed to communicate with Arkesel SMS Gateway: ${fetchErr.message}`);
   }
-
-  return responseData;
 }
 
 // Helper: Send a plain SMS via Arkesel (for password reset codes)
 async function sendSmsViaArkesel(phoneNumber, message) {
   if (!ARKESEL_API_KEY) {
     console.warn('[Arkesel] No API key set — SMS not sent.');
-    return;
+    throw new Error('Arkesel SMS configuration error: API key is missing');
   }
 
   let formattedPhone = phoneNumber.replace(/\s+/g, '');
@@ -87,20 +100,33 @@ async function sendSmsViaArkesel(phoneNumber, message) {
     recipients: [formattedPhone]
   };
 
-  const res = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
-    method: 'POST',
-    headers: {
-      'api-key': ARKESEL_API_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
+  try {
+    const res = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
+      method: 'POST',
+      headers: {
+        'api-key': ARKESEL_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000) // Timeout after 8s so it never hangs
+    });
 
-  const responseData = await res.json();
-  console.log('[Arkesel] Response:', JSON.stringify(responseData));
+    const responseText = await res.text();
+    console.log('[Arkesel] Raw Response (plain SMS):', responseText);
 
-  if (!res.ok || responseData.status !== 'success') {
-    throw new Error('Arkesel SMS error: ' + (responseData.message || JSON.stringify(responseData)));
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      throw new Error(`Arkesel returned non-JSON response: ${responseText.substring(0, 100)}`);
+    }
+
+    if (!res.ok || responseData.status !== 'success') {
+      throw new Error('Arkesel API returned error: ' + (responseData.message || responseText));
+    }
+  } catch (fetchErr) {
+    console.error('[Arkesel Fetch Error (plain SMS)]:', fetchErr);
+    throw new Error(`Failed to communicate with Arkesel SMS Gateway: ${fetchErr.message}`);
   }
 }
 
