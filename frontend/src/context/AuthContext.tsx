@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, [mounted]);
 
-  const login = async (email: string, password?: string, role: 'voter' | 'admin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string; phone?: string }> => {
+  const login = async (email: string, password?: string, role: 'voter' | 'admin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }> => {
     setLoading(true);
     try {
       if (role === 'admin') {
