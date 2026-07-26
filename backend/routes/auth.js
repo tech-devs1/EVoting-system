@@ -579,4 +579,34 @@ router.delete('/cleanup-incomplete', async (req, res) => {
   }
 });
 
+// Test SMS sending directly from browser
+router.get('/test-sms', async (req, res) => {
+  try {
+    const { phone } = req.query;
+    if (!phone) {
+      return res.status(400).json({ status: 'error', message: 'Phone query parameter is required. E.g. /api/auth/test-sms?phone=0241234567' });
+    }
+
+    const testOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(`[Test SMS] Attempting to send test OTP ${testOtp} to ${phone}`);
+    
+    const responseData = await sendOtpViaSMS(phone, testOtp);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Arkesel SMS API call completed successfully',
+      phone_input: phone,
+      otp_sent: testOtp,
+      arkesel_response: responseData
+    });
+  } catch (err) {
+    console.error('[Test SMS] Failed:', err);
+    res.status(500).json({
+      status: 'error',
+      message: err.message || 'Test SMS failed',
+      stack: err.stack
+    });
+  }
+});
+
 module.exports = router;
