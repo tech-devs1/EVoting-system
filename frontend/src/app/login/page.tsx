@@ -106,7 +106,7 @@ export default function LoginPage() {
     setError('');
     try {
       await apiRequest('/auth/resend-otp', 'POST', { email: otpEmail });
-      setResendMsg('A new code has been sent to your email.');
+      setResendMsg('A new code has been sent to your phone via SMS.');
       setOtp(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
     } catch (err: any) {
@@ -238,10 +238,7 @@ export default function LoginPage() {
                 <CheckCircle2 size={30} style={{ color: 'var(--color-primary)' }} />
               </div>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                Check your inbox — code expires in <strong>10 minutes</strong>
-              </p>
-              <p style={{ fontSize: '11px', color: 'var(--color-warning, #f59e0b)', marginTop: 'var(--space-2)', fontWeight: 500 }}>
-                ⚠️ Don't see the code? Check your <strong>Spam or Junk folder</strong>.
+                Check your phone — a 6-digit SMS code has been sent. It expires in <strong>10 minutes</strong>.
               </p>
             </div>
 

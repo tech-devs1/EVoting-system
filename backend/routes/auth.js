@@ -7,6 +7,7 @@ const { verifyAuth } = require('../middleware/auth');
 const { logFraudAlert } = require('../services/fraud');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
+const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY || '';
 
 // Helper: Calculate Cosine Distance between two vectors
 function cosineDistance(vec1, vec2) {
@@ -22,36 +23,93 @@ function cosineDistance(vec1, vec2) {
   return 1 - (dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2)));
 }
 
-// Shared helper: send OTP via EmailJS
-async function sendOtpViaEmailJS(email, name, otp) {
+// Helper: Send OTP via Arkesel SMS API v2
+async function sendOtpViaSMS(phoneNumber, otp) {
+  if (!ARKESEL_API_KEY) {
+    console.warn('[Arkesel] No API key set — OTP not sent via SMS. Code:', otp);
+    return;
+  }
+
+  // Normalize phone number to include country code
+  let formattedPhone = phoneNumber.replace(/\s+/g, '');
+  if (formattedPhone.startsWith('0')) {
+    formattedPhone = '+233' + formattedPhone.substring(1);
+  } else if (!formattedPhone.startsWith('+')) {
+    formattedPhone = '+233' + formattedPhone;
+  }
+
   const payload = {
-    service_id: process.env.EMAILJS_SERVICE_ID,
-    template_id: process.env.EMAILJS_TEMPLATE_ID,
-    user_id: process.env.EMAILJS_PUBLIC_KEY,
-    accessToken: process.env.EMAILJS_PRIVATE_KEY,
-    template_params: {
-      to_name: name || 'Student',
-      to_email: email,
-      reset_code: otp
-    }
+    expiry: 10,
+    length: 6,
+    medium: 'sms',
+    message: `Your COMPSSA verification code is %otp_code%. It expires in 10 minutes. Do not share this code.`,
+    number: formattedPhone,
+    sender_id: 'COMPSSA',
+    type: 'numeric'
   };
-  const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+
+  console.log(`[Arkesel] Sending OTP to ${formattedPhone}`);
+
+  const res = await fetch('https://sms.arkesel.com/api/v2/otp/send', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'api-key': ARKESEL_API_KEY,
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify(payload)
   });
+
+  const responseData = await res.json();
+  console.log('[Arkesel] Response:', JSON.stringify(responseData));
+
+  if (!res.ok || responseData.code !== '1000') {
+    throw new Error('Arkesel SMS error: ' + (responseData.message || JSON.stringify(responseData)));
+  }
+
+  return responseData;
+}
+
+// Helper: Send a plain SMS via Arkesel (for password reset codes)
+async function sendSmsViaArkesel(phoneNumber, message) {
+  if (!ARKESEL_API_KEY) {
+    console.warn('[Arkesel] No API key set — SMS not sent.');
+    return;
+  }
+
+  let formattedPhone = phoneNumber.replace(/\s+/g, '');
+  if (formattedPhone.startsWith('0')) {
+    formattedPhone = '+233' + formattedPhone.substring(1);
+  } else if (!formattedPhone.startsWith('+')) {
+    formattedPhone = '+233' + formattedPhone;
+  }
+
+  const payload = {
+    sender: 'COMPSSA',
+    message: message,
+    recipients: [formattedPhone]
+  };
+
+  const res = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
+    method: 'POST',
+    headers: {
+      'api-key': ARKESEL_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
   if (!res.ok) {
     const err = await res.text();
-    throw new Error('EmailJS error: ' + err);
+    throw new Error('Arkesel SMS error: ' + err);
   }
 }
 
-// Generate and store OTP for a user doc, then email it
-async function generateAndSendOtp(userDocRef, email, name) {
+// Generate and store OTP for a user doc, then send via SMS
+async function generateAndSendOtp(userDocRef, phoneNumber, name) {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
   await userDocRef.update({ otp, otpExpiry: expiry });
-  await sendOtpViaEmailJS(email, name, otp);
+  await sendOtpViaSMS(phoneNumber, otp);
   return otp;
 }
 
@@ -87,17 +145,20 @@ router.post('/verify-student', async (req, res) => {
     if (studentData.password) {
       // Try to send a new OTP so they can complete verification
       try {
-        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
-      } catch (emailErr) {
-        console.error('OTP email failed for incomplete registration (user can resend):', emailErr.message || emailErr);
+        if (studentData.phone) {
+          await generateAndSendOtp(studentDocRef, studentData.phone, studentData.name);
+        }
+      } catch (smsErr) {
+        console.error('OTP SMS failed for incomplete registration (user can resend):', smsErr.message || smsErr);
       }
       return res.status(200).json({
         status: 'incomplete_registration',
         data: {
           name: studentData.name,
-          email: studentData.email
+          email: studentData.email,
+          phone: studentData.phone || ''
         },
-        message: 'You have an incomplete registration. A verification code has been sent to your email.'
+        message: 'You have an incomplete registration. A verification code has been sent to your phone.'
       });
     }
 
@@ -117,10 +178,16 @@ router.post('/verify-student', async (req, res) => {
  // Register a user securely
 router.post('/register', async (req, res) => {
   try {
-    const { studentId, email, name, password, faceImage } = req.body;
+    const { studentId, email, name, password, phone, faceImage } = req.body;
 
-    if (!studentId || !email || !password) {
-      return res.status(400).json({ status: 'error', message: 'Missing required fields' });
+    if (!studentId || !email || !password || !phone) {
+      return res.status(400).json({ status: 'error', message: 'Missing required fields (studentId, email, password, phone)' });
+    }
+
+    // Phone number validation (Ghana format)
+    const phoneClean = phone.replace(/\s+/g, '');
+    if (!/^(\+233|0)\d{9}$/.test(phoneClean)) {
+      return res.status(400).json({ status: 'error', message: 'Please enter a valid Ghana phone number (e.g. 0241234567 or +233241234567)' });
     }
 
     // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
@@ -150,15 +217,15 @@ router.post('/register', async (req, res) => {
     }
 
     let faceEmbedding = null;
-    // Face verification and embedding calculation is removed
 
-    // Store credentials but do NOT mark as registered yet; require OTP verification first
+    // Store credentials and phone number
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await studentDocRef.set({
       isRegistered: true,
       password: hashedPassword,
       name: name || studentData.name,
+      phone: phoneClean,
       uid: studentId,
       role: 'voter',
       faceImage: faceImage || '',
@@ -202,10 +269,15 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
     }
 
-    // Send OTP — token is issued only after OTP verification
-    await generateAndSendOtp(db.collection('users').doc(userDoc.id), userData.email, userData.name);
+    // Send OTP via SMS — token is issued only after OTP verification
+    if (!userData.phone) {
+      return res.status(400).json({ status: 'error', message: 'No phone number on file. Please contact admin.' });
+    }
+    await generateAndSendOtp(db.collection('users').doc(userDoc.id), userData.phone, userData.name);
 
-    res.status(200).json({ status: 'otp_required', email: userData.email, message: 'OTP sent to your school email. Please verify.' });
+    // Mask the phone number for display
+    const maskedPhone = userData.phone.replace(/(.{4})(.*)(.{3})/, '$1****$3');
+    res.status(200).json({ status: 'otp_required', email: userData.email, phone: maskedPhone, message: `OTP sent to ${maskedPhone}. Please verify.` });
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ status: 'error', message: 'Failed to authenticate user.' });
@@ -275,9 +347,13 @@ router.post('/resend-otp', async (req, res) => {
 
     const userDoc = usersSnapshot.docs[0];
     const userData = userDoc.data();
-    await generateAndSendOtp(db.collection('users').doc(userDoc.id), userData.email, userData.name);
+    if (!userData.phone) {
+      return res.status(400).json({ status: 'error', message: 'No phone number on file. Please contact admin.' });
+    }
+    await generateAndSendOtp(db.collection('users').doc(userDoc.id), userData.phone, userData.name);
 
-    res.status(200).json({ status: 'success', message: 'A new OTP has been sent to your email.' });
+    const maskedPhone = userData.phone.replace(/(.{4})(.*)(.{3})/, '$1****$3');
+    res.status(200).json({ status: 'success', message: `A new OTP has been sent to ${maskedPhone}.` });
   } catch (error) {
     console.error('Error resending OTP:', error);
     res.status(500).json({ status: 'error', message: error.message || 'Failed to resend OTP.' });
@@ -354,32 +430,21 @@ router.post('/forgot-password', async (req, res) => {
       resetCodeExpiry: expiry
     });
 
-    // Send Email via EmailJS API
-    const emailJsPayload = {
-      service_id: process.env.EMAILJS_SERVICE_ID,
-      template_id: process.env.EMAILJS_TEMPLATE_ID,
-      user_id: process.env.EMAILJS_PUBLIC_KEY,
-      accessToken: process.env.EMAILJS_PRIVATE_KEY,
-      template_params: {
-        to_name: userData.name || 'Student',
-        to_email: email,
-        reset_code: resetCode
-      }
-    };
-
-    const emailRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(emailJsPayload)
-    });
-
-    if (!emailRes.ok) {
-      const errText = await emailRes.text();
-      console.error('EmailJS Error:', errText);
-      return res.status(500).json({ status: 'error', message: 'Failed to send reset email' });
+    // Send reset code via SMS using Arkesel
+    if (!userData.phone) {
+      return res.status(400).json({ status: 'error', message: 'No phone number on file for this account. Please contact admin.' });
     }
 
-    res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
+    const smsMessage = `Your COMPSSA password reset code is ${resetCode}. It expires in 15 minutes. Do not share this code.`;
+    try {
+      await sendSmsViaArkesel(userData.phone, smsMessage);
+    } catch (smsErr) {
+      console.error('Arkesel SMS Error:', smsErr.message || smsErr);
+      return res.status(500).json({ status: 'error', message: 'Failed to send reset code via SMS' });
+    }
+
+    const maskedPhone = userData.phone.replace(/(.{4})(.*)(.{3})/, '$1****$3');
+    res.status(200).json({ status: 'success', message: `A reset code has been sent to ${maskedPhone}.` });
   } catch (error) {
     console.error('Error in forgot-password:', error);
     res.status(500).json({ status: 'error', message: 'Server error' });

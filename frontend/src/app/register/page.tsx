@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  ArrowLeft
+  ArrowLeft,
+  Phone
 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -33,6 +34,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
   const [otpEmail, setOtpEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendMsg, setResendMsg] = useState('');
@@ -101,6 +103,12 @@ export default function RegisterPage() {
       setError('Name and Email are required');
       return;
     }
+    // Validate phone number (Ghana format)
+    const phoneClean = phone.replace(/\s+/g, '');
+    if (!phoneClean || !/^(\+233|0)\d{9}$/.test(phoneClean)) {
+      setError('Please enter a valid Ghana phone number (e.g. 0241234567 or +233241234567)');
+      return;
+    }
     setError('');
     setCurrentStep(3);
   };
@@ -124,7 +132,7 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      const result = await register(studentId, email, name, password, '');
+      const result = await register(studentId, email, name, password, phone, '');
       if (result?.otpRequired && result.email) {
         setOtpEmail(result.email);
         setCurrentStep(4); // Skip to OTP verification step
@@ -184,7 +192,7 @@ export default function RegisterPage() {
     setResendMsg('');
     try {
       await apiRequest('/auth/resend-otp', 'POST', { email: otpEmail });
-      setResendMsg('A new code has been sent to your email.');
+      setResendMsg('A new code has been sent to your phone via SMS.');
       setOtp(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
       // start 60‑second cooldown
@@ -345,6 +353,29 @@ export default function RegisterPage() {
                   />
                 </div>
               </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="reg-phone">Phone Number (for OTP verification)</label>
+                <div className="form-input-container">
+                  <Phone size={18} className="form-input-icon" />
+                  <input 
+                    type="tel" 
+                    id="reg-phone" 
+                    className="form-input form-input-with-icon" 
+                    placeholder="e.g. 0241234567" 
+                    required 
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+                <p style={{ 
+                  marginTop: 'var(--space-2)', 
+                  fontSize: 'var(--text-xs)', 
+                  color: 'var(--text-tertiary)',
+                  lineHeight: '1.4' 
+                }}>
+                  * Enter your Ghana phone number. OTP verification codes will be sent here via SMS.
+                </p>
+              </div>
               <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
                 <button type="button" className="btn btn-secondary btn-full" onClick={() => setCurrentStep(1)}>Back</button>
                 <button type="submit" className="btn btn-primary btn-full">Continue</button>
@@ -462,10 +493,7 @@ export default function RegisterPage() {
                   <CheckCircle2 size={30} style={{ color: 'var(--color-primary)' }} />
                 </div>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                  A 6-digit code was sent to <strong>{otpEmail}</strong>.<br />Enter it below to verify your account.
-                </p>
-                <p style={{ fontSize: '11px', color: 'var(--color-warning, #f59e0b)', marginTop: 'var(--space-2)', fontWeight: 500 }}>
-                  ⚠️ Don't see it? Please check your <strong>Spam or Junk folder</strong>.
+                  A 6-digit verification code was sent to your phone via SMS.<br />Enter it below to verify your account.
                 </p>
               </div>
 
