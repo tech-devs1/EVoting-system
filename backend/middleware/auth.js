@@ -1,4 +1,4 @@
-Const { admin } = require('../services/firebase');
+const { admin } = require('../services/firebase');
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
