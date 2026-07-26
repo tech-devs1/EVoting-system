@@ -23,9 +23,9 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
     const activeElectionsCount = activeElectionsSnap.data().count;
     const completedElectionsCount = completedElectionsSnap.data().count;
 
-    // 3. Selective document reads for user roles (~1 Read per non-admin check)
-    const allUsersSnap = await db.collection('users').select('role').get();
-    const totalStudents = allUsersSnap.docs.filter(d => d.data().role !== 'admin').length;
+    // 3. Count non-admin students using count aggregation (1 Read)
+    const totalStudentsSnap = await db.collection('users').where('role', '!=', 'admin').count().get();
+    const totalStudents = totalStudentsSnap.data().count;
 
     // 4. Unique voters count using count aggregation
     const uniqueVotersSnap = await db.collection('voted_voters').count().get();
@@ -175,38 +175,74 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
     let skipped = 0;
     const unsuccessful = [];
 
-    for (const voter of voters) {
+    // Filter out initially invalid voters to avoid query overhead
+    const validVoters = voters.filter(voter => {
       if (!voter.id || !voter.name) {
         unsuccessful.push({
           ...voter,
           reason: 'Missing ID or Name'
         });
         skipped++;
-        continue;
+        return false;
       }
+      return true;
+    });
 
-      const docRef = usersRef.doc(voter.id);
-      const existing = await docRef.get();
-      if (existing.exists) {
+    // Chunk check for duplicates in batches of 30 to stay within Firestore limits
+    const existingIds = new Set();
+    const chunkSize = 30;
+    for (let i = 0; i < validVoters.length; i += chunkSize) {
+      const chunk = validVoters.slice(i, i + chunkSize).map(v => v.id);
+      if (chunk.length > 0) {
+        const snapshot = await usersRef.where('studentId', 'in', chunk).get();
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data && data.studentId) {
+            existingIds.add(data.studentId);
+          }
+        });
+      }
+    }
+
+    // Process valid voters using Firestore Batched Writes (500 operations max per batch)
+    let batch = db.batch();
+    let opCount = 0;
+
+    for (const voter of validVoters) {
+      if (existingIds.has(voter.id)) {
         unsuccessful.push({
           ...voter,
           reason: 'Student ID already exists in database'
         });
         skipped++;
-      } else {
-        await docRef.set({
-          name: voter.name,
-          studentId: voter.id,
-          email: voter.email,
-          programme: voter.programme || '',
-          level: voter.level || '',
-          role: 'voter',
-          isRegistered: false,
-          uploadId: uploadId,
-          createdAt: Date.now()
-        });
-        added++;
+        continue;
       }
+
+      const docRef = usersRef.doc(voter.id);
+      batch.set(docRef, {
+        name: voter.name,
+        studentId: voter.id,
+        email: voter.email,
+        programme: voter.programme || '',
+        level: voter.level || '',
+        role: 'voter',
+        isRegistered: false,
+        uploadId: uploadId,
+        createdAt: Date.now()
+      });
+
+      added++;
+      opCount++;
+
+      if (opCount === 500) {
+        await batch.commit();
+        batch = db.batch();
+        opCount = 0;
+      }
+    }
+
+    if (opCount > 0) {
+      await batch.commit();
     }
 
     await uploadRef.set({

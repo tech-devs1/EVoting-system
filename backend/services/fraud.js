@@ -32,12 +32,13 @@ async function checkVoteAnomaly(electionId) {
   const oneMinuteAgo = Date.now() - 60000;
   
   try {
-    const recentVotes = await db.collection('votes')
+    const recentCountSnap = await db.collection('votes')
       .where('electionId', '==', electionId)
-      // Note: Firestore requires composite index for this query, mocked for now
+      .where('timestamp', '>', oneMinuteAgo)
+      .count()
       .get();
       
-    const recentCount = recentVotes.docs.filter(doc => doc.data().timestamp > oneMinuteAgo).length;
+    const recentCount = recentCountSnap.data().count;
 
     if (recentCount > 1000) {
       await logFraudAlert('HIGH_VOLUME_ANOMALY', `Unusual voting volume detected for election ${electionId}`, { count: recentCount });

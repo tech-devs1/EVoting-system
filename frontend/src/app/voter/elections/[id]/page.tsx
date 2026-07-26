@@ -55,7 +55,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
       }
     }
     fetchData();
-    const interval = setInterval(fetchData, 10000);
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [electionId]);
 
@@ -282,16 +282,18 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                         </div>
                       ) : null}
 
-                      <div className="candidate-actions" style={{ marginTop: 'var(--space-2)' }}>
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-sm cand-expand-profile-btn"
-                          onClick={(e) => openProfileModal(cand, e)}
-                          style={{ width: '100%' }}
-                        >
-                          Read Manifesto
-                        </button>
-                      </div>
+                      {cand.manifesto && cand.manifesto.trim() !== "" && (
+                        <div className="candidate-actions" style={{ marginTop: 'var(--space-2)' }}>
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm cand-expand-profile-btn"
+                            onClick={(e) => openProfileModal(cand, e)}
+                            style={{ width: '100%' }}
+                          >
+                            Read Manifesto
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

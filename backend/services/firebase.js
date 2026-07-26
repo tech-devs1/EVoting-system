@@ -67,42 +67,79 @@ class MockFirestore {
     };
   }
 
+  batch() {
+    const ops = [];
+    return {
+      set: (docRef, data) => {
+        ops.push({ type: 'set', ref: docRef, data });
+      },
+      update: (docRef, data) => {
+        ops.push({ type: 'update', ref: docRef, data });
+      },
+      delete: (docRef) => {
+        ops.push({ type: 'delete', ref: docRef });
+      },
+      commit: async () => {
+        for (const op of ops) {
+          if (op.type === 'set') {
+            await op.ref.set(op.data);
+          } else if (op.type === 'update') {
+            await op.ref.update(op.data);
+          } else if (op.type === 'delete') {
+            await op.ref.delete();
+          }
+        }
+        return true;
+      }
+    };
+  }
+
   collection(name) {
     if (!this.collections[name]) {
       this.collections[name] = new Map();
     }
     const collectionMap = this.collections[name];
 
+    const getDocRef = (docId) => ({
+      id: docId,
+      set: async (data) => { collectionMap.set(docId, { ...data, id: docId }); return data; },
+      get: async () => {
+        const data = collectionMap.get(docId);
+        return { exists: !!data, data: () => data, id: docId, ref: getDocRef(docId) };
+      },
+      update: async (data) => {
+        const existing = collectionMap.get(docId) || {};
+        collectionMap.set(docId, { ...existing, ...data });
+        return data;
+      },
+      delete: async () => { collectionMap.delete(docId); return true; }
+    });
+
     return {
       doc: (id) => {
         const docId = id || Math.random().toString(36).substring(2);
-        return {
-          id: docId,
-          set: async (data) => { collectionMap.set(docId, { ...data, id: docId }); return data; },
-          get: async () => {
-            const data = collectionMap.get(docId);
-            return { exists: !!data, data: () => data, id: docId };
-          },
-          update: async (data) => {
-            const existing = collectionMap.get(docId) || {};
-            collectionMap.set(docId, { ...existing, ...data });
-            return data;
-          },
-          delete: async () => { collectionMap.delete(docId); return true; }
-        };
+        return getDocRef(docId);
       },
       add: async (data) => {
         const docId = Math.random().toString(36).substring(2);
         collectionMap.set(docId, { ...data, id: docId });
-        return { id: docId };
+        return { id: docId, ref: getDocRef(docId) };
       },
       get: async () => {
         const docs = Array.from(collectionMap.values()).map(data => ({
           id: data.id,
           data: () => data,
-          exists: true
+          exists: true,
+          ref: getDocRef(data.id)
         }));
-        return { docs, empty: docs.length === 0, forEach: (cb) => docs.forEach(cb) };
+        return { docs, empty: docs.length === 0, size: docs.length, forEach: (cb) => docs.forEach(cb) };
+      },
+      count: function() {
+        return {
+          get: async () => ({
+            data: () => ({ count: collectionMap.size })
+          })
+        };
       },
       where: function(field, operator, value) {
         const filteredDocs = Array.from(collectionMap.values()).filter(doc => {
@@ -110,17 +147,32 @@ class MockFirestore {
           if (operator === '!=') return doc[field] !== value;
           if (operator === '>') return doc[field] > value;
           if (operator === '<') return doc[field] < value;
+          if (operator === 'in') return Array.isArray(value) && value.includes(doc[field]);
           return false;
         });
 
         const buildQuery = (docs) => ({
           get: async () => {
-            const result = docs.map(data => ({ id: data.id, data: () => data, exists: true }));
-            return { docs: result, empty: result.length === 0, forEach: (cb) => result.forEach(cb) };
+            const result = docs.map(data => ({ id: data.id, data: () => data, exists: true, ref: getDocRef(data.id) }));
+            return { docs: result, empty: result.length === 0, size: result.length, forEach: (cb) => result.forEach(cb) };
           },
-          where: (f2, op2, v2) => buildQuery(docs.filter(doc => op2 === '==' ? doc[f2] === v2 : false)),
+          where: (f2, op2, v2) => buildQuery(docs.filter(doc => {
+            if (op2 === '==') return doc[f2] === v2;
+            if (op2 === '!=') return doc[f2] !== v2;
+            if (op2 === '>') return doc[f2] > v2;
+            if (op2 === '<') return doc[f2] < v2;
+            if (op2 === 'in') return Array.isArray(v2) && v2.includes(doc[f2]);
+            return false;
+          })),
           orderBy: function() { return this; },
           limit: function() { return this; },
+          count: function() {
+            return {
+              get: async () => ({
+                data: () => ({ count: docs.length })
+              })
+            };
+          }
         });
 
         return buildQuery(filteredDocs);

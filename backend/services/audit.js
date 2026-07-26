@@ -20,24 +20,16 @@ function generateHash(data) {
  * @returns {Promise<string>} The transaction/audit ID
  */
 async function recordVoteAudit(voteData, electionId, meta = {}) {
-  // 1. Get the last hash for this election to build the chain
   const auditRef = db.collection('audit_logs');
-  
-  // Since mock or firestore, we might not have a reliable orderBy, 
-  // so we'll just get all and find the latest based on timestamp.
-  const auditDocs = await auditRef.where('electionId', '==', electionId).get();
+  const latestAuditSnap = await auditRef
+    .where('electionId', '==', electionId)
+    .orderBy('timestamp', 'desc')
+    .limit(1)
+    .get();
   
   let previousHash = 'GENESIS_HASH';
-  let latestTimestamp = 0;
-
-  if (!auditDocs.empty) {
-    auditDocs.forEach(doc => {
-      const data = doc.data();
-      if (data.timestamp > latestTimestamp) {
-        latestTimestamp = data.timestamp;
-        previousHash = data.currentHash;
-      }
-    });
+  if (!latestAuditSnap.empty) {
+    previousHash = latestAuditSnap.docs[0].data().currentHash;
   }
 
   // 2. Prepare current data string
