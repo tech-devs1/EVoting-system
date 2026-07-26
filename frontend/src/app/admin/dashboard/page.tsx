@@ -247,8 +247,8 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
-    // Poll stats and charts data every 5 seconds
-    intervalRef.current = setInterval(fetchDashboardData, 5000);
+    // Poll stats and charts data every 15 seconds (optimized for real-time updates while saving Firebase reads)
+    intervalRef.current = setInterval(fetchDashboardData, 15000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -279,7 +279,7 @@ export default function AdminDashboardPage() {
             <span className="kpi-label">Total Elections</span>
             <span className="kpi-value">{stats.totalElections}</span>
             <div className="kpi-trend up" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-              <TrendingUp size={12} /> {stats.totalElections > 0 ? (((stats.completedElectionsCount || 0) / stats.totalElections) * 100).toFixed(0) : 0}% completed
+              <TrendingUp size={12} /> {stats.totalElections > 0 ? Math.min(100, Math.round(((stats.completedElectionsCount || 0) / stats.totalElections) * 100)) : 0}% completed
             </div>
           </div>
           <div className="kpi-icon-wrapper purple">
@@ -292,7 +292,7 @@ export default function AdminDashboardPage() {
             <span className="kpi-label">Active Polls</span>
             <span className="kpi-value">{activeElectionsCount}</span>
             <div className="kpi-trend up" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-              <Check size={12} /> {stats.totalElections > 0 ? (((stats.activeElectionsCount || 0) / stats.totalElections) * 100).toFixed(0) : 0}% of all polls
+              <Check size={12} /> {stats.totalElections > 0 ? Math.min(100, Math.round(((stats.activeElectionsCount || 0) / stats.totalElections) * 100)) : 0}% of all polls
             </div>
           </div>
           <div className="kpi-icon-wrapper blue">
@@ -305,7 +305,7 @@ export default function AdminDashboardPage() {
             <span className="kpi-label">Registered Voters</span>
             <span className="kpi-value">{stats.totalVoters.toLocaleString()}</span>
             <div className="kpi-trend up" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-              <TrendingUp size={12} /> {stats.totalStudents && stats.totalStudents > 0 ? ((stats.totalVoters / stats.totalStudents) * 100).toFixed(1) : 0}% registration rate
+              <TrendingUp size={12} /> {stats.totalStudents && stats.totalStudents > 0 ? Math.min(100, (stats.totalVoters / stats.totalStudents) * 100).toFixed(1) : '0.0'}% registration rate
             </div>
           </div>
           <div className="kpi-icon-wrapper green">
@@ -318,7 +318,7 @@ export default function AdminDashboardPage() {
             <span className="kpi-label">Total Votes Cast</span>
             <span className="kpi-value">{stats.totalVotesCast.toLocaleString()}</span>
             <div className="kpi-trend up" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-              <TrendingUp size={12} /> {stats.totalVoters > 0 ? (((stats.uniqueVotersCount || 0) / stats.totalVoters) * 100).toFixed(1) : 0}% Turnout
+              <TrendingUp size={12} /> {stats.totalVoters > 0 ? Math.min(100, ((stats.uniqueVotersCount || 0) / stats.totalVoters) * 100).toFixed(1) : '0.0'}% Turnout
             </div>
           </div>
           <div className="kpi-icon-wrapper amber">

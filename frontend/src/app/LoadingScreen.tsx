@@ -5,81 +5,126 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── DOM-based install modal — injected directly, bypasses React state issues ───
 function showInstallInstructions(isIOS: boolean) {
-  // Remove any existing modal
   const existing = document.getElementById('compssa-install-overlay');
   if (existing) existing.remove();
 
-  const isAndroid = !isIOS;
+  const ua = typeof window !== 'undefined' ? window.navigator.userAgent.toLowerCase() : '';
+  const isMobile = /iphone|ipad|ipod|android|mobile/.test(ua);
+  let activeDevice = isIOS ? 'ios' : isMobile ? 'android' : 'desktop';
 
-  const steps = isIOS
-    ? [
-        { icon: '🌐', text: 'Open this page in <b style="color:#60a5fa">Safari</b> (not Chrome or other browsers)' },
-        { icon: '⬆️', text: 'Tap the <b style="color:#60a5fa">Share</b> button (□↑) at the bottom of the screen' },
-        { icon: '➕', text: 'Scroll down and tap <b style="color:#60a5fa">"Add to Home Screen"</b>' },
-        { icon: '✅', text: 'Tap <b style="color:#60a5fa">"Add"</b> in the top-right corner to confirm' },
+  const instructions: Record<string, { steps: { icon: string; text: string }[] }> = {
+    desktop: {
+      steps: [
+        { icon: '🌐', text: 'Open COMPSSA in <b style="color:#60a5fa">Google Chrome</b> or <b style="color:#60a5fa">Microsoft Edge</b>' },
+        { icon: '🖥️', text: 'Click the <b style="color:#60a5fa">Install Icon (⊕ or 💻)</b> on the right of the address bar' },
+        { icon: '✅', text: 'Click <b style="color:#60a5fa">"Install"</b> in the browser prompt' }
       ]
-    : [
-        { icon: '⋮', text: 'Tap the <b style="color:#60a5fa">three-dot menu</b> (⋮) in Chrome\'s top-right corner' },
+    },
+    android: {
+      steps: [
+        { icon: '⋮', text: 'Tap the <b style="color:#60a5fa">three-dot menu (⋮)</b> in Chrome\'s top-right corner' },
         { icon: '📱', text: 'Tap <b style="color:#60a5fa">"Add to Home screen"</b> or <b style="color:#60a5fa">"Install app"</b>' },
-        { icon: '✅', text: 'Tap <b style="color:#60a5fa">"Add"</b> to confirm' },
-      ];
+        { icon: '✅', text: 'Tap <b style="color:#60a5fa">"Add" / "Install"</b> to confirm' }
+      ]
+    },
+    ios: {
+      steps: [
+        { icon: '🌐', text: 'Open this page in <b style="color:#60a5fa">Safari</b> (not Chrome or in-app browser)' },
+        { icon: '⬆️', text: 'Tap the <b style="color:#60a5fa">Share button (□↑)</b> at the bottom of Safari' },
+        { icon: '➕', text: 'Scroll down and tap <b style="color:#60a5fa">"Add to Home Screen"</b>' },
+        { icon: '✅', text: 'Tap <b style="color:#60a5fa">"Add"</b> in top-right corner' }
+      ]
+    }
+  };
 
-  const stepsHTML = steps
-    .map(
-      (s, i) => `
-      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
-        <div style="width:30px;height:30px;border-radius:50%;flex-shrink:0;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.5);display:flex;align-items:center;justify-content:center;color:#a5b4fc;font-weight:700;font-size:0.82rem;font-family:sans-serif">${i + 1}</div>
+  const renderSteps = (device: string) => {
+    const data = instructions[device] || instructions.desktop;
+    return data.steps.map((s, i) => `
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div style="width:26px;height:26px;border-radius:50%;flex-shrink:0;background:rgba(99,102,241,0.25);border:1px solid rgba(99,102,241,0.5);display:flex;align-items:center;justify-content:center;color:#a5b4fc;font-weight:700;font-size:0.78rem;font-family:sans-serif">${i + 1}</div>
         <div style="display:flex;align-items:flex-start;gap:10px;padding-top:2px">
-          <span style="font-size:1.25rem;line-height:1.3">${s.icon}</span>
-          <p style="color:rgba(255,255,255,0.85);font-size:0.9rem;margin:0;line-height:1.55;font-family:sans-serif">${s.text}</p>
+          <span style="font-size:1.15rem;line-height:1.3">${s.icon}</span>
+          <p style="color:rgba(255,255,255,0.85);font-size:0.88rem;margin:0;line-height:1.5;font-family:sans-serif">${s.text}</p>
         </div>
-      </div>`
-    )
-    .join('');
+      </div>
+    `).join('');
+  };
 
   const html = `
-    <div id="compssa-install-overlay" style="position:fixed;inset:0;z-index:9999999;display:flex;align-items:flex-end">
-      <!-- Backdrop -->
-      <div id="compssa-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px)"></div>
-      <!-- Sheet -->
-      <div id="compssa-sheet" style="position:relative;width:100%;background:linear-gradient(160deg,#0f172a 0%,#1a2a5e 100%);border-radius:28px 28px 0 0;padding:12px 24px 48px;box-shadow:0 -8px 60px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">
-        <!-- Handle -->
-        <div style="width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.25);margin:0 auto 24px"></div>
-        <!-- Header -->
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px">
-          <div style="width:52px;height:52px;border-radius:16px;flex-shrink:0;background:linear-gradient(135deg,#6366f1,#2563eb);display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 4px 20px rgba(99,102,241,0.5)">📲</div>
+    <div id="compssa-install-overlay" style="position:fixed;inset:0;z-index:9999999;display:flex;align-items:center;justify-content:center;padding:16px">
+      <div id="compssa-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px)"></div>
+      <div id="compssa-sheet" style="position:relative;width:100%;max-width:440px;background:linear-gradient(160deg,#0f172a 0%,#1a2a5e 100%);border-radius:24px;padding:24px;box-shadow:0 12px 60px rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.12);transform:scale(0.92);opacity:0;transition:all 0.25s ease-out">
+        <button id="compssa-close-x" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.1);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center">✕</button>
+        
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#2563eb);display:flex;align-items:center;justify-content:center;font-size:1.4rem">📲</div>
           <div>
-            <p style="color:#fff;font-weight:700;font-size:1.15rem;margin:0;line-height:1.2;font-family:sans-serif">Install COMPSSA</p>
-            <p style="color:rgba(255,255,255,0.45);font-size:0.82rem;margin:4px 0 0;font-family:sans-serif">${isIOS ? 'Add to your iPhone Home Screen' : 'Add to your Android Home Screen'}</p>
+            <p style="color:#fff;font-weight:700;font-size:1.1rem;margin:0;font-family:sans-serif">Install COMPSSA App</p>
+            <p style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin:2px 0 0;font-family:sans-serif">Select your device below for setup guide</p>
           </div>
         </div>
-        <!-- Steps -->
-        ${stepsHTML}
-        <!-- Button -->
-        <button id="compssa-got-it" style="margin-top:16px;width:100%;padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,#6366f1,#2563eb);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:sans-serif;letter-spacing:0.5px">Got it!</button>
+
+        <div style="display:flex;gap:6px;background:rgba(0,0,0,0.3);padding:4px;border-radius:12px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.06)">
+          <button id="tab-desktop" class="compssa-tab" style="flex:1;padding:8px 4px;border:none;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:sans-serif">💻 Desktop</button>
+          <button id="tab-android" class="compssa-tab" style="flex:1;padding:8px 4px;border:none;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:sans-serif">📱 Android</button>
+          <button id="tab-ios" class="compssa-tab" style="flex:1;padding:8px 4px;border:none;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:sans-serif">🍎 iOS</button>
+        </div>
+
+        <div id="compssa-steps-body" style="min-height:150px"></div>
+
+        <button id="compssa-got-it" style="margin-top:16px;width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#6366f1,#2563eb);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:sans-serif">Got it!</button>
       </div>
     </div>
   `;
 
   document.body.insertAdjacentHTML('beforeend', html);
 
-  // Animate sheet in
+  const updateTabsUI = (dev: string) => {
+    activeDevice = dev;
+    ['desktop', 'android', 'ios'].forEach(d => {
+      const btn = document.getElementById(`tab-${d}`);
+      if (btn) {
+        if (d === dev) {
+          btn.style.background = 'linear-gradient(135deg, #6366f1, #2563eb)';
+          btn.style.color = '#ffffff';
+          btn.style.boxShadow = '0 4px 12px rgba(99,102,241,0.4)';
+        } else {
+          btn.style.background = 'transparent';
+          btn.style.color = 'rgba(255,255,255,0.6)';
+          btn.style.boxShadow = 'none';
+        }
+      }
+    });
+    const body = document.getElementById('compssa-steps-body');
+    if (body) body.innerHTML = renderSteps(dev);
+  };
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       const sheet = document.getElementById('compssa-sheet');
-      if (sheet) sheet.style.transform = 'translateY(0)';
+      if (sheet) {
+        sheet.style.transform = 'scale(1)';
+        sheet.style.opacity = '1';
+      }
+      updateTabsUI(activeDevice);
     });
   });
 
-  // Close handlers
+  ['desktop', 'android', 'ios'].forEach(d => {
+    document.getElementById(`tab-${d}`)?.addEventListener('click', () => updateTabsUI(d));
+  });
+
   const close = () => {
     const sheet = document.getElementById('compssa-sheet');
     if (sheet) {
-      sheet.style.transform = 'translateY(100%)';
-      setTimeout(() => document.getElementById('compssa-install-overlay')?.remove(), 350);
+      sheet.style.transform = 'scale(0.92)';
+      sheet.style.opacity = '0';
+      setTimeout(() => document.getElementById('compssa-install-overlay')?.remove(), 250);
     }
   };
+
   document.getElementById('compssa-got-it')?.addEventListener('click', close);
+  document.getElementById('compssa-close-x')?.addEventListener('click', close);
   document.getElementById('compssa-backdrop')?.addEventListener('click', close);
 }
 
@@ -269,7 +314,7 @@ export default function LoadingScreen() {
               }}
             >
               <button
-                onClick={() => setShowDropdown(prev => !prev)}
+                onClick={() => showInstallInstructions(isIOS)}
                 style={{
                   width: '100%',
                   padding: '14px 24px',
@@ -288,8 +333,8 @@ export default function LoadingScreen() {
                   boxShadow: '0 8px 32px rgba(99,102,241,0.5)',
                 }}
               >
-                <span style={{ fontSize: '1.2rem' }}>{isIOS ? '📲' : '⬇'}</span>
-                {isIOS ? 'Add to Home Screen' : 'Install App'}
+                <span style={{ fontSize: '1.2rem' }}>📲</span>
+                Install App
               </button>
 
               {/* Dropdown instruction menu */}

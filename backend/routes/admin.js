@@ -27,9 +27,14 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
     const totalStudentsSnap = await db.collection('users').where('role', '!=', 'admin').count().get();
     const totalStudents = totalStudentsSnap.data().count;
 
-    // 4. Unique voters count using count aggregation
-    const uniqueVotersSnap = await db.collection('voted_voters').count().get();
-    const uniqueVotersCount = uniqueVotersSnap.data().count;
+    // 4. Unique voters count (deduplicate voter IDs to get true human voter count)
+    const uniqueVotersSnap = await db.collection('voted_voters').select('voterId').get();
+    const votedVoterIds = new Set();
+    uniqueVotersSnap.forEach(doc => {
+      const data = doc.data();
+      if (data.voterId) votedVoterIds.add(data.voterId);
+    });
+    const uniqueVotersCount = votedVoterIds.size;
 
     // 5. Fetch top 10 candidates for chart (10 Reads)
     const candidatesDoc = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();

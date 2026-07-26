@@ -14,6 +14,8 @@ interface Candidate {
   name: string;
   position: string;
   photoUrl: string;
+  selectedId?: string;
+  choice?: string;
 }
 
 interface Election {
@@ -35,8 +37,6 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-
-
   useEffect(() => {
     if (candidateIds.length === 0) {
       setLoading(false);
@@ -52,7 +52,25 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
 
         const candidatesRes = await apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${electionId}`);
         if (candidatesRes.status === 'success') {
-          const filtered = candidatesRes.data.filter(c => candidateIds.includes(c.id));
+          // Map searchParam candidateIds to extract base candidate ID and choice (e.g. "cand1:yes" -> base "cand1", choice "yes")
+          const selectedMap = new Map<string, { fullId: string; choice?: string }>();
+          candidateIds.forEach(fullId => {
+            const parts = fullId.split(':');
+            const baseId = parts[0];
+            const choice = parts[1]; // 'yes' or 'no'
+            selectedMap.set(baseId, { fullId, choice });
+          });
+
+          const filtered = candidatesRes.data
+            .filter(c => selectedMap.has(c.id))
+            .map(c => {
+              const sel = selectedMap.get(c.id);
+              return {
+                ...c,
+                selectedId: sel?.fullId || c.id,
+                choice: sel?.choice
+              };
+            });
           setCandidates(filtered);
         }
       } catch (err) {
@@ -81,21 +99,18 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
     );
   }
 
-
-
-
   const castBallot = async () => {
     setError('');
     setSubmitting(true);
     try {
-      // Cast all votes in parallel
+      // Cast all votes in parallel with preserved option choice (e.g. candId:yes)
       const castPromises = candidates.map(cand =>
         apiRequest<{ 
           status: string; 
           data: { verificationId: string } 
         }>('/votes/cast', 'POST', {
           electionId,
-          candidateId: cand.id
+          candidateId: cand.selectedId || cand.id
         })
       );
 
@@ -181,7 +196,19 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
               <span style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)' }}>
                 {candidate.position}
               </span>
-              <h3 style={{ fontSize: 'var(--text-base)', margin: '2px 0', fontWeight: 600 }}>{candidate.name}</h3>
+              <h3 style={{ fontSize: 'var(--text-base)', margin: '2px 0', fontWeight: 600 }}>
+                {candidate.name}
+                {candidate.choice && (
+                  <span style={{ 
+                    marginLeft: '8px', 
+                    fontSize: '12px', 
+                    color: candidate.choice === 'yes' ? 'var(--color-success, #22c55e)' : 'var(--color-danger, #ef4444)',
+                    fontWeight: 'bold' 
+                  }}>
+                    ({candidate.choice === 'yes' ? '✓ Voted Yes' : '✗ Voted No'})
+                  </span>
+                )}
+              </h3>
               <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: 0 }}>{election.title}</p>
             </div>
             <CheckCircle size={18} color="var(--color-success, #22c55e)" style={{ marginRight: 'var(--space-2)' }} />
