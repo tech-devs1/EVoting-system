@@ -8,6 +8,7 @@ const { logFraudAlert } = require('../services/fraud');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY || '';
+const ARKESEL_SENDER_ID = process.env.ARKESEL_SENDER_ID || 'COMPSSA';
 
 // Helper: Calculate Cosine Distance between two vectors
 function cosineDistance(vec1, vec2) {
@@ -38,19 +39,16 @@ async function sendOtpViaSMS(phoneNumber, otp) {
     formattedPhone = '+233' + formattedPhone;
   }
 
+  // Using Arkesel SMS send endpoint so we can send our OWN generated OTP code
   const payload = {
-    expiry: 10,
-    length: 6,
-    medium: 'sms',
-    message: `Your COMPSSA verification code is %otp_code%. It expires in 10 minutes. Do not share this code.`,
-    number: formattedPhone,
-    sender_id: 'COMPSSA',
-    type: 'numeric'
+    sender: ARKESEL_SENDER_ID,
+    message: `Your COMPSSA verification code is ${otp}. It expires in 10 minutes. Do not share this code.`,
+    recipients: [formattedPhone]
   };
 
-  console.log(`[Arkesel] Sending OTP to ${formattedPhone}`);
+  console.log(`[Arkesel] Sending OTP ${otp} to ${formattedPhone} using Sender ID ${ARKESEL_SENDER_ID}`);
 
-  const res = await fetch('https://sms.arkesel.com/api/v2/otp/send', {
+  const res = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
     method: 'POST',
     headers: {
       'api-key': ARKESEL_API_KEY,
@@ -62,7 +60,7 @@ async function sendOtpViaSMS(phoneNumber, otp) {
   const responseData = await res.json();
   console.log('[Arkesel] Response:', JSON.stringify(responseData));
 
-  if (!res.ok || responseData.code !== '1000') {
+  if (!res.ok || responseData.status !== 'success') {
     throw new Error('Arkesel SMS error: ' + (responseData.message || JSON.stringify(responseData)));
   }
 
@@ -84,7 +82,7 @@ async function sendSmsViaArkesel(phoneNumber, message) {
   }
 
   const payload = {
-    sender: 'COMPSSA',
+    sender: ARKESEL_SENDER_ID,
     message: message,
     recipients: [formattedPhone]
   };
@@ -98,9 +96,11 @@ async function sendSmsViaArkesel(phoneNumber, message) {
     body: JSON.stringify(payload)
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error('Arkesel SMS error: ' + err);
+  const responseData = await res.json();
+  console.log('[Arkesel] Response:', JSON.stringify(responseData));
+
+  if (!res.ok || responseData.status !== 'success') {
+    throw new Error('Arkesel SMS error: ' + (responseData.message || JSON.stringify(responseData)));
   }
 }
 
