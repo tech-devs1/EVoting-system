@@ -333,9 +333,8 @@ export default function AdminElectionsPage() {
                       <option value="computer_science">Computer Science</option>
                       <option value="engineering">Engineering</option>
                       <option value="business_administration">Business Administration</option>
-                      <option value="nursing">Nursing</option>
-                      <option value="arts">Arts and Humanities</option>
-                      <option value="applied_sciences">Applied Sciences</option>
+                     
+                     
                     </select>
                   </div>
                 )}
