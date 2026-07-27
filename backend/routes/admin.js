@@ -195,11 +195,12 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
       const flaggedUsers = [];
       flaggedSnap.forEach(doc => {
         const data = doc.data();
+        const studentId = data.metadata?.studentId || 'Unknown';
         flaggedUsers.push({
           id: doc.id,
-          studentId: data.metadata?.studentId || 'Unknown',
+          studentId: studentId,
           attemptedAt: data.metadata?.attemptedAt || new Date(data.timestamp || Date.now()).toISOString(),
-          ipAddress: data.metadata?.ipAddress || 'Unknown',
+          email: studentId !== 'Unknown' ? `${studentId}@htu.edu.gh` : 'Unknown',
           timestamp: data.timestamp || Date.now(),
           status: data.status || 'unresolved'
         });
@@ -519,11 +520,12 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
       const results = [];
       alertsDoc.forEach(doc => {
         const data = doc.data();
+        const studentId = data.metadata?.studentId || 'Unknown';
         results.push({
           id: doc.id,
-          studentId: data.metadata?.studentId || 'Unknown',
+          studentId: studentId,
           attemptedAt: data.metadata?.attemptedAt || new Date(data.timestamp || Date.now()).toISOString(),
-          ipAddress: data.metadata?.ipAddress || 'Unknown',
+          email: studentId !== 'Unknown' ? `${studentId}@htu.edu.gh` : 'Unknown',
           timestamp: data.timestamp || Date.now(),
           status: data.status || 'unresolved'
         });

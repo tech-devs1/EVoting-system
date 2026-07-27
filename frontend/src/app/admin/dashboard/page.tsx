@@ -191,7 +191,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeElectionsCount, setActiveElectionsCount] = useState(0);
   const [results, setResults] = useState<ElectionResult[]>([]);
-  const [flaggedUsers, setFlaggedUsers] = useState<{id: string; studentId: string; attemptedAt: string; ipAddress: string; timestamp: number; status?: string}[]>([]);
+  const [flaggedUsers, setFlaggedUsers] = useState<{id: string; studentId: string; attemptedAt: string; email: string; timestamp: number; status?: string}[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   async function fetchDashboardData() {
     try {
@@ -371,7 +371,7 @@ export default function AdminDashboardPage() {
                 <tr style={{ background: 'var(--bg-input)' }}>
                   <th style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'left', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Student ID Attempted</th>
                   <th style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'left', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time of Attempt</th>
-                  <th style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'left', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>IP Address</th>
+                  <th style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'left', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Student Email</th>
                   <th style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'left', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
                 </tr>
               </thead>
@@ -384,8 +384,8 @@ export default function AdminDashboardPage() {
                     <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                       {fu.attemptedAt ? new Date(fu.attemptedAt).toLocaleString() : 'N/A'}
                     </td>
-                    <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                      {fu.ipAddress}
+                    <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                      {fu.email}
                     </td>
                     <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
                       <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.25)', fontWeight: 600 }}>
