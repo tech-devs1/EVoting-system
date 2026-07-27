@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { db, admin } = require('../services/firebase');
+const { db } = require('../services/firebase');
+const { FieldValue } = require('firebase-admin/firestore');
 const { verifyAuth } = require('../middleware/auth');
 const { recordVoteAudit } = require('../services/audit');
 const { logFraudAlert } = require('../services/fraud');
@@ -109,8 +110,8 @@ router.post('/cast', verifyAuth, async (req, res) => {
 
       // Increment candidate vote tally atomically using FieldValue
       const updateData = (choice === 'no')
-        ? { noVotes: admin.firestore.FieldValue.increment(1) }
-        : { votes: admin.firestore.FieldValue.increment(1) };
+        ? { noVotes: FieldValue.increment(1) }
+        : { votes: FieldValue.increment(1) };
 
       transaction.update(candidateRef, updateData);
       // Create anonymized vote record

@@ -53,6 +53,20 @@ if (!hasFirebaseCreds) {
 // ─── Mock Firestore ───────────────────────────────────────────────────────────
 // Used when real Firebase credentials are absent or initialization fails.
 // Data is in-memory only — lost on server restart.
+function sanitizeMockUpdate(existing, update) {
+  const result = { ...existing };
+  for (const key in update) {
+    const val = update[key];
+    if (val && typeof val === 'object' && val.constructor.name === 'NumericIncrementTransform') {
+      const current = typeof result[key] === 'number' ? result[key] : 0;
+      result[key] = current + (val.operand || 1);
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
 class MockFirestore {
   constructor() {
     this.collections = {
@@ -109,8 +123,9 @@ class MockFirestore {
       },
       update: async (data) => {
         const existing = collectionMap.get(docId) || {};
-        collectionMap.set(docId, { ...existing, ...data });
-        return data;
+        const sanitized = sanitizeMockUpdate(existing, data);
+        collectionMap.set(docId, sanitized);
+        return sanitized;
       },
       delete: async () => { collectionMap.delete(docId); return true; }
     });
