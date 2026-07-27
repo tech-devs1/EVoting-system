@@ -235,6 +235,15 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
     }
 
     const reportData = await cache.getOrSet('admin:report', async () => {
+      // 0. Find current active election(s)
+      const activeElectionsSnap = await db.collection('elections').where('status', '==', 'active').get();
+      const activeElectionIds = [];
+      let activeElectionTitle = 'No Active Election';
+      activeElectionsSnap.forEach(doc => {
+        activeElectionIds.push(doc.id);
+        activeElectionTitle = doc.data().title || activeElectionTitle;
+      });
+
       // 1. Fetch user records
       const usersSnap = await db.collection('users').get();
       
@@ -242,15 +251,27 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
       let totalRegisteredVoters = 0;
       const voterList = [];
 
-      // 2. Fetch voted_voters to check unique voters
-      const votedSnap = await db.collection('voted_voters').select('voterId').get();
+      // 2. Fetch voted_voters ONLY for active election(s)
       const votedVoterIds = new Set();
-      votedSnap.forEach(doc => {
-        const data = doc.data();
-        if (data.voterId) {
-          votedVoterIds.add(data.voterId);
+      if (activeElectionIds.length > 0) {
+        // Firestore 'in' supports up to 30 values
+        const chunks = [];
+        for (let i = 0; i < activeElectionIds.length; i += 30) {
+          chunks.push(activeElectionIds.slice(i, i + 30));
         }
-      });
+        for (const chunk of chunks) {
+          const votedSnap = await db.collection('voted_voters')
+            .where('electionId', 'in', chunk)
+            .select('voterId')
+            .get();
+          votedSnap.forEach(doc => {
+            const data = doc.data();
+            if (data.voterId) {
+              votedVoterIds.add(data.voterId);
+            }
+          });
+        }
+      }
 
       usersSnap.forEach(doc => {
         const data = doc.data();
@@ -301,9 +322,10 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
         totalVotersFromCSV,
         totalRegisteredVoters,
         totalVoted,
+        activeElectionTitle,
         voters: voterList
       };
-    }, 15000); // Cache for 15 seconds — report data doesn't change rapidly
+    }, 15000); // Cache for 15 seconds
 
     res.status(200).json({ status: 'success', data: reportData });
   } catch (error) {

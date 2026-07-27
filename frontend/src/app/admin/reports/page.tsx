@@ -38,6 +38,7 @@ interface ReportData {
   totalVotersFromCSV: number;
   totalRegisteredVoters: number;
   totalVoted: number;
+  activeElectionTitle?: string;
   voters: VoterReportItem[];
 }
 
@@ -324,7 +325,7 @@ export default function AdminReportPage() {
 
             {/* Sub-Header: Activity Period / Election Status */}
             <div style={{ fontStyle: 'italic', fontSize: '14px', marginBottom: '28px', borderBottom: '1px solid #000000', paddingBottom: '8px' }}>
-              Official Audit Period: Active Election Session as of {currentDate}
+              Official Audit Period: {reportData.activeElectionTitle || 'Active Election Session'} as of {currentDate}
             </div>
 
             {/* Written Narrative Section 1: Field 1 - Number of Voters from CSV */}
