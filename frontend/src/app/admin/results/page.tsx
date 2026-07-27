@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
-import { RefreshCw, ArrowLeft, Trophy, Download } from 'lucide-react';
+import { RefreshCw, ArrowLeft, Trophy, Download, XCircle } from 'lucide-react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -167,16 +167,24 @@ function PositionChart({
           display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
           marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-3)',
           borderRadius: 'var(--radius-md)',
-          background: `${accentColor}18`,
-          border: `1px solid ${accentColor}44`,
+          background: leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? '#EF444418' : `${accentColor}18`,
+          border: `1px solid ${leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? '#EF444444' : accentColor + '44'}`,
         }}>
-          <Trophy size={14} color={accentColor} />
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: accentColor }}>
+          {leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? (
+            <XCircle size={14} color="#EF4444" />
+          ) : (
+            <Trophy size={14} color={accentColor} />
+          )}
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? '#EF4444' : accentColor }}>
             {leader.name}
           </span>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            leading with {(leader.votes || 0).toLocaleString()} vote{(leader.votes || 0) !== 1 ? 's' : ''}
-            {' '}({positionTotal > 0 ? (((leader.votes || 0) / positionTotal) * 100).toFixed(1) : 0}%)
+            {leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? (
+              <>losing by {(((leader.noVotes || 0) / positionTotal) * 100).toFixed(1)}%</>
+            ) : (
+              <>leading with {(leader.votes || 0).toLocaleString()} vote{(leader.votes || 0) !== 1 ? 's' : ''}
+              {' '}({positionTotal > 0 ? (((leader.votes || 0) / positionTotal) * 100).toFixed(1) : 0}%)</>
+            )}
           </span>
         </div>
       )}

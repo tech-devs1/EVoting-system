@@ -67,7 +67,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "Voter Database", href: "/admin/voters", icon: Users },
     { label: "Manage Elections", href: "/admin/elections", icon: Settings },
     { label: "Live Results", href: "/admin/results", icon: Activity },
-    { label: "Verify Vote", href: "/admin/audit", icon: Database },
     { label: "Report", href: "/admin/reports", icon: FileText }
   ];
 
