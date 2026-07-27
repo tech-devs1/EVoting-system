@@ -8,7 +8,7 @@ const { logFraudAlert } = require('../services/fraud');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY || 'aU1RbmFFbXFZTUxjSmp1ZmZSSFY';
-const ARKESEL_SENDER_ID = process.env.ARKESEL_SENDER_ID || 'Arkesel';
+const ARKESEL_SENDER_ID = process.env.ARKESEL_SENDER_ID || 'C0S EC';
 
 // Helper: Calculate Cosine Distance between two vectors
 function cosineDistance(vec1, vec2) {
@@ -302,23 +302,25 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
     }
 
-    // Generate JWT token immediately (bypassing OTP verification for production stability)
-    const token = jwt.sign(
-      { uid: userDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name },
-      JWT_SECRET,
-      { expiresIn: '24h' }
+    // Send OTP via SMS — token is issued only after OTP verification
+    if (!userData.phone) {
+      return res.status(400).json({ status: 'error', message: 'No phone number on file. Please contact admin.' });
+    }
+    const { otp, smsSent } = await generateAndSendOtp(
+      db.collection('users').doc(userDoc.id), userData.phone, userData.name
     );
 
+    // Mask the phone number for display
+    const maskedPhone = userData.phone.replace(/(.{4})(.*)(.{3})/, '$1****$3');
     res.status(200).json({
-      status: 'success',
-      data: {
-        uid: userDoc.id,
-        email: userData.email,
-        role: userData.role || 'voter',
-        name: userData.name,
-        faceImage: userData.faceImage || ''
-      },
-      token
+      status: 'otp_required',
+      email: userData.email,
+      phone: maskedPhone,
+      fallbackOtp: smsSent ? undefined : otp,
+      smsFailed: !smsSent,
+      message: smsSent
+        ? `OTP sent to ${maskedPhone}. Please verify.`
+        : `SMS unavailable. Use this code: ${otp}`
     });
   } catch (error) {
     console.error('Error logging in:', error);
