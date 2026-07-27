@@ -159,7 +159,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
     }
 
     console.error('[Cast Vote] Error casting vote:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to cast vote' });
+    res.status(500).json({ status: 'error', message: `Failed to cast vote: ${error.message}` });
   }
 });
 
