@@ -21,15 +21,23 @@ function generateHash(data) {
  */
 async function recordVoteAudit(voteData, electionId, meta = {}) {
   const auditRef = db.collection('audit_logs');
+
+  // Fetch recent audit logs without orderBy to avoid requiring a composite index.
+  // Sort in JS memory instead.
   const latestAuditSnap = await auditRef
     .where('electionId', '==', electionId)
-    .orderBy('timestamp', 'desc')
-    .limit(1)
+    .limit(50)
     .get();
   
   let previousHash = 'GENESIS_HASH';
   if (!latestAuditSnap.empty) {
-    previousHash = latestAuditSnap.docs[0].data().currentHash;
+    // Find the most recent entry by timestamp in JS
+    let latest = null;
+    latestAuditSnap.forEach(doc => {
+      const d = doc.data();
+      if (!latest || d.timestamp > latest.timestamp) latest = d;
+    });
+    if (latest && latest.currentHash) previousHash = latest.currentHash;
   }
 
   // 2. Prepare current data string
