@@ -8,7 +8,7 @@ const { logFraudAlert } = require('../services/fraud');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY || 'aU1RbmFFbXFZTUxjSmp1ZmZSSFY';
-const ARKESEL_SENDER_ID = process.env.ARKESEL_SENDER_ID || 'C0S EC';
+const ARKESEL_SENDER_ID = process.env.ARKESEL_SENDER_ID || 'COMPSSA';
 
 // Helper: Calculate Cosine Distance between two vectors
 function cosineDistance(vec1, vec2) {
