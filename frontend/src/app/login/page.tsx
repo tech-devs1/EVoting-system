@@ -244,7 +244,7 @@ export default function LoginPage() {
                 <CheckCircle2 size={30} style={{ color: 'var(--color-primary)' }} />
               </div>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                Check your phone{otpPhone ? ` (${otpPhone})` : ''} — a 6-digit SMS code has been sent. It expires in <strong>10 minutes</strong>.
+                Check your school email{otpEmail ? ` (${otpEmail})` : ''} — a 6-digit verification code has been sent. It expires in <strong>10 minutes</strong>.
               </p>
             </div>
 
@@ -261,7 +261,7 @@ export default function LoginPage() {
                 fontWeight: 500
               }}>
                 📢 <strong>[Demo Mode Fallback]</strong><br />
-                SMS gateway delayed. Use code: <strong style={{ fontSize: '1.2rem', color: 'var(--color-primary)', letterSpacing: '2px', marginLeft: '4px' }}>{fallbackOtp}</strong>
+                Email delivery delayed. Use code: <strong style={{ fontSize: '1.2rem', color: 'var(--color-primary)', letterSpacing: '2px', marginLeft: '4px' }}>{fallbackOtp}</strong>
               </div>
             )}
 

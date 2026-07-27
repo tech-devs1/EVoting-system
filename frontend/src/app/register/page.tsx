@@ -493,7 +493,7 @@ export default function RegisterPage() {
                   <CheckCircle2 size={30} style={{ color: 'var(--color-primary)' }} />
                 </div>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                  A 6-digit verification code was sent to your phone via SMS.<br />Enter it below to verify your account.
+                  A 6-digit verification code was sent to your email.<br />Enter it below to verify your account.
                 </p>
               </div>
 
