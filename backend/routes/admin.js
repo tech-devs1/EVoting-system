@@ -89,6 +89,11 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
 // Replaces 3+ separate API calls with a single round-trip
 router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
   try {
+    const skipCache = req.query.nocache === 'true';
+    if (skipCache) {
+      cache.invalidate('admin:dashboard-full');
+    }
+
     const fullData = await cache.getOrSet('admin:dashboard-full', async () => {
       // --- KPIs ---
       const activeElectionsSnap = await db.collection('elections').where('status', '==', 'active').get();
@@ -222,6 +227,13 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
 // Get Comprehensive Voter & Election Activity Report
 router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
   try {
+    // Support ?nocache=true to bypass the in-memory cache
+    // (critical on serverless where upload and report may hit different instances)
+    const skipCache = req.query.nocache === 'true';
+    if (skipCache) {
+      cache.invalidate('admin:report');
+    }
+
     const reportData = await cache.getOrSet('admin:report', async () => {
       // 1. Fetch user records
       const usersSnap = await db.collection('users').get();

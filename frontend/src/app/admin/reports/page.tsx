@@ -55,7 +55,7 @@ export default function AdminReportPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiRequest<{ status: string; data: ReportData }>('/admin/report', 'GET');
+      const res = await apiRequest<{ status: string; data: ReportData }>(`/admin/report?nocache=true&_t=${Date.now()}`, 'GET');
       if (res.status === 'success') {
         setReportData(res.data);
       }

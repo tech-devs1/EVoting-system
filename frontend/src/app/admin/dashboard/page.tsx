@@ -203,7 +203,7 @@ export default function AdminDashboardPage() {
           electionResults: ElectionResult[];
           flaggedUsers: any[];
         };
-      }>('/admin/dashboard-full');
+      }>(`/admin/dashboard-full?nocache=true&_t=${Date.now()}`);
 
       if (res.status === 'success') {
         const { stats, electionResults, flaggedUsers } = res.data;
