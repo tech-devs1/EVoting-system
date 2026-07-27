@@ -412,6 +412,7 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
 
     // Invalidate report cache since voter data changed
     cache.invalidate('admin:report');
+    cache.invalidate('admin:analytics');
     cache.invalidate('admin:dashboard');
     cache.invalidate('admin:dashboard-full');
 
@@ -464,6 +465,7 @@ router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req,
     // Invalidate caches
     cache.invalidate('admin:uploads');
     cache.invalidate('admin:report');
+    cache.invalidate('admin:analytics');
     cache.invalidate('admin:dashboard');
     cache.invalidate('admin:dashboard-full');
 
@@ -543,34 +545,87 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
 // Get Analytics Data
 router.get('/analytics', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const analyticsData = {
-      departmentParticipation: {
-        labels: ['Computer Science', 'Engineering', 'Business School', 'Design & Arts', 'Medical Sci'],
-        datasets: [{
-          label: 'Turnout %',
-          data: [92, 85, 78, 88, 71],
-          backgroundColor: '#3B82F6',
-          borderRadius: 6
-        }]
-      },
-      peakVotingTimes: {
-        labels: ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00'],
-        datasets: [{
-          label: 'Ballots Processed',
-          data: [50, 180, 420, 290, 510, 230],
-          borderColor: '#7C3AED',
-          backgroundColor: 'rgba(124, 58, 237, 0.1)',
-          tension: 0.3,
-          fill: true
-        }]
-      },
-      performanceSummary: [
-        { name: 'University Student Council Presidential Election', total: 2840, cast: 2085, rate: '73.4%', status: 'active' },
-        { name: 'Department of Computer Science Representative', total: 450, cast: 394, rate: '87.6%', status: 'active' },
-        { name: 'HTU Sports Club Board Members', total: 1200, cast: 0, rate: '—', status: 'upcoming' },
-        { name: 'Annual Budget Allocation Referendum', total: 2840, cast: 2095, rate: '73.8%', status: 'completed' }
-      ]
-    };
+    const analyticsData = await cache.getOrSet('admin:analytics', async () => {
+      // 1. Fetch total users
+      const usersSnap = await db.collection('users').get();
+      let totalVoters = 0;
+      const deptCounts = {};
+      
+      usersSnap.forEach(doc => {
+        const data = doc.data();
+        if (data.role !== 'admin') {
+          totalVoters++;
+          const dept = data.programme || 'Other';
+          deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+        }
+      });
+
+      const sortedDepts = Object.entries(deptCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+      const deptLabels = sortedDepts.map(d => d[0]);
+      const deptData = sortedDepts.map(d => d[1]);
+      
+      // 2. Fetch elections & votes for performance summary
+      const electionsSnap = await db.collection('elections').get();
+      const performanceSummary = [];
+      
+      const votesSnap = await db.collection('votes').get();
+      const castPerElection = {};
+      const votesByHour = {};
+      
+      votesSnap.forEach(doc => {
+        const data = doc.data();
+        if (data.electionId) {
+          castPerElection[data.electionId] = (castPerElection[data.electionId] || 0) + 1;
+        }
+        if (data.timestamp) {
+           const date = new Date(data.timestamp);
+           const hour = date.getHours();
+           const timeLabel = `${hour.toString().padStart(2, '0')}:00`;
+           votesByHour[timeLabel] = (votesByHour[timeLabel] || 0) + 1;
+        }
+      });
+      
+      electionsSnap.forEach(doc => {
+        const el = doc.data();
+        const cast = castPerElection[doc.id] || 0;
+        const rate = totalVoters > 0 ? ((cast / totalVoters) * 100).toFixed(1) + '%' : '—';
+        performanceSummary.push({
+          name: el.title || 'Unknown Election',
+          total: totalVoters,
+          cast: cast,
+          rate: rate,
+          status: el.status || 'unknown'
+        });
+      });
+      
+      const sortedHours = Object.keys(votesByHour).sort();
+      const peakLabels = sortedHours.length > 0 ? sortedHours : ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00'];
+      const peakData = sortedHours.length > 0 ? sortedHours.map(h => votesByHour[h]) : [0, 0, 0, 0, 0, 0];
+
+      return {
+        departmentParticipation: {
+          labels: deptLabels.length > 0 ? deptLabels : ['No Data'],
+          datasets: [{
+            label: 'Students Enrolled',
+            data: deptData.length > 0 ? deptData : [0],
+            backgroundColor: '#3B82F6',
+            borderRadius: 6
+          }]
+        },
+        peakVotingTimes: {
+          labels: peakLabels,
+          datasets: [{
+            label: 'Ballots Processed',
+            data: peakData,
+            borderColor: '#7C3AED',
+            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        performanceSummary: performanceSummary
+      };
+    }, 15000);
     
     res.status(200).json({ status: 'success', data: analyticsData });
   } catch (error) {
