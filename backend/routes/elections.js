@@ -205,6 +205,14 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'startDate and endDate are required' });
     }
 
+    const electionDoc = await db.collection('elections').doc(req.params.id).get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
+    if (electionDoc.data().status === 'active') {
+      return res.status(400).json({ status: 'error', message: 'Cannot edit time window for an ongoing election' });
+    }
+
     await db.collection('elections').doc(req.params.id).update({ startDate, endDate });
 
     // Invalidate caches

@@ -79,6 +79,14 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
+    const electionDoc = await db.collection('elections').doc(electionId).get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
+    if (electionDoc.data().status === 'active') {
+      return res.status(400).json({ status: 'error', message: 'Cannot add candidates to an ongoing election' });
+    }
+
     // Check if the image/photoUrl is already used in the same election
     if (photoUrl && photoUrl.trim() !== '') {
       const duplicatePhotoSnap = await db.collection('candidates')
