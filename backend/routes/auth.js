@@ -7,8 +7,8 @@ const { verifyAuth } = require('../middleware/auth');
 const { logFraudAlert } = require('../services/fraud');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
-const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY || 'aU1RbmFFbXFZTUxjSmp1ZmZSSFY';
-const ARKESEL_SENDER_ID = process.env.ARKESEL_SENDER_ID || 'COMPSSA';
+const BMS_API_KEY = process.env.BMS_API_KEY || process.env.MNOTIFY_API_KEY || '';
+const BMS_SENDER_ID = process.env.BMS_SENDER_ID || 'COMPSSA';
 
 // Helper: Calculate Cosine Distance between two vectors
 function cosineDistance(vec1, vec2) {
@@ -68,20 +68,89 @@ async function sendOtpViaEmailJS(email, name, otp) {
   }
 }
 
-// Generate and store OTP for a user doc, then send via EmailJS
-// Returns { otp, emailSent, emailError } — even if email fails, OTP is saved in Firebase
-async function generateAndSendOtp(userDocRef, email, name) {
+// Helper: Send OTP via BMS Africa (mNotify) Quick SMS API
+async function sendOtpViaBMS(phoneNumber, otp) {
+  if (!BMS_API_KEY) {
+    console.warn('[BMS SMS Warning] No BMS_API_KEY configured — SMS not dispatched. Code for', phoneNumber, 'is:', otp);
+    return;
+  }
+
+  let formattedPhone = phoneNumber.replace(/\s+/g, '');
+  if (formattedPhone.startsWith('+233')) {
+    formattedPhone = '0' + formattedPhone.substring(4);
+  } else if (!formattedPhone.startsWith('0') && formattedPhone.length === 9) {
+    formattedPhone = '0' + formattedPhone;
+  }
+
+  const payload = {
+    recipient: [formattedPhone],
+    sender: BMS_SENDER_ID,
+    message: `Your COMPSSA verification code is ${otp}. It expires in 10 minutes. Do not share this code.`,
+    is_schedule: false
+  };
+
+  console.log(`[BMS SMS] Dispatching OTP ${otp} to ${formattedPhone} via BMS Africa (Sender ID: ${BMS_SENDER_ID})`);
+
+  try {
+    const res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000)
+    });
+
+    const responseText = await res.text();
+    console.log('[BMS SMS] Response:', responseText);
+
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      throw new Error(`BMS API returned non-JSON response: ${responseText.substring(0, 100)}`);
+    }
+
+    if (!res.ok || (responseData.status !== 'success' && responseData.code !== '2000' && responseData.status !== 2000)) {
+      throw new Error('BMS API returned error: ' + (responseData.message || responseText));
+    }
+
+    return responseData;
+  } catch (err) {
+    console.error('[BMS SMS Error]:', err.message || err);
+    throw err;
+  }
+}
+
+// Generate and store OTP for a user doc, then send via EmailJS and BMS SMS (dual channel)
+// Returns { otp, emailSent, smsSent } — even if delivery fails, OTP is saved in Firebase
+async function generateAndSendOtp(userDocRef, email, name, phoneNumber = null) {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
   await userDocRef.update({ otp, otpExpiry: expiry });
 
+  let emailSent = false;
+  let smsSent = false;
+
+  // 1. Send via EmailJS
   try {
-    await sendOtpViaEmailJS(email, name, otp);
-    return { otp, emailSent: true };
+    if (email) {
+      await sendOtpViaEmailJS(email, name, otp);
+      emailSent = true;
+    }
   } catch (emailErr) {
-    console.error('[OTP] Email delivery failed, OTP saved to Firebase:', emailErr.message);
-    return { otp, emailSent: false, emailError: emailErr.message };
+    console.error('[OTP] Email delivery failed:', emailErr.message || emailErr);
   }
+
+  // 2. Send via BMS Africa SMS (if phone number is provided)
+  if (phoneNumber) {
+    try {
+      await sendOtpViaBMS(phoneNumber, otp);
+      smsSent = true;
+    } catch (smsErr) {
+      console.error('[OTP] BMS SMS delivery failed:', smsErr.message || smsErr);
+    }
+  }
+
+  return { otp, emailSent, smsSent };
 }
 
 // Verify student ID and fetch details before registration
@@ -116,15 +185,16 @@ router.post('/verify-student', async (req, res) => {
     if (studentData.password) {
       // Try to send a new OTP so they can complete verification
       try {
-        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
-      } catch (emailErr) {
-        console.error('OTP email failed for incomplete registration (user can resend):', emailErr.message || emailErr);
+        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name, studentData.phone || null);
+      } catch (otpErr) {
+        console.error('OTP delivery failed for incomplete registration (user can resend):', otpErr.message || otpErr);
       }
       return res.status(200).json({
         status: 'incomplete_registration',
         data: {
           name: studentData.name,
-          email: studentData.email
+          email: studentData.email,
+          phone: studentData.phone || ''
         },
         message: 'You have an incomplete registration. A verification code has been sent to your email.'
       });
@@ -146,10 +216,15 @@ router.post('/verify-student', async (req, res) => {
 // Register a user securely
 router.post('/register', async (req, res) => {
   try {
-    const { studentId, email, name, password, faceImage } = req.body;
+    const { studentId, email, name, password, phone, faceImage } = req.body;
 
     if (!studentId || !email || !password) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields (studentId, email, password)' });
+    }
+
+    let phoneClean = null;
+    if (phone) {
+      phoneClean = phone.replace(/\s+/g, '');
     }
 
     // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
@@ -187,6 +262,7 @@ router.post('/register', async (req, res) => {
       isRegistered: true,
       password: hashedPassword,
       name: name || studentData.name,
+      phone: phoneClean || studentData.phone || '',
       uid: studentId,
       role: 'voter',
       faceImage: faceImage || '',
@@ -230,19 +306,23 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
     }
 
-    // Send OTP via EmailJS
-    const { otp, emailSent } = await generateAndSendOtp(
-      db.collection('users').doc(userDoc.id), userData.email, userData.name
+    // Send OTP via EmailJS and BMS SMS (if phone exists)
+    const { otp, emailSent, smsSent } = await generateAndSendOtp(
+      db.collection('users').doc(userDoc.id), userData.email, userData.name, userData.phone || null
     );
+
+    const dispatchSuccess = emailSent || smsSent;
 
     res.status(200).json({
       status: 'otp_required',
       email: userData.email,
-      fallbackOtp: emailSent ? undefined : otp,
+      phone: userData.phone ? userData.phone.replace(/(.{4})(.*)(.{3})/, '$1****$3') : undefined,
+      fallbackOtp: dispatchSuccess ? undefined : otp,
       emailFailed: !emailSent,
-      message: emailSent
-        ? `OTP sent to your school email (${userData.email}). Please verify.`
-        : `Email delivery unavailable. Use code: ${otp}`
+      smsFailed: !smsSent,
+      message: dispatchSuccess
+        ? `OTP sent to your email (${userData.email})${smsSent ? ' and SMS' : ''}. Please verify.`
+        : `Delivery unavailable. Use code: ${otp}`
     });
   } catch (error) {
     console.error('Error logging in:', error);
@@ -314,13 +394,17 @@ router.post('/resend-otp', async (req, res) => {
     const userDoc = usersSnapshot.docs[0];
     const userData = userDoc.data();
 
-    const { otp, emailSent } = await generateAndSendOtp(db.collection('users').doc(userDoc.id), userData.email, userData.name);
+    const { otp, emailSent, smsSent } = await generateAndSendOtp(
+      db.collection('users').doc(userDoc.id), userData.email, userData.name, userData.phone || null
+    );
+
+    const dispatchSuccess = emailSent || smsSent;
 
     res.status(200).json({
       status: 'success',
-      fallbackOtp: emailSent ? undefined : otp,
-      message: emailSent
-        ? `A new OTP has been sent to your email (${userData.email}).`
+      fallbackOtp: dispatchSuccess ? undefined : otp,
+      message: dispatchSuccess
+        ? `A new OTP has been sent to your email (${userData.email})${smsSent ? ' and SMS' : ''}.`
         : `A new OTP was generated: ${otp}`
     });
   } catch (error) {
@@ -400,14 +484,22 @@ router.post('/forgot-password', async (req, res) => {
       resetCodeExpiry: expiry
     });
 
-    // Send reset code via EmailJS
+    // Dual-channel send: EmailJS + BMS Africa SMS
     try {
       await sendOtpViaEmailJS(email, userData.name || 'Student', resetCode);
     } catch (emailErr) {
       console.error('EmailJS Error in forgot-password:', emailErr.message || emailErr);
     }
 
-    res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent to your email.' });
+    if (userData.phone) {
+      try {
+        await sendOtpViaBMS(userData.phone, resetCode);
+      } catch (smsErr) {
+        console.error('BMS SMS Error in forgot-password:', smsErr.message || smsErr);
+      }
+    }
+
+    res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent to your email/phone.' });
   } catch (error) {
     console.error('Error in forgot-password:', error);
     res.status(500).json({ status: 'error', message: 'Server error' });
