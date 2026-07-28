@@ -272,13 +272,36 @@ router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) =
 // Delete election (Admin only)
 router.delete('/:id', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    await db.collection('elections').doc(req.params.id).delete();
+    const electionId = req.params.id;
+    await db.collection('elections').doc(electionId).delete();
+
+    // Cascade delete associated candidates, votes, and voted_voters
+    const collectionsToDelete = ['candidates', 'votes', 'voted_voters'];
+    
+    for (const collectionName of collectionsToDelete) {
+      const snapshot = await db.collection(collectionName).where('electionId', '==', electionId).get();
+      if (!snapshot.empty) {
+        // Firestore batch allows up to 500 operations. For simplicity and since elections might have >500 votes,
+        // we'll delete them concurrently using Promise.all in chunks.
+        const docs = snapshot.docs;
+        const chunkSize = 400;
+        for (let i = 0; i < docs.length; i += chunkSize) {
+          const chunk = docs.slice(i, i + chunkSize);
+          const batch = db.batch();
+          chunk.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          await batch.commit();
+        }
+      }
+    }
 
     // Invalidate caches
     cache.invalidatePrefix('elections:');
     cache.invalidatePrefix('admin:');
+    cache.invalidatePrefix('candidates:');
 
-    res.status(200).json({ status: 'success', message: 'Election deleted' });
+    res.status(200).json({ status: 'success', message: 'Election and all associated data deleted successfully' });
   } catch (error) {
     console.error('Error deleting election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to delete election' });
