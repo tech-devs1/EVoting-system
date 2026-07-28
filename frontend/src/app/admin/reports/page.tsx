@@ -370,19 +370,20 @@ export default function AdminReportPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', fontFamily: 'Arial, sans-serif' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #000000', textAlign: 'left' }}>
-                    <th style={{ padding: '6px 4px', width: '13%' }}>Index No.</th>
-                    <th style={{ padding: '6px 4px', width: '22%' }}>Full Name</th>
-                    <th style={{ padding: '6px 4px', width: '22%' }}>Email</th>
-                    <th style={{ padding: '6px 4px', width: '25%' }}>Programme</th>
+                    <th style={{ padding: '6px 4px', width: '12%' }}>Index No.</th>
+                    <th style={{ padding: '6px 4px', width: '18%' }}>Full Name</th>
+                    <th style={{ padding: '6px 4px', width: '18%' }}>Email</th>
+                    <th style={{ padding: '6px 4px', width: '15%' }}>Programme</th>
                     <th style={{ padding: '6px 4px', width: '8%' }}>Level</th>
-                    <th style={{ padding: '6px 4px', textAlign: 'center', width: '5%' }}>Reg</th>
+                    <th style={{ padding: '6px 4px', textAlign: 'center', width: '4%' }}>Reg</th>
                     <th style={{ padding: '6px 4px', textAlign: 'center', width: '5%' }}>Voted</th>
+                    <th style={{ padding: '6px 4px', width: '20%' }}>Verification Code</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredVoters.length === 0 ? (
                     <tr>
-                      <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#666666' }}>
+                      <td colSpan={8} style={{ padding: '20px', textAlign: 'center', color: '#666666' }}>
                         No voters match the specified criteria.
                       </td>
                     </tr>
@@ -419,6 +420,10 @@ export default function AdminReportPage() {
                         {/* Voted Tick */}
                         <td style={{ padding: '5px 4px', textAlign: 'center', fontWeight: 'bold', fontSize: '13px', color: voter.hasVoted ? '#16a34a' : '#dc2626' }}>
                           {voter.hasVoted ? '✓' : '✗'}
+                        </td>
+                        {/* Verification Code */}
+                        <td style={{ padding: '5px 4px', fontSize: '9px', color: '#666666', wordBreak: 'break-all' }}>
+                          {voter.verificationCode || '—'}
                         </td>
                       </tr>
                     ))

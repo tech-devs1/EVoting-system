@@ -295,6 +295,7 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
 
       // 2. Fetch voted_voters ONLY for active election(s)
       const votedVoterIds = new Set();
+      const voterAuditCodes = {}; // Maps voterId -> array of auditTxIds
       if (activeElectionIds.length > 0) {
         // Firestore 'in' supports up to 30 values
         const chunks = [];
@@ -304,12 +305,18 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
         for (const chunk of chunks) {
           const votedSnap = await db.collection('voted_voters')
             .where('electionId', 'in', chunk)
-            .select('voterId')
+            .select('voterId', 'auditTxId')
             .get();
           votedSnap.forEach(doc => {
             const data = doc.data();
             if (data.voterId) {
               votedVoterIds.add(data.voterId);
+              if (data.auditTxId) {
+                if (!voterAuditCodes[data.voterId]) {
+                  voterAuditCodes[data.voterId] = new Set();
+                }
+                voterAuditCodes[data.voterId].add(data.auditTxId);
+              }
             }
           });
         }
@@ -323,6 +330,9 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
           if (isReg) totalRegisteredVoters++;
 
           const hasVoted = votedVoterIds.has(doc.id) || votedVoterIds.has(data.studentId);
+          const verificationCodes = hasVoted && voterAuditCodes[doc.id] 
+            ? Array.from(voterAuditCodes[doc.id]).join(', ') 
+            : (hasVoted && voterAuditCodes[data.studentId] ? Array.from(voterAuditCodes[data.studentId]).join(', ') : 'N/A');
 
           voterList.push({
             id: doc.id,
@@ -332,7 +342,8 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
             programme: data.programme || 'N/A',
             level: data.level || 'N/A',
             isRegistered: isReg,
-            hasVoted: hasVoted
+            hasVoted: hasVoted,
+            verificationCode: verificationCodes
           });
         }
       });
