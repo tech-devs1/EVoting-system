@@ -96,52 +96,88 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
 
     const fullData = await cache.getOrSet('admin:dashboard-full', async () => {
       // --- KPIs ---
-      const activeElectionsSnap = await db.collection('elections').where('status', '==', 'active').get();
-      const activeElectionIds = [];
-      activeElectionsSnap.forEach(doc => activeElectionIds.push(doc.id));
+      let activeElectionIds = [];
+      try {
+        const activeElectionsSnap = await db.collection('elections').where('status', '==', 'active').get();
+        activeElectionsSnap.forEach(doc => activeElectionIds.push(doc.id));
+      } catch (e) {
+        console.error('Error fetching active elections:', e);
+      }
 
-      const [electionsCountSnap, votersCountSnap, completedSnap, studentsSnap] = await Promise.all([
-        db.collection('elections').count().get(),
-        db.collection('users').where('isRegistered', '==', true).count().get(),
-        db.collection('elections').where('status', '==', 'completed').count().get(),
-        db.collection('users').where('role', '!=', 'admin').count().get()
-      ]);
+      let totalElections = 0;
+      let totalVoters = 0;
+      let completedElectionsCount = 0;
+      let totalStudents = 0;
+
+      try {
+        const [electionsCountSnap, votersCountSnap, completedSnap, studentsSnap] = await Promise.all([
+          db.collection('elections').count().get(),
+          db.collection('users').where('isRegistered', '==', true).count().get(),
+          db.collection('elections').where('status', '==', 'completed').count().get(),
+          db.collection('users').where('role', '!=', 'admin').count().get()
+        ]);
+        totalElections = electionsCountSnap.data().count;
+        totalVoters = votersCountSnap.data().count;
+        completedElectionsCount = completedSnap.data().count;
+        totalStudents = studentsSnap.data().count;
+      } catch (countErr) {
+        console.warn('[Dashboard] Aggregation count() failed, falling back to snapshot size:', countErr.message);
+        // Fallback to .get().size if count() is unsupported or fails
+        const [elSnap, vSnap, compSnap, stSnap] = await Promise.all([
+          db.collection('elections').get(),
+          db.collection('users').where('isRegistered', '==', true).get(),
+          db.collection('elections').where('status', '==', 'completed').get(),
+          db.collection('users').get()
+        ]);
+        totalElections = elSnap.size;
+        totalVoters = vSnap.size;
+        completedElectionsCount = compSnap.size;
+        totalStudents = stSnap.docs.filter(d => d.data().role !== 'admin').length;
+      }
 
       let totalVotesCast = 0;
       let uniqueVotersCount = 0;
 
-      if (activeElectionIds.length > 0) {
-        const [votesSnap, votersSnap] = await Promise.all([
-          db.collection('votes').where('electionId', 'in', activeElectionIds).count().get(),
-          db.collection('voted_voters').where('electionId', 'in', activeElectionIds).count().get()
-        ]);
-        totalVotesCast = votesSnap.data().count;
-        uniqueVotersCount = votersSnap.data().count;
-      } else {
-        const [votesSnap, votersSnap] = await Promise.all([
-          db.collection('votes').count().get(),
-          db.collection('voted_voters').count().get()
-        ]);
-        totalVotesCast = votesSnap.data().count;
-        uniqueVotersCount = votersSnap.data().count;
+      try {
+        if (activeElectionIds.length > 0) {
+          const [votesSnap, votersSnap] = await Promise.all([
+            db.collection('votes').where('electionId', 'in', activeElectionIds).count().get(),
+            db.collection('voted_voters').where('electionId', 'in', activeElectionIds).count().get()
+          ]);
+          totalVotesCast = votesSnap.data().count;
+          uniqueVotersCount = votersSnap.data().count;
+        } else {
+          const [votesSnap, votersSnap] = await Promise.all([
+            db.collection('votes').count().get(),
+            db.collection('voted_voters').count().get()
+          ]);
+          totalVotesCast = votesSnap.data().count;
+          uniqueVotersCount = votersSnap.data().count;
+        }
+      } catch (e) {
+        console.warn('[Dashboard] Fallback for votes/voters count:', e.message);
       }
 
-      const topCandidatesSnap = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();
       const topCandidates = [];
-      topCandidatesSnap.forEach(doc => {
-        const d = doc.data();
-        topCandidates.push({ name: d.name, votes: d.votes || 0 });
-      });
+      try {
+        const topCandidatesSnap = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();
+        topCandidatesSnap.forEach(doc => {
+          const d = doc.data();
+          topCandidates.push({ name: d.name, votes: d.votes || 0 });
+        });
+      } catch (e) {
+        console.error('Error fetching top candidates:', e);
+      }
 
       const stats = {
-        totalElections: electionsCountSnap.data().count,
-        totalVoters: votersCountSnap.data().count,
+        totalElections,
+        totalVoters,
         totalVotesCast,
         activeAlerts: 0,
-        totalStudents: studentsSnap.data().count,
+        totalStudents,
         uniqueVotersCount,
         activeElectionsCount: activeElectionIds.length,
-        completedElectionsCount: completedSnap.data().count,
+        completedElectionsCount,
         topCandidates
       };
 
@@ -191,25 +227,31 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
       });
 
       // --- Flagged Users ---
-      const flaggedSnap = await db.collection('fraud_alerts')
-        .where('type', '==', 'UNRECOGNIZED_STUDENT')
-        .orderBy('timestamp', 'desc')
-        .limit(50)
-        .get();
-
-      const flaggedUsers = [];
-      flaggedSnap.forEach(doc => {
-        const data = doc.data();
-        const studentId = data.metadata?.studentId || 'Unknown';
-        flaggedUsers.push({
-          id: doc.id,
-          studentId: studentId,
-          attemptedAt: data.metadata?.attemptedAt || new Date(data.timestamp || Date.now()).toISOString(),
-          email: studentId !== 'Unknown' ? `${studentId}@htu.edu.gh` : 'Unknown',
-          timestamp: data.timestamp || Date.now(),
-          status: data.status || 'unresolved'
+      let flaggedUsers = [];
+      try {
+        const flaggedSnap = await db.collection('fraud_alerts').get();
+        
+        const rawUsers = [];
+        flaggedSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.type === 'UNRECOGNIZED_STUDENT') {
+            const studentId = data.metadata?.studentId || 'Unknown';
+            rawUsers.push({
+              id: doc.id,
+              studentId: studentId,
+              attemptedAt: data.metadata?.attemptedAt || new Date(data.timestamp || Date.now()).toISOString(),
+              email: studentId !== 'Unknown' ? `${studentId}@htu.edu.gh` : 'Unknown',
+              timestamp: data.timestamp || Date.now(),
+              status: data.status || 'unresolved'
+            });
+          }
         });
-      });
+        
+        // Sort in memory to avoid needing a composite index for where() + orderBy() in Firestore
+        flaggedUsers = rawUsers.sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
+      } catch (err) {
+        console.error('Error fetching flagged users:', err);
+      }
 
       return { stats, electionResults, flaggedUsers };
     }, 10000); // Cache for 10 seconds
