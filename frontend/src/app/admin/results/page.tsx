@@ -59,6 +59,7 @@ function PositionChart({
   // Tie detection: multiple candidates share the highest vote count
   const topVotes = sorted[0]?.votes || 0;
   const isTied = positionTotal > 0 && sorted.filter(c => (c.votes || 0) === topVotes).length > 1;
+  const isIndependentTied = positionTotal > 0 && sorted.length === 1 && sorted[0].isIndependent && (sorted[0].votes || 0) === (sorted[0].noVotes || 0);
 
   const chartLabels: string[] = [];
   const chartVotes: number[] = [];
@@ -162,7 +163,7 @@ function PositionChart({
       </div>
 
       {/* Leader callout — hidden when tied */}
-      {leader && positionTotal > 0 && !isTied && (
+      {leader && positionTotal > 0 && !isTied && !isIndependentTied && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
           marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-3)',
@@ -204,6 +205,25 @@ function PositionChart({
           </span>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
             each with {topVotes.toLocaleString()} vote{topVotes !== 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
+
+      {/* Independent Tie callout */}
+      {isIndependentTied && positionTotal > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+          marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-3)',
+          borderRadius: 'var(--radius-md)',
+          background: '#F59E0B18',
+          border: '1px solid #F59E0B44',
+        }}>
+          <span style={{ fontSize: '14px' }}>⚖️</span>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#F59E0B' }}>
+            Tie — {leader.name}
+          </span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+            Yes and No votes are tied at {(leader.votes || 0).toLocaleString()}
           </span>
         </div>
       )}
