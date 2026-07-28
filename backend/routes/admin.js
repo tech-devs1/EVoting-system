@@ -522,20 +522,42 @@ router.get('/voters/uploads', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Delete an upload and all associated voters
+// Delete an upload and all associated voters, and clear flagged users
 router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const { uploadId } = req.params;
 
+    // 1. Delete associated voters
     const votersSnapshot = await db.collection('users').where('uploadId', '==', uploadId).get();
     if (!votersSnapshot.empty) {
-      const batch = db.batch();
-      votersSnapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-      await batch.commit();
+      const docs = votersSnapshot.docs;
+      const chunkSize = 400;
+      for (let i = 0; i < docs.length; i += chunkSize) {
+        const chunk = docs.slice(i, i + chunkSize);
+        const batch = db.batch();
+        chunk.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+      }
     }
 
+    // 2. Clear flagged users (UNRECOGNIZED_STUDENT fraud alerts)
+    const fraudSnapshot = await db.collection('fraud_alerts').where('type', '==', 'UNRECOGNIZED_STUDENT').get();
+    if (!fraudSnapshot.empty) {
+      const docs = fraudSnapshot.docs;
+      const chunkSize = 400;
+      for (let i = 0; i < docs.length; i += chunkSize) {
+        const chunk = docs.slice(i, i + chunkSize);
+        const batch = db.batch();
+        chunk.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+      }
+    }
+
+    // 3. Delete the upload document itself
     await db.collection('uploads').doc(uploadId).delete();
 
     // Invalidate caches
@@ -544,13 +566,15 @@ router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req,
     cache.invalidate('admin:analytics');
     cache.invalidate('admin:dashboard');
     cache.invalidate('admin:dashboard-full');
+    cache.invalidate('admin:flagged-users');
+    cache.invalidate('admin:fraud-alerts');
 
     res.status(200).json({
       status: 'success',
-      message: `Upload and ${votersSnapshot.size} associated voter records deleted successfully.`
+      message: `Upload, ${votersSnapshot.size} associated voter records, and ${fraudSnapshot.size} flagged users cleared successfully.`
     });
   } catch (error) {
-    console.error('Error deleting upload:', error);
+    console.error('Error deleting upload and flagged users:', error);
     res.status(500).json({ status: 'error', message: 'Failed to delete upload and linked records' });
   }
 });
