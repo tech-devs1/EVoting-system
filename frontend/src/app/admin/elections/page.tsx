@@ -521,7 +521,7 @@ export default function AdminElectionsPage() {
                   <span>✅</span>
                   <span>
                     <strong>Safe Reactivation:</strong> All existing votes, candidates, and results are preserved.
-                    Only the end date and status will be updated.
+                    The election will reopen <strong>immediately</strong> (start time set to now) until your new end date.
                   </span>
                 </div>
 

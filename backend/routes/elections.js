@@ -265,11 +265,13 @@ router.patch('/:id/reactivate', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Only completed elections can be reactivated' });
     }
 
-    // Atomically update endDate and status — votes, candidates, results are untouched
+    // Atomically update endDate, reset startDate to now, and change status back to active
+    const nowISO = new Date().toISOString();
     await db.collection('elections').doc(req.params.id).update({
+      startDate: nowISO,
       endDate,
       status: 'active',
-      reactivatedAt: new Date().toISOString()
+      reactivatedAt: nowISO
     });
 
     // Invalidate caches
@@ -277,7 +279,7 @@ router.patch('/:id/reactivate', verifyAuth, requireAdmin, async (req, res) => {
     cache.invalidatePrefix('admin:');
     cache.invalidatePrefix('candidates:');
 
-    res.status(200).json({ status: 'success', message: 'Election reactivated successfully with new end date' });
+    res.status(200).json({ status: 'success', message: 'Election reactivated successfully with new time window' });
   } catch (error) {
     console.error('Error reactivating election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to reactivate election' });
