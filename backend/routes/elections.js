@@ -239,7 +239,7 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
     res.status(200).json({ status: 'success', message: 'Election time window updated' });
   } catch (error) {
     console.error('Error updating election time window:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to update time window' });
+    res.status(500).json({ status: 'error', message: `Failed to update time window: ${error.message} - ${error.stack}` });
   }
 });
 
