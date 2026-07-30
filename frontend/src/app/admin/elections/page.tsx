@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
-import { Plus, FolderOpen, Settings, Activity, Trash, ArrowLeft, Download, Clock } from 'lucide-react';
+import { Plus, FolderOpen, Settings, Activity, Trash, ArrowLeft, Download, Clock, RefreshCw } from 'lucide-react';
 
 interface Election {
   id: string;
@@ -46,6 +46,12 @@ export default function AdminElectionsPage() {
   const [editStartDate, setEditStartDate] = useState('');
   const [editEndDate, setEditEndDate] = useState('');
   const [editingTime, setEditingTime] = useState(false);
+
+  const [isReactivateModalOpen, setIsReactivateModalOpen] = useState(false);
+  const [reactivateElectionId, setReactivateElectionId] = useState<string | null>(null);
+  const [reactivateElectionTitle, setReactivateElectionTitle] = useState('');
+  const [reactivateEndDate, setReactivateEndDate] = useState('');
+  const [reactivating, setReactivating] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -211,6 +217,39 @@ export default function AdminElectionsPage() {
     }
   };
 
+  const openReactivateModal = (el: Election) => {
+    setReactivateElectionId(el.id);
+    setReactivateElectionTitle(el.title);
+    // Default new end date = 24 hours from now
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    setReactivateEndDate(tomorrow.toISOString().slice(0, 16));
+    setIsReactivateModalOpen(true);
+  };
+
+  const handleReactivate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reactivateElectionId) return;
+    setReactivating(true);
+    try {
+      const res = await apiRequest<{ status: string }>(`/elections/${reactivateElectionId}/reactivate`, 'PATCH', {
+        endDate: reactivateEndDate,
+      });
+      if (res.status === 'success') {
+        setElections(prev => prev.map(el =>
+          el.id === reactivateElectionId ? { ...el, status: 'active' as any, endDate: reactivateEndDate } : el
+        ));
+        setIsReactivateModalOpen(false);
+        alert('Election reactivated successfully! Voting is now open again.');
+      } else {
+        alert('Failed to reactivate: ' + (res as any).message || 'Unknown error');
+      }
+    } catch (err: any) {
+      alert('Failed to reactivate election: ' + err.message);
+    } finally {
+      setReactivating(false);
+    }
+  };
+
   return (
     <div className="animate-page-enter">
       {/* Header */}
@@ -271,9 +310,14 @@ export default function AdminElectionsPage() {
                   </button>
                 )}
                 {el.status === 'completed' && (
-                  <button className="btn btn-primary btn-sm" onClick={() => handleDownloadReport(el.id, el.title)} style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Download size={12} /> Download Report
-                  </button>
+                  <>
+                    <button className="btn btn-primary btn-sm" onClick={() => handleDownloadReport(el.id, el.title)} style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Download size={12} /> Download Report
+                    </button>
+                    <button className="btn btn-success btn-sm" onClick={() => openReactivateModal(el)} style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <RefreshCw size={12} /> Reactivate
+                    </button>
+                  </>
                 )}
                 <Link href={`/admin/elections/${el.id}/candidates`} className="btn btn-outline btn-sm" style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Settings size={12} /> Manage Candidates
@@ -426,6 +470,84 @@ export default function AdminElectionsPage() {
                 <button type="button" className="btn btn-secondary" onClick={() => setIsEditTimeModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={editingTime}>
                   {editingTime ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Reactivate Election Modal */}
+      {mounted && isReactivateModalOpen && createPortal(
+        <div
+          onClick={() => setIsReactivateModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9000,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            padding: '80px 16px 88px 16px',
+            overflowY: 'auto',
+            background: 'rgba(0,0,0,0.5)',
+          }}
+        >
+          <div
+            className="modal-container"
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '440px', maxHeight: 'calc(100dvh - 180px)' }}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">🔄 Reactivate Election</h3>
+              <button className="modal-close" onClick={() => setIsReactivateModalOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleReactivate} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className="modal-body">
+                {/* Info Banner */}
+                <div style={{
+                  padding: '10px 14px',
+                  marginBottom: 'var(--space-4)',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  fontSize: 'var(--text-sm)',
+                  color: '#10B981',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px'
+                }}>
+                  <span>✅</span>
+                  <span>
+                    <strong>Safe Reactivation:</strong> All existing votes, candidates, and results are preserved.
+                    Only the end date and status will be updated.
+                  </span>
+                </div>
+
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
+                  Reactivating: <strong style={{ color: 'var(--text-primary)' }}>{reactivateElectionTitle}</strong>
+                </p>
+
+                <div className="form-group">
+                  <label className="form-label" htmlFor="reactivate-end">
+                    New End Date <span style={{ color: '#EF4444', fontSize: '12px' }}>(must be in the future)</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="reactivate-end"
+                    className="form-input"
+                    required
+                    value={reactivateEndDate}
+                    onChange={e => setReactivateEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsReactivateModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-success" disabled={reactivating} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <RefreshCw size={14} />
+                  {reactivating ? 'Reactivating...' : 'Reactivate Election'}
                 </button>
               </div>
             </form>

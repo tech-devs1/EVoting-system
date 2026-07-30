@@ -243,6 +243,47 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Reactivate a completed election with a new end date (Admin only)
+// NOTE: This does NOT clear votes, candidates, or results — it only extends time and sets status back to active
+router.patch('/:id/reactivate', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const { endDate } = req.body;
+    if (!endDate) {
+      return res.status(400).json({ status: 'error', message: 'A new endDate is required to reactivate the election' });
+    }
+
+    const newEndDate = new Date(endDate).getTime();
+    if (isNaN(newEndDate) || newEndDate <= Date.now()) {
+      return res.status(400).json({ status: 'error', message: 'The new end date must be in the future' });
+    }
+
+    const electionDoc = await db.collection('elections').doc(req.params.id).get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
+    if (electionDoc.data().status !== 'completed') {
+      return res.status(400).json({ status: 'error', message: 'Only completed elections can be reactivated' });
+    }
+
+    // Atomically update endDate and status — votes, candidates, results are untouched
+    await db.collection('elections').doc(req.params.id).update({
+      endDate,
+      status: 'active',
+      reactivatedAt: new Date().toISOString()
+    });
+
+    // Invalidate caches
+    cache.invalidatePrefix('elections:');
+    cache.invalidatePrefix('admin:');
+    cache.invalidatePrefix('candidates:');
+
+    res.status(200).json({ status: 'success', message: 'Election reactivated successfully with new end date' });
+  } catch (error) {
+    console.error('Error reactivating election:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to reactivate election' });
+  }
+});
+
 // Update election status (Admin only)
 router.patch('/:id/status', verifyAuth, requireAdmin, async (req, res) => {
   try {
