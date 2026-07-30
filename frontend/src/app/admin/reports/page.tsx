@@ -27,6 +27,7 @@ interface VoterReportItem {
   level: string;
   isRegistered: boolean;
   hasVoted: boolean;
+  verificationCode?: string;
 }
 
 interface ReportData {
