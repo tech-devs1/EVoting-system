@@ -306,23 +306,23 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
     }
 
-    // Send OTP via EmailJS and BMS SMS (if phone exists)
-    const { otp, emailSent, smsSent } = await generateAndSendOtp(
-      db.collection('users').doc(userDoc.id), userData.email, userData.name, userData.phone || null
+    // BYPASS OTP: Instantly issue JWT token and log user in
+    const token = jwt.sign(
+      { uid: userDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name },
+      JWT_SECRET,
+      { expiresIn: '24h' }
     );
 
-    const dispatchSuccess = emailSent || smsSent;
-
     res.status(200).json({
-      status: 'otp_required',
-      email: userData.email,
-      phone: userData.phone ? userData.phone.replace(/(.{4})(.*)(.{3})/, '$1****$3') : undefined,
-      fallbackOtp: dispatchSuccess ? undefined : otp,
-      emailFailed: !emailSent,
-      smsFailed: !smsSent,
-      message: dispatchSuccess
-        ? `OTP sent to your email (${userData.email})${smsSent ? ' and SMS' : ''}. Please verify.`
-        : `Delivery unavailable. Use code: ${otp}`
+      status: 'success',
+      data: {
+        uid: userDoc.id,
+        email: userData.email,
+        role: userData.role || 'voter',
+        name: userData.name,
+        faceImage: userData.faceImage || ''
+      },
+      token
     });
   } catch (error) {
     console.error('Error logging in:', error);
