@@ -201,9 +201,19 @@ export default function AdminElectionsPage() {
         endDate: editEndDate,
       });
       if (res.status === 'success') {
-        setElections(prev => prev.map(el => 
-          el.id === editElectionId ? { ...el, startDate: editStartDate, endDate: editEndDate } : el
-        ));
+        const now = Date.now();
+        const newEndTime = new Date(editEndDate).getTime();
+        setElections(prev => prev.map(el => {
+          if (el.id === editElectionId) {
+            let newStatus = el.status;
+            // Mirror backend logic: if it was completed and end time is pushed to future, it becomes active
+            if (newStatus === 'completed' && newEndTime > now) {
+              newStatus = 'active' as any;
+            }
+            return { ...el, startDate: editStartDate, endDate: editEndDate, status: newStatus };
+          }
+          return el;
+        }));
         setIsEditTimeModalOpen(false);
         alert('Election time window updated successfully!');
       } else {

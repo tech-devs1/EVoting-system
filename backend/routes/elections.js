@@ -229,7 +229,16 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
       await db.collection('elections').doc(req.params.id).update({ endDate });
     } else {
       // For draft/completed elections: update both start and end dates freely
-      await db.collection('elections').doc(req.params.id).update({ startDate, endDate });
+      const updateData = { startDate, endDate };
+      const now = Date.now();
+      const newEndTime = new Date(endDate).getTime();
+      
+      // If it was completed but they just moved the end date to the future, auto-reactivate it!
+      if (electionData.status === 'completed' && newEndTime > now) {
+        updateData.status = 'active';
+      }
+
+      await db.collection('elections').doc(req.params.id).update(updateData);
     }
 
     // Invalidate caches
