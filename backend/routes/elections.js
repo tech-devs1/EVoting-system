@@ -209,11 +209,28 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
     if (!electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
-    if (electionDoc.data().status === 'active') {
-      return res.status(400).json({ status: 'error', message: 'Cannot edit time window for an ongoing election' });
-    }
 
-    await db.collection('elections').doc(req.params.id).update({ startDate, endDate });
+    const electionData = electionDoc.data();
+    const isActive = electionData.status === 'active';
+
+    if (isActive) {
+      // For active elections: only allow extending the end time, not reducing it
+      const currentEndDate = new Date(electionData.endDate).getTime();
+      const newEndDate = new Date(endDate).getTime();
+
+      if (newEndDate < currentEndDate) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Cannot reduce the end time of an ongoing election. You may only extend it.'
+        });
+      }
+
+      // Only update endDate for active elections (don't change startDate mid-election)
+      await db.collection('elections').doc(req.params.id).update({ endDate });
+    } else {
+      // For draft/completed elections: update both start and end dates freely
+      await db.collection('elections').doc(req.params.id).update({ startDate, endDate });
+    }
 
     // Invalidate caches
     cache.invalidatePrefix('elections:');

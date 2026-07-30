@@ -42,6 +42,7 @@ export default function AdminElectionsPage() {
   
   const [isEditTimeModalOpen, setIsEditTimeModalOpen] = useState(false);
   const [editElectionId, setEditElectionId] = useState<string | null>(null);
+  const [editElectionStatus, setEditElectionStatus] = useState<string>('');
   const [editStartDate, setEditStartDate] = useState('');
   const [editEndDate, setEditEndDate] = useState('');
   const [editingTime, setEditingTime] = useState(false);
@@ -178,6 +179,7 @@ export default function AdminElectionsPage() {
 
   const openEditTimeModal = (el: Election) => {
     setEditElectionId(el.id);
+    setEditElectionStatus(el.status);
     setEditStartDate(el.startDate);
     setEditEndDate(el.endDate);
     setIsEditTimeModalOpen(true);
@@ -385,12 +387,38 @@ export default function AdminElectionsPage() {
             </div>
             <form onSubmit={handleEditTimeWindow} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div className="modal-body">
+                {editElectionStatus === 'active' && (
+                  <div style={{
+                    padding: '10px 14px',
+                    marginBottom: 'var(--space-4)',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(245, 158, 11, 0.12)',
+                    border: '1px solid rgba(245, 158, 11, 0.4)',
+                    fontSize: 'var(--text-sm)',
+                    color: '#F59E0B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <span>⚠️</span>
+                    <span>Election is <strong>active</strong>. You may only extend the end time — the start time and reducing end time are locked.</span>
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label" htmlFor="edit-start">Start Date</label>
-                  <input type="datetime-local" id="edit-start" className="form-input" required value={editStartDate} onChange={e => setEditStartDate(e.target.value)} />
+                  <input
+                    type="datetime-local"
+                    id="edit-start"
+                    className="form-input"
+                    required
+                    value={editStartDate}
+                    onChange={e => setEditStartDate(e.target.value)}
+                    disabled={editElectionStatus === 'active'}
+                    style={editElectionStatus === 'active' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                  />
                 </div>
                 <div className="form-group">
-                  <label className="form-label" htmlFor="edit-end">End Date</label>
+                  <label className="form-label" htmlFor="edit-end">End Date {editElectionStatus === 'active' && <span style={{ color: '#F59E0B', fontWeight: 600 }}>(Extend only)</span>}</label>
                   <input type="datetime-local" id="edit-end" className="form-input" required value={editEndDate} onChange={e => setEditEndDate(e.target.value)} />
                 </div>
               </div>
