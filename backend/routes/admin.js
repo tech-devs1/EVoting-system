@@ -871,4 +871,65 @@ router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// ── Admin Password Reset ─────────────────────────────────────────────────
+// Allows department admins to change their own login password.
+// Writes the new bcrypt hash directly to the tenant doc so the superadmin
+// portal always stays in sync.
+const bcrypt = require('bcryptjs');
+
+router.post('/change-password', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ status: 'error', message: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ status: 'error', message: 'New password must be at least 6 characters' });
+    }
+
+    const tenantId = getTenantId(req);
+    const tenantRef = db.collection('tenants').doc(tenantId);
+    const tenantSnap = await tenantRef.get();
+
+    if (!tenantSnap.exists) {
+      return res.status(404).json({ status: 'error', message: 'Department not found' });
+    }
+
+    const tenantData = tenantSnap.data();
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, tenantData.adminPassword);
+    if (!isMatch) {
+      return res.status(401).json({ status: 'error', message: 'Current password is incorrect' });
+    }
+
+    // Hash and save the new password to the tenant doc
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await tenantRef.update({
+      adminPassword: hashedPassword,
+      passwordUpdatedAt: Date.now()
+    });
+
+    // Log the password change activity
+    try {
+      await logActivity({
+        tenantId,
+        action: 'PASSWORD_CHANGE',
+        performedBy: req.user.email || req.user.uid,
+        details: `Admin password changed by ${req.user.email || 'admin'}`,
+        ip: req.ip
+      });
+    } catch (logErr) {
+      console.warn('[Admin] Failed to log password change activity:', logErr.message);
+    }
+
+    res.status(200).json({ status: 'success', message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Error changing admin password:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to change password' });
+  }
+});
+
 module.exports = router;
