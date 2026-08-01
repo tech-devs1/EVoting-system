@@ -117,14 +117,16 @@ export default function AdminVotersPage() {
                 'education','nursing','health','information','mathematics',
                 'statistics','economics','arts','law','commerce'].some(k => l.includes(k));
       };
+      // Looks like a phone number (7-15 digits, may start with +/0)
+      const isPhone = (s: string) => /^[+]?[\d\s\-().]{7,15}$/.test(s.trim()) && /\d{7,}/.test(s.replace(/[\s\-().+]/g, ''));
 
       // ── HEADER SCAN ──────────────────────────────────────────────────────
       let startRow = 0;
-      let hIdx = -1, hSur = -1, hFirst = -1, hFull = -1, hProg = -1, hLvl = -1, hEmail = -1;
+      let hIdx = -1, hSur = -1, hFirst = -1, hFull = -1, hProg = -1, hLvl = -1, hEmail = -1, hPhone = -1;
 
       const row0 = splitLine(rawLines[0]).map(c => c.toLowerCase());
       const isHeaderRow = row0.some(c =>
-        ['index','surname','name','programme','level','student','id','email'].some(k => c.includes(k))
+        ['index','surname','name','programme','level','student','id','email','phone','mobile','contact','telephone'].some(k => c.includes(k))
       );
 
       if (isHeaderRow) {
@@ -138,6 +140,7 @@ export default function AdminVotersPage() {
           else if (['programme','program','course'].some(k => c.includes(k)))                        hProg  = i;
           else if (['level','lvl','year'].some(k => c.includes(k)))                                  hLvl   = i;
           else if (c.includes('email'))                                                              hEmail = i;
+          else if (['phone','mobile','contact','telephone','tel','cell'].some(k => c.includes(k)))  hPhone = i;
         });
       }
 
@@ -149,7 +152,7 @@ export default function AdminVotersPage() {
         const cols = splitLine(rawLines[i]);
         if (cols.filter(Boolean).length < 2) continue;
 
-        let idx = '', name = '', prog = '', lvl = '', email = '';
+        let idx = '', name = '', prog = '', lvl = '', email = '', phone = '';
 
         // PATH A – header column positions known
         if (hIdx !== -1) {
@@ -161,15 +164,16 @@ export default function AdminVotersPage() {
             const s = cols[hSur] || '', f = cols[hFirst] || '';
             name = s && f ? `${s}, ${f}` : (s || f);
           } else {
-            // Collect all columns that are not ID / programme / level / email
+            // Collect all columns that are not ID / programme / level / email / phone
             name = cols
-              .filter((_, ci) => ci !== hIdx && ci !== hProg && ci !== hLvl && ci !== hEmail)
-              .filter(v => v && !isId(v) && !isLvl(v) && !isProg(v))
+              .filter((_, ci) => ci !== hIdx && ci !== hProg && ci !== hLvl && ci !== hEmail && ci !== hPhone)
+              .filter(v => v && !isId(v) && !isLvl(v) && !isProg(v) && !isPhone(v))
               .join(', ');
           }
-          prog = hProg !== -1 ? (cols[hProg] || '') : '';
-          lvl  = hLvl  !== -1 ? (cols[hLvl]  || '') : '';
-          email = hEmail !== -1 ? (cols[hEmail] || '') : '';
+          prog  = hProg  !== -1 ? (cols[hProg]  || '') : '';
+          lvl   = hLvl   !== -1 ? (cols[hLvl]   || '') : '';
+          email = hEmail !== -1 ? (cols[hEmail]  || '') : '';
+          phone = hPhone !== -1 ? (cols[hPhone]  || '') : '';
         }
 
         // PATH B – no header mapping; auto-detect columns
@@ -184,9 +188,17 @@ export default function AdminVotersPage() {
           idx = cols[idCol];
           const rest = cols.filter((_, c) => c !== idCol);
 
+          // Extract phone number
+          let ph = '';
+          const noPhone = rest.filter(v => {
+            if (!ph && isPhone(v)) { ph = v; return false; }
+            return true;
+          });
+          phone = ph;
+
           // Extract level value
           let lv = '';
-          const noLvl = rest.filter(v => {
+          const noLvl = noPhone.filter(v => {
             if (!lv && isLvl(v)) { lv = v; return false; }
             return true;
           });
@@ -224,8 +236,11 @@ export default function AdminVotersPage() {
           }
         }
 
+        // Clean phone number
+        const phoneClean = phone.replace(/^["'\s,]+|["'\s,]+$/g, '').trim();
+
         if (idx && name) {
-          data.push({ id: idx, name, programme: prog, level: lvl, email });
+          data.push({ id: idx, name, programme: prog, level: lvl, email, phone: phoneClean });
         }
       }
 

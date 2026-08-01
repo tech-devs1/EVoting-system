@@ -481,6 +481,7 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
         email: voter.email,
         programme: voter.programme || '',
         level: voter.level || '',
+        phone: voter.phone ? voter.phone.replace(/\s+/g, '') : '',
         role: 'voter',
         isRegistered: false,
         uploadId: uploadId,

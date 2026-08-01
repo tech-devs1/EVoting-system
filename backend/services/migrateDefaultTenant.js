@@ -78,7 +78,14 @@ async function migrateDefaultTenant() {
       let count = 0;
 
       for (const doc of snap.docs) {
-        batch.set(newColRef.doc(doc.id), doc.data());
+        const data = doc.data();
+        if (data.tenantId === 'default_tenant') {
+          data.tenantId = 'compssa';
+        }
+        if (data.tenantName === 'Default University' || data.tenantName === 'default_tenant') {
+          data.tenantName = 'COMPSSA';
+        }
+        batch.set(newColRef.doc(doc.id), data);
         count++;
 
         if (count % 500 === 0) {
@@ -92,6 +99,33 @@ async function migrateDefaultTenant() {
       }
 
       console.log(`[Migration] Successfully copied ${count} documents for '${colName}'.`);
+    }
+
+    // 3. Fix global_activity_logs that are tied to default_tenant
+    console.log(`[Migration] Scanning global_activity_logs for old default_tenant references...`);
+    const globalLogsSnap = await db.collection('global_activity_logs').where('tenantId', '==', 'default_tenant').get();
+    
+    if (!globalLogsSnap.empty) {
+      let batch = db.batch();
+      let count = 0;
+      
+      for (const doc of globalLogsSnap.docs) {
+        batch.update(doc.ref, {
+          tenantId: 'compssa',
+          tenantName: 'COMPSSA'
+        });
+        count++;
+        
+        if (count % 500 === 0) {
+          await batch.commit();
+          batch = db.batch();
+        }
+      }
+      
+      if (count % 500 !== 0) {
+        await batch.commit();
+      }
+      console.log(`[Migration] Updated ${count} global activity logs to compssa.`);
     }
 
     console.log(`[Migration] Migration from '${oldTenantId}' to '${newTenantId}' completed successfully.`);

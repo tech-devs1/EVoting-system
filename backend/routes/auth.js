@@ -208,7 +208,8 @@ router.post('/verify-student', async (req, res) => {
       status: 'success',
       data: {
         name: studentData.name,
-        email: studentData.email
+        email: studentData.email,
+        hasPhone: !!(studentData.phone)
       }
     });
   } catch (error) {
@@ -250,6 +251,23 @@ router.post('/register', async (req, res) => {
     
     if (studentData.email !== email) {
       return res.status(403).json({ status: 'error', message: 'Email does not match our school records.' });
+    }
+
+    // Phone verification: if the CSV record has a phone on file, the student's input must match
+    if (studentData.phone) {
+      const normalize = (p) => p.replace(/[\s\-().+]/g, '');
+      const recordPhone = normalize(studentData.phone);
+      const inputPhone  = phone ? normalize(phone) : '';
+
+      // Also allow matching with leading country code (e.g., 233 prefix vs 0 prefix)
+      const toLocal = (p) => p.replace(/^233/, '0');
+
+      if (!inputPhone) {
+        return res.status(400).json({ status: 'error', message: 'A phone number is required for registration. Please provide your registered phone number.' });
+      }
+      if (toLocal(recordPhone) !== toLocal(inputPhone)) {
+        return res.status(403).json({ status: 'error', message: 'The phone number provided does not match the one on school records. Please use the phone number registered with the school.' });
+      }
     }
 
     if (studentData.isRegistered) {

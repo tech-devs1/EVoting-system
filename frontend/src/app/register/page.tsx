@@ -38,6 +38,7 @@ export default function RegisterPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendMsg, setResendMsg] = useState('');
+  const [hasPhone, setHasPhone] = useState(false);
 
   // Countdown effect for resend button
   useEffect(() => {
@@ -77,10 +78,11 @@ export default function RegisterPage() {
     setInfoMessage('');
     setLoading(true);
     try {
-      const res = await apiRequest<{ status: string; data: { name: string; email: string }; message?: string }>('/auth/verify-student', 'POST', { studentId: formattedId });
+      const res = await apiRequest<{ status: string; data: { name: string; email: string; hasPhone?: boolean }; message?: string }>('/auth/verify-student', 'POST', { studentId: formattedId });
       if (res.status === 'success') {
         setName(res.data.name);
         setEmail(res.data.email);
+        setHasPhone(!!res.data.hasPhone);
         setCurrentStep(2);
       } else if (res.status === 'incomplete_registration') {
         // User has incomplete registration - redirect to OTP verification
@@ -370,10 +372,12 @@ export default function RegisterPage() {
                 <p style={{ 
                   marginTop: 'var(--space-2)', 
                   fontSize: 'var(--text-xs)', 
-                  color: 'var(--text-tertiary)',
+                  color: hasPhone ? 'var(--color-warning, #d97706)' : 'var(--text-tertiary)',
                   lineHeight: '1.4' 
                 }}>
-                  * Enter your Ghana phone number. OTP verification codes will be sent here via SMS.
+                  {hasPhone
+                    ? '⚠ Your school record has a phone number on file. You must enter that exact number to proceed.'
+                    : '* Enter your Ghana phone number. OTP verification codes will be sent here via SMS.'}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
