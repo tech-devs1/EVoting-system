@@ -44,14 +44,11 @@ export default function LoginPage() {
       setError('Email contains invalid characters. Only letters, numbers, @, ., -, and _ are allowed.');
       return;
     }
-    
     setLoading(true);
     try {
       let role: 'voter' | 'admin' | 'superadmin' = 'voter';
       if (formattedEmail === 'supertech@admin.com') {
         role = 'superadmin';
-      } else if (formattedEmail.includes('admin')) {
-        role = 'admin';
       }
       const result = await login(formattedEmail, password, role);
       if (result?.otpRequired && result.email) {

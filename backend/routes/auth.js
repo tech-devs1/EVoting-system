@@ -291,12 +291,76 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and password are required.' });
     }
 
-    // Iterate through all tenants to find the voter
-    const tenantsSnapshot = await db.collection('tenants').get();
+    // 1. Check COMPSSA (default_tenant) legacy fallback admin
+    if (email === 'admin@htu.edu.gh') {
+      if (password === 'admin080') {
+        const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const token = jwt.sign(
+          { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+        await logActivity({
+          tenantId: DEFAULT_TENANT_ID,
+          tenantName: 'COMPSSA',
+          actorEmail: email,
+          actorRole: 'admin',
+          action: 'ADMIN_LOGIN',
+          description: 'COMPSSA Administrator logged into the admin dashboard',
+          ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+          status: 'success'
+        });
+        return res.status(200).json({
+          status: 'success',
+          data: { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
+          token
+        });
+      } else {
+        return res.status(401).json({ status: 'error', message: 'Invalid credentials.' });
+      }
+    }
+
+    // 2. Check other tenants for department admin
+    const tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', email).get();
+    if (!tenantsSnapshot.empty) {
+      const tenantDoc = tenantsSnapshot.docs[0];
+      const tenantData = tenantDoc.data();
+
+      if (tenantData.adminPassword) {
+        const isMatch = await bcrypt.compare(password, tenantData.adminPassword);
+        if (isMatch) {
+          const uid = `admin_${tenantDoc.id}`;
+          const token = jwt.sign(
+            { uid, email, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+          );
+          await logActivity({
+            tenantId: tenantDoc.id,
+            tenantName: tenantData.name,
+            actorEmail: email,
+            actorRole: 'admin',
+            action: 'ADMIN_LOGIN',
+            description: `${tenantData.name} Administrator logged into the admin dashboard`,
+            ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+            status: 'success'
+          });
+          return res.status(200).json({
+            status: 'success',
+            data: { uid, email, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
+            token
+          });
+        }
+      }
+      return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
+    }
+
+    // 3. Iterate through all tenants to find the voter
+    const allTenantsSnapshot = await db.collection('tenants').get();
     let foundVoterDoc = null;
     let foundTenantId = null;
 
-    for (const tenantDoc of tenantsSnapshot.docs) {
+    for (const tenantDoc of allTenantsSnapshot.docs) {
       const usersSnapshot = await db.collection('tenants').doc(tenantDoc.id).collection('voter_rolls').where('email', '==', email).get();
       if (!usersSnapshot.empty) {
         foundVoterDoc = usersSnapshot.docs[0];
