@@ -138,4 +138,76 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// Update department name and/or admin password
+router.patch('/departments/:tenantId', async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+
+    if (tenantId === 'default_tenant') {
+      return res.status(403).json({ status: 'error', message: 'Cannot modify the default COMPSSA tenant via this endpoint.' });
+    }
+
+    const tenantRef = db.collection('tenants').doc(tenantId);
+    const snap = await tenantRef.get();
+    if (!snap.exists) {
+      return res.status(404).json({ status: 'error', message: 'Department not found' });
+    }
+
+    const updates = {};
+    const { name, adminPassword } = req.body;
+
+    if (name && name.trim()) {
+      updates.name = name.trim();
+    }
+
+    if (adminPassword && adminPassword.trim()) {
+      updates.adminPassword = await bcrypt.hash(adminPassword.trim(), 10);
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ status: 'error', message: 'No changes provided' });
+    }
+
+    await tenantRef.update(updates);
+    res.status(200).json({ status: 'success', message: 'Department updated successfully' });
+  } catch (error) {
+    console.error('Error updating department:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update department' });
+  }
+});
+
+// Delete a department (tenant) and all its sub-collections
+router.delete('/departments/:tenantId', async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+
+    if (tenantId === 'default_tenant') {
+      return res.status(403).json({ status: 'error', message: 'The default COMPSSA tenant cannot be deleted.' });
+    }
+
+    const tenantRef = db.collection('tenants').doc(tenantId);
+    const snap = await tenantRef.get();
+    if (!snap.exists) {
+      return res.status(404).json({ status: 'error', message: 'Department not found' });
+    }
+
+    // Delete sub-collections: elections, candidates, voter_rolls
+    const subCollections = ['elections', 'candidates', 'voter_rolls'];
+    for (const col of subCollections) {
+      const colSnap = await tenantRef.collection(col).get();
+      const batch = db.batch();
+      colSnap.docs.forEach(doc => batch.delete(doc.ref));
+      if (!colSnap.empty) await batch.commit();
+    }
+
+    // Delete the tenant document itself
+    await tenantRef.delete();
+
+    res.status(200).json({ status: 'success', message: 'Department deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting department:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to delete department' });
+  }
+});
+
 module.exports = router;
