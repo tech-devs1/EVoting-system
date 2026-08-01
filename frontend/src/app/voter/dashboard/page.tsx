@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
+import { get, set } from 'idb-keyval';
 import { 
   ShieldCheck, 
   Key, 
@@ -90,36 +91,70 @@ export default function VoterDashboard() {
 
     async function fetchData() {
       try {
+        // ... in fetchData() ...
         console.log('[Dashboard] Fetching elections data...');
-        // Fetch active elections
-        const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
-        console.log('[Dashboard] Elections response:', res);
-        if (res.status === 'success') {
-          // Only show elections created by admin
-          const adminElections = res.data.filter(el => el.createdBy === 'admin');
-          setElections(adminElections.filter(el => el.status === 'active'));
-          setUpcomingElections(adminElections.filter(el => el.status === 'draft'));
-          setPublishedResultsElections(adminElections.filter(el => el.showResults === true));
+        
+        // 1. Try to load from IndexedDB cache first for instant UI response
+        try {
+          const cachedData = await get('voter_dashboard_cache');
+          if (cachedData) {
+            setElections(cachedData.elections || []);
+            setUpcomingElections(cachedData.upcomingElections || []);
+            setPublishedResultsElections(cachedData.publishedResultsElections || []);
+            setVotedElectionIds(cachedData.votedElectionIds || []);
+            setTotalVotes(cachedData.totalVotes || 0);
+            setLoading(false); // UI instantly loads from cache
+          }
+        } catch (e) {
+          console.warn('IndexedDB cache read failed', e);
         }
 
-        // Fetch user voted elections
+        // 2. Fetch fresh data from API
+        const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
+        let newElections = [], newUpcoming = [], newPublished = [];
+        if (res.status === 'success') {
+          const adminElections = res.data.filter(el => el.createdBy === 'admin');
+          newElections = adminElections.filter(el => el.status === 'active');
+          newUpcoming = adminElections.filter(el => el.status === 'draft');
+          newPublished = adminElections.filter(el => el.showResults === true);
+          
+          setElections(newElections);
+          setUpcomingElections(newUpcoming);
+          setPublishedResultsElections(newPublished);
+        }
+
+        let newVotedIds = [];
         try {
           const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
           if (votedRes.status === 'success') {
-            setVotedElectionIds(votedRes.data);
+            newVotedIds = votedRes.data;
+            setVotedElectionIds(newVotedIds);
           }
         } catch (votedErr) {
           console.error('Error fetching voted elections:', votedErr);
         }
 
-        // Get total votes cast from local storage history or mock
+        let newTotalVotes = 0;
         const storedVotes = localStorage.getItem('COMPSSA_voter_votes');
         if (storedVotes) {
           const parsed = JSON.parse(storedVotes);
-          setTotalVotes(parsed.length);
-        } else {
-          setTotalVotes(0); // default to 0 for empty database
+          newTotalVotes = parsed.length;
+          setTotalVotes(newTotalVotes);
         }
+
+        // 3. Save fresh data back to IndexedDB cache
+        try {
+          await set('voter_dashboard_cache', {
+            elections: newElections,
+            upcomingElections: newUpcoming,
+            publishedResultsElections: newPublished,
+            votedElectionIds: newVotedIds,
+            totalVotes: newTotalVotes
+          });
+        } catch (e) {
+          console.warn('IndexedDB cache write failed', e);
+        }
+
       } catch (err) {
         console.error('[Dashboard] Error fetching dashboard data:', err);
       } finally {

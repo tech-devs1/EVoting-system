@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../services/firebase');
+const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
+
+const getTenantId = (req) => req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
+const getElectionsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('elections');
+const getCandidatesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('candidates');
+const getVotedVotersRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('voted_voters');
+const getVotesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('votes');
+const getAuditLogsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('audit_logs');
 const { FieldValue } = require('firebase-admin/firestore');
 const { verifyAuth } = require('../middleware/auth');
 const { recordVoteAudit } = require('../services/audit');
@@ -15,7 +22,7 @@ router.get('/voted-elections', verifyAuth, async (req, res) => {
 
     const electionIds = await cache.getOrSet(cacheKey, async () => {
       // Selective retrieval to minimize network bandwidth
-      const snapshot = await db.collection('voted_voters')
+      const snapshot = await getVotedVotersRef(req)
         .where('voterId', '==', voterId)
         .select('electionId')
         .get();
@@ -58,7 +65,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
     // 1. Check if election is active and within valid time window
     // (We get this from Cache to avoid reading elections document every single time a vote is cast!)
     const election = await cache.getOrSet(`elections:detail:${electionId}`, async () => {
-      const doc = await db.collection('elections').doc(electionId).get();
+      const doc = await getElectionsRef(req).doc(electionId).get();
       if (!doc.exists) {
         throw new Error('ELECTION_NOT_FOUND');
       }
@@ -78,7 +85,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
     }
 
     // Pre-calculate references
-    const candidateRef = db.collection('candidates').doc(candidateId);
+    const candidateRef = getCandidatesRef(req).doc(candidateId);
     const candidateDoc = await candidateRef.get();
     if (!candidateDoc.exists || candidateDoc.data().electionId !== electionId) {
       return res.status(400).json({ status: 'error', message: 'Invalid candidate for this election' });
@@ -87,7 +94,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
     const position = candidateDoc.data().position || 'General';
     const candidateName = candidateDoc.data().name || '';
     const positionKey = position.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const votedRef = db.collection('voted_voters').doc(`${electionId}_${voterId}_${positionKey}`);
+    const votedRef = getVotedVotersRef(req).doc(`${electionId}_${voterId}_${positionKey}`);
 
     // Prepare Vote Payload
     const votePayload = {
@@ -115,7 +122,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
 
       transaction.update(candidateRef, updateData);
       // Create anonymized vote record
-      const votesRef = db.collection('votes').doc();
+      const votesRef = getVotesRef(req).doc();
       transaction.set(votesRef, votePayload);
 
       // Mark voter as voted for this position
@@ -171,7 +178,7 @@ router.get('/verify/:auditTxId', async (req, res) => {
     const cacheKey = `votes:verify:${auditTxId}`;
 
     const auditData = await cache.getOrSet(cacheKey, async () => {
-      const auditDoc = await db.collection('audit_logs').doc(auditTxId).get();
+      const auditDoc = await getAuditLogsRef(req).doc(auditTxId).get();
       if (!auditDoc.exists) {
         throw new Error('NOT_FOUND');
       }

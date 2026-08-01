@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../services/firebase');
+const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
+
+const getTenantId = (req) => req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
+const getElectionsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('elections');
+const getCandidatesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('candidates');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const cache = require('../services/cache');
 
@@ -34,14 +38,14 @@ router.get('/election/:electionId', async (req, res) => {
 
     const candidates = await cache.getOrSet(cacheKey, async () => {
       // Fetch election to see if live charts are published to voters
-      const electionDoc = await db.collection('elections').doc(electionId).get();
+      const electionDoc = await getElectionsRef(req).doc(electionId).get();
       if (!electionDoc.exists) {
         throw new Error('ELECTION_NOT_FOUND');
       }
       const electionData = electionDoc.data();
       const showResults = electionData.showResults === true;
 
-      const candidatesRef = db.collection('candidates');
+      const candidatesRef = getCandidatesRef(req);
       const snapshot = await candidatesRef.where('electionId', '==', electionId).get();
       
       const list = [];
@@ -79,7 +83,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
-    const electionDoc = await db.collection('elections').doc(electionId).get();
+    const electionDoc = await getElectionsRef(req).doc(electionId).get();
     if (!electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
@@ -89,7 +93,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
 
     // Check if the image/photoUrl is already used in the same election
     if (photoUrl && photoUrl.trim() !== '') {
-      const duplicatePhotoSnap = await db.collection('candidates')
+      const duplicatePhotoSnap = await getCandidatesRef(req)
         .where('electionId', '==', electionId)
         .where('photoUrl', '==', photoUrl.trim())
         .get();
@@ -116,7 +120,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
     };
 
     console.log('[Add Candidate] Creating candidate with data:', newCandidate);
-    const docRef = await db.collection('candidates').add(newCandidate);
+    const docRef = await getCandidatesRef(req).add(newCandidate);
     console.log('[Add Candidate] Candidate created with ID:', docRef.id);
     
     // Invalidate caches
@@ -137,10 +141,10 @@ router.delete('/:candidateId', verifyAuth, requireAdmin, async (req, res) => {
     console.log('[Delete Candidate] Deleting candidate:', candidateId);
     
     // Retrieve candidate first to get electionId for cache invalidation
-    const candDoc = await db.collection('candidates').doc(candidateId).get();
+    const candDoc = await getCandidatesRef(req).doc(candidateId).get();
     if (candDoc.exists) {
       const electionId = candDoc.data().electionId;
-      await db.collection('candidates').doc(candidateId).delete();
+      await getCandidatesRef(req).doc(candidateId).delete();
       cache.invalidatePrefix(`candidates:election:${electionId}`);
       cache.invalidate('admin:dashboard-full');
     }
@@ -163,7 +167,7 @@ router.patch('/:candidateId', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'No update fields provided' });
     }
 
-    const candRef = db.collection('candidates').doc(candidateId);
+    const candRef = getCandidatesRef(req).doc(candidateId);
     const candDoc = await candRef.get();
     if (!candDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Candidate not found' });
@@ -171,7 +175,7 @@ router.patch('/:candidateId', verifyAuth, requireAdmin, async (req, res) => {
     const electionId = candDoc.data().electionId;
 
     if (updates.photoUrl && updates.photoUrl.trim() !== '') {
-      const duplicatePhotoSnap = await db.collection('candidates')
+      const duplicatePhotoSnap = await getCandidatesRef(req)
         .where('electionId', '==', electionId)
         .where('photoUrl', '==', updates.photoUrl.trim())
         .get();

@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../services/firebase');
+const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
+
+const getElectionsRef = (req) => {
+  const tenantId = req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
+  return db.collection('tenants').doc(tenantId).collection('elections');
+};
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
 const cache = require('../services/cache');
@@ -12,7 +17,7 @@ router.get('/', async (req, res) => {
     const cacheKey = `elections:list:${status || 'all'}`;
 
     const elections = await cache.getOrSet(cacheKey, async () => {
-      const electionsRef = db.collection('elections');
+      const electionsRef = getElectionsRef(req);
       let snapshot;
       if (status) {
         snapshot = await electionsRef.where('status', '==', status).get();
@@ -37,10 +42,10 @@ router.get('/', async (req, res) => {
 
         if (electionData.status === 'active' && electionData.endDate && endTime < now) {
           updatedStatus = 'completed';
-          dbUpdates.push(db.collection('elections').doc(doc.id).update({ status: 'completed' }));
+          dbUpdates.push(getElectionsRef(req).doc(doc.id).update({ status: 'completed' }));
         } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
           updatedStatus = 'active';
-          dbUpdates.push(db.collection('elections').doc(doc.id).update({ status: 'active' }));
+          dbUpdates.push(getElectionsRef(req).doc(doc.id).update({ status: 'active' }));
         }
         
         list.push({ id: doc.id, ...electionData, status: updatedStatus });
@@ -74,7 +79,7 @@ router.get('/:id', async (req, res) => {
     const cacheKey = `elections:detail:${electionId}`;
 
     const election = await cache.getOrSet(cacheKey, async () => {
-      const doc = await db.collection('elections').doc(electionId).get();
+      const doc = await getElectionsRef(req).doc(electionId).get();
       if (!doc.exists) {
         throw new Error('NOT_FOUND');
       }
@@ -88,13 +93,13 @@ router.get('/:id', async (req, res) => {
 
       if (electionData.status === 'active' && electionData.endDate && endTime < now) {
         updatedStatus = 'completed';
-        await db.collection('elections').doc(doc.id).update({ status: 'completed' });
+        await getElectionsRef(req).doc(doc.id).update({ status: 'completed' });
         // Invalidate caches
         cache.invalidatePrefix('elections:');
         cache.invalidatePrefix('admin:');
       } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
         updatedStatus = 'active';
-        await db.collection('elections').doc(doc.id).update({ status: 'active' });
+        await getElectionsRef(req).doc(doc.id).update({ status: 'active' });
         // Invalidate caches
         cache.invalidatePrefix('elections:');
         cache.invalidatePrefix('admin:');
@@ -148,7 +153,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       createdAt: Date.now()
     };
 
-    const docRef = await db.collection('elections').add(newElection);
+    const docRef = await getElectionsRef(req).add(newElection);
 
     // Invalidate election list caches
     cache.invalidatePrefix('elections:');
@@ -164,7 +169,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
 // Migrate existing elections (Admin only)
 router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const snapshot = await db.collection('elections').get();
+    const snapshot = await getElectionsRef(req).get();
     const updates = [];
 
     snapshot.forEach(doc => {
@@ -180,7 +185,7 @@ router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) 
           ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
           : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
 
-        updates.push(db.collection('elections').doc(doc.id).update({ description: newDesc }));
+        updates.push(getElectionsRef(req).doc(doc.id).update({ description: newDesc }));
       }
     });
 
@@ -205,7 +210,7 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'startDate and endDate are required' });
     }
 
-    const electionDoc = await db.collection('elections').doc(req.params.id).get();
+    const electionDoc = await getElectionsRef(req).doc(req.params.id).get();
     if (!electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
@@ -226,7 +231,7 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
       }
 
       // Only update endDate for active elections (don't change startDate mid-election)
-      await db.collection('elections').doc(req.params.id).update({ endDate });
+      await getElectionsRef(req).doc(req.params.id).update({ endDate });
     } else {
       // For draft/completed elections: update both start and end dates freely
       const updateData = { startDate, endDate };
@@ -238,7 +243,7 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
         updateData.status = 'active';
       }
 
-      await db.collection('elections').doc(req.params.id).update(updateData);
+      await getElectionsRef(req).doc(req.params.id).update(updateData);
     }
 
     // Invalidate caches
@@ -266,7 +271,7 @@ router.patch('/:id/reactivate', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'The new end date must be in the future' });
     }
 
-    const electionDoc = await db.collection('elections').doc(req.params.id).get();
+    const electionDoc = await getElectionsRef(req).doc(req.params.id).get();
     if (!electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
@@ -276,7 +281,7 @@ router.patch('/:id/reactivate', verifyAuth, requireAdmin, async (req, res) => {
 
     // Atomically update endDate, reset startDate to now, and change status back to active
     const nowISO = new Date().toISOString();
-    await db.collection('elections').doc(req.params.id).update({
+    await getElectionsRef(req).doc(req.params.id).update({
       startDate: nowISO,
       endDate,
       status: 'active',
@@ -303,7 +308,7 @@ router.patch('/:id/status', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Invalid status' });
     }
 
-    await db.collection('elections').doc(req.params.id).update({ status });
+    await getElectionsRef(req).doc(req.params.id).update({ status });
 
     // Invalidate caches
     cache.invalidatePrefix('elections:');
@@ -324,7 +329,7 @@ router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) =
       return res.status(400).json({ status: 'error', message: 'showResults must be a boolean' });
     }
 
-    await db.collection('elections').doc(req.params.id).update({ showResults });
+    await getElectionsRef(req).doc(req.params.id).update({ showResults });
 
     // Invalidate caches
     cache.invalidatePrefix('elections:');
@@ -342,7 +347,7 @@ router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) =
 router.delete('/:id', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
-    await db.collection('elections').doc(electionId).delete();
+    await getElectionsRef(req).doc(electionId).delete();
 
     // Cascade delete associated candidates, votes, and voted_voters
     const collectionsToDelete = ['candidates', 'votes', 'voted_voters'];
@@ -385,7 +390,7 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
 
     const report = await cache.getOrSet(cacheKey, async () => {
       // 1. Get election details (1 Read)
-      const electionDoc = await db.collection('elections').doc(electionId).get();
+      const electionDoc = await getElectionsRef(req).doc(electionId).get();
       if (!electionDoc.exists) {
         throw new Error('NOT_FOUND');
       }
@@ -451,7 +456,7 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
 
     const reportData = await cache.getOrSet(cacheKey, async () => {
       // 1. Get election details
-      const electionDoc = await db.collection('elections').doc(electionId).get();
+      const electionDoc = await getElectionsRef(req).doc(electionId).get();
       if (!electionDoc.exists) {
         throw new Error('NOT_FOUND');
       }

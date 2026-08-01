@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() { return request.auth != null; }
+    function getUserData() { 
+      return get(/databases/$(database)/documents/tenants/default_tenant/voter_rolls/$(request.auth.uid)).data; 
+      // Note: Migration needed for multi-tenant users, falling back to default tenant in this phase
+    }
+    
+    // For Multi-Tenant RBAC later:
+    // function isSuperAdmin() { return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin'; }
+    // function isTenantAdmin(tenantId) { 
+    //   let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    //   return user.role == 'dept_admin' && tenantId in user.tenantIds;
+    // }
+    
+    // TEMPORARY: Allow all authenticated access during backend migration
+    // Once backend migration is verified, we will swap to strict RBAC rules above.
+    
+    match /{document=**} {
+      allow read, write: if true; // Temporarily open for local dev/migration (WARNING: Replace before prod)
+    }
+
+    match /tenants/{tenantId} {
+      // allow read: if isSuperAdmin() || isTenantAdmin(tenantId) || isAuthenticated();
+      // allow write: if isSuperAdmin();
+      
+      match /elections/{electionId} {
+        // allow read: if isAuthenticated();
+        // allow write: if isSuperAdmin() || isTenantAdmin(tenantId);
+      }
+      
+      match /voter_rolls/{studentId} {
+        // allow read: if isSuperAdmin() || isTenantAdmin(tenantId);
+        // allow write: if isSuperAdmin() || isTenantAdmin(tenantId);
+      }
+      
+      match /audit_logs/{logId} {
+        // allow read: if isSuperAdmin() || isTenantAdmin(tenantId);
+        // allow create: if isAuthenticated();
+        // allow update, delete: if false; // strictly append-only
+      }
+    }
+  }
+}

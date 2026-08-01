@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { db } = require('../services/firebase');
+const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
+
+const getTenantId = (req) => req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
 const { verifyAuth } = require('../middleware/auth');
 const { logFraudAlert } = require('../services/fraud');
 
@@ -161,7 +163,7 @@ router.post('/verify-student', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Student ID is required' });
     }
 
-    const studentDocRef = db.collection('users').doc(studentId);
+    const studentDocRef = db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').doc(studentId);
     const studentDoc = await studentDocRef.get();
 
     if (!studentDoc.exists) {
@@ -236,7 +238,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const studentDocRef = db.collection('users').doc(studentId);
+    const studentDocRef = db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').doc(studentId);
     const studentDoc = await studentDocRef.get();
 
     if (!studentDoc.exists) {
@@ -288,7 +290,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and password are required.' });
     }
 
-    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
+    const usersSnapshot = await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').where('email', '==', email).get();
     
     if (usersSnapshot.empty) {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
@@ -338,7 +340,7 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and OTP are required.' });
     }
 
-    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
+    const usersSnapshot = await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(400).json({ status: 'error', message: 'Invalid request.' });
     }
@@ -354,7 +356,7 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     // Verify OTP and issue JWT token; mark user as registered
-    const userRef = db.collection('users').doc(userDoc.id);
+    const userRef = db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').doc(userDoc.id);
     await userRef.update({ otp: null, otpExpiry: null, isRegistered: true });
 
     const token = jwt.sign(
@@ -386,7 +388,7 @@ router.post('/resend-otp', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required.' });
 
-    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
+    const usersSnapshot = await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a new OTP was sent.' });
     }
@@ -395,7 +397,7 @@ router.post('/resend-otp', async (req, res) => {
     const userData = userDoc.data();
 
     const { otp, emailSent, smsSent } = await generateAndSendOtp(
-      db.collection('users').doc(userDoc.id), userData.email, userData.name, userData.phone || null
+      db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').doc(userDoc.id), userData.email, userData.name, userData.phone || null
     );
 
     const dispatchSuccess = emailSent || smsSent;
@@ -432,7 +434,7 @@ router.get('/me', verifyAuth, async (req, res) => {
     }
 
     const uid = req.user.uid;
-    const doc = await db.collection('users').doc(uid).get();
+    const doc = await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').doc(uid).get();
 
     if (!doc.exists) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
@@ -467,7 +469,7 @@ router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required' });
 
-    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
+    const usersSnapshot = await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
     }
@@ -479,7 +481,7 @@ router.post('/forgot-password', async (req, res) => {
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = Date.now() + 15 * 60 * 1000; // 15 minutes
 
-    await db.collection('users').doc(userDoc.id).update({
+    await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').doc(userDoc.id).update({
       resetCode,
       resetCodeExpiry: expiry
     });
@@ -523,7 +525,7 @@ router.post('/reset-password', async (req, res) => {
       });
     }
 
-    const usersSnapshot = await db.collection('users').where('email', '==', email).get();
+    const usersSnapshot = await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(400).json({ status: 'error', message: 'Invalid or expired code.' });
     }
@@ -538,7 +540,7 @@ router.post('/reset-password', async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
     // Update password and invalidate code
-    await db.collection('users').doc(userDoc.id).update({
+    await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').doc(userDoc.id).update({
       password: hashedPassword,
       resetCode: null,
       resetCodeExpiry: null
@@ -574,7 +576,7 @@ router.post('/change-password', verifyAuth, async (req, res) => {
     }
 
     const uid = req.user.uid;
-    const userDoc = await db.collection('users').doc(uid).get();
+    const userDoc = await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').doc(uid).get();
 
     if (!userDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
@@ -600,7 +602,7 @@ router.post('/change-password', verifyAuth, async (req, res) => {
 
     // Hash and update the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.collection('users').doc(uid).update({ password: hashedPassword });
+    await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').doc(uid).update({ password: hashedPassword });
 
     res.status(200).json({ status: 'success', message: 'Password changed successfully.' });
   } catch (error) {
@@ -612,7 +614,7 @@ router.post('/change-password', verifyAuth, async (req, res) => {
 router.delete('/cleanup-incomplete', async (req, res) => {
   try {
     // Find users marked as registered but still have pending OTP (registration not completed)
-    const usersSnap = await db.collection('users')
+    const usersSnap = await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls')
       .where('isRegistered', '==', true)
       .where('otp', '!=', null)
       .get();

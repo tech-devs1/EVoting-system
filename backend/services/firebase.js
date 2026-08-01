@@ -200,4 +200,8 @@ class MockFirestore {
 
 const db = firestoreDb || new MockFirestore();
 
-module.exports = { db };
+// Multi-Tenant Migration Constant
+// During the migration, all non-tenant specific API requests will hit the default_tenant
+const DEFAULT_TENANT_ID = 'default_tenant';
+
+module.exports = { db, DEFAULT_TENANT_ID };

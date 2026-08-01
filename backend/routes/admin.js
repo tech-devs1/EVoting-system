@@ -1,6 +1,16 @@
  const express = require('express');
 const router = express.Router();
-const { db } = require('../services/firebase');
+const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
+
+const getTenantId = (req) => req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
+const getElectionsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('elections');
+const getCandidatesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('candidates');
+const getVotedVotersRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('voted_voters');
+const getVotesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('votes');
+const getAuditLogsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('audit_logs');
+const getUsersRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls');
+const getFraudAlertsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('fraud_alerts');
+const getUploadsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('uploads');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const { verifyElectionIntegrity } = require('../services/audit');
 const cache = require('../services/cache');
@@ -10,15 +20,15 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const dashboardData = await cache.getOrSet('admin:dashboard', async () => {
       // 1. Get active elections
-      const activeElectionsSnapForQuery = await db.collection('elections').where('status', '==', 'active').get();
+      const activeElectionsSnapForQuery = await getElectionsRef(req).where('status', '==', 'active').get();
       const activeElectionIds = [];
       activeElectionsSnapForQuery.forEach(doc => {
         activeElectionIds.push(doc.id);
       });
 
       // 2. Server-side aggregations for total counts (~1 Read per collection)
-      const electionsCountSnap = await db.collection('elections').count().get();
-      const votersCountSnap = await db.collection('users').where('isRegistered', '==', true).count().get();
+      const electionsCountSnap = await getElectionsRef(req).count().get();
+      const votersCountSnap = await getUsersRef(req).where('isRegistered', '==', true).count().get();
       
       const totalElections = electionsCountSnap.data().count;
       const totalVoters = votersCountSnap.data().count;
@@ -28,34 +38,34 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
 
       if (activeElectionIds.length > 0) {
         // Get counts for active election(s) specifically
-        const votesCountSnap = await db.collection('votes').where('electionId', 'in', activeElectionIds).count().get();
+        const votesCountSnap = await getVotesRef(req).where('electionId', 'in', activeElectionIds).count().get();
         totalVotesCast = votesCountSnap.data().count;
 
         // OPTIMIZED: Use count() for voted_voters instead of reading all docs
         // This counts vote records (a voter with 3 positions = 3 records), which is
         // close enough for KPI display and saves potentially thousands of reads.
-        const uniqueVotersSnap = await db.collection('voted_voters').where('electionId', 'in', activeElectionIds).count().get();
+        const uniqueVotersSnap = await getVotedVotersRef(req).where('electionId', 'in', activeElectionIds).count().get();
         uniqueVotersCount = uniqueVotersSnap.data().count;
       } else {
         // Fallback to global counts
-        const votesCountSnap = await db.collection('votes').count().get();
+        const votesCountSnap = await getVotesRef(req).count().get();
         totalVotesCast = votesCountSnap.data().count;
 
-        const uniqueVotersSnap = await db.collection('voted_voters').count().get();
+        const uniqueVotersSnap = await getVotedVotersRef(req).count().get();
         uniqueVotersCount = uniqueVotersSnap.data().count;
       }
 
       // 3. Fetch election statuses cleanly
-      const completedElectionsSnap = await db.collection('elections').where('status', '==', 'completed').count().get();
+      const completedElectionsSnap = await getElectionsRef(req).where('status', '==', 'completed').count().get();
       const activeElectionsCount = activeElectionIds.length;
       const completedElectionsCount = completedElectionsSnap.data().count;
 
       // 4. Count non-admin students using count aggregation (1 Read)
-      const totalStudentsSnap = await db.collection('users').where('role', '!=', 'admin').count().get();
+      const totalStudentsSnap = await getUsersRef(req).where('role', '!=', 'admin').count().get();
       const totalStudents = totalStudentsSnap.data().count;
 
       // 5. Fetch top 10 candidates for chart (10 Reads)
-      const candidatesDoc = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();
+      const candidatesDoc = await getCandidatesRef(req).orderBy('votes', 'desc').limit(10).get();
       const topCandidates = [];
       candidatesDoc.forEach(doc => {
         const data = doc.data();
@@ -98,7 +108,7 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
       // --- KPIs ---
       let activeElectionIds = [];
       try {
-        const activeElectionsSnap = await db.collection('elections').where('status', '==', 'active').get();
+        const activeElectionsSnap = await getElectionsRef(req).where('status', '==', 'active').get();
         activeElectionsSnap.forEach(doc => activeElectionIds.push(doc.id));
       } catch (e) {
         console.error('Error fetching active elections:', e);
@@ -111,10 +121,10 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
 
       try {
         const [electionsCountSnap, votersCountSnap, completedSnap, studentsSnap] = await Promise.all([
-          db.collection('elections').count().get(),
-          db.collection('users').where('isRegistered', '==', true).count().get(),
-          db.collection('elections').where('status', '==', 'completed').count().get(),
-          db.collection('users').where('role', '!=', 'admin').count().get()
+          getElectionsRef(req).count().get(),
+          getUsersRef(req).where('isRegistered', '==', true).count().get(),
+          getElectionsRef(req).where('status', '==', 'completed').count().get(),
+          getUsersRef(req).where('role', '!=', 'admin').count().get()
         ]);
         totalElections = electionsCountSnap.data().count;
         totalVoters = votersCountSnap.data().count;
@@ -124,10 +134,10 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
         console.warn('[Dashboard] Aggregation count() failed, falling back to snapshot size:', countErr.message);
         // Fallback to .get().size if count() is unsupported or fails
         const [elSnap, vSnap, compSnap, stSnap] = await Promise.all([
-          db.collection('elections').get(),
-          db.collection('users').where('isRegistered', '==', true).get(),
-          db.collection('elections').where('status', '==', 'completed').get(),
-          db.collection('users').get()
+          getElectionsRef(req).get(),
+          getUsersRef(req).where('isRegistered', '==', true).get(),
+          getElectionsRef(req).where('status', '==', 'completed').get(),
+          getUsersRef(req).get()
         ]);
         totalElections = elSnap.size;
         totalVoters = vSnap.size;
@@ -141,15 +151,15 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
       try {
         if (activeElectionIds.length > 0) {
           const [votesSnap, votersSnap] = await Promise.all([
-            db.collection('votes').where('electionId', 'in', activeElectionIds).count().get(),
-            db.collection('voted_voters').where('electionId', 'in', activeElectionIds).count().get()
+            getVotesRef(req).where('electionId', 'in', activeElectionIds).count().get(),
+            getVotedVotersRef(req).where('electionId', 'in', activeElectionIds).count().get()
           ]);
           totalVotesCast = votesSnap.data().count;
           uniqueVotersCount = votersSnap.data().count;
         } else {
           const [votesSnap, votersSnap] = await Promise.all([
-            db.collection('votes').count().get(),
-            db.collection('voted_voters').count().get()
+            getVotesRef(req).count().get(),
+            getVotedVotersRef(req).count().get()
           ]);
           totalVotesCast = votesSnap.data().count;
           uniqueVotersCount = votersSnap.data().count;
@@ -160,7 +170,7 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
 
       const topCandidates = [];
       try {
-        const topCandidatesSnap = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();
+        const topCandidatesSnap = await getCandidatesRef(req).orderBy('votes', 'desc').limit(10).get();
         topCandidatesSnap.forEach(doc => {
           const d = doc.data();
           topCandidates.push({ name: d.name, votes: d.votes || 0 });
@@ -182,7 +192,7 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
       };
 
       // --- Elections + Candidates (for charts) ---
-      const electionsSnap = await db.collection('elections').get();
+      const electionsSnap = await getElectionsRef(req).get();
       const elections = [];
       const now = Date.now();
       const statusUpdates = [];
@@ -195,10 +205,10 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
 
         if (electionData.status === 'active' && electionData.endDate && endTime < now) {
           updatedStatus = 'completed';
-          statusUpdates.push(db.collection('elections').doc(doc.id).update({ status: 'completed' }));
+          statusUpdates.push(getElectionsRef(req).doc(doc.id).update({ status: 'completed' }));
         } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
           updatedStatus = 'active';
-          statusUpdates.push(db.collection('elections').doc(doc.id).update({ status: 'active' }));
+          statusUpdates.push(getElectionsRef(req).doc(doc.id).update({ status: 'active' }));
         }
 
         elections.push({ id: doc.id, ...electionData, status: updatedStatus });
@@ -211,7 +221,7 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
 
       // Fetch candidates for all elections in parallel
       const candidateResults = await Promise.allSettled(
-        elections.map(el => db.collection('candidates').where('electionId', '==', el.id).get())
+        elections.map(el => getCandidatesRef(req).where('electionId', '==', el.id).get())
       );
 
       const electionResults = elections.map((election, i) => {
@@ -229,7 +239,7 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
       // --- Flagged Users ---
       let flaggedUsers = [];
       try {
-        const flaggedSnap = await db.collection('fraud_alerts').get();
+        const flaggedSnap = await getFraudAlertsRef(req).get();
         
         const rawUsers = [];
         flaggedSnap.forEach(doc => {
@@ -278,7 +288,7 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
 
     const reportData = await cache.getOrSet('admin:report', async () => {
       // 0. Find current active election(s)
-      const activeElectionsSnap = await db.collection('elections').where('status', '==', 'active').get();
+      const activeElectionsSnap = await getElectionsRef(req).where('status', '==', 'active').get();
       const activeElectionIds = [];
       let activeElectionTitle = 'No Active Election';
       activeElectionsSnap.forEach(doc => {
@@ -287,7 +297,7 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
       });
 
       // 1. Fetch user records
-      const usersSnap = await db.collection('users').get();
+      const usersSnap = await getUsersRef(req).get();
       
       let totalVotersFromCSV = 0;
       let totalRegisteredVoters = 0;
@@ -303,7 +313,7 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
           chunks.push(activeElectionIds.slice(i, i + 30));
         }
         for (const chunk of chunks) {
-          const votedSnap = await db.collection('voted_voters')
+          const votedSnap = await getVotedVotersRef(req)
             .where('electionId', 'in', chunk)
             .select('voterId', 'auditTxId')
             .get();
@@ -412,10 +422,10 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Invalid data format. Expected an array of voters.' });
     }
 
-    const uploadRef = db.collection('uploads').doc();
+    const uploadRef = getUploadsRef(req).doc();
     const uploadId = uploadRef.id;
 
-    const usersRef = db.collection('users');
+    const usersRef = getUsersRef(req);
     let added = 0;
     let skipped = 0;
     const unsuccessful = [];
@@ -518,7 +528,7 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
 router.get('/voters/uploads', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const uploads = await cache.getOrSet('admin:uploads', async () => {
-      const snapshot = await db.collection('uploads').orderBy('timestamp', 'desc').get();
+      const snapshot = await getUploadsRef(req).orderBy('timestamp', 'desc').get();
       const results = [];
       snapshot.forEach(doc => {
          results.push({ id: doc.id, ...doc.data() });
@@ -539,7 +549,7 @@ router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req,
     const { uploadId } = req.params;
 
     // 1. Delete associated voters
-    const votersSnapshot = await db.collection('users').where('uploadId', '==', uploadId).get();
+    const votersSnapshot = await getUsersRef(req).where('uploadId', '==', uploadId).get();
     if (!votersSnapshot.empty) {
       const docs = votersSnapshot.docs;
       const chunkSize = 400;
@@ -554,7 +564,7 @@ router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req,
     }
 
     // 2. Clear flagged users (UNRECOGNIZED_STUDENT fraud alerts)
-    const fraudSnapshot = await db.collection('fraud_alerts').where('type', '==', 'UNRECOGNIZED_STUDENT').get();
+    const fraudSnapshot = await getFraudAlertsRef(req).where('type', '==', 'UNRECOGNIZED_STUDENT').get();
     if (!fraudSnapshot.empty) {
       const docs = fraudSnapshot.docs;
       const chunkSize = 400;
@@ -569,7 +579,7 @@ router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req,
     }
 
     // 3. Delete the upload document itself
-    await db.collection('uploads').doc(uploadId).delete();
+    await getUploadsRef(req).doc(uploadId).delete();
 
     // Invalidate caches
     cache.invalidate('admin:uploads');
@@ -595,7 +605,7 @@ router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const alerts = await cache.getOrSet('admin:fraud-alerts', async () => {
       // Query only DUPLICATE_VOTE type alerts at the Firestore level
-      const alertsDoc = await db.collection('fraud_alerts')
+      const alertsDoc = await getFraudAlertsRef(req)
         .where('type', '==', 'DUPLICATE_VOTE')
         .orderBy('timestamp', 'desc')
         .limit(100)
@@ -622,7 +632,7 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const flagged = await cache.getOrSet('admin:flagged-users', async () => {
       // Query only UNRECOGNIZED_STUDENT type at the Firestore level
-      const alertsDoc = await db.collection('fraud_alerts')
+      const alertsDoc = await getFraudAlertsRef(req)
         .where('type', '==', 'UNRECOGNIZED_STUDENT')
         .orderBy('timestamp', 'desc')
         .limit(50)
@@ -658,7 +668,7 @@ router.get('/analytics', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const analyticsData = await cache.getOrSet('admin:analytics', async () => {
       // 1. Fetch total users
-      const usersSnap = await db.collection('users').get();
+      const usersSnap = await getUsersRef(req).get();
       let totalVoters = 0;
       const deptCounts = {};
       
@@ -676,10 +686,10 @@ router.get('/analytics', verifyAuth, requireAdmin, async (req, res) => {
       const deptData = sortedDepts.map(d => d[1]);
       
       // 2. Fetch elections & votes for performance summary
-      const electionsSnap = await db.collection('elections').get();
+      const electionsSnap = await getElectionsRef(req).get();
       const performanceSummary = [];
       
-      const votesSnap = await db.collection('votes').get();
+      const votesSnap = await getVotesRef(req).get();
       const castPerElection = {};
       const votesByHour = {};
       
@@ -768,11 +778,11 @@ router.get('/live-votes', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const liveData = await cache.getOrSet('admin:live-votes', async () => {
       // 1. Fast count aggregation (~1 Read instead of reading every vote doc)
-      const votesCountSnap = await db.collection('votes').count().get();
+      const votesCountSnap = await getVotesRef(req).count().get();
       const liveVotesCount = votesCountSnap.data().count;
       
       // 2. Fetch top candidates (10 Reads)
-      const candidatesDoc = await db.collection('candidates').orderBy('votes', 'desc').limit(10).get();
+      const candidatesDoc = await getCandidatesRef(req).orderBy('votes', 'desc').limit(10).get();
       const topCandidates = [];
       candidatesDoc.forEach(doc => {
         const data = doc.data();
@@ -796,7 +806,7 @@ router.get('/live-votes', verifyAuth, requireAdmin, async (req, res) => {
 router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
   try {
     // 1. Delete all non-admin voters
-    const usersSnap = await db.collection('users').get();
+    const usersSnap = await getUsersRef(req).get();
     let deletedVotersCount = 0;
     if (!usersSnap.empty) {
       const batch = db.batch();
@@ -813,7 +823,7 @@ router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
     }
 
     // 2. Clear upload history
-    const uploadsSnap = await db.collection('uploads').get();
+    const uploadsSnap = await getUploadsRef(req).get();
     if (!uploadsSnap.empty) {
       const batch = db.batch();
       uploadsSnap.docs.forEach(doc => {
@@ -823,7 +833,7 @@ router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
     }
 
     // 3. Clear voted records
-    const votedSnap = await db.collection('voted_voters').get();
+    const votedSnap = await getVotedVotersRef(req).get();
     if (!votedSnap.empty) {
       const batch = db.batch();
       votedSnap.docs.forEach(doc => {
