@@ -37,13 +37,13 @@ export default function SuperAdminDepartments() {
     setError('');
     setFormLoading(true);
     try {
-      const res = await apiRequest('/superadmin/departments', 'POST', formData);
+      const res = await apiRequest<{ status: string; message?: string }>('/superadmin/departments', 'POST', formData);
       if (res.status === 'success') {
         setShowModal(false);
         setFormData({ name: '', domain: '', adminEmail: '', adminPassword: '' });
         fetchDepartments();
       } else {
-        throw new Error((res as any).message || 'Failed to create department');
+        throw new Error(res.message || 'Failed to create department');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
