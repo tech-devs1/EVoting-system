@@ -48,7 +48,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       let role: 'voter' | 'admin' | 'superadmin' = 'voter';
-      if (formattedEmail === 'supertech@admin') {
+      if (formattedEmail === 'supertech@admin.com') {
         role = 'superadmin';
       } else if (formattedEmail.includes('admin')) {
         role = 'admin';
