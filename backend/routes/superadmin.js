@@ -58,8 +58,9 @@ router.get('/departments', async (req, res) => {
   try {
     const snapshot = await db.collection('tenants').get();
     
-    // Process tenants and their stats
-    const departments = await Promise.all(snapshot.docs.map(async (doc) => {
+    // Process tenants and their stats (exclude the old default_tenant)
+    const validDocs = snapshot.docs.filter(doc => doc.id !== 'default_tenant');
+    const departments = await Promise.all(validDocs.map(async (doc) => {
       const data = doc.data();
       
       // Get counts (simplified for overview)
@@ -108,12 +109,13 @@ router.get('/departments', async (req, res) => {
 router.get('/stats', async (req, res) => {
   try {
     const tenantsSnap = await db.collection('tenants').get();
-    const departments = tenantsSnap.size;
+    const validDocs = tenantsSnap.docs.filter(doc => doc.id !== 'default_tenant');
+    const departments = validDocs.length;
     
     let totalElections = 0;
     let totalVoters = 0;
     
-    for (const doc of tenantsSnap.docs) {
+    for (const doc of validDocs) {
       try {
         const elSnap = await db.collection('tenants').doc(doc.id).collection('elections').count().get();
         totalElections += elSnap.data().count;
