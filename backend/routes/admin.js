@@ -14,6 +14,7 @@ const getUploadsRef = (req) => db.collection('tenants').doc(getTenantId(req)).co
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const { verifyElectionIntegrity } = require('../services/audit');
 const cache = require('../services/cache');
+const { logActivity } = require('../services/activityLog');
 
 // Get Dashboard Analytics - OPTIMIZED WITH AGGREGATIONS + CACHE
 router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
@@ -512,6 +513,19 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
     cache.invalidate('admin:analytics');
     cache.invalidate('admin:dashboard');
     cache.invalidate('admin:dashboard-full');
+
+    // Log activity
+    const tenantId = getTenantId(req);
+    await logActivity({
+      tenantId,
+      actorEmail: req.user?.email || 'admin',
+      actorRole: 'admin',
+      action: 'CSV_UPLOAD',
+      description: `Uploaded voter roster "${filename || 'unknown.csv'}" — ${added} added, ${skipped} skipped`,
+      ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      status: 'success',
+      meta: { filename, added, skipped }
+    });
 
     res.status(200).json({ 
       status: 'success', 

@@ -7,6 +7,7 @@ const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
 const getTenantId = (req) => req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
 const { verifyAuth } = require('../middleware/auth');
 const { logFraudAlert } = require('../services/fraud');
+const { logActivity } = require('../services/activityLog');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 const BMS_API_KEY = process.env.BMS_API_KEY || process.env.MNOTIFY_API_KEY || '';
@@ -326,6 +327,17 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    // Log successful voter login
+    await logActivity({
+      tenantId: foundTenantId,
+      actorEmail: userData.email,
+      actorRole: 'voter',
+      action: 'VOTER_LOGIN',
+      description: `Voter ${userData.name || userData.email} logged in successfully`,
+      ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      status: 'success'
+    });
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -360,6 +372,16 @@ router.post('/login-admin', async (req, res) => {
         JWT_SECRET,
         { expiresIn: '24h' }
       );
+      await logActivity({
+        tenantId: DEFAULT_TENANT_ID,
+        tenantName: 'COMPSSA',
+        actorEmail: email,
+        actorRole: 'admin',
+        action: 'ADMIN_LOGIN',
+        description: 'COMPSSA Administrator logged into the admin dashboard',
+        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+        status: 'success'
+      });
       return res.status(200).json({
         status: 'success',
         data: { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
@@ -392,6 +414,17 @@ router.post('/login-admin', async (req, res) => {
       JWT_SECRET,
       { expiresIn: '24h' }
     );
+
+    await logActivity({
+      tenantId: tenantDoc.id,
+      tenantName: tenantData.name,
+      actorEmail: email,
+      actorRole: 'admin',
+      action: 'ADMIN_LOGIN',
+      description: `${tenantData.name} Administrator logged into the admin dashboard`,
+      ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      status: 'success'
+    });
 
     res.status(200).json({
       status: 'success',

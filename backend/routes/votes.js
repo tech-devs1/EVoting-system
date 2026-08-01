@@ -12,6 +12,7 @@ const { FieldValue } = require('firebase-admin/firestore');
 const { verifyAuth } = require('../middleware/auth');
 const { recordVoteAudit } = require('../services/audit');
 const { logFraudAlert } = require('../services/fraud');
+const { logActivity } = require('../services/activityLog');
 const cache = require('../services/cache');
 
 // Get list of election IDs the current user has voted in - CACHED
@@ -145,6 +146,19 @@ router.post('/cast', verifyAuth, async (req, res) => {
     cache.invalidate(`admin:dashboard-full`);
     cache.invalidate(`admin:live-votes`);
     cache.invalidatePrefix(`candidates:election:${electionId}`);
+
+    // Log vote cast activity (anonymous – no candidate name stored)
+    const tenantId = getTenantId(req);
+    await logActivity({
+      tenantId,
+      actorEmail: req.user?.email || 'voter',
+      actorRole: 'voter',
+      action: 'VOTE_CAST',
+      description: `Vote cast in election "${election.title || electionId}"`,
+      ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      status: 'success',
+      meta: { electionId, electionTitle: election.title || '' }
+    });
 
     res.status(200).json({ 
       status: 'success', 
