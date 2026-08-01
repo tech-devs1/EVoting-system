@@ -8,6 +8,29 @@ const { verifyAuth, requireSuperAdmin } = require('../middleware/auth');
 // Protect all superadmin routes
 router.use(verifyAuth, requireSuperAdmin);
 
+// Initialize default COMPSSA tenant doc if it doesn't exist
+async function initDefaultTenant() {
+  try {
+    const tenantRef = db.collection('tenants').doc('default_tenant');
+    const doc = await tenantRef.get();
+    if (!doc.exists) {
+      console.log('[Superadmin] Initializing default COMPSSA tenant in Firestore...');
+      const hashedAdminPassword = await bcrypt.hash('admin080', 10);
+      await tenantRef.set({
+        name: 'COMPSSA',
+        domain: '',
+        adminEmail: 'admin@htu.edu.gh',
+        adminPassword: hashedAdminPassword,
+        status: 'active',
+        createdAt: Date.now()
+      });
+    }
+  } catch (err) {
+    console.error('[Superadmin] Failed to initialize default COMPSSA tenant:', err);
+  }
+}
+initDefaultTenant();
+
 // Create a new department (tenant)
 router.post('/departments', async (req, res) => {
   try {
@@ -144,10 +167,6 @@ router.patch('/departments/:tenantId', async (req, res) => {
   try {
     const { tenantId } = req.params;
 
-    if (tenantId === 'default_tenant') {
-      return res.status(403).json({ status: 'error', message: 'Cannot modify the default COMPSSA tenant via this endpoint.' });
-    }
-
     const tenantRef = db.collection('tenants').doc(tenantId);
     const snap = await tenantRef.get();
     if (!snap.exists) {
@@ -181,10 +200,6 @@ router.patch('/departments/:tenantId', async (req, res) => {
 router.delete('/departments/:tenantId', async (req, res) => {
   try {
     const { tenantId } = req.params;
-
-    if (tenantId === 'default_tenant') {
-      return res.status(403).json({ status: 'error', message: 'The default COMPSSA tenant cannot be deleted.' });
-    }
 
     const tenantRef = db.collection('tenants').doc(tenantId);
     const snap = await tenantRef.get();

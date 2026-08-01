@@ -214,8 +214,8 @@ export default function SuperAdminDepartments() {
                   <tr key={dept.id} style={{ borderBottom: idx < departments.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-md)', background: dept.id === 'default_tenant' ? 'var(--color-primary-100, rgba(37,99,235,0.1))' : 'var(--bg-secondary)', color: dept.id === 'default_tenant' ? 'var(--color-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {dept.id === 'default_tenant' ? <Shield size={20} /> : <Building2 size={20} />}
+                        <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Building2 size={20} />
                         </div>
                         <div>
                           <div style={{ fontWeight: 600 }}>{dept.name}</div>
@@ -237,49 +237,45 @@ export default function SuperAdminDepartments() {
                       </span>
                     </td>
                     <td style={{ padding: '12px', textAlign: 'center', position: 'relative' }}>
-                      {dept.id === 'default_tenant' ? (
-                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Protected</span>
-                      ) : (
-                        <div style={{ position: 'relative', display: 'inline-block' }} ref={openMenuId === dept.id ? menuRef : null}>
-                          <button
-                            className="btn btn-outline btn-sm"
-                            style={{ padding: '6px' }}
-                            onClick={() => setOpenMenuId(openMenuId === dept.id ? null : dept.id)}
-                            aria-label="Department actions"
-                          >
-                            <MoreVertical size={16} />
-                          </button>
-                          {openMenuId === dept.id && (
-                            <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '4px', zIndex: 100, background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: '200px', overflow: 'hidden' }}>
-                              <button
-                                onClick={() => openModal('edit', dept)}
-                                style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'left' }}
-                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-                                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                              >
-                                <Pencil size={15} style={{ color: 'var(--color-primary)' }} /> Rename Department
-                              </button>
-                              <button
-                                onClick={() => openModal('password', dept)}
-                                style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'left' }}
-                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-                                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                              >
-                                <KeyRound size={15} style={{ color: 'var(--color-warning)' }} /> Change Admin Password
-                              </button>
-                              <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
-                              <button
-                                onClick={() => openModal('delete', dept)}
-                                style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: '#EF4444', textAlign: 'left' }}
-                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
-                                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                              >
-                                <Trash2 size={15} /> Delete Department
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <div style={{ position: 'relative', display: 'inline-block' }} ref={openMenuId === dept.id ? menuRef : null}>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          style={{ padding: '6px' }}
+                          onClick={() => setOpenMenuId(openMenuId === dept.id ? null : dept.id)}
+                          aria-label="Department actions"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                        {openMenuId === dept.id && (
+                          <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '4px', zIndex: 100, background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: '200px', overflow: 'hidden' }}>
+                            <button
+                              onClick={() => openModal('edit', dept)}
+                              style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'left' }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                            >
+                              <Pencil size={15} style={{ color: 'var(--color-primary)' }} /> Rename Department
+                            </button>
+                            <button
+                              onClick={() => openModal('password', dept)}
+                              style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'left' }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                            >
+                              <KeyRound size={15} style={{ color: 'var(--color-warning)' }} /> Change Admin Password
+                            </button>
+                            <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
+                            <button
+                              onClick={() => openModal('delete', dept)}
+                              style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: '#EF4444', textAlign: 'left' }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                            >
+                              <Trash2 size={15} /> Delete Department
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
