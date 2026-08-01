@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { apiRequest } from '@/lib/api';
 import { Building2, Plus, AlertCircle, MoreVertical, Shield } from 'lucide-react';
 
@@ -139,73 +140,87 @@ export default function SuperAdminDepartments() {
       )}
 
       {/* Provision Modal */}
-      {showModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', zIndex: 100,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: 'var(--space-4)'
-        }}>
-          <div className="card" style={{ width: '100%', maxWidth: '500px', backgroundColor: 'var(--bg-primary)' }}>
-            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: 'var(--space-6)' }}>Provision New Department</h2>
+      {showModal && typeof window !== 'undefined' && createPortal(
+        <div
+          onClick={() => setShowModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9000,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            padding: '80px 16px 88px 16px',
+            overflowY: 'auto',
+            background: 'rgba(0,0,0,0.5)'
+          }}
+        >
+          <div 
+            className="modal-container" 
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '560px', maxHeight: 'calc(100dvh - 180px)' }}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">Provision New Department</h3>
+              <button className="modal-close" onClick={() => setShowModal(false)}>&times;</button>
+            </div>
             
-            {error && (
-              <div style={{
-                padding: '12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#EF4444',
-                borderRadius: 'var(--radius-md)', marginBottom: '16px', fontSize: 'var(--text-sm)',
-                display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #EF444444'
-              }}>
-                <AlertCircle size={16} /> {error}
-              </div>
-            )}
+            <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className="modal-body">
+                {error && (
+                  <div style={{
+                    padding: '12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#EF4444',
+                    borderRadius: 'var(--radius-md)', marginBottom: '16px', fontSize: 'var(--text-sm)',
+                    display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #EF444444'
+                  }}>
+                    <AlertCircle size={16} /> {error}
+                  </div>
+                )}
 
-            <form onSubmit={handleCreate}>
-              <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-                <label className="form-label" style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>Department Name</label>
-                <input 
-                  type="text" className="form-input" required 
-                  placeholder="e.g. Computer Science Department"
-                  value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
-                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-                <label className="form-label" style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>Sub-Domain / Identifier (Optional)</label>
-                <input 
-                  type="text" className="form-input" 
-                  placeholder="e.g. cs.htu.edu.gh"
-                  value={formData.domain} onChange={e => setFormData({...formData, domain: e.target.value})}
-                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-                <label className="form-label" style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>Admin Login Email</label>
-                <input 
-                  type="email" className="form-input" required 
-                  placeholder="admin@cs.htu.edu.gh"
-                  value={formData.adminEmail} onChange={e => setFormData({...formData, adminEmail: e.target.value})}
-                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-                <label className="form-label" style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>Admin Initial Password</label>
-                <input 
-                  type="password" className="form-input" required 
-                  placeholder="Enter secure password"
-                  value={formData.adminPassword} onChange={e => setFormData({...formData, adminPassword: e.target.value})}
-                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-                />
+                <div className="form-group">
+                  <label className="form-label">Department Name</label>
+                  <input 
+                    type="text" className="form-input" required 
+                    placeholder="e.g. Computer Science Department"
+                    value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Sub-Domain / Identifier (Optional)</label>
+                  <input 
+                    type="text" className="form-input" 
+                    placeholder="e.g. cs.htu.edu.gh"
+                    value={formData.domain} onChange={e => setFormData({...formData, domain: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Admin Login Email</label>
+                  <input 
+                    type="email" className="form-input" required 
+                    placeholder="admin@cs.htu.edu.gh"
+                    value={formData.adminEmail} onChange={e => setFormData({...formData, adminEmail: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Admin Initial Password</label>
+                  <input 
+                    type="password" className="form-input" required 
+                    placeholder="Enter secure password"
+                    value={formData.adminPassword} onChange={e => setFormData({...formData, adminPassword: e.target.value})}
+                  />
+                </div>
               </div>
               
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: 'var(--space-6)' }}>
-                <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline" disabled={formLoading}>Cancel</button>
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary" disabled={formLoading}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={formLoading}>
                   {formLoading ? 'Provisioning...' : 'Provision Tenant'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

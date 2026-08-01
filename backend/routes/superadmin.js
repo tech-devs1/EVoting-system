@@ -103,5 +103,39 @@ router.get('/departments', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to list departments' });
   }
 });
+// Get overall system stats
+router.get('/stats', async (req, res) => {
+  try {
+    const tenantsSnap = await db.collection('tenants').get();
+    const departments = tenantsSnap.size;
+    
+    let totalElections = 0;
+    let totalVoters = 0;
+    
+    for (const doc of tenantsSnap.docs) {
+      try {
+        const elSnap = await db.collection('tenants').doc(doc.id).collection('elections').count().get();
+        totalElections += elSnap.data().count;
+        
+        const voterSnap = await db.collection('tenants').doc(doc.id).collection('voter_rolls').count().get();
+        totalVoters += voterSnap.data().count;
+      } catch (err) {
+        // ignore
+      }
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        departments,
+        elections: totalElections,
+        voters: totalVoters
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch stats' });
+  }
+});
 
 module.exports = router;
