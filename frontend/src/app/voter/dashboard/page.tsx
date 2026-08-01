@@ -111,7 +111,7 @@ export default function VoterDashboard() {
 
         // 2. Fetch fresh data from API
         const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
-        let newElections = [], newUpcoming = [], newPublished = [];
+        let newElections: Election[] = [], newUpcoming: Election[] = [], newPublished: Election[] = [];
         if (res.status === 'success') {
           const adminElections = res.data.filter(el => el.createdBy === 'admin');
           newElections = adminElections.filter(el => el.status === 'active');
@@ -123,7 +123,7 @@ export default function VoterDashboard() {
           setPublishedResultsElections(newPublished);
         }
 
-        let newVotedIds = [];
+        let newVotedIds: string[] = [];
         try {
           const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
           if (votedRes.status === 'success') {
