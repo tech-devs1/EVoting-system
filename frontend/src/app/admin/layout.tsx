@@ -31,8 +31,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Auth Guard
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
+    if (!loading) {
+      if (!user) {
+        router.push('/login');
+      } else if (user.role === 'voter') {
+        router.push('/voter/dashboard');
+      } else if (user.role === 'superadmin') {
+        router.push('/superadmin/dashboard');
+      }
     }
   }, [user, loading, router]);
 

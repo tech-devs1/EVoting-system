@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { 
   ShieldCheck, 
@@ -26,6 +26,7 @@ import {
 export default function VoterLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -36,6 +37,19 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Auth Guard
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.push('/login');
+      } else if (user.role === 'admin') {
+        router.push('/admin/dashboard');
+      } else if (user.role === 'superadmin') {
+        router.push('/superadmin/dashboard');
+      }
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     // Only run on client side after mount
