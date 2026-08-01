@@ -8,7 +8,8 @@ export interface UserProfile {
   uid: string;
   email: string;
   name: string;
-  role: 'voter' | 'admin';
+  role: 'voter' | 'admin' | 'superadmin';
+  tenantId?: string;
   createdAt?: number;
   status?: string;
   faceImage?: string;
@@ -17,7 +18,7 @@ export interface UserProfile {
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
-  login: (email: string, password?: string, role?: 'voter' | 'admin') => Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>;
+  login: (email: string, password?: string, role?: 'voter' | 'admin' | 'superadmin') => Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>;
   register: (studentId: string, email: string, name: string, password?: string, phone?: string, faceImage?: string) => Promise<{ otpRequired?: boolean; email?: string; phone?: string }>;
 
   verifyOtp: (email: string, otp: string) => Promise<void>;
@@ -44,16 +45,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const mockToken = localStorage.getItem('COMPSSA_token');
       if (mockToken) {
         try {
-          // If we have a mock token, let's fetch current user info from backend
           const res = await apiRequest<{ status: string; data: UserProfile }>('/auth/me');
           if (res.status === 'success') {
             setUser(res.data);
+            if (res.data.tenantId) {
+              localStorage.setItem('COMPSSA_tenantId', res.data.tenantId);
+            }
           } else {
             localStorage.removeItem('COMPSSA_token');
           }
         } catch (e) {
           console.error('Failed to restore session from token', e);
-          // Fallback: try to restore from localStorage if API fails
           const storedUser = localStorage.getItem('COMPSSA_user');
           if (storedUser) {
             try {
@@ -72,22 +74,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, [mounted]);
 
-  const login = async (email: string, password?: string, role: 'voter' | 'admin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }> => {
+  const login = async (email: string, password?: string, role: 'voter' | 'admin' | 'superadmin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }> => {
     setLoading(true);
     try {
-      if (role === 'admin') {
-        if (email !== 'admin@htu.edu.gh' || password !== 'admin080') {
-          throw new Error('Invalid administrator credentials.');
+      if (role === 'superadmin') {
+        if (email !== 'supertech' || password !== 'udiosuper') {
+          throw new Error('Invalid super administrator credentials.');
         }
-        const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const uid = `superadmin_${email}`;
         const mockToken = `MOCK_${uid}`;
         localStorage.setItem('COMPSSA_token', `Bearer ${mockToken}`);
-        const userData = { uid, email, name: 'System Administrator', role: 'admin' as const, status: 'active' };
+        const userData = { uid, email, name: 'Super Administrator', role: 'superadmin' as const, status: 'active' };
         localStorage.setItem('COMPSSA_user', JSON.stringify(userData));
         setUser(userData);
-        console.log('[Auth Context] Admin login successful, token:', `Bearer ${mockToken}`);
-        router.push('/admin/dashboard');
+        router.push('/superadmin/dashboard');
         return {};
+      } else if (role === 'admin') {
+        // Send to backend for admin auth
+        const res = await apiRequest<{ status: string; data?: UserProfile; token?: string }>('/auth/login-admin', 'POST', { email, password });
+        if (res.status === 'success' && res.token) {
+          localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);
+          localStorage.setItem('COMPSSA_user', JSON.stringify(res.data));
+          if (res.data?.tenantId) {
+            localStorage.setItem('COMPSSA_tenantId', res.data.tenantId);
+          }
+          setUser(res.data!);
+          router.push('/admin/dashboard');
+          return {};
+        }
+        throw new Error('Unexpected response from server.');
       } else {
         const res = await apiRequest<{ status: string; data?: UserProfile; token?: string; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>('/auth/login', 'POST', { email, password });
         if (res.status === 'otp_required') {
@@ -96,6 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (res.status === 'success' && res.token) {
           localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);
           localStorage.setItem('COMPSSA_user', JSON.stringify(res.data));
+          if (res.data?.tenantId) {
+            localStorage.setItem('COMPSSA_tenantId', res.data.tenantId);
+          }
           setUser(res.data!);
           router.push('/voter/dashboard');
           return {};

@@ -281,7 +281,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login User
+// Login
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -290,14 +290,25 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and password are required.' });
     }
 
-    const usersSnapshot = await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').where('email', '==', email).get();
+    // Iterate through all tenants to find the voter
+    const tenantsSnapshot = await db.collection('tenants').get();
+    let foundVoterDoc = null;
+    let foundTenantId = null;
+
+    for (const tenantDoc of tenantsSnapshot.docs) {
+      const usersSnapshot = await db.collection('tenants').doc(tenantDoc.id).collection('voter_rolls').where('email', '==', email).get();
+      if (!usersSnapshot.empty) {
+        foundVoterDoc = usersSnapshot.docs[0];
+        foundTenantId = tenantDoc.id;
+        break;
+      }
+    }
     
-    if (usersSnapshot.empty) {
-      return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
+    if (!foundVoterDoc) {
+      return res.status(401).json({ status: 'error', message: 'Invalid email or password. You may not be registered in any department.' });
     }
 
-    const userDoc = usersSnapshot.docs[0];
-    const userData = userDoc.data();
+    const userData = foundVoterDoc.data();
 
     if (!userData.isRegistered || !userData.password) {
       return res.status(401).json({ status: 'error', message: 'Account not registered. Please sign up first.' });
@@ -310,7 +321,7 @@ router.post('/login', async (req, res) => {
 
     // BYPASS OTP: Instantly issue JWT token and log user in
     const token = jwt.sign(
-      { uid: userDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name },
+      { uid: foundVoterDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name, tenantId: foundTenantId },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -318,10 +329,11 @@ router.post('/login', async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        uid: userDoc.id,
+        uid: foundVoterDoc.id,
         email: userData.email,
         role: userData.role || 'voter',
         name: userData.name,
+        tenantId: foundTenantId,
         faceImage: userData.faceImage || ''
       },
       token
@@ -329,6 +341,66 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ status: 'error', message: 'Failed to authenticate user.' });
+  }
+});
+
+// Admin Login
+router.post('/login-admin', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ status: 'error', message: 'Email and password are required.' });
+    }
+
+    // COMPSSA (default_tenant) legacy fallback
+    if (email === 'admin@htu.edu.gh' && password === 'admin080') {
+      const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const token = jwt.sign(
+        { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      return res.status(200).json({
+        status: 'success',
+        data: { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
+        token
+      });
+    }
+
+    // Check other tenants for department admin
+    const tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', email).get();
+    if (tenantsSnapshot.empty) {
+      return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
+    }
+
+    const tenantDoc = tenantsSnapshot.docs[0];
+    const tenantData = tenantDoc.data();
+
+    // Verify hashed password for department admins
+    if (!tenantData.adminPassword) {
+      return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, tenantData.adminPassword);
+    if (!isMatch) {
+      return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
+    }
+
+    const uid = `admin_${tenantDoc.id}`;
+    const token = jwt.sign(
+      { uid, email, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: { uid, email, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
+      token
+    });
+  } catch (error) {
+    console.error('Error logging in admin:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to authenticate admin.' });
   }
 });
 

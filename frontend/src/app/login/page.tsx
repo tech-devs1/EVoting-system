@@ -40,14 +40,19 @@ export default function LoginPage() {
     
     // Validate email - only allow alphanumeric, @, ., -, _
     const emailRegex = /^[a-zA-Z0-9@._-]+$/;
-    if (!emailRegex.test(formattedEmail)) {
+    if (formattedEmail !== 'supertech' && !emailRegex.test(formattedEmail)) {
       setError('Email contains invalid characters. Only letters, numbers, @, ., -, and _ are allowed.');
       return;
     }
     
     setLoading(true);
     try {
-      const role = formattedEmail.includes('admin') ? 'admin' : 'voter';
+      let role: 'voter' | 'admin' | 'superadmin' = 'voter';
+      if (formattedEmail === 'supertech') {
+        role = 'superadmin';
+      } else if (formattedEmail.includes('admin')) {
+        role = 'admin';
+      }
       const result = await login(formattedEmail, password, role);
       if (result?.otpRequired && result.email) {
         setOtpEmail(result.email);

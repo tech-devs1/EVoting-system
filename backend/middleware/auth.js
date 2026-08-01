@@ -24,8 +24,17 @@ async function verifyAuth(req, res, next) {
     if (idToken.startsWith('MOCK_')) {
       console.log('[Auth Middleware] Using MOCK token authentication');
       const uid = idToken.replace('MOCK_', '');
-      const role = uid.startsWith('admin_') ? 'admin' : 'voter';
-      req.user = { uid, email: role === 'admin' ? 'admin@htu.edu.gh' : 'mock@votetrust.ai', role };
+      let role = 'voter';
+      let email = 'mock@votetrust.ai';
+      if (uid.startsWith('superadmin_')) {
+        role = 'superadmin';
+        email = 'supertech';
+      } else if (uid.startsWith('admin_')) {
+        role = 'admin';
+        email = 'admin@htu.edu.gh';
+      }
+      
+      req.user = { uid, email, role };
       console.log('[Auth Middleware] MOCK user authenticated:', req.user);
       return next();
     }
@@ -75,12 +84,26 @@ async function requireAdmin(req, res, next) {
     return res.status(401).json({ status: 'error', message: 'Unauthorized: User not authenticated' });
   }
   
-  // In a real application, check custom claims or a user document in Firestore
-  if (req.user.role === 'admin' || req.user.email?.includes('admin')) {
+  if (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.email?.includes('admin')) {
     next();
   } else {
     res.status(403).json({ status: 'error', message: 'Forbidden: Admin access required' });
   }
 }
 
-module.exports = { verifyAuth, requireAdmin };
+/**
+ * Middleware to restrict access to super admin only
+ */
+async function requireSuperAdmin(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized: User not authenticated' });
+  }
+  
+  if (req.user.role === 'superadmin') {
+    next();
+  } else {
+    res.status(403).json({ status: 'error', message: 'Forbidden: Super Admin access required' });
+  }
+}
+
+module.exports = { verifyAuth, requireAdmin, requireSuperAdmin };
