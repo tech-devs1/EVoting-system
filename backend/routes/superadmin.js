@@ -8,29 +8,6 @@ const { verifyAuth, requireSuperAdmin } = require('../middleware/auth');
 // Protect all superadmin routes
 router.use(verifyAuth, requireSuperAdmin);
 
-// Initialize default COMPSSA tenant doc if it doesn't exist
-async function initDefaultTenant() {
-  try {
-    const tenantRef = db.collection('tenants').doc('default_tenant');
-    const doc = await tenantRef.get();
-    if (!doc.exists) {
-      console.log('[Superadmin] Initializing default COMPSSA tenant in Firestore...');
-      const hashedAdminPassword = await bcrypt.hash('admin080', 10);
-      await tenantRef.set({
-        name: 'COMPSSA',
-        domain: '',
-        adminEmail: 'admin@htu.edu.gh',
-        adminPassword: hashedAdminPassword,
-        status: 'active',
-        createdAt: Date.now()
-      });
-    }
-  } catch (err) {
-    console.error('[Superadmin] Failed to initialize default COMPSSA tenant:', err);
-  }
-}
-initDefaultTenant();
-
 // Create a new department (tenant)
 router.post('/departments', async (req, res) => {
   try {
@@ -101,9 +78,9 @@ router.get('/departments', async (req, res) => {
       
       return {
         id: doc.id,
-        name: data.name || (doc.id === 'default_tenant' ? 'COMPSSA' : 'Unknown'),
+        name: data.name || (doc.id === 'compssa' ? 'COMPSSA' : 'Unknown'),
         domain: data.domain || '',
-        adminEmail: data.adminEmail || (doc.id === 'default_tenant' ? 'admin@htu.edu.gh' : 'N/A'),
+        adminEmail: data.adminEmail || (doc.id === 'compssa' ? 'admin@htu.edu.gh' : 'N/A'),
         status: data.status || 'active',
         createdAt: data.createdAt || null,
         electionsCount,
@@ -111,10 +88,10 @@ router.get('/departments', async (req, res) => {
       };
     }));
     
-    // Sort default_tenant (COMPSSA) first
+    // Sort compssa first
     departments.sort((a, b) => {
-      if (a.id === 'default_tenant') return -1;
-      if (b.id === 'default_tenant') return 1;
+      if (a.id === 'compssa') return -1;
+      if (b.id === 'compssa') return 1;
       return (b.createdAt || 0) - (a.createdAt || 0);
     });
 
@@ -346,7 +323,7 @@ router.get('/audit/pdf/:tenantId', async (req, res) => {
     const tenantDoc = await db.collection('tenants').doc(tenantId).get();
     const tenantName = tenantDoc.exists
       ? (tenantDoc.data().name || tenantId)
-      : (tenantId === 'default_tenant' ? 'COMPSSA' : tenantId);
+      : (tenantId === 'compssa' ? 'COMPSSA' : tenantId);
 
     const snap = await db.collection('tenants').doc(tenantId).collection('activity_logs')
       .orderBy('timestamp', 'desc').limit(500).get();

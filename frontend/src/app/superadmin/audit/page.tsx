@@ -192,7 +192,7 @@ export default function SuperAdminAudit() {
               transition: 'all 0.15s ease'
             }}
           >
-            {dept.id === 'default_tenant' ? <Shield size={14} /> : <Building2 size={14} />}
+            {dept.id === 'compssa' ? <Shield size={14} /> : <Building2 size={14} />}
             {dept.name}
           </button>
         ))}
