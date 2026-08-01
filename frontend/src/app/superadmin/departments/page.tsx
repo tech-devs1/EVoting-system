@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '@/lib/api';
-import { Building2, Plus, AlertCircle, CheckCircle2, MoreVertical, Shield } from 'lucide-react';
+import { Building2, Plus, AlertCircle, MoreVertical, Shield } from 'lucide-react';
 
 export default function SuperAdminDepartments() {
   const [departments, setDepartments] = useState<any[]>([]);
@@ -53,42 +53,42 @@ export default function SuperAdminDepartments() {
   };
 
   return (
-    <div className="animate-fade-in">
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+    <div className="animate-page-enter">
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
         <div>
-          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>Manage Departments</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Provision and monitor isolated VaaS tenants.</p>
+          <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-1)' }}>Manage Departments</h2>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Provision and monitor isolated VaaS tenants.</span>
         </div>
-        <button onClick={() => setShowModal(true)} className="btn btn-primary hover-lift">
-          <Plus size={18} style={{ marginRight: '8px' }} />
+        <button onClick={() => setShowModal(true)} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Plus size={16} />
           Provision Department
         </button>
       </header>
 
       {loading ? (
-        <div className="spinner" style={{ margin: '50px auto' }}></div>
+        <p style={{ color: 'var(--text-secondary)' }}>Loading departments registry...</p>
       ) : (
-        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div className="table-responsive">
-            <table className="admin-table">
+        <div className="card" style={{ padding: 'var(--space-6)', overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto', flexGrow: 1, border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
               <thead>
-                <tr>
-                  <th>Department Name</th>
-                  <th>Tenant ID</th>
-                  <th>Admin Login (Email)</th>
-                  <th>Stats</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                <tr style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                  <th style={{ padding: '12px' }}>Department Name</th>
+                  <th style={{ padding: '12px' }}>Tenant ID</th>
+                  <th style={{ padding: '12px' }}>Admin Login (Email)</th>
+                  <th style={{ padding: '12px' }}>Stats</th>
+                  <th style={{ padding: '12px' }}>Status</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {departments.map((dept) => (
-                  <tr key={dept.id}>
-                    <td>
+                {departments.map((dept, idx) => (
+                  <tr key={dept.id} style={{ borderBottom: idx < departments.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                    <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{
                           width: '40px', height: '40px', borderRadius: 'var(--radius-md)',
-                          background: dept.id === 'default_tenant' ? 'var(--color-primary-100)' : 'var(--bg-input)',
+                          background: dept.id === 'default_tenant' ? 'var(--color-primary-100)' : 'var(--bg-secondary)',
                           color: dept.id === 'default_tenant' ? 'var(--color-primary)' : 'var(--text-secondary)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}>
@@ -96,25 +96,30 @@ export default function SuperAdminDepartments() {
                         </div>
                         <div>
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{dept.name}</div>
-                          {dept.domain && <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{dept.domain}</div>}
+                          {dept.domain && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{dept.domain}</div>}
                         </div>
                       </div>
                     </td>
-                    <td><code style={{ fontSize: '0.8rem', background: 'var(--bg-base)', padding: '2px 6px', borderRadius: '4px' }}>{dept.id}</code></td>
-                    <td>{dept.adminEmail}</td>
-                    <td>
-                      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                    <td style={{ padding: '12px' }}><code style={{ fontSize: '12px', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '4px' }}>{dept.id}</code></td>
+                    <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{dept.adminEmail}</td>
+                    <td style={{ padding: '12px' }}>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                         <div><strong style={{color: 'var(--text-primary)'}}>{dept.electionsCount}</strong> Elections</div>
                         <div><strong style={{color: 'var(--text-primary)'}}>{dept.votersCount}</strong> Voters</div>
                       </div>
                     </td>
-                    <td>
-                      <span className={`status-badge status-${dept.status === 'active' ? 'active' : 'draft'}`}>
+                    <td style={{ padding: '12px' }}>
+                      <span className={`badge ${dept.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
                         {dept.status === 'active' ? 'Active' : 'Disabled'}
                       </span>
                     </td>
-                    <td>
-                      <button className="btn btn-outline" style={{ padding: '6px' }} disabled={dept.id === 'default_tenant'}>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                      <button 
+                        className="btn btn-outline btn-sm" 
+                        style={{ padding: '6px' }} 
+                        disabled={dept.id === 'default_tenant'}
+                        title={dept.id === 'default_tenant' ? "Default tenant cannot be managed here" : "Manage"}
+                      >
                         <MoreVertical size={16} />
                       </button>
                     </td>
@@ -122,7 +127,7 @@ export default function SuperAdminDepartments() {
                 ))}
                 {departments.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-secondary)' }}>
                       No departments found.
                     </td>
                   </tr>
@@ -141,50 +146,54 @@ export default function SuperAdminDepartments() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: 'var(--space-4)'
         }}>
-          <div className="glass-card-strong animate-scale-in" style={{ width: '100%', maxWidth: '500px' }}>
-            <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, marginBottom: 'var(--space-6)' }}>Provision New Department</h2>
+          <div className="card" style={{ width: '100%', maxWidth: '500px', backgroundColor: 'var(--bg-primary)' }}>
+            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: 'var(--space-6)' }}>Provision New Department</h2>
             
             {error && (
               <div style={{
-                padding: '12px', background: 'var(--color-danger-bg)', color: 'var(--color-danger)',
+                padding: '12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#EF4444',
                 borderRadius: 'var(--radius-md)', marginBottom: '16px', fontSize: 'var(--text-sm)',
-                display: 'flex', alignItems: 'center', gap: '8px'
+                display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #EF444444'
               }}>
                 <AlertCircle size={16} /> {error}
               </div>
             )}
 
             <form onSubmit={handleCreate}>
-              <div className="form-group">
-                <label className="form-label">Department Name</label>
+              <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+                <label className="form-label" style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>Department Name</label>
                 <input 
                   type="text" className="form-input" required 
                   placeholder="e.g. Computer Science Department"
                   value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
+                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">Sub-Domain / Identifier (Optional)</label>
+              <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+                <label className="form-label" style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>Sub-Domain / Identifier (Optional)</label>
                 <input 
                   type="text" className="form-input" 
                   placeholder="e.g. cs.htu.edu.gh"
                   value={formData.domain} onChange={e => setFormData({...formData, domain: e.target.value})}
+                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">Admin Login Email</label>
+              <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+                <label className="form-label" style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>Admin Login Email</label>
                 <input 
                   type="email" className="form-input" required 
                   placeholder="admin@cs.htu.edu.gh"
                   value={formData.adminEmail} onChange={e => setFormData({...formData, adminEmail: e.target.value})}
+                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">Admin Initial Password</label>
+              <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+                <label className="form-label" style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>Admin Initial Password</label>
                 <input 
                   type="password" className="form-input" required 
                   placeholder="Enter secure password"
                   value={formData.adminPassword} onChange={e => setFormData({...formData, adminPassword: e.target.value})}
+                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                 />
               </div>
               

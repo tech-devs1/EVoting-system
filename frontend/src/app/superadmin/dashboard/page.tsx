@@ -1,38 +1,31 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { apiRequest } from '@/lib/api';
-import { Building2, Users, FileText, Activity } from 'lucide-react';
+import { Building2, Activity, Users, FileText } from 'lucide-react';
+
+interface SuperAdminStats {
+  departments: number;
+  elections: number;
+  voters: number;
+}
 
 export default function SuperAdminDashboard() {
-  const [stats, setStats] = useState({
-    departments: 0,
-    elections: 0,
-    voters: 0
-  });
+  const [stats, setStats] = useState<SuperAdminStats>({ departments: 0, elections: 0, voters: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await apiRequest<{ status: string; data: any[] }>('/superadmin/departments');
+        const res = await apiRequest<{ status: string; data: SuperAdminStats }>('/superadmin/stats');
         if (res.status === 'success') {
-          const departments = res.data;
-          let elections = 0;
-          let voters = 0;
-          departments.forEach(dept => {
-            elections += dept.electionsCount || 0;
-            voters += dept.votersCount || 0;
-          });
-          
-          setStats({
-            departments: departments.length,
-            elections,
-            voters
-          });
+          setStats(res.data);
+        } else {
+          throw new Error('Failed to load stats');
         }
-      } catch (err) {
-        console.error('Failed to load stats', err);
+      } catch (err: any) {
+        setError(err.message || 'An error occurred');
       } finally {
         setLoading(false);
       }
@@ -40,66 +33,78 @@ export default function SuperAdminDashboard() {
     fetchStats();
   }, []);
 
-  if (loading) {
-    return <div className="spinner" style={{ margin: '50px auto' }}></div>;
-  }
-
   return (
-    <div className="animate-fade-in">
-      <header style={{ marginBottom: 'var(--space-6)' }}>
-        <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>System Overview</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>Global metrics across all VaaS tenant departments.</p>
+    <div className="animate-page-enter">
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+        <div>
+          <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, margin: 0 }}>System Overview</h2>
+          <p style={{ color: 'var(--text-secondary)', margin: 'var(--space-1) 0 0 0', fontSize: 'var(--text-sm)' }}>Global metrics across all tenants</p>
+        </div>
       </header>
 
-      <div className="dashboard-grid" style={{ marginBottom: 'var(--space-8)' }}>
-        <div className="glass-card stat-card">
-          <div className="stat-icon-wrapper" style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary)' }}>
-            <Building2 size={24} />
-          </div>
-          <div className="stat-content">
-            <h3 className="stat-label">Active Departments</h3>
-            <p className="stat-value">{stats.departments}</p>
-          </div>
+      {error && (
+        <div style={{ padding: 'var(--space-4)', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-6)', border: '1px solid #EF444444' }}>
+          {error}
         </div>
+      )}
 
-        <div className="glass-card stat-card">
-          <div className="stat-icon-wrapper" style={{ background: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
-            <FileText size={24} />
+      {loading ? (
+        <p style={{ color: 'var(--text-secondary)' }}>Loading system statistics...</p>
+      ) : (
+        <div className="admin-grid-top">
+          <div className="card kpi-card">
+            <div className="kpi-details">
+              <span className="kpi-label">Active Departments</span>
+              <span className="kpi-value">{stats.departments}</span>
+              <div className="kpi-trend up">
+                <span>Total tenants</span>
+              </div>
+            </div>
+            <div className="kpi-icon-wrapper blue">
+              <Building2 size={24} />
+            </div>
           </div>
-          <div className="stat-content">
-            <h3 className="stat-label">Total Elections</h3>
-            <p className="stat-value">{stats.elections}</p>
-          </div>
-        </div>
 
-        <div className="glass-card stat-card">
-          <div className="stat-icon-wrapper" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
-            <Users size={24} />
+          <div className="card kpi-card">
+            <div className="kpi-details">
+              <span className="kpi-label">Total Elections</span>
+              <span className="kpi-value">{stats.elections}</span>
+              <div className="kpi-trend">
+                <span>Across all departments</span>
+              </div>
+            </div>
+            <div className="kpi-icon-wrapper purple">
+              <Activity size={24} />
+            </div>
           </div>
-          <div className="stat-content">
-            <h3 className="stat-label">Total Registered Voters</h3>
-            <p className="stat-value">{stats.voters.toLocaleString()}</p>
-          </div>
-        </div>
 
-        <div className="glass-card stat-card">
-          <div className="stat-icon-wrapper" style={{ background: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
-            <Activity size={24} />
+          <div className="card kpi-card">
+            <div className="kpi-details">
+              <span className="kpi-label">Registered Voters</span>
+              <span className="kpi-value">{stats.voters.toLocaleString()}</span>
+              <div className="kpi-trend">
+                <span>Total platform users</span>
+              </div>
+            </div>
+            <div className="kpi-icon-wrapper green">
+              <Users size={24} />
+            </div>
           </div>
-          <div className="stat-content">
-            <h3 className="stat-label">System Health</h3>
-            <p className="stat-value" style={{ color: 'var(--color-success)', fontSize: '1.2rem' }}>All Systems Nominal</p>
+          
+          <div className="card kpi-card">
+            <div className="kpi-details">
+              <span className="kpi-label">System Health</span>
+              <span className="kpi-value" style={{ color: 'var(--color-success)', fontSize: '1.2rem' }}>Nominal</span>
+              <div className="kpi-trend">
+                <span>All systems operational</span>
+              </div>
+            </div>
+            <div className="kpi-icon-wrapper green">
+              <FileText size={24} />
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div className="glass-card">
-        <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, marginBottom: 'var(--space-4)' }}>Recent System Activity</h2>
-        <div style={{ textAlign: 'center', padding: 'var(--space-8) 0', color: 'var(--text-secondary)' }}>
-          <Activity size={48} style={{ opacity: 0.2, margin: '0 auto var(--space-4) auto' }} />
-          <p>System audit logs will appear here.</p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
