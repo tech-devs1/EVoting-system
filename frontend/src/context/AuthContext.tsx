@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       if (role === 'superadmin') {
-        if (email !== 'supertech' || password !== 'udiosuper') {
+        if (email !== 'supertech@admin.com' || password !== 'udiosuper') {
           throw new Error('Invalid super administrator credentials.');
         }
         const uid = `superadmin_${email}`;

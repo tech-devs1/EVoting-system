@@ -28,7 +28,7 @@ async function verifyAuth(req, res, next) {
       let email = 'mock@votetrust.ai';
       if (uid.startsWith('superadmin_')) {
         role = 'superadmin';
-        email = 'supertech';
+        email = 'supertech@admin.com';
       } else if (uid.startsWith('admin_')) {
         role = 'admin';
         email = 'admin@htu.edu.gh';

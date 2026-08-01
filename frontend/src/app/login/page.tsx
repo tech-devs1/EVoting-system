@@ -40,7 +40,7 @@ export default function LoginPage() {
     
     // Validate email - only allow alphanumeric, @, ., -, _
     const emailRegex = /^[a-zA-Z0-9@._-]+$/;
-    if (formattedEmail !== 'supertech' && !emailRegex.test(formattedEmail)) {
+    if (formattedEmail !== 'supertech@admin.com' && !emailRegex.test(formattedEmail)) {
       setError('Email contains invalid characters. Only letters, numbers, @, ., -, and _ are allowed.');
       return;
     }
@@ -48,7 +48,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       let role: 'voter' | 'admin' | 'superadmin' = 'voter';
-      if (formattedEmail === 'supertech') {
+      if (formattedEmail === 'supertech@admin') {
         role = 'superadmin';
       } else if (formattedEmail.includes('admin')) {
         role = 'admin';
