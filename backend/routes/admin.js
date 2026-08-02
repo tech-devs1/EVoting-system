@@ -37,23 +37,47 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
       let totalVotesCast = 0;
       let uniqueVotersCount = 0;
 
-      if (activeElectionIds.length > 0) {
-        // Get counts for active election(s) specifically
-        const votesCountSnap = await getVotesRef(req).where('electionId', 'in', activeElectionIds).count().get();
-        totalVotesCast = votesCountSnap.data().count;
+      // Target active elections, or fallback to all/completed elections if no active election exists
+      let targetElectionIds = [...activeElectionIds];
+      if (targetElectionIds.length === 0) {
+        const allElectionsSnap = await getElectionsRef(req).get();
+        allElectionsSnap.forEach(doc => targetElectionIds.push(doc.id));
+      }
 
-        // OPTIMIZED: Use count() for voted_voters instead of reading all docs
-        // This counts vote records (a voter with 3 positions = 3 records), which is
-        // close enough for KPI display and saves potentially thousands of reads.
-        const uniqueVotersSnap = await getVotedVotersRef(req).where('electionId', 'in', activeElectionIds).count().get();
-        uniqueVotersCount = uniqueVotersSnap.data().count;
-      } else {
-        // Fallback to global counts
-        const votesCountSnap = await getVotesRef(req).count().get();
-        totalVotesCast = votesCountSnap.data().count;
+      if (targetElectionIds.length > 0) {
+        try {
+          const votesCountSnap = await getVotesRef(req).where('electionId', 'in', targetElectionIds.slice(0, 30)).count().get();
+          totalVotesCast = votesCountSnap.data().count;
 
-        const uniqueVotersSnap = await getVotedVotersRef(req).count().get();
-        uniqueVotersCount = uniqueVotersSnap.data().count;
+          const uniqueVotersSnap = await getVotedVotersRef(req).where('electionId', 'in', targetElectionIds.slice(0, 30)).count().get();
+          uniqueVotersCount = uniqueVotersSnap.data().count;
+        } catch (err) {
+          console.warn('[Dashboard] Error querying votes/voted_voters:', err.message);
+        }
+      }
+
+      // Robust fallback: If totalVotesCast is 0, sum votes directly from candidate tallies across elections
+      if (totalVotesCast === 0) {
+        try {
+          const candsSnap = await getCandidatesRef(req).get();
+          let candTotal = 0;
+          const posTotals = {};
+          candsSnap.forEach(doc => {
+            const d = doc.data();
+            const v = (d.votes || 0) + (d.noVotes || 0);
+            candTotal += v;
+            const pos = d.position || 'General';
+            posTotals[pos] = (posTotals[pos] || 0) + v;
+          });
+          totalVotesCast = candTotal;
+          if (uniqueVotersCount === 0) {
+            // Unique voters = max votes in any single category
+            const maxPosVotes = Math.max(0, ...Object.values(posTotals));
+            uniqueVotersCount = maxPosVotes;
+          }
+        } catch (err) {
+          console.warn('[Dashboard] Candidate fallback failed:', err.message);
+        }
       }
 
       // 3. Fetch election statuses cleanly
@@ -150,23 +174,43 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
       let uniqueVotersCount = 0;
 
       try {
-        if (activeElectionIds.length > 0) {
+        let targetElectionIds = [...activeElectionIds];
+        if (targetElectionIds.length === 0) {
+          const allElectionsSnap = await getElectionsRef(req).get();
+          allElectionsSnap.forEach(doc => targetElectionIds.push(doc.id));
+        }
+
+        if (targetElectionIds.length > 0) {
           const [votesSnap, votersSnap] = await Promise.all([
-            getVotesRef(req).where('electionId', 'in', activeElectionIds).count().get(),
-            getVotedVotersRef(req).where('electionId', 'in', activeElectionIds).count().get()
-          ]);
-          totalVotesCast = votesSnap.data().count;
-          uniqueVotersCount = votersSnap.data().count;
-        } else {
-          const [votesSnap, votersSnap] = await Promise.all([
-            getVotesRef(req).count().get(),
-            getVotedVotersRef(req).count().get()
+            getVotesRef(req).where('electionId', 'in', targetElectionIds.slice(0, 30)).count().get(),
+            getVotedVotersRef(req).where('electionId', 'in', targetElectionIds.slice(0, 30)).count().get()
           ]);
           totalVotesCast = votesSnap.data().count;
           uniqueVotersCount = votersSnap.data().count;
         }
       } catch (e) {
         console.warn('[Dashboard] Fallback for votes/voters count:', e.message);
+      }
+
+      if (totalVotesCast === 0) {
+        try {
+          const candsSnap = await getCandidatesRef(req).get();
+          let candTotal = 0;
+          const posTotals = {};
+          candsSnap.forEach(doc => {
+            const d = doc.data();
+            const v = (d.votes || 0) + (d.noVotes || 0);
+            candTotal += v;
+            const pos = d.position || 'General';
+            posTotals[pos] = (posTotals[pos] || 0) + v;
+          });
+          totalVotesCast = candTotal;
+          if (uniqueVotersCount === 0) {
+            uniqueVotersCount = Math.max(0, ...Object.values(posTotals));
+          }
+        } catch (err) {
+          console.warn('[Dashboard-full] Candidate fallback failed:', err.message);
+        }
       }
 
       const topCandidates = [];
@@ -288,7 +332,7 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
     }
 
     const reportData = await cache.getOrSet('admin:report', async () => {
-      // 0. Find current active election(s)
+      // 0. Find current active election(s) or fallback to completed/all elections
       const activeElectionsSnap = await getElectionsRef(req).where('status', '==', 'active').get();
       const activeElectionIds = [];
       let activeElectionTitle = 'No Active Election';
@@ -297,6 +341,17 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
         activeElectionTitle = doc.data().title || activeElectionTitle;
       });
 
+      let targetElectionIds = [...activeElectionIds];
+      if (targetElectionIds.length === 0) {
+        const allElectionsSnap = await getElectionsRef(req).get();
+        allElectionsSnap.forEach(doc => {
+          targetElectionIds.push(doc.id);
+          if (activeElectionTitle === 'No Active Election') {
+            activeElectionTitle = doc.data().title || 'Completed Election';
+          }
+        });
+      }
+
       // 1. Fetch user records
       const usersSnap = await getUsersRef(req).get();
       
@@ -304,14 +359,13 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
       let totalRegisteredVoters = 0;
       const voterList = [];
 
-      // 2. Fetch voted_voters ONLY for active election(s)
+      // 2. Fetch voted_voters for target election(s)
       const votedVoterIds = new Set();
       const voterAuditCodes = {}; // Maps voterId -> array of auditTxIds
-      if (activeElectionIds.length > 0) {
-        // Firestore 'in' supports up to 30 values
+      if (targetElectionIds.length > 0) {
         const chunks = [];
-        for (let i = 0; i < activeElectionIds.length; i += 30) {
-          chunks.push(activeElectionIds.slice(i, i + 30));
+        for (let i = 0; i < targetElectionIds.length; i += 30) {
+          chunks.push(targetElectionIds.slice(i, i + 30));
         }
         for (const chunk of chunks) {
           const votedSnap = await getVotedVotersRef(req)
@@ -359,7 +413,23 @@ router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
         }
       });
 
-      const totalVoted = votedVoterIds.size;
+      let totalVoted = votedVoterIds.size;
+
+      // Fallback: If totalVoted is 0, estimate from candidate max category votes
+      if (totalVoted === 0) {
+        try {
+          const candsSnap = await getCandidatesRef(req).get();
+          const posTotals = {};
+          candsSnap.forEach(doc => {
+            const d = doc.data();
+            const v = (d.votes || 0) + (d.noVotes || 0);
+            const pos = d.position || 'General';
+            posTotals[pos] = (posTotals[pos] || 0) + v;
+          });
+          totalVoted = Math.max(0, ...Object.values(posTotals));
+        } catch (e) {}
+      }
+
       const summary = {
         field1_totalVoters: {
           label: 'Number of Voters (from CSV file)',
