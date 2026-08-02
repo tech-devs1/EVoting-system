@@ -214,7 +214,7 @@ export default function AdminSettingsPage() {
         </form>
 
         <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          <strong style={{ color: 'var(--text-primary)' }}>ℹ Note:</strong> Changing your password here will immediately update your login credentials across the system, including the Super Admin management portal.
+          
         </div>
       </div>
     </div>

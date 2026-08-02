@@ -24,12 +24,16 @@ interface Department {
 }
 
 const ACTION_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  VOTER_LOGIN:  { label: 'Voter Login',  color: '#2563EB', bg: 'rgba(37,99,235,0.1)' },
-  ADMIN_LOGIN:  { label: 'Admin Login',  color: '#7C3AED', bg: 'rgba(124,58,237,0.1)' },
-  CSV_UPLOAD:   { label: 'CSV Upload',   color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-  VOTE_CAST:    { label: 'Vote Cast',    color: '#0891B2', bg: 'rgba(8,145,178,0.1)' },
-  DEPT_CREATED: { label: 'Dept Created', color: '#D97706', bg: 'rgba(217,119,6,0.1)' },
-  DEFAULT:      { label: 'Action',       color: '#6B7280', bg: 'rgba(107,114,128,0.1)' },
+  VOTER_LOGIN:               { label: 'Voter Login',        color: '#2563EB', bg: 'rgba(37,99,235,0.1)' },
+  ADMIN_LOGIN:               { label: 'Admin Login',        color: '#7C3AED', bg: 'rgba(124,58,237,0.1)' },
+  CSV_UPLOAD:                { label: 'CSV Upload',         color: '#059669', bg: 'rgba(5,150,105,0.1)' },
+  VOTE_CAST:                 { label: 'Vote Cast',          color: '#0891B2', bg: 'rgba(8,145,178,0.1)' },
+  DEPT_CREATED:              { label: 'Dept Created',       color: '#D97706', bg: 'rgba(217,119,6,0.1)' },
+  PASSWORD_CHANGE:           { label: 'Admin Pwd Change',   color: '#DC2626', bg: 'rgba(220,38,38,0.1)' },
+  PASSWORD_CHANGED:          { label: 'Voter Pwd Change',   color: '#E11D48', bg: 'rgba(225,29,72,0.1)' },
+  PASSWORD_RESET:            { label: 'Password Reset',     color: '#EA580C', bg: 'rgba(234,88,12,0.1)' },
+  PASSWORD_RESET_REQUESTED:  { label: 'Reset Requested',   color: '#CA8A04', bg: 'rgba(202,138,4,0.1)' },
+  DEFAULT:                   { label: 'Action',             color: '#6B7280', bg: 'rgba(107,114,128,0.1)' },
 };
 
 function ActionBadge({ action }: { action: string }) {

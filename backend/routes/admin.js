@@ -917,10 +917,12 @@ router.post('/change-password', verifyAuth, requireAdmin, async (req, res) => {
     try {
       await logActivity({
         tenantId,
+        actorEmail: req.user?.email || 'admin',
+        actorRole: 'admin',
         action: 'PASSWORD_CHANGE',
-        performedBy: req.user.email || req.user.uid,
-        details: `Admin password changed by ${req.user.email || 'admin'}`,
-        ip: req.ip
+        description: `Admin password changed by ${req.user?.email || 'admin'}`,
+        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+        status: 'success'
       });
     } catch (logErr) {
       console.warn('[Admin] Failed to log password change activity:', logErr.message);

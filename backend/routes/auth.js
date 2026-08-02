@@ -688,6 +688,19 @@ router.post('/forgot-password', async (req, res) => {
       }
     }
 
+    // Audit log
+    try {
+      await logActivity({
+        tenantId: getTenantId(req),
+        actorEmail: email,
+        actorRole: 'voter',
+        action: 'PASSWORD_RESET_REQUESTED',
+        description: `Password reset code requested for ${email}`,
+        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+        status: 'success'
+      });
+    } catch (_) {}
+
     res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent to your email/phone.' });
   } catch (error) {
     console.error('Error in forgot-password:', error);
@@ -732,6 +745,19 @@ router.post('/reset-password', async (req, res) => {
       resetCode: null,
       resetCodeExpiry: null
     });
+
+    // Audit log
+    try {
+      await logActivity({
+        tenantId: getTenantId(req),
+        actorEmail: email,
+        actorRole: 'voter',
+        action: 'PASSWORD_RESET',
+        description: `Password successfully reset for ${email}`,
+        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+        status: 'success'
+      });
+    } catch (_) {}
 
     res.status(200).json({ status: 'success', message: 'Password has been reset successfully.' });
   } catch (error) {
@@ -790,6 +816,19 @@ router.post('/change-password', verifyAuth, async (req, res) => {
     // Hash and update the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await db.collection('tenants').doc(DEFAULT_TENANT_ID).collection('voter_rolls').doc(uid).update({ password: hashedPassword });
+
+    // Audit log
+    try {
+      await logActivity({
+        tenantId: getTenantId(req),
+        actorEmail: req.user?.email || uid,
+        actorRole: 'voter',
+        action: 'PASSWORD_CHANGED',
+        description: `Voter changed their password (${req.user?.email || uid})`,
+        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+        status: 'success'
+      });
+    } catch (_) {}
 
     res.status(200).json({ status: 'success', message: 'Password changed successfully.' });
   } catch (error) {

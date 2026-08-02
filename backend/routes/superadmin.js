@@ -272,7 +272,10 @@ function buildAuditPDF(res, title, subtitle, logs) {
     doc.font('Helvetica').fontSize(8);
     const actionColors = {
       VOTER_LOGIN: '#1d4ed8', ADMIN_LOGIN: '#7c3aed', CSV_UPLOAD: '#15803d',
-      VOTE_CAST: '#0369a1', ELECTION_CREATED: '#92400e', DEFAULT: '#374151'
+      VOTE_CAST: '#0369a1', ELECTION_CREATED: '#92400e',
+      PASSWORD_CHANGE: '#dc2626', PASSWORD_CHANGED: '#e11d48',
+      PASSWORD_RESET: '#ea580c', PASSWORD_RESET_REQUESTED: '#ca8a04',
+      DEFAULT: '#374151'
     };
 
     logs.forEach((log, i) => {
