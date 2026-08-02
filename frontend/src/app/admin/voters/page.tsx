@@ -10,6 +10,7 @@ interface ParsedVoter {
   programme: string;
   level: string;
   email: string;
+  phone?: string;
 }
 
 interface UploadHistoryItem {
