@@ -33,6 +33,12 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     setMounted(true);
@@ -78,6 +84,31 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
     };
   }, [settingsOpen]);
 
+  // Close sidebar on clicking/tapping outside (mobile & desktop)
+  useEffect(() => {
+    const handleOutsideClickOrTouch = (event: MouseEvent | TouchEvent) => {
+      if (
+        sidebarOpen &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target as Node)
+      ) {
+        const toggleBtn = document.querySelector('.menu-toggle-btn');
+        if (toggleBtn && toggleBtn.contains(event.target as Node)) return;
+        setSidebarOpen(false);
+      }
+    };
+
+    if (sidebarOpen) {
+      document.addEventListener('mousedown', handleOutsideClickOrTouch);
+      document.addEventListener('touchstart', handleOutsideClickOrTouch);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClickOrTouch);
+      document.removeEventListener('touchstart', handleOutsideClickOrTouch);
+    };
+  }, [sidebarOpen]);
+
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(nextTheme);
@@ -112,12 +143,13 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
     <div className="app-shell" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
       {/* Sidebar Navigation */}
       <aside 
+        ref={sidebarRef}
         className={`sidebar ${sidebarOpen ? 'open' : ''}`} 
         id="sidebar" 
         style={{ display: 'flex', flexDirection: 'column' }}
       >
         <div className="sidebar-header">
-          <Link href="/voter/dashboard" className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <Link href="/voter/dashboard" onClick={() => setSidebarOpen(false)} className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} />
             <span style={{ fontWeight: 700, letterSpacing: '-0.5px' }}>COMPSSA <span style={{ color: 'var(--color-primary)' }}>✓</span></span>
           </Link>
@@ -131,6 +163,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
                 href={link.href} 
                 className={`sidebar-link ${isActive ? 'active' : ''}`} 
                 key={link.href}
+                onClick={() => setSidebarOpen(false)}
                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}
               >
                 <Icon size={18} />
@@ -310,8 +343,8 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="sidebar-overlay"
-          onClick={toggleSidebar}
+          className="sidebar-overlay active"
+          onClick={() => setSidebarOpen(false)}
           style={{
             position: 'fixed',
             top: 0,
@@ -319,7 +352,8 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
             right: 0,
             bottom: 0,
             background: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 40
+            zIndex: 299,
+            cursor: 'pointer'
           }}
         />
       )}
