@@ -284,7 +284,10 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
       // --- Flagged Users ---
       let flaggedUsers = [];
       try {
-        const flaggedSnap = await getFraudAlertsRef(req).get();
+        let flaggedSnap = await getFraudAlertsRef(req).get();
+        if (flaggedSnap.empty) {
+          flaggedSnap = await db.collection('fraud_alerts').get();
+        }
         
         const rawUsers = [];
         flaggedSnap.forEach(doc => {
@@ -689,12 +692,19 @@ router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req,
 router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const alerts = await cache.getOrSet('admin:fraud-alerts', async () => {
-      // Query only DUPLICATE_VOTE type alerts at the Firestore level
-      const alertsDoc = await getFraudAlertsRef(req)
+      let alertsDoc = await getFraudAlertsRef(req)
         .where('type', '==', 'DUPLICATE_VOTE')
         .orderBy('timestamp', 'desc')
         .limit(100)
         .get();
+
+      if (alertsDoc.empty) {
+        alertsDoc = await db.collection('fraud_alerts')
+          .where('type', '==', 'DUPLICATE_VOTE')
+          .orderBy('timestamp', 'desc')
+          .limit(100)
+          .get();
+      }
 
       if (alertsDoc.empty) return [];
 
@@ -703,7 +713,7 @@ router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
         results.push({ id: doc.id, ...doc.data() });
       });
       return results;
-    }, 15000); // Cache 15s — fraud alerts don't change rapidly
+    }, 15000);
 
     res.status(200).json({ status: 'success', data: alerts });
   } catch (error) {
@@ -716,12 +726,19 @@ router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
 router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const flagged = await cache.getOrSet('admin:flagged-users', async () => {
-      // Query only UNRECOGNIZED_STUDENT type at the Firestore level
-      const alertsDoc = await getFraudAlertsRef(req)
+      let alertsDoc = await getFraudAlertsRef(req)
         .where('type', '==', 'UNRECOGNIZED_STUDENT')
         .orderBy('timestamp', 'desc')
         .limit(50)
         .get();
+
+      if (alertsDoc.empty) {
+        alertsDoc = await db.collection('fraud_alerts')
+          .where('type', '==', 'UNRECOGNIZED_STUDENT')
+          .orderBy('timestamp', 'desc')
+          .limit(50)
+          .get();
+      }
 
       if (alertsDoc.empty) return [];
 
@@ -739,7 +756,7 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
         });
       });
       return results;
-    }, 15000); // Cache 15s
+    }, 15000);
 
     res.status(200).json({ status: 'success', data: flagged });
   } catch (error) {

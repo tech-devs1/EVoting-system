@@ -8,15 +8,26 @@ const { db } = require('./firebase');
  * 3. Voting outside of permitted hours
  */
 
-async function logFraudAlert(type, message, metadata = {}) {
+async function logFraudAlert(type, message, metadata = {}, tenantId = null) {
   try {
-    await db.collection('fraud_alerts').add({
+    const targetTenantId = tenantId || metadata.tenantId || 'compssa';
+    const entry = {
       type,
       message,
       metadata,
+      tenantId: targetTenantId,
       timestamp: Date.now(),
       status: 'unresolved'
-    });
+    };
+
+    // Write to global fraud_alerts
+    await db.collection('fraud_alerts').add(entry);
+
+    // Also write to tenant sub-collection if tenantId is available
+    if (targetTenantId) {
+      await db.collection('tenants').doc(targetTenantId).collection('fraud_alerts').add(entry);
+    }
+
     console.warn(`[FRAUD ALERT] ${type}: ${message}`);
   } catch (error) {
     console.error('Failed to log fraud alert', error);
