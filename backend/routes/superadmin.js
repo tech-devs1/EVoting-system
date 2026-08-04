@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const PDFDocument = require('pdfkit');
 const { db } = require('../services/firebase');
+const { FieldValue } = require('firebase-admin/firestore');
 const { verifyAuth, requireSuperAdmin } = require('../middleware/auth');
 
 // Protect all superadmin routes
@@ -85,7 +86,8 @@ router.get('/departments', async (req, res) => {
         status: data.status || 'active',
         createdAt: data.createdAt || null,
         electionsCount,
-        votersCount
+        votersCount,
+        adminsCount: 1 + (data.admins ? data.admins.length : 0)
       };
     }));
     
@@ -202,6 +204,155 @@ router.delete('/departments/:tenantId', async (req, res) => {
   } catch (error) {
     console.error('Error deleting department:', error);
     res.status(500).json({ status: 'error', message: 'Failed to delete department' });
+  }
+});
+
+// ─── DEPARTMENT ADMIN MANAGEMENT ──────────────────────────────────────
+
+// List all admins for a department
+router.get('/departments/:tenantId/admins', async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const tenantRef = db.collection('tenants').doc(tenantId);
+    const snap = await tenantRef.get();
+    if (!snap.exists) {
+      return res.status(404).json({ status: 'error', message: 'Department not found' });
+    }
+    const data = snap.data();
+    const admins = [
+      { id: 'primary', name: (data.name || 'Department') + ' Admin', email: data.adminEmail || 'N/A', isPrimary: true, createdAt: data.createdAt || null }
+    ];
+    if (data.admins && Array.isArray(data.admins)) {
+      data.admins.forEach(a => {
+        admins.push({ id: a.id, name: a.name, email: a.email, isPrimary: false, createdAt: a.createdAt || null });
+      });
+    }
+    res.status(200).json({ status: 'success', data: admins });
+  } catch (error) {
+    console.error('Error listing department admins:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to list admins' });
+  }
+});
+
+// Add a new admin to a department
+router.post('/departments/:tenantId/admins', async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ status: 'error', message: 'Name, email, and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ status: 'error', message: 'Password must be at least 6 characters' });
+    }
+
+    const tenantRef = db.collection('tenants').doc(tenantId);
+    const snap = await tenantRef.get();
+    if (!snap.exists) {
+      return res.status(404).json({ status: 'error', message: 'Department not found' });
+    }
+    const tenantData = snap.data();
+
+    // Check email uniqueness: primary admin emails across all tenants
+    const primaryCheck = await db.collection('tenants').where('adminEmail', '==', email).get();
+    if (!primaryCheck.empty) {
+      return res.status(400).json({ status: 'error', message: 'This email is already used as a primary admin for another department' });
+    }
+
+    // Check email uniqueness: secondary admins across all tenants
+    const allTenants = await db.collection('tenants').get();
+    for (const doc of allTenants.docs) {
+      const d = doc.data();
+      if (d.admins && Array.isArray(d.admins)) {
+        if (d.admins.some(a => a.email === email)) {
+          return res.status(400).json({ status: 'error', message: 'This email is already assigned as an admin in another department' });
+        }
+      }
+    }
+
+    // Also check against same tenant's primary email
+    if (tenantData.adminEmail === email) {
+      return res.status(400).json({ status: 'error', message: 'This email is already the primary admin for this department' });
+    }
+
+    const adminId = `adm_${Date.now()}`;
+    const passwordHash = await bcrypt.hash(password, 10);
+    const newAdmin = {
+      id: adminId,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      passwordHash,
+      createdAt: Date.now()
+    };
+
+    await tenantRef.update({
+      admins: FieldValue.arrayUnion(newAdmin)
+    });
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Admin added successfully',
+      data: { id: adminId, name: newAdmin.name, email: newAdmin.email, isPrimary: false, createdAt: newAdmin.createdAt }
+    });
+  } catch (error) {
+    console.error('Error adding department admin:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to add admin' });
+  }
+});
+
+// Update a department admin's name or password
+router.patch('/departments/:tenantId/admins/:adminId', async (req, res) => {
+  try {
+    const { tenantId, adminId } = req.params;
+    const { name, password } = req.body;
+
+    const tenantRef = db.collection('tenants').doc(tenantId);
+    const snap = await tenantRef.get();
+    if (!snap.exists) {
+      return res.status(404).json({ status: 'error', message: 'Department not found' });
+    }
+    const tenantData = snap.data();
+    const admins = tenantData.admins || [];
+    const idx = admins.findIndex(a => a.id === adminId);
+    if (idx === -1) {
+      return res.status(404).json({ status: 'error', message: 'Admin not found' });
+    }
+
+    if (name && name.trim()) admins[idx].name = name.trim();
+    if (password && password.trim()) {
+      if (password.length < 6) {
+        return res.status(400).json({ status: 'error', message: 'Password must be at least 6 characters' });
+      }
+      admins[idx].passwordHash = await bcrypt.hash(password.trim(), 10);
+    }
+
+    await tenantRef.update({ admins });
+    res.status(200).json({ status: 'success', message: 'Admin updated successfully' });
+  } catch (error) {
+    console.error('Error updating department admin:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update admin' });
+  }
+});
+
+// Remove a department admin
+router.delete('/departments/:tenantId/admins/:adminId', async (req, res) => {
+  try {
+    const { tenantId, adminId } = req.params;
+
+    const tenantRef = db.collection('tenants').doc(tenantId);
+    const snap = await tenantRef.get();
+    if (!snap.exists) {
+      return res.status(404).json({ status: 'error', message: 'Department not found' });
+    }
+    const tenantData = snap.data();
+    const admins = (tenantData.admins || []).filter(a => a.id !== adminId);
+
+    await tenantRef.update({ admins });
+    res.status(200).json({ status: 'success', message: 'Admin removed successfully' });
+  } catch (error) {
+    console.error('Error removing department admin:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to remove admin' });
   }
 });
 

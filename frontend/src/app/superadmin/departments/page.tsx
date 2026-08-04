@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
-import { Building2, Plus, AlertCircle, Shield, MoreVertical, Pencil, KeyRound, Trash2 } from 'lucide-react';
+import { Building2, Plus, AlertCircle, Shield, MoreVertical, Pencil, KeyRound, Trash2, Users, UserPlus, X, ExternalLink } from 'lucide-react';
 
 interface Department {
   id: string;
@@ -13,11 +14,21 @@ interface Department {
   status: string;
   electionsCount: number;
   votersCount: number;
+  adminsCount?: number;
 }
 
-type ModalType = 'create' | 'edit' | 'password' | 'delete' | null;
+interface DeptAdmin {
+  id: string;
+  name: string;
+  email: string;
+  isPrimary: boolean;
+  createdAt?: number | null;
+}
+
+type ModalType = 'create' | 'edit' | 'password' | 'delete' | 'admins' | null;
 
 export default function SuperAdminDepartments() {
+  const router = useRouter();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -43,6 +54,14 @@ export default function SuperAdminDepartments() {
 
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Admin management state
+  const [deptAdmins, setDeptAdmins] = useState<DeptAdmin[]>([]);
+  const [adminsLoading, setAdminsLoading] = useState(false);
+  const [addAdminForm, setAddAdminForm] = useState({ name: '', email: '', password: '' });
+  const [showAddAdmin, setShowAddAdmin] = useState(false);
+  const [editingAdminId, setEditingAdminId] = useState<string | null>(null);
+  const [editAdminForm, setEditAdminForm] = useState({ name: '', password: '' });
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -80,10 +99,11 @@ export default function SuperAdminDepartments() {
     if (type === 'edit' && dept) setEditName(dept.name);
     if (type === 'password') { setNewPassword(''); setConfirmPassword(''); }
     if (type === 'create') setCreateForm({ name: '', domain: '', adminEmail: '', adminPassword: '' });
+    if (type === 'admins' && dept) fetchAdmins(dept.id);
     setModalType(type);
   };
 
-  const closeModal = () => { setModalType(null); setSelectedDept(null); setError(''); setMenuCoords(null); };
+  const closeModal = () => { setModalType(null); setSelectedDept(null); setError(''); setMenuCoords(null); setShowAddAdmin(false); setEditingAdminId(null); setAddAdminForm({ name: '', email: '', password: '' }); };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -151,6 +171,65 @@ export default function SuperAdminDepartments() {
     }
   };
 
+  // ── Admin Management Handlers ─────────────────────────────────────────────
+  const fetchAdmins = async (tenantId: string) => {
+    setAdminsLoading(true);
+    try {
+      const res = await apiRequest<{ status: string; data: DeptAdmin[] }>(`/superadmin/departments/${tenantId}/admins`);
+      if (res.status === 'success') setDeptAdmins(res.data);
+    } catch (err) { console.error('Failed to load admins', err); }
+    finally { setAdminsLoading(false); }
+  };
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDept) return;
+    setError('');
+    setFormLoading(true);
+    try {
+      const res = await apiRequest<{ status: string; message?: string }>(`/superadmin/departments/${selectedDept.id}/admins`, 'POST', addAdminForm);
+      if (res.status === 'success') {
+        setShowAddAdmin(false);
+        setAddAdminForm({ name: '', email: '', password: '' });
+        fetchAdmins(selectedDept.id);
+        fetchDepartments();
+      } else throw new Error(res.message || 'Failed to add admin');
+    } catch (err: any) { setError(err.message || 'An error occurred'); }
+    finally { setFormLoading(false); }
+  };
+
+  const handleEditAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDept || !editingAdminId) return;
+    setError('');
+    setFormLoading(true);
+    try {
+      const body: any = {};
+      if (editAdminForm.name.trim()) body.name = editAdminForm.name.trim();
+      if (editAdminForm.password.trim()) body.password = editAdminForm.password.trim();
+      const res = await apiRequest<{ status: string; message?: string }>(`/superadmin/departments/${selectedDept.id}/admins/${editingAdminId}`, 'PATCH', body);
+      if (res.status === 'success') {
+        setEditingAdminId(null);
+        setEditAdminForm({ name: '', password: '' });
+        fetchAdmins(selectedDept.id);
+      } else throw new Error(res.message || 'Failed to update admin');
+    } catch (err: any) { setError(err.message || 'An error occurred'); }
+    finally { setFormLoading(false); }
+  };
+
+  const handleRemoveAdmin = async (adminId: string) => {
+    if (!selectedDept) return;
+    if (!confirm('Are you sure you want to remove this admin?')) return;
+    setError('');
+    try {
+      const res = await apiRequest<{ status: string; message?: string }>(`/superadmin/departments/${selectedDept.id}/admins/${adminId}`, 'DELETE');
+      if (res.status === 'success') {
+        fetchAdmins(selectedDept.id);
+        fetchDepartments();
+      } else throw new Error(res.message || 'Failed to remove admin');
+    } catch (err: any) { setError(err.message || 'An error occurred'); }
+  };
+
   // ── Shared Modal Shell ────────────────────────────────────────────────────
   const renderModal = (title: string, onSubmit: (e: React.FormEvent) => void, children: React.ReactNode, submitLabel: string, submitClass = 'btn-primary', isDelete = false) =>
     mounted && createPortal(
@@ -207,6 +286,7 @@ export default function SuperAdminDepartments() {
                   <th style={{ padding: '12px' }}>Department Name</th>
                   <th style={{ padding: '12px' }}>Tenant ID</th>
                   <th style={{ padding: '12px' }}>Admin Email</th>
+                  <th style={{ padding: '12px' }}>Admins</th>
                   <th style={{ padding: '12px' }}>Stats</th>
                   <th style={{ padding: '12px' }}>Status</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
@@ -228,6 +308,11 @@ export default function SuperAdminDepartments() {
                     </td>
                     <td style={{ padding: '12px' }}><code style={{ fontSize: '12px', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '4px' }}>{dept.id}</code></td>
                     <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{dept.adminEmail}</td>
+                    <td style={{ padding: '12px' }}>
+                      <span className="badge badge-info" style={{ cursor: 'pointer' }} onClick={() => openModal('admins', dept)}>
+                        {dept.adminsCount || 1} {(dept.adminsCount || 1) === 1 ? 'admin' : 'admins'}
+                      </span>
+                    </td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                         <div><strong style={{ color: 'var(--text-primary)' }}>{dept.electionsCount}</strong> Elections</div>
@@ -269,7 +354,7 @@ export default function SuperAdminDepartments() {
                 ))}
                 {departments.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-secondary)' }}>No departments found.</td>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-secondary)' }}>No departments found.</td>
                   </tr>
                 )}
               </tbody>
@@ -350,6 +435,103 @@ export default function SuperAdminDepartments() {
         'btn-danger',
         true
       )}
+      {/* ── Manage Admins Modal ── */}
+      {modalType === 'admins' && selectedDept && mounted && createPortal(
+        <div
+          onClick={closeModal}
+          style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 16px 88px 16px', overflowY: 'auto', background: 'rgba(0,0,0,0.5)' }}
+        >
+          <div className="modal-container" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '640px', maxHeight: 'calc(100dvh - 180px)' }}>
+            <div className="modal-header">
+              <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={18} /> Manage Admins — {selectedDept.name}
+              </h3>
+              <button className="modal-close" onClick={closeModal}>&times;</button>
+            </div>
+            <div className="modal-body" style={{ padding: 'var(--space-4)' }}>
+              {error && (
+                <div style={{ padding: '12px', backgroundColor: 'rgba(239,68,68,0.1)', color: '#EF4444', borderRadius: 'var(--radius-md)', marginBottom: '16px', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #EF444444' }}>
+                  <AlertCircle size={16} /> {error}
+                </div>
+              )}
+
+              {adminsLoading ? (
+                <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 'var(--space-6)' }}>Loading admins...</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  {deptAdmins.map(admin => (
+                    <div key={admin.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', gap: '12px', flexWrap: 'wrap' }}>
+                      {editingAdminId === admin.id ? (
+                        <form onSubmit={handleEditAdmin} style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <input type="text" className="form-input" placeholder="Name" value={editAdminForm.name} onChange={e => setEditAdminForm({ ...editAdminForm, name: e.target.value })} style={{ flex: 1, minWidth: '120px' }} />
+                          <input type="password" className="form-input" placeholder="New password (optional)" value={editAdminForm.password} onChange={e => setEditAdminForm({ ...editAdminForm, password: e.target.value })} style={{ flex: 1, minWidth: '120px' }} />
+                          <button type="submit" className="btn btn-primary btn-sm" disabled={formLoading}>{formLoading ? '...' : 'Save'}</button>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingAdminId(null)}>Cancel</button>
+                        </form>
+                      ) : (
+                        <>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {admin.name}
+                              {admin.isPrimary && <span className="badge badge-primary" style={{ fontSize: '10px', padding: '2px 6px' }}>Primary</span>}
+                            </div>
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '2px' }}>{admin.email}</div>
+                          </div>
+                          {!admin.isPrimary && (
+                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                              <button
+                                className="btn btn-outline btn-sm"
+                                style={{ padding: '4px 8px' }}
+                                onClick={() => { setEditingAdminId(admin.id); setEditAdminForm({ name: admin.name, password: '' }); }}
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                className="btn btn-outline btn-sm"
+                                style={{ padding: '4px 8px', color: '#EF4444', borderColor: '#EF4444' }}
+                                onClick={() => handleRemoveAdmin(admin.id)}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add Admin Form */}
+              {showAddAdmin ? (
+                <form onSubmit={handleAddAdmin} style={{ marginTop: 'var(--space-4)', padding: '16px', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                    <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>Add New Admin</span>
+                    <button type="button" onClick={() => { setShowAddAdmin(false); setAddAdminForm({ name: '', email: '', password: '' }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={16} /></button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                    <input type="text" className="form-input" required placeholder="Admin Name" value={addAdminForm.name} onChange={e => setAddAdminForm({ ...addAdminForm, name: e.target.value })} />
+                    <input type="email" className="form-input" required placeholder="Admin Email" value={addAdminForm.email} onChange={e => setAddAdminForm({ ...addAdminForm, email: e.target.value })} />
+                    <input type="password" className="form-input" required placeholder="Password (min 6 chars)" value={addAdminForm.password} onChange={e => setAddAdminForm({ ...addAdminForm, password: e.target.value })} />
+                    <button type="submit" className="btn btn-primary" disabled={formLoading} style={{ alignSelf: 'flex-end' }}>
+                      {formLoading ? 'Adding...' : 'Add Admin'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button onClick={() => setShowAddAdmin(true)} className="btn btn-outline" style={{ marginTop: 'var(--space-4)', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <UserPlus size={16} /> Add New Admin
+                </button>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button type="button" onClick={closeModal} className="btn btn-secondary">Close</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* ── Dropdown Portal ── */}
       {openMenuId && menuCoords && selectedDept && createPortal(
         <div
@@ -367,6 +549,26 @@ export default function SuperAdminDepartments() {
             overflow: 'hidden'
           }}
         >
+          <button
+            onClick={() => {
+              localStorage.setItem('COMPSSA_tenantId', selectedDept.id);
+              router.push('/admin/dashboard');
+            }}
+            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--color-warning)', fontWeight: 600, textAlign: 'left' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(234, 179, 8, 0.1)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+          >
+            <ExternalLink size={15} /> Access Admin Console
+          </button>
+          <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
+          <button
+            onClick={() => openModal('admins', selectedDept)}
+            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'left' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+          >
+            <Users size={15} style={{ color: 'var(--color-primary)' }} /> Manage Admins
+          </button>
           <button
             onClick={() => openModal('edit', selectedDept)}
             style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'left' }}

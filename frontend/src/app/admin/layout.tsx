@@ -28,6 +28,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [mounted, setMounted] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [currentTenantId, setCurrentTenantId] = useState<string>('compssa');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentTenantId(localStorage.getItem('COMPSSA_tenantId') || 'compssa');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user?.role === 'superadmin') {
+      import('@/lib/api').then(({ apiRequest }) => {
+        apiRequest<{ status: string; data: { id: string; name: string }[] }>('/superadmin/departments')
+          .then(res => {
+            if (res.status === 'success') {
+              setDepartments(res.data);
+            }
+          })
+          .catch(err => console.error('Failed to load departments for switcher', err));
+      });
+    }
+  }, [user]);
 
   // Auth Guard
   useEffect(() => {
@@ -36,8 +58,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         router.push('/login');
       } else if (user.role === 'voter') {
         router.push('/voter/dashboard');
-      } else if (user.role === 'superadmin') {
-        router.push('/superadmin/dashboard');
       }
     }
   }, [user, loading, router]);
@@ -163,6 +183,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
           <div className="topbar-actions" style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
+            {user?.role === 'superadmin' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(234, 179, 8, 0.1)', padding: '4px 12px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-warning)' }}>Dept:</span>
+                <select
+                  value={currentTenantId}
+                  onChange={(e) => {
+                    const newId = e.target.value;
+                    localStorage.setItem('COMPSSA_tenantId', newId);
+                    setCurrentTenantId(newId);
+                    window.location.reload();
+                  }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer', outline: 'none' }}
+                >
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id} style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>{d.name}</option>
+                  ))}
+                </select>
+                <Link href="/superadmin/dashboard" className="btn btn-outline btn-sm" style={{ padding: '2px 8px', fontSize: '11px', textDecoration: 'none', marginLeft: '4px' }}>
+                  Exit to Super Admin
+                </Link>
+              </div>
+            )}
             <button className="theme-toggle-btn" aria-label="Toggle Light/Dark Theme" onClick={toggleTheme}>
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>

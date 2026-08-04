@@ -373,6 +373,42 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
     }
 
+    // 2b. Check secondary admins across all tenants
+    const allTenantsForAdminCheck = await db.collection('tenants').get();
+    for (const tDoc of allTenantsForAdminCheck.docs) {
+      const tData = tDoc.data();
+      if (tData.admins && Array.isArray(tData.admins)) {
+        const matchedAdmin = tData.admins.find(a => a.email === email);
+        if (matchedAdmin) {
+          const isAdminMatch = await bcrypt.compare(password, matchedAdmin.passwordHash);
+          if (isAdminMatch) {
+            const uid = `admin_${tDoc.id}_${matchedAdmin.id}`;
+            const token = jwt.sign(
+              { uid, email, role: 'admin', name: matchedAdmin.name || `${tData.name} Admin`, tenantId: tDoc.id },
+              JWT_SECRET,
+              { expiresIn: '24h' }
+            );
+            await logActivity({
+              tenantId: tDoc.id,
+              tenantName: tData.name,
+              actorEmail: email,
+              actorRole: 'admin',
+              action: 'ADMIN_LOGIN',
+              description: `${matchedAdmin.name || 'Admin'} logged into the ${tData.name} admin dashboard`,
+              ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+              status: 'success'
+            });
+            return res.status(200).json({
+              status: 'success',
+              data: { uid, email, role: 'admin', name: matchedAdmin.name || `${tData.name} Admin`, tenantId: tDoc.id },
+              token
+            });
+          }
+          return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
+        }
+      }
+    }
+
     // 3. Iterate through all tenants to find the voter
     const allTenantsSnapshot = await db.collection('tenants').get();
     let foundVoterDoc = null;
@@ -471,48 +507,78 @@ router.post('/login-admin', async (req, res) => {
       });
     }
 
-    // Check other tenants for department admin
+    // Check other tenants for department admin (primary)
     const tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', email).get();
-    if (tenantsSnapshot.empty) {
+    if (!tenantsSnapshot.empty) {
+      const tenantDoc = tenantsSnapshot.docs[0];
+      const tenantData = tenantDoc.data();
+
+      if (tenantData.adminPassword) {
+        const isMatch = await bcrypt.compare(password, tenantData.adminPassword);
+        if (isMatch) {
+          const uid = `admin_${tenantDoc.id}`;
+          const token = jwt.sign(
+            { uid, email, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+          );
+          await logActivity({
+            tenantId: tenantDoc.id,
+            tenantName: tenantData.name,
+            actorEmail: email,
+            actorRole: 'admin',
+            action: 'ADMIN_LOGIN',
+            description: `${tenantData.name} Administrator logged into the admin dashboard`,
+            ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+            status: 'success'
+          });
+          return res.status(200).json({
+            status: 'success',
+            data: { uid, email, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
+            token
+          });
+        }
+      }
       return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
     }
 
-    const tenantDoc = tenantsSnapshot.docs[0];
-    const tenantData = tenantDoc.data();
-
-    // Verify hashed password for department admins
-    if (!tenantData.adminPassword) {
-      return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
+    // Check secondary admins across all tenants
+    const allTenantsForAdmin = await db.collection('tenants').get();
+    for (const tDoc of allTenantsForAdmin.docs) {
+      const tData = tDoc.data();
+      if (tData.admins && Array.isArray(tData.admins)) {
+        const matchedAdmin = tData.admins.find(a => a.email === email);
+        if (matchedAdmin) {
+          const isAdminMatch = await bcrypt.compare(password, matchedAdmin.passwordHash);
+          if (isAdminMatch) {
+            const uid = `admin_${tDoc.id}_${matchedAdmin.id}`;
+            const token = jwt.sign(
+              { uid, email, role: 'admin', name: matchedAdmin.name || `${tData.name} Admin`, tenantId: tDoc.id },
+              JWT_SECRET,
+              { expiresIn: '24h' }
+            );
+            await logActivity({
+              tenantId: tDoc.id,
+              tenantName: tData.name,
+              actorEmail: email,
+              actorRole: 'admin',
+              action: 'ADMIN_LOGIN',
+              description: `${matchedAdmin.name || 'Admin'} logged into the ${tData.name} admin dashboard`,
+              ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+              status: 'success'
+            });
+            return res.status(200).json({
+              status: 'success',
+              data: { uid, email, role: 'admin', name: matchedAdmin.name || `${tData.name} Admin`, tenantId: tDoc.id },
+              token
+            });
+          }
+          return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
+        }
+      }
     }
 
-    const isMatch = await bcrypt.compare(password, tenantData.adminPassword);
-    if (!isMatch) {
-      return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
-    }
-
-    const uid = `admin_${tenantDoc.id}`;
-    const token = jwt.sign(
-      { uid, email, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    await logActivity({
-      tenantId: tenantDoc.id,
-      tenantName: tenantData.name,
-      actorEmail: email,
-      actorRole: 'admin',
-      action: 'ADMIN_LOGIN',
-      description: `${tenantData.name} Administrator logged into the admin dashboard`,
-      ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-      status: 'success'
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: { uid, email, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
-      token
-    });
+    return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
   } catch (error) {
     console.error('Error logging in admin:', error);
     res.status(500).json({ status: 'error', message: 'Failed to authenticate admin.' });
