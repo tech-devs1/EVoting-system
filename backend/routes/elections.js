@@ -577,4 +577,227 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// --- ELECTION ACCESS CONTROL VIA OTP (REPLACES BIOMETRIC PROCESS WITH IDENTITY VERIFICATION) ---
+
+const BMS_API_KEY = process.env.BMS_API_KEY || process.env.MNOTIFY_API_KEY || '';
+const BMS_SENDER_ID = process.env.BMS_SENDER_ID || 'COMPSSA';
+
+// Helper: Send OTP via EmailJS REST API
+async function sendOtpViaEmailJS(email, name, otp) {
+  const serviceId = process.env.EMAILJS_SERVICE_ID;
+  const templateId = process.env.EMAILJS_TEMPLATE_ID;
+  const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
+
+  if (!serviceId || !templateId || !publicKey) {
+    console.warn('[EmailJS Warning] Missing EmailJS env variables. Code for', email, 'is:', otp);
+    return;
+  }
+
+  const payload = {
+    service_id: serviceId,
+    template_id: templateId,
+    user_id: publicKey,
+    accessToken: privateKey,
+    template_params: {
+      to_name: name || 'Student',
+      to_email: email,
+      reset_code: otp,
+      otp_code: otp,
+      otp: otp
+    }
+  };
+
+  try {
+    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('[EmailJS Error]:', errText);
+      throw new Error('EmailJS error: ' + errText);
+    }
+  } catch (err) {
+    console.error('[EmailJS Failure]:', err.message || err);
+    throw err;
+  }
+}
+
+// Helper: Send OTP via BMS Africa (mNotify) Quick SMS API
+async function sendOtpViaBMS(phoneNumber, otp) {
+  if (!BMS_API_KEY) {
+    console.warn('[BMS SMS Warning] No BMS_API_KEY configured — SMS not dispatched. Code for', phoneNumber, 'is:', otp);
+    return;
+  }
+
+  let formattedPhone = phoneNumber.replace(/\s+/g, '');
+  if (formattedPhone.startsWith('+233')) {
+    formattedPhone = '0' + formattedPhone.substring(4);
+  } else if (!formattedPhone.startsWith('0') && formattedPhone.length === 9) {
+    formattedPhone = '0' + formattedPhone;
+  }
+
+  const payload = {
+    recipient: [formattedPhone],
+    sender: BMS_SENDER_ID,
+    message: `Your COMPSSA verification code to unlock election access is ${otp}. It expires in 10 minutes.`,
+    is_schedule: false
+  };
+
+  console.log(`[BMS SMS] Dispatching OTP ${otp} to ${formattedPhone} via BMS Africa`);
+
+  try {
+    const res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000)
+    });
+
+    const responseText = await res.text();
+    console.log('[BMS SMS] Response:', responseText);
+  } catch (err) {
+    console.error('[BMS SMS Error]:', err.message || err);
+    throw err;
+  }
+}
+
+// 1. Check if voter has already unlocked access to an election
+router.get('/:id/access-status', verifyAuth, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const voterId = req.user.uid;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+
+    const doc = await db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
+    res.status(200).json({
+      status: 'success',
+      data: {
+        unlocked: doc.exists
+      }
+    });
+  } catch (error) {
+    console.error('Error checking access status:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to check access status.' });
+  }
+});
+
+// 2. Request OTP to unlock access to an election
+router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const voterId = req.user.uid;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+
+    // Fetch voter profile from voter_rolls to find contact details
+    const voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
+    const voterDoc = await voterRef.get();
+    if (!voterDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Voter profile not found.' });
+    }
+    const voterData = voterDoc.data();
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Store in voter doc
+    await voterRef.update({
+      accessOtp: otp,
+      accessOtpExpiry: expiry
+    });
+
+    let emailSent = false;
+    let smsSent = false;
+
+    // Dispatch via email
+    if (voterData.email) {
+      try {
+        await sendOtpViaEmailJS(voterData.email, voterData.name, otp);
+        emailSent = true;
+      } catch (err) {
+        console.error('[Access OTP] Email delivery failed:', err.message);
+      }
+    }
+
+    // Dispatch via SMS
+    if (voterData.phone) {
+      try {
+        await sendOtpViaBMS(voterData.phone, otp);
+        smsSent = true;
+      } catch (err) {
+        console.error('[Access OTP] SMS delivery failed:', err.message);
+      }
+    }
+
+    const dispatchSuccess = emailSent || smsSent;
+
+    res.status(200).json({
+      status: 'success',
+      fallbackOtp: dispatchSuccess ? undefined : otp,
+      message: dispatchSuccess
+        ? `A verification code has been dispatched to your registered contact information.`
+        : `A verification code was generated: ${otp}`
+    });
+  } catch (error) {
+    console.error('Error requesting access OTP:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to request verification code.' });
+  }
+});
+
+// 3. Verify OTP to unlock access to an election
+router.post('/:id/verify-access-otp', verifyAuth, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const voterId = req.user.uid;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+    const { otp } = req.body;
+
+    if (!otp) {
+      return res.status(400).json({ status: 'error', message: 'Verification code is required.' });
+    }
+
+    // Fetch voter profile
+    const voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
+    const voterDoc = await voterRef.get();
+    if (!voterDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Voter profile not found.' });
+    }
+    const voterData = voterDoc.data();
+
+    // Validate OTP
+    if (!voterData.accessOtp || voterData.accessOtp !== otp) {
+      return res.status(400).json({ status: 'error', message: 'Invalid verification code.' });
+    }
+
+    if (Date.now() > voterData.accessOtpExpiry) {
+      return res.status(400).json({ status: 'error', message: 'Verification code has expired. Please request a new one.' });
+    }
+
+    // Log the unlocked status for this user in this election
+    await db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).set({
+      voterId,
+      electionId,
+      verifiedAt: Date.now()
+    });
+
+    // Invalidate voter OTP fields
+    await voterRef.update({
+      accessOtp: null,
+      accessOtpExpiry: null
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Election unlocked successfully.'
+    });
+  } catch (error) {
+    console.error('Error verifying access OTP:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to verify OTP.' });
+  }
+});
+
 module.exports = router;

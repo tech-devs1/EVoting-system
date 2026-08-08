@@ -63,6 +63,13 @@ router.post('/cast', verifyAuth, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Missing election or candidate ID' });
     }
 
+    // Verify voter has unlocked access to this election via OTP verification
+    const tenantId = getTenantId(req);
+    const unlockedDoc = await db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
+    if (!unlockedDoc.exists) {
+      return res.status(403).json({ status: 'error', message: 'You must verify your identity via OTP before casting your ballot.' });
+    }
+
     // 1. Check if election is active and within valid time window
     // (We get this from Cache to avoid reading elections document every single time a vote is cast!)
     const election = await cache.getOrSet(`elections:detail:${electionId}`, async () => {
@@ -157,7 +164,6 @@ router.post('/cast', verifyAuth, async (req, res) => {
     cache.invalidatePrefix(`candidates:election:${electionId}`);
 
     // Log vote cast activity (anonymous – no candidate name stored)
-    const tenantId = getTenantId(req);
     await logActivity({
       tenantId,
       actorEmail: req.user?.email || 'voter',
