@@ -20,7 +20,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password?: string, role?: 'voter' | 'admin' | 'superadmin') => Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>;
   register: (studentId: string, email: string, name: string, password?: string, phone?: string, faceImage?: string) => Promise<{ otpRequired?: boolean; email?: string; phone?: string }>;
-
+  loginWithGoogle: (idToken: string) => Promise<UserProfile>;
   verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
 }
@@ -165,6 +165,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginWithGoogle = async (idToken: string): Promise<UserProfile> => {
+    setLoading(true);
+    try {
+      const res = await apiRequest<{ status: string; data: UserProfile; token: string }>('/auth/google-login', 'POST', { idToken });
+      if (res.status === 'success' && res.token) {
+        localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);
+        localStorage.setItem('COMPSSA_user', JSON.stringify(res.data));
+        if (res.data?.tenantId) {
+          localStorage.setItem('COMPSSA_tenantId', res.data.tenantId);
+        }
+        setUser(res.data);
+
+        if (res.data.role === 'admin') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/voter/dashboard');
+        }
+        return res.data;
+      }
+      throw new Error('Google authentication failed.');
+    } catch (error: any) {
+      console.error('Google Auth Login error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('COMPSSA_token');
     localStorage.removeItem('COMPSSA_user');
@@ -173,7 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, verifyOtp, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, verifyOtp, logout }}>
       {children}
     </AuthContext.Provider>
   );
