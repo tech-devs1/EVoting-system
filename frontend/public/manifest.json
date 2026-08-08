@@ -1,6 +1,6 @@
 {
-  "name": "COMPSSA",
-  "short_name": "COMPSSA",
+  "name": "HTU Elect",
+  "short_name": "HTU Elect",
   "description": "Secure online voting platform",
   "start_url": "/?mode=pwa",
   "scope": "/",
