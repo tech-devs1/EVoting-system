@@ -87,13 +87,22 @@ router.post('/cast', verifyAuth, async (req, res) => {
 
     // Pre-calculate references
     const candidateRef = getCandidatesRef(req).doc(candidateId);
-    const candidateDoc = await candidateRef.get();
-    if (!candidateDoc.exists || candidateDoc.data().electionId !== electionId) {
+
+    // Cache candidate details to prevent heavy Firestore read storms on static data
+    const candidateData = await cache.getOrSet(`candidates:detail:${candidateId}`, async () => {
+      const candidateDoc = await candidateRef.get();
+      if (!candidateDoc.exists) {
+        throw new Error('CANDIDATE_NOT_FOUND');
+      }
+      return candidateDoc.data();
+    }, 15000); // Cache for 15 seconds
+
+    if (candidateData.electionId !== electionId) {
       return res.status(400).json({ status: 'error', message: 'Invalid candidate for this election' });
     }
 
-    const position = candidateDoc.data().position || 'General';
-    const candidateName = candidateDoc.data().name || '';
+    const position = candidateData.position || 'General';
+    const candidateName = candidateData.name || '';
     const positionKey = position.toLowerCase().replace(/[^a-z0-9]/g, '_');
     const votedRef = getVotedVotersRef(req).doc(`${electionId}_${voterId}_${positionKey}`);
 
@@ -170,6 +179,9 @@ router.post('/cast', verifyAuth, async (req, res) => {
     if (error.message === 'ELECTION_NOT_FOUND') {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
+    if (error.message === 'CANDIDATE_NOT_FOUND') {
+      return res.status(400).json({ status: 'error', message: 'Invalid candidate for this election' });
+    }
     if (error.message === 'DUPLICATE_VOTE') {
       console.log('[Cast Vote] User already voted.');
       await logFraudAlert('DUPLICATE_VOTE', 'Voter tried to vote twice in the same category', { 
@@ -178,6 +190,16 @@ router.post('/cast', verifyAuth, async (req, res) => {
         candidateId: req.body.candidateId 
       });
       return res.status(403).json({ status: 'error', message: 'User has already voted for this position in this election' });
+    }
+
+    // Handle high-concurrency contention/deadlock errors gracefully
+    const errMsg = (error.message || '').toLowerCase();
+    if (errMsg.includes('contention') || errMsg.includes('deadline') || errMsg.includes('resource_exhausted') || errMsg.includes('timeout') || error.code === 4 || error.code === 10) {
+      console.warn('[Cast Vote] High concurrency transaction conflict detected:', error);
+      return res.status(429).json({
+        status: 'error',
+        message: 'The system is experiencing high traffic. Your vote was not recorded yet. Please try again in a few seconds.'
+      });
     }
 
     console.error('[Cast Vote] Error casting vote:', error);

@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { db } = require('./firebase');
+const cache = require('./cache');
 
 /**
  * Generates a SHA-256 hash for a given data string
@@ -22,23 +23,27 @@ function generateHash(data) {
 async function recordVoteAudit(voteData, electionId, meta = {}) {
   const auditRef = db.collection('audit_logs');
 
-  // Fetch recent audit logs without orderBy to avoid requiring a composite index.
-  // Sort in JS memory instead.
-  const latestAuditSnap = await auditRef
-    .where('electionId', '==', electionId)
-    .limit(50)
-    .get();
-  
-  let previousHash = 'GENESIS_HASH';
-  if (!latestAuditSnap.empty) {
-    // Find the most recent entry by timestamp in JS
-    let latest = null;
-    latestAuditSnap.forEach(doc => {
-      const d = doc.data();
-      if (!latest || d.timestamp > latest.timestamp) latest = d;
-    });
-    if (latest && latest.currentHash) previousHash = latest.currentHash;
-  }
+  // Use fast in-memory cache for previous hash to prevent read storms under concurrency
+  const previousHash = await cache.getOrSet(`audit:latest-hash:${electionId}`, async () => {
+    // Fetch recent audit logs without orderBy to avoid requiring a composite index.
+    // Sort in JS memory instead.
+    const latestAuditSnap = await auditRef
+      .where('electionId', '==', electionId)
+      .limit(50)
+      .get();
+
+    let prevHash = 'GENESIS_HASH';
+    if (!latestAuditSnap.empty) {
+      // Find the most recent entry by timestamp in JS
+      let latest = null;
+      latestAuditSnap.forEach(doc => {
+        const d = doc.data();
+        if (!latest || d.timestamp > latest.timestamp) latest = d;
+      });
+      if (latest && latest.currentHash) prevHash = latest.currentHash;
+    }
+    return prevHash;
+  }, 15000); // Cache for 15 seconds
 
   // 2. Prepare current data string
   const timestamp = Date.now();
@@ -64,6 +69,9 @@ async function recordVoteAudit(voteData, electionId, meta = {}) {
     position: meta.position || '',
     dataPayload: dataString
   };
+
+  // Immediately update the cached latest hash so subsequent votes in this thread build on it instantly
+  cache.set(`audit:latest-hash:${electionId}`, currentHash, 60000); // 1 minute TTL
 
   const newDoc = await auditRef.add(auditEntry);
   return newDoc.id;
