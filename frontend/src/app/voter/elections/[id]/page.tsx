@@ -13,6 +13,7 @@ interface Candidate {
   manifesto: string;
   photoUrl: string;
   isIndependent?: boolean;
+  ballotNumber?: string | number;
 }
 
 interface Election {
@@ -421,7 +422,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                     <div className="candidate-content">
                       <div className="candidate-info">
                         <h4 className="candidate-name">
-                          {cand.name} {isIndie && <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 'bold' }}>(Independent)</span>}
+                          {cand.ballotNumber ? `No. ${cand.ballotNumber} - ` : ''}{cand.name} {isIndie && <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 'bold' }}>(Independent)</span>}
                         </h4>
                         <span className="candidate-position">{cand.position}</span>
                       </div>

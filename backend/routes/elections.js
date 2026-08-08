@@ -2,8 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
 
+const getTenantId = (req) => {
+  if (!req) return DEFAULT_TENANT_ID;
+  const headersTenant = req.headers ? req.headers['x-tenant-id'] : null;
+  const queryTenant = req.query ? req.query.tenantId : null;
+  const bodyTenant = req.body ? req.body.tenantId : null;
+  return headersTenant || queryTenant || bodyTenant || DEFAULT_TENANT_ID;
+};
 const getElectionsRef = (req) => {
-  const tenantId = req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
+  const tenantId = getTenantId(req);
   return db.collection('tenants').doc(tenantId).collection('elections');
 };
 const { verifyAuth, requireAdmin } = require('../middleware/auth');

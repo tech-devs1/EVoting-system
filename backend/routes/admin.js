@@ -2,7 +2,13 @@
 const router = express.Router();
 const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
 
-const getTenantId = (req) => req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
+const getTenantId = (req) => {
+  if (!req) return DEFAULT_TENANT_ID;
+  const headersTenant = req.headers ? req.headers['x-tenant-id'] : null;
+  const queryTenant = req.query ? req.query.tenantId : null;
+  const bodyTenant = req.body ? req.body.tenantId : null;
+  return headersTenant || queryTenant || bodyTenant || DEFAULT_TENANT_ID;
+};
 const getElectionsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('elections');
 const getCandidatesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('candidates');
 const getVotedVotersRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('voted_voters');

@@ -2,7 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
 
-const getTenantId = (req) => req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
+const getTenantId = (req) => {
+  if (!req) return DEFAULT_TENANT_ID;
+  const headersTenant = req.headers ? req.headers['x-tenant-id'] : null;
+  const queryTenant = req.query ? req.query.tenantId : null;
+  const bodyTenant = req.body ? req.body.tenantId : null;
+  return headersTenant || queryTenant || bodyTenant || DEFAULT_TENANT_ID;
+};
 const getElectionsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('elections');
 const getCandidatesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('candidates');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
@@ -59,6 +65,26 @@ router.get('/election/:electionId', async (req, res) => {
         list.push({ id: doc.id, ...data });
       });
 
+      // Sort candidates by ballotNumber (ascending) primarily, with fallbacks
+      list.sort((a, b) => {
+        const valA = a.ballotNumber;
+        const valB = b.ballotNumber;
+        const hasA = valA !== undefined && valA !== null && valA !== '';
+        const hasB = valB !== undefined && valB !== null && valB !== '';
+
+        if (hasA && hasB) {
+          const numA = parseInt(valA, 10);
+          const numB = parseInt(valB, 10);
+          if (!isNaN(numA) && !isNaN(numB)) {
+            return numA - numB;
+          }
+          return valA.toString().localeCompare(valB.toString());
+        }
+        if (hasA) return -1;
+        if (hasB) return 1;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
       return list;
     }, 10000); // Cache for 10 seconds
 
@@ -76,7 +102,7 @@ router.get('/election/:electionId', async (req, res) => {
 router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   try {
     console.log('[Add Candidate] Request body:', req.body);
-    const { name, manifesto, manifestoUrl, electionId, position, photoUrl, isIndependent } = req.body;
+    const { name, manifesto, manifestoUrl, electionId, position, photoUrl, isIndependent, ballotNumber } = req.body;
     
     if (!name || !electionId) {
       console.log('[Add Candidate] Missing required fields:', { name, electionId });
@@ -116,6 +142,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       votes: 0, // Initial vote count
       noVotes: 0, // Initial no-vote count (for independent candidates)
       isIndependent: isIndependent === true,
+      ballotNumber: ballotNumber !== undefined && ballotNumber !== null ? ballotNumber : '',
       createdAt: Date.now()
     };
 
