@@ -15,6 +15,7 @@ interface Candidate {
   votes: number;
   noVotes?: number;
   isIndependent?: boolean;
+  ballotNumber?: string | number;
 }
 
 interface Election {
@@ -44,6 +45,7 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
   const [formPosSelect, setFormPosSelect] = useState('');   // dropdown value
   const [formPosCustom, setFormPosCustom] = useState('');   // free-text when "custom"
   const [formIsIndependent, setFormIsIndependent] = useState(false);
+  const [formBallotNumber, setFormBallotNumber] = useState('');
   const [formManifesto, setFormManifesto] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -162,12 +164,13 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
         photoUrl,
         electionId,
         isIndependent: formIsIndependent,
+        ballotNumber: formBallotNumber,
       });
 
       if (res.status === 'success') {
         setCandidates(prev => [...prev, res.data]);
         setIsModalOpen(false);
-        setFormName(''); setFormPosSelect(''); setFormPosCustom(''); setFormIsIndependent(false); clearAddManifestoEditor();
+        setFormName(''); setFormPosSelect(''); setFormPosCustom(''); setFormIsIndependent(false); setFormBallotNumber(''); clearAddManifestoEditor();
         setPhotoFile(null);
       } else {
         alert('Failed to add candidate: ' + (res as any).message || 'Unknown error');
@@ -228,7 +231,7 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
               <div className="candidate-content">
                 <div className="candidate-info">
                   <h4 className="candidate-name">
-                    {cand.name} {cand.isIndependent && <span style={{ fontSize: '11px', color: 'var(--color-primary)' }}>(Independent)</span>}
+                    {cand.ballotNumber ? `No. ${cand.ballotNumber} - ` : ''}{cand.name} {cand.isIndependent && <span style={{ fontSize: '11px', color: 'var(--color-primary)' }}>(Independent)</span>}
                   </h4>
                   <span className="candidate-position">{cand.position}</span>
                   {cand.isIndependent ? (
@@ -294,6 +297,10 @@ export default function AdminElectionCandidatesPage({ params }: { params: Promis
                 <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
                   <label className="form-label" htmlFor="cand-name" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Name</label>
                   <input type="text" id="cand-name" className="form-input" placeholder="e.g. John Doe" required value={formName} onChange={e => setFormName(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+                  <label className="form-label" htmlFor="cand-ballot" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Ballot Number / Order (e.g. 1 for No. 1)</label>
+                  <input type="text" id="cand-ballot" className="form-input" placeholder="e.g. 1" value={formBallotNumber} onChange={e => setFormBallotNumber(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
                 </div>
                 <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
                   <label className="form-label" htmlFor="cand-pos" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Position</label>

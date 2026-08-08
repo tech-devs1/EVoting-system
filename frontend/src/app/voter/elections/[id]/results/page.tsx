@@ -29,6 +29,7 @@ interface Candidate {
   votes: number;
   noVotes?: number;
   isIndependent?: boolean;
+  ballotNumber?: string | number;
 }
 
 interface Election {
@@ -60,16 +61,17 @@ function PositionChart({
   const chartColors: string[] = [];
 
   sorted.forEach((c, i) => {
+    const prefix = c.ballotNumber ? `No. ${c.ballotNumber} ` : '';
     if (c.isIndependent) {
-      chartLabels.push(`${c.name} (Yes)`);
+      chartLabels.push(`${prefix}${c.name} (Yes)`);
       chartVotes.push(c.votes || 0);
       chartColors.push('#10B981');
 
-      chartLabels.push(`${c.name} (No)`);
+      chartLabels.push(`${prefix}${c.name} (No)`);
       chartVotes.push(c.noVotes || 0);
       chartColors.push('#EF4444');
     } else {
-      chartLabels.push(c.name);
+      chartLabels.push(`${prefix}${c.name}`);
       chartVotes.push(c.votes || 0);
       chartColors.push(COLORS[(colorOffset + i) % COLORS.length]);
     }
@@ -171,7 +173,7 @@ function PositionChart({
             <Trophy size={14} color={accentColor} />
           )}
           <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? '#EF4444' : accentColor }}>
-            {leader.name}
+            {leader.ballotNumber ? `No. ${leader.ballotNumber} - ` : ''}{leader.name}
           </span>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
             {leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? (
@@ -195,7 +197,7 @@ function PositionChart({
         }}>
           <span style={{ fontSize: '14px' }}>⚖️</span>
           <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#F59E0B' }}>
-            Tie — {sorted.filter(c => (c.votes || 0) === topVotes).map(c => c.name).join(' & ')}
+            Tie — {sorted.filter(c => (c.votes || 0) === topVotes).map(c => `${c.ballotNumber ? `No. ${c.ballotNumber} ` : ''}${c.name}`).join(' & ')}
           </span>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
             each with {topVotes.toLocaleString()} vote{topVotes !== 1 ? 's' : ''}
@@ -214,7 +216,7 @@ function PositionChart({
         }}>
           <span style={{ fontSize: '14px' }}>⚖️</span>
           <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#F59E0B' }}>
-            Tie — {leader.name}
+            Tie — {leader.ballotNumber ? `No. ${leader.ballotNumber} ` : ''}{leader.name}
           </span>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
             Yes and No votes are tied at {(leader.votes || 0).toLocaleString()}
@@ -246,7 +248,7 @@ function PositionChart({
                   }}>
                     {idx + 1}
                   </span>
-                  {cand.name}
+                  {cand.ballotNumber ? `No. ${cand.ballotNumber} - ` : ''}{cand.name}
                   {isWinner && <span style={{ fontSize: '12px' }}>🏆</span>}
                   {isCandTied && (
                     <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600 }}>⚖</span>

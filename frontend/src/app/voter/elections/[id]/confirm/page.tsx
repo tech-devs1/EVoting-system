@@ -16,6 +16,7 @@ interface Candidate {
   photoUrl: string;
   selectedId?: string;
   choice?: string;
+  ballotNumber?: string | number;
 }
 
 interface Election {
@@ -197,7 +198,7 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
                 {candidate.position}
               </span>
               <h3 style={{ fontSize: 'var(--text-base)', margin: '2px 0', fontWeight: 600 }}>
-                {candidate.name}
+                {candidate.ballotNumber ? `No. ${candidate.ballotNumber} - ` : ''}{candidate.name}
                 {candidate.choice && (
                   <span style={{ 
                     marginLeft: '8px', 

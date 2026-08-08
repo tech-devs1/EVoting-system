@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDLZAnrMZJhti55Mo3PTntoPFa4-8hvHb4",
-  authDomain: "voting-0.firebaseapp.com",
-  projectId: "voting-0",
-  storageBucket: "voting-0.firebasestorage.app",
-  messagingSenderId: "719858248032",
-  appId: "1:719858248032:web:06f6fd64c8f29639cc5605",
-  measurementId: "G-PP0ZC2Q44R"
+  apiKey: "AIzaSyDxNfoX5qwMCqDNWNtBYKbg5bqK5iYptaA",
+  authDomain: "htu-elect.firebaseapp.com",
+  projectId: "htu-elect",
+  storageBucket: "htu-elect.firebasestorage.app",
+  messagingSenderId: "165648828899",
+  appId: "1:165648828899:web:7cfc969a599a1f5f08f8d6",
+  measurementId: "G-LQBJCJ5KSS"
 };
 
 // Initialize Firebase
