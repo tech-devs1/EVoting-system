@@ -1,5 +1,5 @@
-◇ injected env (8) from .env // tip: ⌘ enable debugging { debug: true }
-◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+◇ injected env (8) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
 ✅ Firebase Admin SDK initialized — connected to project: voting-0
 Server is running on port 5001
 [Migration] Tenant 'compssa' already exists. Skipping migration.
@@ -19,7 +19,7 @@ Server is running on port 5001
   name: 'John Doe',
   position: 'President',
   manifesto: "John's Manifesto",
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
   isIndependent: false,
   ballotNumber: '2'
 }
@@ -27,16 +27,16 @@ Server is running on port 5001
   name: 'John Doe',
   manifesto: "John's Manifesto",
   manifestoUrl: '',
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
   position: 'President',
   photoUrl: '',
   votes: 0,
   noVotes: 0,
   isIndependent: false,
   ballotNumber: '2',
-  createdAt: 1786213339293
+  createdAt: 1786217121368
 }
-[Add Candidate] Candidate created with ID: gJ3kKKXtoyxt3Jlcrr8m
+[Add Candidate] Candidate created with ID: bsn8Py7OWKo1TojnZAj5
 [Auth Middleware] Authorization header: Bearer eyJhbGciOiJIU...
 [Auth Middleware] JWT_SECRET set: true
 [Auth Middleware] Token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
@@ -47,7 +47,7 @@ Server is running on port 5001
   name: 'Jane Smith',
   position: 'President',
   manifesto: "Jane's Manifesto",
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
   isIndependent: false,
   ballotNumber: '1'
 }
@@ -55,16 +55,16 @@ Server is running on port 5001
   name: 'Jane Smith',
   manifesto: "Jane's Manifesto",
   manifestoUrl: '',
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
   position: 'President',
   photoUrl: '',
   votes: 0,
   noVotes: 0,
   isIndependent: false,
   ballotNumber: '1',
-  createdAt: 1786213339425
+  createdAt: 1786217121488
 }
-[Add Candidate] Candidate created with ID: ximWV1JCFahJFBfmypqG
+[Add Candidate] Candidate created with ID: MCRWSkWtXe7Gk4B6xZSf
 [Auth Middleware] Authorization header: Bearer eyJhbGciOiJIU...
 [Auth Middleware] JWT_SECRET set: true
 [Auth Middleware] Token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
@@ -75,7 +75,7 @@ Server is running on port 5001
   name: 'Bob Johnson',
   position: 'Financial Secretary',
   manifesto: "Bob's Manifesto",
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
   isIndependent: true,
   ballotNumber: '1'
 }
@@ -83,16 +83,16 @@ Server is running on port 5001
   name: 'Bob Johnson',
   manifesto: "Bob's Manifesto",
   manifestoUrl: '',
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
   position: 'Financial Secretary',
   photoUrl: '',
   votes: 0,
   noVotes: 0,
   isIndependent: true,
   ballotNumber: '1',
-  createdAt: 1786213339603
+  createdAt: 1786217121614
 }
-[Add Candidate] Candidate created with ID: YiFC4qNhBGWwZzHGRzvM
+[Add Candidate] Candidate created with ID: dvFRWxEg330szLrCp857
 [Auth Middleware] Authorization header: Bearer eyJhbGciOiJIU...
 [Auth Middleware] JWT_SECRET set: true
 [Auth Middleware] Token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
@@ -105,9 +105,9 @@ Server is running on port 5001
 [Auth Middleware] Attempting Firebase token verification
 [Auth Middleware] Firebase verification failed, trying JWT: Cannot read properties of undefined (reading 'auth')
 [Auth Middleware] JWT token verified
-[EmailJS Warning] Missing EmailJS env variables. Code for voter1@htu.edu.gh is: 428700
-[BMS SMS] Dispatching OTP 428700 to 0241111111 via BMS Africa
-[BMS SMS] Response: {"status":"success","code":"2000","message":"messages sent successfully","summary":{"_id":"EC3B7DFD-B1B1-493A-B025-4B53B7865656","message_id":"20260808233557138306V2","type":"API QUICK SMS","total_sent":1,"contacts":1,"total_rejected":0,"numbers_sent":["0241111111"],"credit_used":1,"credit_left":882,"wallet_used":0}}
+[EmailJS Warning] Missing EmailJS env variables. Code for voter1@htu.edu.gh is: 190827
+[BMS SMS] Dispatching OTP 190827 to 0241111111 via BMS Africa
+[BMS SMS] Response: {"status":"success","code":"2000","message":"messages sent successfully","summary":{"_id":"248DFCC7-D354-4254-B269-236E5A1FE9F3","message_id":"20260808233557138306V2","type":"API QUICK SMS","total_sent":1,"contacts":1,"total_rejected":0,"numbers_sent":["0241111111"],"credit_used":1,"credit_left":880,"wallet_used":0}}
 [Auth Middleware] Authorization header: Bearer eyJhbGciOiJIU...
 [Auth Middleware] JWT_SECRET set: true
 [Auth Middleware] Token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
@@ -121,14 +121,14 @@ Server is running on port 5001
 [Auth Middleware] Firebase verification failed, trying JWT: Cannot read properties of undefined (reading 'auth')
 [Auth Middleware] JWT token verified
 [Cast Vote] Vote attempt: {
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
-  candidateId: 'ximWV1JCFahJFBfmypqG',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
+  candidateId: 'MCRWSkWtXe7Gk4B6xZSf',
   choice: undefined,
   voterId: 'voter-001'
 }
 [Cast Vote] Vote cast successfully: {
   voterId: 'voter-001',
-  candidateId: 'ximWV1JCFahJFBfmypqG',
+  candidateId: 'MCRWSkWtXe7Gk4B6xZSf',
   position: 'President',
   choice: 'yes'
 }
@@ -139,14 +139,14 @@ Server is running on port 5001
 [Auth Middleware] Firebase verification failed, trying JWT: Cannot read properties of undefined (reading 'auth')
 [Auth Middleware] JWT token verified
 [Cast Vote] Vote attempt: {
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
-  candidateId: 'YiFC4qNhBGWwZzHGRzvM',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
+  candidateId: 'dvFRWxEg330szLrCp857',
   choice: 'yes',
   voterId: 'voter-001'
 }
 [Cast Vote] Vote cast successfully: {
   voterId: 'voter-001',
-  candidateId: 'YiFC4qNhBGWwZzHGRzvM',
+  candidateId: 'dvFRWxEg330szLrCp857',
   position: 'Financial Secretary',
   choice: 'yes'
 }
@@ -156,9 +156,9 @@ Server is running on port 5001
 [Auth Middleware] Attempting Firebase token verification
 [Auth Middleware] Firebase verification failed, trying JWT: Cannot read properties of undefined (reading 'auth')
 [Auth Middleware] JWT token verified
-[EmailJS Warning] Missing EmailJS env variables. Code for voter2@htu.edu.gh is: 869669
-[BMS SMS] Dispatching OTP 869669 to 0242222222 via BMS Africa
-[BMS SMS] Response: {"status":"success","code":"2000","message":"messages sent successfully","summary":{"_id":"F6CAFCE5-114E-4214-97A4-1031176CF144","message_id":"20260808233557138306V2","type":"API QUICK SMS","total_sent":1,"contacts":1,"total_rejected":0,"numbers_sent":["0242222222"],"credit_used":1,"credit_left":881,"wallet_used":0}}
+[EmailJS Warning] Missing EmailJS env variables. Code for voter2@htu.edu.gh is: 731649
+[BMS SMS] Dispatching OTP 731649 to 0242222222 via BMS Africa
+[BMS SMS] Response: {"status":"success","code":"2000","message":"messages sent successfully","summary":{"_id":"12546FD7-EACF-4C09-972B-81600CE15C5B","message_id":"20260808233557138306V2","type":"API QUICK SMS","total_sent":1,"contacts":1,"total_rejected":0,"numbers_sent":["0242222222"],"credit_used":1,"credit_left":879,"wallet_used":0}}
 [Auth Middleware] Authorization header: Bearer eyJhbGciOiJIU...
 [Auth Middleware] JWT_SECRET set: true
 [Auth Middleware] Token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
@@ -172,14 +172,14 @@ Server is running on port 5001
 [Auth Middleware] Firebase verification failed, trying JWT: Cannot read properties of undefined (reading 'auth')
 [Auth Middleware] JWT token verified
 [Cast Vote] Vote attempt: {
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
-  candidateId: 'ximWV1JCFahJFBfmypqG',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
+  candidateId: 'MCRWSkWtXe7Gk4B6xZSf',
   choice: undefined,
   voterId: 'voter-002'
 }
 [Cast Vote] Vote cast successfully: {
   voterId: 'voter-002',
-  candidateId: 'ximWV1JCFahJFBfmypqG',
+  candidateId: 'MCRWSkWtXe7Gk4B6xZSf',
   position: 'President',
   choice: 'yes'
 }
@@ -190,14 +190,14 @@ Server is running on port 5001
 [Auth Middleware] Firebase verification failed, trying JWT: Cannot read properties of undefined (reading 'auth')
 [Auth Middleware] JWT token verified
 [Cast Vote] Vote attempt: {
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
-  candidateId: 'YiFC4qNhBGWwZzHGRzvM',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
+  candidateId: 'dvFRWxEg330szLrCp857',
   choice: 'no',
   voterId: 'voter-002'
 }
 [Cast Vote] Vote cast successfully: {
   voterId: 'voter-002',
-  candidateId: 'YiFC4qNhBGWwZzHGRzvM',
+  candidateId: 'dvFRWxEg330szLrCp857',
   position: 'Financial Secretary',
   choice: 'no'
 }
@@ -208,8 +208,8 @@ Server is running on port 5001
 [Auth Middleware] Firebase verification failed, trying JWT: Cannot read properties of undefined (reading 'auth')
 [Auth Middleware] JWT token verified
 [Cast Vote] Vote attempt: {
-  electionId: 'ThMC7DRUTzazxZlCEFJe',
-  candidateId: 'gJ3kKKXtoyxt3Jlcrr8m',
+  electionId: '0sW4Pu1eYGMMP9MuXQhJ',
+  candidateId: 'bsn8Py7OWKo1TojnZAj5',
   choice: undefined,
   voterId: 'voter-001'
 }
