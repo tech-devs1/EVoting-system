@@ -233,7 +233,7 @@ export default function RegisterPage() {
           <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
             <span style={{ fontWeight: 600, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
-              COMPSSA <span style={{ color: 'var(--color-primary)' }}>✓</span>
+              HTU Elect <span style={{ color: 'var(--color-primary)' }}>✓</span>
             </span>
           </div>
           <h2 className="auth-title" style={{ marginTop: 'var(--space-4)' }}>Voter Registration</h2>

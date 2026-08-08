@@ -1,122 +1,67 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { apiRequest } from '@/lib/api';
-import { ShieldCheck, Mail, Lock, KeyRound, CheckCircle2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { ShieldCheck, Mail, Lock, KeyRound, Eye, EyeOff, LogIn } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, verifyOtp } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
 
-  // Step 1: credentials
+  // Mode state
+  const [isAdminMode, setIsAdminMode] = useState(false);
+
+  // Admin credentials state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Step 2: OTP
-  const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
-  const [otpEmail, setOtpEmail] = useState('');
-  const [otpPhone, setOtpPhone] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [fallbackOtp, setFallbackOtp] = useState('');
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [resendMsg, setResendMsg] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handle Google Auth Sign In
+  const handleGoogleLogin = async () => {
     setError('');
-    
-    // Auto-prefix with 0 if it's a numeric email that starts without 0
-    let formattedEmail = email.trim();
-    const [localPart, domain] = formattedEmail.split('@');
-    if (localPart && !localPart.startsWith('0') && /^\d+$/.test(localPart)) {
-      formattedEmail = `0${localPart}@${domain || 'htu.edu.gh'}`;
-      setEmail(formattedEmail);
-    }
-    
-    // Validate email - only allow alphanumeric, @, ., -, _
-    const emailRegex = /^[a-zA-Z0-9@._-]+$/;
-    if (formattedEmail !== 'supertech@admin.com' && !emailRegex.test(formattedEmail)) {
-      setError('Email contains invalid characters. Only letters, numbers, @, ., -, and _ are allowed.');
-      return;
-    }
     setLoading(true);
     try {
-      let role: 'voter' | 'admin' | 'superadmin' = 'voter';
-      if (formattedEmail === 'supertech@admin.com') {
+      const provider = new GoogleAuthProvider();
+      // Force account selection popup
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+
+      await loginWithGoogle(idToken);
+    } catch (err: any) {
+      console.error('Google login error:', err);
+      // Clean up firebase canceled error messages
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Login cancelled. Please select a Google account in the popup.');
+      } else {
+        setError(err.message || 'Google Authentication failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Admin Credentials Login
+  const handleAdminSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      let role: 'voter' | 'admin' | 'superadmin' = 'admin';
+      if (email.trim() === 'supertech@admin.com') {
         role = 'superadmin';
       }
-      const result = await login(formattedEmail, password, role);
-      if (result?.otpRequired && result.email) {
-        setOtpEmail(result.email);
-        setOtpPhone(result.phone || '');
-        setFallbackOtp(result.fallbackOtp || '');
-        setStep('otp');
-      }
+      await login(email.trim(), password, role);
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please verify credentials.');
+      setError(err.message || 'Login failed. Please verify admin credentials.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const newOtp = [...otp];
-    pasted.split('').forEach((char, i) => { newOtp[i] = char; });
-    setOtp(newOtp);
-    otpRefs.current[Math.min(pasted.length, 5)]?.focus();
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const otpCode = otp.join('');
-    if (otpCode.length !== 6) {
-      setError('Please enter the full 6-digit code.');
-      return;
-    }
-    setError('');
-    setLoading(true);
-    try {
-      await verifyOtp(otpEmail, otpCode);
-    } catch (err: any) {
-      setError(err.message || 'Invalid OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    setResendMsg('');
-    setError('');
-    try {
-      await apiRequest('/auth/resend-otp', 'POST', { email: otpEmail });
-      setResendMsg('A new code has been sent to your phone via SMS.');
-      setOtp(['', '', '', '', '', '']);
-      otpRefs.current[0]?.focus();
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend OTP.');
     }
   };
 
@@ -126,22 +71,19 @@ export default function LoginPage() {
       
       <div className="glass-card-strong auth-card" style={{ maxWidth: '450px', width: '100%', margin: '0 auto' }}>
         <div className="auth-header">
-
           <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
             <span style={{ fontWeight: 600, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
-              COMPSSA <span style={{ color: 'var(--color-primary)' }}>✓</span>
+              HTU Elect <span style={{ color: 'var(--color-primary)' }}>✓</span>
             </span>
           </div>
           <h2 className="auth-title" style={{ marginTop: 'var(--space-4)' }}>
-            {step === 'credentials' ? 'Secure Sign In' : 'Verify Your Identity'}
+            {isAdminMode ? 'Administrator Sign In' : 'Voter Secure Login'}
           </h2>
           <p className="auth-subtitle">
-            {step === 'credentials'
-              ? 'Sign in to review credentials and submit your ballot.'
-              : otpPhone
-                ? `Enter the 6-digit SMS code sent to your phone (${otpPhone})`
-                : `Enter the 6-digit code sent to ${otpEmail}`}
+            {isAdminMode
+              ? 'Enter your department administrator credentials to access the console.'
+              : 'Sign in instantly using your Google account to confirm identity and cast your ballot.'}
           </p>
         </div>
 
@@ -159,31 +101,52 @@ export default function LoginPage() {
           </div>
         )}
 
-        {resendMsg && (
-          <div style={{
-            padding: 'var(--space-3) var(--space-4)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: 'var(--space-4)',
-            fontSize: 'var(--text-sm)',
-            background: 'var(--color-success-bg)',
-            color: 'var(--color-success)',
-            border: '1px solid rgba(34,197,94,0.2)'
-          }}>
-            {resendMsg}
-          </div>
-        )}
+        {!isAdminMode ? (
+          /* VOTER GOOGLE AUTH MODE */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="btn btn-primary btn-full hover-lift"
+              disabled={loading}
+              style={{
+                background: '#fff',
+                color: '#1f2937',
+                border: '1px solid #d1d5db',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                padding: 'var(--space-3) var(--space-4)',
+                fontWeight: 600,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22c-.62-.63-1.05-1.41-1.18-2.63z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+              </svg>
+              {loading ? 'Authenticating...' : 'Sign In with Google'}
+            </button>
 
-        {step === 'credentials' && (
-          <form onSubmit={handleSubmit}>
+            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', textAlign: 'center', lineHeight: '1.5' }}>
+              Only students and voters registered on the official EC voter lists will be granted access. Manual account creation is deprecated.
+            </p>
+          </div>
+        ) : (
+          /* ADMIN CREDENTIALS MODE */
+          <form onSubmit={handleAdminSubmit}>
             <div className="form-group">
-              <label className="form-label" htmlFor="login-email">Email Address</label>
+              <label className="form-label" htmlFor="login-email">Admin Email</label>
               <div className="form-input-container">
                 <Mail size={18} className="form-input-icon" />
                 <input
                   type="email"
                   id="login-email"
                   className="form-input form-input-with-icon"
-                  placeholder="id@htu.edu.gh"
+                  placeholder="admin@htu.edu.gh"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -219,120 +182,37 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-              <label className="form-checkbox-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input type="checkbox" className="form-checkbox" defaultChecked />
-                <span style={{ fontSize: 'var(--text-sm)' }}>Remember this session</span>
-              </label>
-              <Link href="/forgot-password" style={{ fontSize: 'var(--text-sm)' }}>Forgot Password?</Link>
-            </div>
-
             <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading}>
               <KeyRound size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
-              {loading ? 'Verifying...' : 'Sign In'}
+              {loading ? 'Signing In...' : 'Verify & Access Console'}
             </button>
           </form>
         )}
 
-        {step === 'otp' && (
-          <form onSubmit={handleVerifyOtp}>
-            <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-              <div style={{
-                width: '60px', height: '60px', borderRadius: '50%',
-                background: 'var(--color-primary-100)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto var(--space-4) auto'
-              }}>
-                <CheckCircle2 size={30} style={{ color: 'var(--color-primary)' }} />
-              </div>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                Check your school email{otpEmail ? ` (${otpEmail})` : ''} — a 6-digit verification code has been sent. It expires in <strong>10 minutes</strong>.
-              </p>
-            </div>
-
-            {fallbackOtp && (
-              <div style={{
-                padding: 'var(--space-3) var(--space-4)',
-                borderRadius: 'var(--radius-md)',
-                marginBottom: 'var(--space-4)',
-                fontSize: 'var(--text-sm)',
-                background: 'var(--color-warning-bg) || rgba(245, 158, 11, 0.1)',
-                color: 'var(--color-warning) || rgb(217, 119, 6)',
-                border: '1px solid rgba(245, 158, 11, 0.2)',
-                textAlign: 'center',
-                fontWeight: 500
-              }}>
-                📢 <strong>[Demo Mode Fallback]</strong><br />
-                Email delivery delayed. Use code: <strong style={{ fontSize: '1.2rem', color: 'var(--color-primary)', letterSpacing: '2px', marginLeft: '4px' }}>{fallbackOtp}</strong>
-              </div>
-            )}
-
-            {/* 6-digit OTP boxes */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: 'var(--space-6)' }}>
-              {otp.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={el => { otpRefs.current[i] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={e => handleOtpChange(i, e.target.value)}
-                  onKeyDown={e => handleOtpKeyDown(i, e)}
-                  onPaste={i === 0 ? handleOtpPaste : undefined}
-                  style={{
-                    width: '52px', height: '58px',
-                    textAlign: 'center',
-                    fontSize: '1.5rem',
-                    fontWeight: 700,
-                    border: `2px solid ${digit ? 'var(--color-primary)' : 'var(--border-color)'}`,
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--bg-input)',
-                    color: 'var(--text-primary)',
-                    outline: 'none',
-                    transition: 'border-color 0.2s',
-                  }}
-                  disabled={loading}
-                />
-              ))}
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading}>
-              <ShieldCheck size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
-              {loading ? 'Verifying...' : 'Confirm & Sign In'}
-            </button>
-
-            <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
-              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Didn't receive it? </span>
-              <button type="button" onClick={handleResend} style={{
-                fontSize: 'var(--text-sm)', color: 'var(--color-primary)',
-                fontWeight: 'bold', background: 'none', border: 'none', cursor: 'pointer'
-              }}>
-                Resend Code
-              </button>
-            </div>
-
-            <div style={{ marginTop: 'var(--space-3)', textAlign: 'center' }}>
-              <button type="button" onClick={() => { setStep('credentials'); setError(''); setOtp(['','','','','','']); }}
-                style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                ← Back to Sign In
-              </button>
-            </div>
-          </form>
-        )}
-
-        {step === 'credentials' && (
-          <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
-            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Don't have an account? </span>
-            <Link href="/register" style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 'bold' }}>
-              Register Account
-            </Link>
-          </div>
-        )}
+        <div style={{ marginTop: 'var(--space-6)', textAlign: 'center', borderTop: '1px dashed var(--border-color)', paddingTop: 'var(--space-4)' }}>
+          <button
+            type="button"
+            onClick={() => { setIsAdminMode(!isAdminMode); setError(''); }}
+            style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-primary)',
+              fontWeight: 'bold',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <LogIn size={16} />
+            {isAdminMode ? 'Switch to Voter Portal (Google)' : 'Switch to Admin Login (Credentials)'}
+          </button>
+        </div>
 
         <div className="auth-security-badge" style={{ marginTop: 'var(--space-6)' }}>
           <ShieldCheck size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
-          Protected by TECHDEVS ✓ Security
+          Protected by HTU Elect Secure Authenticator ✓
         </div>
       </div>
     </div>
