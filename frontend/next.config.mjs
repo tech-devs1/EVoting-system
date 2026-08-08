@@ -17,8 +17,11 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname, '../'),
   async rewrites() {
     // On Vercel, root vercel.json routes /api/* → backend/server.js directly,
-    // so these rewrites are only used in local development.
-    // In local dev, BACKEND_URL defaults to http://localhost:5000
+    // so we don't need any Next.js rewrites in production if BACKEND_URL is not set.
+    // This avoids DNS resolution and proxying errors (e.g., DNS_HOSTNAME_RESOLVED_PRIVATE).
+    if (process.env.VERCEL === '1' && !process.env.BACKEND_URL) {
+      return [];
+    }
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
     return [
       {
