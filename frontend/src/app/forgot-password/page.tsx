@@ -92,7 +92,7 @@ export default function ForgotPasswordPage() {
         <div className="auth-header">
           <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
-            <span style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold' }}>COMPSSA ✓</span>
+            <span style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold' }}>HTU Elect ✓</span>
           </div>
           <h2 className="auth-title">Password Recovery</h2>
           <p className="auth-subtitle">Securely reset your terminal access key.</p>

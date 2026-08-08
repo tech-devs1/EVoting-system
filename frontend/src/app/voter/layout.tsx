@@ -151,7 +151,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
         <div className="sidebar-header">
           <Link href="/voter/dashboard" onClick={() => setSidebarOpen(false)} className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: 700, letterSpacing: '-0.5px' }}>COMPSSA <span style={{ color: 'var(--color-primary)' }}>✓</span></span>
+            <span style={{ fontWeight: 700, letterSpacing: '-0.5px' }}>HTU Elect <span style={{ color: 'var(--color-primary)' }}>✓</span></span>
           </Link>
         </div>
         <nav className="sidebar-nav" style={{ flexGrow: 1 }}>
