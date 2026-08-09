@@ -75,9 +75,7 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
     setBroadcastLoading(true);
     setMessage(null);
     try {
-      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}/broadcast-results`, {
-        method: 'POST'
-      });
+      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}/broadcast-results`, 'POST');
       if (res.status === 'success') {
         setMessage({ type: 'success', text: res.message || 'Election results broadcasted successfully to all roster voters via email!' });
         fetchResultsData();

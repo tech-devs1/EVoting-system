@@ -67,10 +67,7 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
     setActionLoading(true);
     setMessage(null);
     try {
-      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}`, {
-        method: 'PUT',
-        body: { status: newStatus }
-      });
+      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}`, 'PUT', { status: newStatus });
       if (res.status === 'success') {
         setMessage({ type: 'success', text: `Election status updated to ${newStatus.toUpperCase()}.` });
         fetchElectionData();
@@ -87,9 +84,7 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
     setActionLoading(true);
     setMessage(null);
     try {
-      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}/send-invitations`, {
-        method: 'POST'
-      });
+      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}/send-invitations`, 'POST');
       if (res.status === 'success') {
         setMessage({ type: 'success', text: res.message || 'Voting invitations dispatched to roster voters!' });
       }
@@ -105,9 +100,7 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
     setActionLoading(true);
     setMessage(null);
     try {
-      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}/broadcast-results`, {
-        method: 'POST'
-      });
+      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}/broadcast-results`, 'POST');
       if (res.status === 'success') {
         setMessage({ type: 'success', text: res.message || 'Final election results broadcasted to roster voters!' });
         fetchElectionData();

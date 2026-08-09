@@ -191,10 +191,7 @@ export default function OrganizationElectionHub() {
         status: publishNow ? 'active' : 'draft'
       };
 
-      const res = await apiRequest<{ status: string; data: { id: string } }>('/elections', {
-        method: 'POST',
-        body: payload
-      });
+      const res = await apiRequest<{ status: string; data: { id: string } }>('/elections', 'POST', payload);
 
       if (res.status === 'success' && res.data?.id) {
         const electionId = res.data.id;
