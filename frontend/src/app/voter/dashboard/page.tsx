@@ -66,8 +66,15 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
   }, [endsAt, mounted]);
 
   return (
-    <div className={`countdown-timer ${endingSoon ? 'ending-soon' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }} suppressHydrationWarning>
-      <Clock size={14} /> {mounted ? timeLeft : 'Loading...'}
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '4px',
+      fontSize: 'var(--text-xs, 12px)',
+      color: endingSoon ? 'var(--color-red, #EF4444)' : 'var(--text-secondary, #475569)',
+      fontWeight: endingSoon ? 'var(--weight-semibold, 600)' : 'var(--weight-normal, 400)'
+    }} suppressHydrationWarning>
+      <Clock size={12} /> {mounted ? timeLeft : 'Loading...'}
     </div>
   );
 }
@@ -91,10 +98,8 @@ export default function VoterDashboard() {
 
     async function fetchData() {
       try {
-        // ... in fetchData() ...
         console.log('[Dashboard] Fetching elections data...');
         
-        // 1. Try to load from IndexedDB cache first for instant UI response
         try {
           const cachedData = await get('voter_dashboard_cache');
           if (cachedData) {
@@ -103,13 +108,12 @@ export default function VoterDashboard() {
             setPublishedResultsElections(cachedData.publishedResultsElections || []);
             setVotedElectionIds(cachedData.votedElectionIds || []);
             setTotalVotes(cachedData.totalVotes || 0);
-            setLoading(false); // UI instantly loads from cache
+            setLoading(false);
           }
         } catch (e) {
           console.warn('IndexedDB cache read failed', e);
         }
 
-        // 2. Fetch fresh data from API
         const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
         let newElections: Election[] = [], newUpcoming: Election[] = [], newPublished: Election[] = [];
         if (res.status === 'success') {
@@ -142,7 +146,6 @@ export default function VoterDashboard() {
           setTotalVotes(newTotalVotes);
         }
 
-        // 3. Save fresh data back to IndexedDB cache
         try {
           await set('voter_dashboard_cache', {
             elections: newElections,
@@ -188,218 +191,329 @@ export default function VoterDashboard() {
     };
   }, [mounted]);
 
-  const userName = user?.name || "";
-  const voterCode = user?.uid ? user.uid.substring(0, 12) : "";
+  const userName = user?.name || "Voter";
 
   return (
-    <div className="dashboard-grid animate-page-enter" suppressHydrationWarning>
-      {/* Main Content Column */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr',
+      gap: 'var(--space-6, 1.5rem)',
+      fontFamily: 'var(--font-body, system-ui, sans-serif)'
+    }} suppressHydrationWarning>
+
+      {/* Top Welcome Card */}
+      <div style={{
+        backgroundColor: 'var(--bg-secondary, #FFFFFF)',
+        borderRadius: 'var(--radius-xl, 12px)',
+        border: '1px solid var(--border-color, #E2E8F0)',
+        padding: '2rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.25rem'
+      }}>
+        <div>
+          <h2 style={{
+            fontSize: 'var(--text-xl, 1.25rem)',
+            fontWeight: 'var(--weight-bold, 700)',
+            color: 'var(--text-primary, #0F172A)',
+            margin: '0 0 0.35rem 0'
+          }}>
+            Welcome back, {userName}!
+          </h2>
+          <p style={{
+            fontSize: 'var(--text-sm, 0.875rem)',
+            color: 'var(--text-secondary, #475569)',
+            margin: 0,
+            maxWidth: '640px',
+            lineHeight: '1.5'
+          }}>
+            Your student voter account is cryptographically verified and ready. Review the running e-ballots below to securely cast your vote.
+          </p>
+        </div>
         
-        {/* Welcome Banner Card */}
-        <div className="welcome-card">
-          <h2>Welcome back, {userName}!</h2>
-          <p>Your digital identity profile is cryptographic verification ready. Explore running ballots or check validation history tokens below.</p>
-          
-          <div className="quick-stats-grid">
-            <div className="stat-widget">
-              <span className="stat-widget-label">Active E-ballots</span>
-              <span className="stat-widget-val">{elections.length}</span>
-            </div>
-            <div className="stat-widget">
-              <span className="stat-widget-label">Upcoming Elections</span>
-              <span className="stat-widget-val">{upcomingElections.length}</span>
-            </div>
-            <div className="stat-widget">
-              <span className="stat-widget-label">Total Verified Votes</span>
-              <span className="stat-widget-val">{totalVotes}</span>
-            </div>
+        {/* Flat Minimalist Stats Row */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '1rem',
+          borderTop: '1px solid var(--border-color, #E2E8F0)',
+          paddingTop: '1.25rem'
+        }}>
+          <div>
+            <div style={{ fontSize: 'var(--text-xs, 12px)', color: 'var(--text-tertiary, #94A3B8)', textTransform: 'uppercase', fontWeight: 600 }}>Active Ballots</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', marginTop: '2px' }}>{elections.length}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 'var(--text-xs, 12px)', color: 'var(--text-tertiary, #94A3B8)', textTransform: 'uppercase', fontWeight: 600 }}>Upcoming</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', marginTop: '2px' }}>{upcomingElections.length}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 'var(--text-xs, 12px)', color: 'var(--text-tertiary, #94A3B8)', textTransform: 'uppercase', fontWeight: 600 }}>Total Votes</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', marginTop: '2px' }}>{totalVotes}</div>
           </div>
         </div>
+      </div>
 
-        {/* Dynamic list of running elections */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-            <h3>Active Elections</h3>
-            <Link href="/voter/elections" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
-              View All
-            </Link>
+      {/* Main Grid: Left Main Area, Right Sidebar */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
+        gap: 'var(--space-6, 1.5rem)'
+      }} className="responsive-dashboard-split">
+
+        {/* Left Column — Active Elections */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', margin: 0 }}>Active Elections</h3>
+              <Link href="/voter/elections" style={{ fontSize: 'var(--text-xs, 12px)', color: 'var(--color-primary, #2563EB)', fontWeight: 600 }}>
+                View All
+              </Link>
+            </div>
+
+            {loading ? (
+              <div style={{ padding: '2rem', textAlign: 'center', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '13px' }}>Syncing active ballots...</p>
+              </div>
+            ) : elections.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '3rem 1.5rem',
+                border: '1px dashed var(--border-color, #E2E8F0)',
+                borderRadius: 'var(--radius-lg, 10px)',
+                backgroundColor: 'var(--bg-secondary, #FFFFFF)'
+              }}>
+                <Inbox size={36} style={{ color: 'var(--text-tertiary, #94A3B8)', marginBottom: '0.75rem' }} />
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>No Active Elections</h4>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>There are no running elections at the moment. Please check back later.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {elections.map(el => {
+                  const hasVoted = votedElectionIds.includes(el.id);
+                  return (
+                    <div key={el.id} style={{
+                      backgroundColor: 'var(--bg-secondary, #FFFFFF)',
+                      border: '1px solid var(--border-color, #E2E8F0)',
+                      borderRadius: 'var(--radius-lg, 10px)',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                        <div>
+                          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>{el.title}</h4>
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>{el.description}</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                          {hasVoted ? (
+                            <span style={{ fontSize: '10px', backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>✓ Voted</span>
+                          ) : (
+                            <span style={{ fontSize: '10px', backgroundColor: 'var(--color-primary-50)', color: 'var(--color-primary)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>Active</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        borderTop: '1px solid var(--border-light, #F1F5F9)',
+                        paddingTop: '0.75rem'
+                      }}>
+                        <CountdownTimer endsAt={el.endDate} />
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          {hasVoted ? (
+                            <button disabled style={{
+                              padding: '0.45rem 0.85rem',
+                              fontSize: '11px',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-tertiary)',
+                              color: 'var(--text-tertiary)',
+                              cursor: 'not-allowed'
+                            }}>
+                              Already Voted
+                            </button>
+                          ) : (
+                            <Link href={`/voter/elections/${el.id}`} style={{
+                              padding: '0.45rem 0.85rem',
+                              fontSize: '11px',
+                              borderRadius: '6px',
+                              backgroundColor: 'var(--color-primary, #2563EB)',
+                              color: '#ffffff',
+                              fontWeight: 600,
+                              textDecoration: 'none'
+                            }}>
+                              Vote Now
+                            </Link>
+                          )}
+                          {el.showResults && (
+                            <Link href={`/voter/elections/${el.id}/results`} style={{
+                              padding: '0.45rem 0.85rem',
+                              fontSize: '11px',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              color: 'var(--text-secondary)',
+                              fontWeight: 600,
+                              textDecoration: 'none'
+                            }}>
+                              View Results
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {loading ? (
-            <p style={{ color: 'var(--text-secondary)' }}>Syncing active ballots...</p>
-          ) : elections.length === 0 ? (
-            <div className="empty-state">
-              <Inbox size={48} style={{ color: 'var(--text-tertiary)' }} />
-              <h3>No Active Elections</h3>
-              <p>There are no elections running right now. Check back later.</p>
-            </div>
-          ) : (
-            <div className="election-grid">
-              {elections.map(el => {
-                const hasVoted = votedElectionIds.includes(el.id);
-                return (
-                  <div className="card election-card card-hover" key={el.id}>
-                    <div className="election-card-header">
-                      <h4 className="election-card-title">{el.title}</h4>
-                      <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                        {hasVoted && (
-                          <span className="badge" style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--color-success, #22c55e)', fontSize: '11px' }}>✓ Voted</span>
-                        )}
-                        <span className="badge badge-success">Active</span>
-                      </div>
+          {/* Upcoming Elections */}
+          {upcomingElections.length > 0 && (
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', marginBottom: '1rem' }}>Upcoming Elections</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {upcomingElections.map(el => (
+                  <div key={el.id} style={{
+                    backgroundColor: 'var(--bg-secondary, #FFFFFF)',
+                    border: '1px solid var(--border-color, #E2E8F0)',
+                    borderRadius: 'var(--radius-lg, 10px)',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{el.title}</h4>
+                      <span style={{ fontSize: '10px', backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>Upcoming</span>
                     </div>
-                    <p className="election-card-desc">{el.description}</p>
-                    <div className="election-card-meta">
-                      <CountdownTimer endsAt={el.endDate} />
-                      <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                        {hasVoted ? (
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            disabled
-                            style={{ opacity: 0.5, cursor: 'not-allowed' }}
-                          >
-                            Already Voted
-                          </button>
-                        ) : (
-                          <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
-                            Vote Now
-                          </Link>
-                        )}
-                        {el.showResults && (
-                          <Link href={`/voter/elections/${el.id}/results`} className="btn btn-secondary btn-sm">
-                            View Results
-                          </Link>
-                        )}
-                      </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>{el.description}</p>
+                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={12} /> Starts {new Date(el.startDate).toLocaleDateString()}
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Upcoming Elections Section */}
-        {upcomingElections.length > 0 && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-              <h3>Upcoming Elections</h3>
-              <Link href="/voter/elections" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>View All</Link>
-            </div>
-            <div className="election-grid">
-              {upcomingElections.map(el => (
-                <div className="card election-card" key={el.id}>
-                  <div className="election-card-header">
-                    <h4 className="election-card-title">{el.title}</h4>
-                    <span className="badge badge-warning">Upcoming</span>
-                  </div>
-                  <p className="election-card-desc">{el.description}</p>
-                  <div className="election-card-meta">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                      <Clock size={13} />
-                      Starts {new Date(el.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          {/* Published Election Results */}
+          {publishedResultsElections.length > 0 && (
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', marginBottom: '1rem' }}>📊 Published Results</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {publishedResultsElections.map(el => (
+                  <div key={el.id} style={{
+                    backgroundColor: 'var(--bg-secondary, #FFFFFF)',
+                    border: '1px solid var(--border-color, #E2E8F0)',
+                    borderRadius: 'var(--radius-lg, 10px)',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.15rem 0' }}>{el.title}</h4>
+                      <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>Ended</span>
                     </div>
-                    <button className="btn btn-secondary btn-sm" disabled style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.6 }}>
-                      Not Yet Open
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Published Election Results Section */}
-        {publishedResultsElections.length > 0 && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                📊 Published Election Results
-              </h3>
-              <Link href="/voter/elections" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>View All</Link>
-            </div>
-            <div className="election-grid">
-              {publishedResultsElections.map(el => (
-                <div className="card election-card card-hover" key={el.id} style={{ border: '1px solid rgba(99,102,241,0.3)' }}>
-                  <div className="election-card-header">
-                    <h4 className="election-card-title">{el.title}</h4>
-                    <span className="badge badge-success">Results Available</span>
-                  </div>
-                  <p className="election-card-desc">{el.description}</p>
-                  <div className="election-card-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>
-                      Status: {el.status}
-                    </span>
-                    <Link href={`/voter/elections/${el.id}/results`} className="btn btn-primary btn-sm">
+                    <Link href={`/voter/elections/${el.id}/results`} style={{
+                      padding: '0.45rem 0.85rem',
+                      fontSize: '11px',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--color-primary, #2563EB)',
+                      color: '#ffffff',
+                      fontWeight: 600,
+                      textDecoration: 'none'
+                    }}>
                       View Results
                     </Link>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
 
-      {/* Sidebar Widgets Column */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-        
-        {/* Security Announcements */}
-        <div className="card">
-          <h4 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Security Announcements</h4>
-          <div className="notification-item" style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-            <div className="notification-icon blue" style={{ 
-              width: '32px', 
-              height: '32px', 
-              borderRadius: '50%', 
-              background: 'var(--color-info-bg)', 
-              color: 'var(--color-info)',
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center' 
-            }}>
-              <ShieldCheck size={16} />
-            </div>
-            <div className="notification-content" style={{ flexGrow: 1 }}>
-              <p style={{ fontWeight: 'bold', margin: 0, fontSize: 'var(--text-sm)' }}>Multi-Factor Authentication</p>
-              <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 'var(--text-xs)' }}>SSO Credentials validated successfully from current session.</p>
-              <div className="notification-time" style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '4px' }}>10 mins ago</div>
-            </div>
-          </div>
-
-          <div className="notification-item" style={{ display: 'flex', gap: 'var(--space-3)' }}>
-            <div className="notification-icon green" style={{ 
-              width: '32px', 
-              height: '32px', 
-              borderRadius: '50%', 
-              background: 'var(--color-success-bg)', 
-              color: 'var(--color-success)',
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center' 
-            }}>
-              <Key size={16} />
-            </div>
-            <div className="notification-content" style={{ flexGrow: 1 }}>
-              <p style={{ fontWeight: 'bold', margin: 0, fontSize: 'var(--text-sm)' }}>Ledger Integrity Checked</p>
-              <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 'var(--text-xs)' }}>SHA-256 ledger integrity validation complete. 0 errors.</p>
-              <div className="notification-time" style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '4px' }}>2 hours ago</div>
-            </div>
-          </div>
         </div>
 
-        {/* Quick verification profile card */}
-        <div className="card">
-          <h4 style={{ marginBottom: 'var(--space-3)', fontSize: 'var(--text-base)' }}>Cryptographic Verification</h4>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-            Use your tracking token ID to lookup audit nodes status.
-          </p>
-          <Link href="/voter/verify" className="btn btn-outline btn-full btn-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <Search size={14} /> Lookup Verification ID
-          </Link>
+        {/* Right Column — Sidebar Profile & Security Integrities */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+          {/* Flat Security Info */}
+          <div style={{
+            backgroundColor: 'var(--bg-secondary, #FFFFFF)',
+            border: '1px solid var(--border-color, #E2E8F0)',
+            borderRadius: 'var(--radius-lg, 10px)',
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Security Status</h4>
+
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <div style={{ color: 'var(--color-info)', marginTop: '2px' }}><ShieldCheck size={16} /></div>
+              <div>
+                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 2px 0' }}>MFA Credentials Validated</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>Single Sign-On authentication is active for this session.</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', borderTop: '1px solid var(--border-light)', paddingTop: '0.75rem' }}>
+              <div style={{ color: 'var(--color-success)', marginTop: '2px' }}><Key size={16} /></div>
+              <div>
+                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 2px 0' }}>Tamper-proof Log Verified</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>Cryptographic SHA-256 chain checked and valid.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Verification Lookup */}
+          <div style={{
+            backgroundColor: 'var(--bg-secondary, #FFFFFF)',
+            border: '1px solid var(--border-color, #E2E8F0)',
+            borderRadius: 'var(--radius-lg, 10px)',
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem'
+          }}>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Cryptographic Verification</h4>
+            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+              Verify the exact inclusion of your vote in the electoral ledger using your unique tracking token.
+            </p>
+            <Link href="/voter/verify" style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '0.55rem',
+              borderRadius: '6px',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-secondary)',
+              fontSize: '11px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              backgroundColor: 'var(--bg-secondary)'
+            }}>
+              <Search size={12} /> Lookup Verification ID
+            </Link>
+          </div>
+
         </div>
+
       </div>
+
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          .responsive-dashboard-split {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
