@@ -15,28 +15,28 @@ function initFirestore() {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
 
+  const hasCert = clientEmail && privateKeyRaw && privateKeyRaw.includes('BEGIN PRIVATE KEY');
+
+  if (!hasCert) {
+    console.warn('⚠️ Firebase Admin service account cert not provided in environment. Falling back to in-memory MockFirestore.');
+    return null;
+  }
+
   try {
     if (getApps().length === 0) {
-      if (clientEmail && privateKeyRaw && privateKeyRaw.includes('BEGIN PRIVATE KEY')) {
-        let privateKey = privateKeyRaw;
-        if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-          privateKey = privateKey.slice(1, -1);
-        }
-        privateKey = privateKey.replace(/\\n/g, '\n');
-
-        initializeApp({
-          credential: cert({
-            projectId: projectId,
-            clientEmail: clientEmail,
-            privateKey: privateKey,
-          }),
-        });
-      } else {
-        // Initialize with Project ID for htu-elect
-        initializeApp({
-          projectId: projectId
-        });
+      let privateKey = privateKeyRaw;
+      if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+        privateKey = privateKey.slice(1, -1);
       }
+      privateKey = privateKey.replace(/\\n/g, '\n');
+
+      initializeApp({
+        credential: cert({
+          projectId: projectId,
+          clientEmail: clientEmail,
+          privateKey: privateKey,
+        }),
+      });
     }
     firestoreDb = getFirestore();
     console.log('✅ Firebase Admin SDK initialized — connected to project:', projectId);

@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const { migrateDefaultTenant } = require('./services/migrateDefaultTenant');
-migrateDefaultTenant();
+migrateDefaultTenant().catch(err => console.warn('[Migration Warning]:', err?.message || err));
 
 const app = express();
 const PORT = process.env.PORT || 5000;
