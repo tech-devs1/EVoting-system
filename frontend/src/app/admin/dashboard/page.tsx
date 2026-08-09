@@ -760,34 +760,200 @@ export default function OrganizationElectionHub() {
               </div>
             )}
 
-            {/* STEP 2: Scheduling */}
+            {/* STEP 2: Scheduling & Time Selection */}
             {wizardStep === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                
+                {/* Quick Presets Bar */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Start Date & Time *</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                  />
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                    ⚡ Quick Schedule Presets:
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {[
+                      { label: '8 Hours (8am - 4pm)', hours: 8, startHour: '08:00', endHour: '16:00' },
+                      { label: '12 Hours (8am - 8pm)', hours: 12, startHour: '08:00', endHour: '20:00' },
+                      { label: '24 Hours (Full Day)', hours: 24, startHour: '08:00', endHour: '08:00' },
+                      { label: '48 Hours (2 Days)', hours: 48, startHour: '08:00', endHour: '08:00' },
+                    ].map(preset => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => {
+                          const today = new Date();
+                          const yyyy = today.getFullYear();
+                          const mm = String(today.getMonth() + 1).padStart(2, '0');
+                          const dd = String(today.getDate()).padStart(2, '0');
+                          const startDateStr = `${yyyy}-${mm}-${dd}T${preset.startHour}`;
+
+                          const endObj = new Date(today.getTime() + preset.hours * 3600 * 1000);
+                          const eYYYY = endObj.getFullYear();
+                          const eMM = String(endObj.getMonth() + 1).padStart(2, '0');
+                          const eDD = String(endObj.getDate()).padStart(2, '0');
+                          const endDateStr = `${eYYYY}-${eMM}-${eDD}T${preset.endHour}`;
+
+                          setStartDate(startDateStr);
+                          setEndDate(endDateStr);
+                        }}
+                        style={{
+                          padding: '0.4rem 0.75rem',
+                          borderRadius: '8px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          border: '1px solid #2563eb',
+                          backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                          color: '#2563eb',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>End Date & Time *</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                  />
+                {/* Start Date & Time Picker */}
+                <div style={{ backgroundColor: 'var(--bg-input)', padding: '1.25rem', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: '#2563eb' }}>
+                    📅 Start Date & 🕒 Start Time *
+                  </label>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Select Date</span>
+                      <input
+                        type="date"
+                        required
+                        value={startDate ? startDate.split('T')[0] : ''}
+                        onChange={(e) => {
+                          const dateVal = e.target.value;
+                          const timeVal = startDate && startDate.includes('T') ? startDate.split('T')[1] : '08:00';
+                          setStartDate(`${dateVal}T${timeVal}`);
+                        }}
+                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Select Exact Time</span>
+                      <input
+                        type="time"
+                        required
+                        value={startDate && startDate.includes('T') ? startDate.split('T')[1] : '08:00'}
+                        onChange={(e) => {
+                          const timeVal = e.target.value;
+                          const dateVal = startDate && startDate.includes('T') ? startDate.split('T')[0] : new Date().toISOString().split('T')[0];
+                          setStartDate(`${dateVal}T${timeVal}`);
+                        }}
+                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Time Slots */}
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Time slots:</span>
+                    {['07:00', '08:00', '09:00', '10:00', '12:00', '14:00', '16:00', '18:00'].map(slot => (
+                      <button
+                        key={`start-${slot}`}
+                        type="button"
+                        onClick={() => {
+                          const dateVal = startDate && startDate.includes('T') ? startDate.split('T')[0] : new Date().toISOString().split('T')[0];
+                          setStartDate(`${dateVal}T${slot}`);
+                        }}
+                        style={{
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: startDate?.endsWith(slot) ? '#2563eb' : 'var(--bg-card)',
+                          color: startDate?.endsWith(slot) ? '#ffffff' : 'var(--text-secondary)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-input)', borderRadius: '10px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  🌐 Timezone: <strong>GMT / UTC+0 (Accra)</strong>. Access will open and close strictly at these timestamps.
+                {/* End Date & Time Picker */}
+                <div style={{ backgroundColor: 'var(--bg-input)', padding: '1.25rem', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: '#ef4444' }}>
+                    🏁 End Date & 🕒 End Time *
+                  </label>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Select Date</span>
+                      <input
+                        type="date"
+                        required
+                        value={endDate ? endDate.split('T')[0] : ''}
+                        onChange={(e) => {
+                          const dateVal = e.target.value;
+                          const timeVal = endDate && endDate.includes('T') ? endDate.split('T')[1] : '17:00';
+                          setEndDate(`${dateVal}T${timeVal}`);
+                        }}
+                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Select Exact Time</span>
+                      <input
+                        type="time"
+                        required
+                        value={endDate && endDate.includes('T') ? endDate.split('T')[1] : '17:00'}
+                        onChange={(e) => {
+                          const timeVal = e.target.value;
+                          const dateVal = endDate && endDate.includes('T') ? endDate.split('T')[0] : new Date().toISOString().split('T')[0];
+                          setEndDate(`${dateVal}T${timeVal}`);
+                        }}
+                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Time Slots */}
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Time slots:</span>
+                    {['12:00', '16:00', '17:00', '18:00', '20:00', '21:00', '23:59'].map(slot => (
+                      <button
+                        key={`end-${slot}`}
+                        type="button"
+                        onClick={() => {
+                          const dateVal = endDate && endDate.includes('T') ? endDate.split('T')[0] : new Date().toISOString().split('T')[0];
+                          setEndDate(`${dateVal}T${slot}`);
+                        }}
+                        style={{
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: endDate?.endsWith(slot) ? '#ef4444' : 'var(--bg-card)',
+                          color: endDate?.endsWith(slot) ? '#ffffff' : 'var(--text-secondary)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Formatted Summary Banner */}
+                {startDate && endDate && (
+                  <div style={{ padding: '1rem 1.25rem', backgroundColor: 'rgba(37, 99, 235, 0.08)', borderRadius: '12px', border: '1px solid rgba(37, 99, 235, 0.2)', fontSize: '0.875rem' }}>
+                    <div style={{ fontWeight: 700, color: '#2563eb', marginBottom: '4px' }}>📋 Scheduled Voting Window Summary:</div>
+                    <div style={{ color: 'var(--text-primary)' }}>
+                      Opens: <strong>{new Date(startDate).toLocaleString([], { dateStyle: 'full', timeStyle: 'short' })}</strong>
+                    </div>
+                    <div style={{ color: 'var(--text-primary)' }}>
+                      Closes: <strong>{new Date(endDate).toLocaleString([], { dateStyle: 'full', timeStyle: 'short' })}</strong>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
