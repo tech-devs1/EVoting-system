@@ -36,6 +36,13 @@ router.post('/departments', async (req, res) => {
     };
 
     await db.collection('tenants').doc(tenantId).set(newTenant);
+    await db.collection('organizations').doc(tenantId).set({
+      name: newTenant.name,
+      acronym: newTenant.name.substring(0, 6).toUpperCase(),
+      domain: newTenant.domain || '',
+      status: 'active',
+      createdAt: Date.now()
+    });
 
     res.status(201).json({ 
       status: 'success', 
