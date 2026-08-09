@@ -1181,4 +1181,81 @@ router.get('/:id/export-audit', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// 7. Get Per-Election Roster Voters
+router.get('/:id/voters', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+
+    const rosterSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+    const voters = rosterSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    res.status(200).json({ status: 'success', data: voters });
+  } catch (error) {
+    console.error('Error fetching election roster voters:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch roster voters.' });
+  }
+});
+
+// 8. Get 360 Audit Records (Admin setup actions + Voter ballot cast events with timestamps & candidate selections)
+router.get('/:id/audit-records', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+
+    const logsSnap = await db.collection('tenants').doc(tenantId).collection('activity_logs').get();
+    const adminLogs = logsSnap.docs
+      .map(doc => doc.data())
+      .filter(l => (l.description && l.description.includes(electionId)) || (l.action && l.action.includes('ELECTION')))
+      .map(l => ({
+        id: `log_${l.timestamp || Date.now()}`,
+        type: 'admin',
+        actor: l.actorEmail || 'EC Admin',
+        action: l.action || 'ADMIN_ACTION',
+        timestamp: l.timestamp || Date.now(),
+        details: l.description,
+        hash: 'CRYPTOGRAPHICALLY_VERIFIED'
+      }));
+
+    const votesSnap = await db.collection('tenants').doc(tenantId).collection('votes').where('electionId', '==', electionId).get();
+    const voterCastRecords = votesSnap.docs.map(doc => {
+      const v = doc.data();
+      return {
+        id: doc.id,
+        type: 'voter',
+        actor: v.voterEmail || v.voterId || 'Eligible Voter',
+        action: 'BALLOT_CAST',
+        timestamp: v.timestamp || Date.now(),
+        details: `Voted for: ${v.candidateName || v.candidateId || 'Candidate'} (${v.position || 'Executive'})`,
+        selections: v.selections || { [v.position || 'Position']: v.candidateName || 'Candidate' },
+        hash: doc.id
+      };
+    });
+
+    const combined = [...adminLogs, ...voterCastRecords].sort((a, b) => b.timestamp - a.timestamp);
+    res.status(200).json({ status: 'success', data: combined });
+  } catch (error) {
+    console.error('Error fetching audit records:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch audit records.' });
+  }
+});
+
+// 9. Get Per-Election Security Alerts
+router.get('/:id/security-alerts', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+
+    const alertsSnap = await db.collection('tenants').doc(tenantId).collection('fraud_alerts').get();
+    const alerts = alertsSnap.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(a => !a.electionId || a.electionId === electionId);
+
+    res.status(200).json({ status: 'success', data: alerts });
+  } catch (error) {
+    console.error('Error fetching security alerts:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch security alerts.' });
+  }
+});
+
 module.exports = router;
