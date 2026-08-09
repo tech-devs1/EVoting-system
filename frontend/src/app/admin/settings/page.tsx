@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { KeyRound, ShieldCheck, Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+import { KeyRound, ShieldCheck, Eye, EyeOff, CheckCircle, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 export default function AdminSettingsPage() {
@@ -72,14 +73,32 @@ export default function AdminSettingsPage() {
   const strength = passwordStrength(newPassword);
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '720px', margin: '0 auto', paddingTop: '1.5rem' }}>
       <div style={{ marginBottom: 'var(--space-6)' }}>
-        <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} />
-          Account Settings
+        <Link 
+          href="/admin/dashboard"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            color: '#2563eb',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            textDecoration: 'none',
+            marginBottom: '1rem',
+            padding: '0.4rem 0.75rem',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(37, 99, 235, 0.08)'
+          }}
+        >
+          <ArrowLeft size={16} /> Back to Election Hub
+        </Link>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <ShieldCheck size={28} style={{ color: '#2563eb' }} />
+          Organization & Account Settings
         </h2>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: 'var(--space-1)' }}>
-          Manage your department admin credentials. Password changes are synced to the Super Admin portal.
+          Configure organization branding, tenant logos, and update administrator security credentials.
         </p>
       </div>
 

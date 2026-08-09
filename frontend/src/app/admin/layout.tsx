@@ -103,9 +103,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const currentTitle = navLinks.find(link => pathname.startsWith(link.href))?.label || "Admin Console";
 
-  if (pathname === '/admin/dashboard') {
+  // Bypass legacy sidebar shell for all top-level Hub pages (/admin/dashboard, /admin/settings, etc.)
+  if (!pathname.startsWith('/admin/elections/')) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', padding: '0 2.5rem' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', padding: '0 2.5rem 2.5rem 2.5rem' }}>
         {children}
       </div>
     );
