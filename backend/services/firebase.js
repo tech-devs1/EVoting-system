@@ -200,10 +200,15 @@ class MockFirestore {
   }
 }
 
+const { initMySQL, db: mysqlDb } = require('./mysql');
+
+// Auto-start MySQL connection check
+initMySQL().catch(err => console.warn('MySQL auto-init:', err.message));
+
 const mockInstance = new MockFirestore();
 const db = new Proxy({}, {
   get(target, prop) {
-    const activeDb = firestoreDb || initFirestore() || mockInstance;
+    const activeDb = process.env.MYSQL_URL || process.env.MYSQL_HOST ? mysqlDb : (firestoreDb || initFirestore() || mysqlDb || mockInstance);
     const value = activeDb[prop];
     return typeof value === 'function' ? value.bind(activeDb) : value;
   }
@@ -211,4 +216,4 @@ const db = new Proxy({}, {
 
 const DEFAULT_TENANT_ID = 'compssa';
 
-module.exports = { db, DEFAULT_TENANT_ID };
+module.exports = { db, DEFAULT_TENANT_ID, initMySQL };

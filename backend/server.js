@@ -31,19 +31,22 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'success', message: 'VoteTrust AI Backend is running', timestamp: new Date() });
 });
 
-// Diagnostic status endpoint to debug Vercel environment variables directly
+// Diagnostic status endpoint to debug environment & database status directly
 app.get('/api/status', (req, res) => {
-  const hasProjId = !!process.env.FIREBASE_PROJECT_ID;
-  const hasEmail = !!process.env.FIREBASE_CLIENT_EMAIL;
-  const hasKey = !!process.env.FIREBASE_PRIVATE_KEY;
-  
+  const { isMySQLConnected } = require('./services/mysql');
+  const hasMysqlUrl = !!(process.env.MYSQL_URL || process.env.DATABASE_URL);
+  const hasMysqlHost = !!process.env.MYSQL_HOST;
+
   res.status(200).json({
     status: 'success',
+    database: {
+      type: hasMysqlUrl || hasMysqlHost ? 'MySQL' : 'Firestore/Mock',
+      mysqlConnected: isMySQLConnected(),
+      hasMysqlUrl,
+      hasMysqlHost
+    },
     env: {
-      FIREBASE_PROJECT_ID: hasProjId ? process.env.FIREBASE_PROJECT_ID : 'MISSING',
-      FIREBASE_CLIENT_EMAIL: hasEmail ? process.env.FIREBASE_CLIENT_EMAIL : 'MISSING',
-      FIREBASE_PRIVATE_KEY_EXISTS: hasKey,
-      FIREBASE_PRIVATE_KEY_LENGTH: hasKey ? process.env.FIREBASE_PRIVATE_KEY.length : 0,
+      FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || 'not-set',
       NODE_ENV: process.env.NODE_ENV || 'not-set'
     }
   });
