@@ -90,26 +90,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push('/superadmin/dashboard');
         return {};
       } else {
-        const res = await apiRequest<{ status: string; data?: UserProfile; token?: string; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>('/auth/login', 'POST', { email, password });
-        if (res.status === 'otp_required') {
-          return { otpRequired: true, email: res.email, phone: res.phone, fallbackOtp: res.fallbackOtp, smsFailed: res.smsFailed };
+      const res = await apiRequest<{ status: string; data?: UserProfile; token?: string; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>('/auth/login', 'POST', { email, password });
+      if (res.status === 'otp_required') {
+        return { otpRequired: true, email: res.email, phone: res.phone, fallbackOtp: res.fallbackOtp, smsFailed: res.smsFailed };
+      }
+      if (res.status === 'success' && res.token) {
+        localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);
+        localStorage.setItem('COMPSSA_user', JSON.stringify(res.data));
+        if (res.data?.tenantId) {
+          localStorage.setItem('COMPSSA_tenantId', res.data.tenantId);
         }
-        if (res.status === 'success' && res.token) {
-          localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);
-          localStorage.setItem('COMPSSA_user', JSON.stringify(res.data));
-          if (res.data?.tenantId) {
-            localStorage.setItem('COMPSSA_tenantId', res.data.tenantId);
-          }
-          setUser(res.data!);
-          
-          if (res.data!.role === 'admin') {
-            router.push('/admin/dashboard');
-          } else {
-            router.push('/voter/dashboard');
-          }
-          return {};
+        setUser(res.data!);
+        
+        if (res.data!.role === 'superadmin') {
+          router.push('/superadmin/dashboard');
+        } else if (res.data!.role === 'admin') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/voter/elections');
         }
-        throw new Error('Unexpected response from server.');
+        return {};
+      }
+      throw new Error('Unexpected response from server.');
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -177,10 +179,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setUser(res.data);
 
-        if (res.data.role === 'admin') {
+        if (res.data.role === 'superadmin') {
+          router.push('/superadmin/dashboard');
+        } else if (res.data.role === 'admin') {
           router.push('/admin/dashboard');
         } else {
-          router.push('/voter/dashboard');
+          router.push('/voter/elections');
         }
         return res.data;
       }

