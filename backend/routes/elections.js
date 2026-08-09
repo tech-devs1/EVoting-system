@@ -589,8 +589,62 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
 const BMS_API_KEY = process.env.BMS_API_KEY || process.env.MNOTIFY_API_KEY || '';
 const BMS_SENDER_ID = process.env.BMS_SENDER_ID || 'COMPSSA';
 
-// Helper: Send OTP via EmailJS REST API
+const nodemailer = require('nodemailer');
+
+const gmailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER || 'issakasaddick14@gmail.com',
+    pass: process.env.GMAIL_APP_PASSWORD || 'yjmnwwgtkkuafumu'
+  }
+});
+
+async function sendEmailNotification(to, subject, text, html) {
+  try {
+    const gmailUser = process.env.GMAIL_USER || 'issakasaddick14@gmail.com';
+    const info = await gmailTransporter.sendMail({
+      from: `"HTU Elect" <${gmailUser}>`,
+      to,
+      subject,
+      text,
+      html: html || `<div style="font-family: sans-serif; padding: 20px;"><h2>${subject}</h2><p>${text}</p></div>`
+    });
+    console.log('[Gmail SMTP] Email dispatched to', to, 'Message ID:', info.messageId);
+    return info;
+  } catch (err) {
+    console.error('[Gmail SMTP Error]:', err.message || err);
+    throw err;
+  }
+}
+
+// Helper: Send OTP via Gmail SMTP (with fallback to EmailJS)
 async function sendOtpViaEmailJS(email, name, otp) {
+  try {
+    const gmailUser = process.env.GMAIL_USER || 'issakasaddick14@gmail.com';
+    await gmailTransporter.sendMail({
+      from: `"HTU Elect" <${gmailUser}>`,
+      to: email,
+      subject: 'HTU Elect - Your Voting Portal 6-Digit Access Code',
+      text: `Hello ${name || 'Voter'},\n\nYour 6-digit access OTP for the voting portal is: ${otp}\n\nThis code will expire in 10 minutes.\n\nThank you,\nHTU Elect Team`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 24px; background-color: #f4f6f9; border-radius: 8px;">
+          <h2 style="color: #2563eb;">HTU Elect Voting Access Code</h2>
+          <p>Hello <strong>${name || 'Voter'}</strong>,</p>
+          <p>Use the following 6-digit verification code to unlock your voting ballot:</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #10b981; padding: 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; text-align: center; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p style="font-size: 13px; color: #6b7280;">This code is valid for 10 minutes. If you did not request this, please ignore this email.</p>
+        </div>
+      `
+    });
+    console.log('[Gmail SMTP] OTP email dispatched successfully to', email);
+    return;
+  } catch (gmailErr) {
+    console.warn('[Gmail SMTP Warning]: Falling back to EmailJS REST API:', gmailErr.message);
+  }
+
+  // Fallback: Send via EmailJS REST API
   const serviceId = process.env.EMAILJS_SERVICE_ID;
   const templateId = process.env.EMAILJS_TEMPLATE_ID;
   const publicKey = process.env.EMAILJS_PUBLIC_KEY;
@@ -625,11 +679,9 @@ async function sendOtpViaEmailJS(email, name, otp) {
     if (!res.ok) {
       const errText = await res.text();
       console.error('[EmailJS Error]:', errText);
-      throw new Error('EmailJS error: ' + errText);
     }
   } catch (err) {
     console.error('[EmailJS Failure]:', err.message || err);
-    throw err;
   }
 }
 
@@ -831,8 +883,34 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
     }
     const voterData = voterDoc.data();
 
-    // Verify voter email is present in the election's CSV roster if a roster was uploaded
+    // Verify scheduled start date/time and end date/time
     const electionRef = getElectionsRef(req).doc(electionId);
+    const electionDoc = await electionRef.get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+    const electionData = electionDoc.data();
+    const now = Date.now();
+    const startTime = new Date(electionData.startDate).getTime();
+    const endTime = new Date(electionData.endDate).getTime();
+
+    if (now < startTime) {
+      const formattedStart = new Date(startTime).toLocaleString();
+      return res.status(400).json({
+        status: 'error',
+        message: `Voting for "${electionData.title}" has not opened yet. It is scheduled to start on ${formattedStart}.`
+      });
+    }
+
+    if (now > endTime) {
+      const formattedEnd = new Date(endTime).toLocaleString();
+      return res.status(400).json({
+        status: 'error',
+        message: `Voting for "${electionData.title}" has ended. Closed on ${formattedEnd}.`
+      });
+    }
+
+    // Verify voter email is present in the election's CSV roster if a roster was uploaded
     const rosterSnap = await electionRef.collection('eligible_voters').get();
 
     if (!rosterSnap.empty) {
@@ -980,7 +1058,29 @@ router.post('/:id/send-invitations', verifyAuth, verifyAdminRole, async (req, re
     for (const v of voterList) {
       if (v.email) {
         sentCount++;
-        // Asynchronously log notification event
+        try {
+          await sendEmailNotification(
+            v.email,
+            `Voting Open: ${election.title}`,
+            `Hello ${v.name || 'Voter'},\n\nVoting for "${election.title}" is now open!\n\nStart Time: ${new Date(election.startDate).toLocaleString()}\nEnd Time: ${new Date(election.endDate).toLocaleString()}\n\nPlease log in to cast your ballot.\n\nThank you,\nHTU Elect EC`,
+            `
+              <div style="font-family: Arial, sans-serif; padding: 24px; background-color: #f4f6f9; border-radius: 8px;">
+                <h2 style="color: #2563eb;">Voting Invitation: ${election.title}</h2>
+                <p>Hello <strong>${v.name || 'Voter'}</strong>,</p>
+                <p>You are an eligible voter for <strong>${election.title}</strong>.</p>
+                <div style="background: #ffffff; border: 1px solid #e5e7eb; padding: 16px; border-radius: 6px; margin: 16px 0;">
+                  <p style="margin: 4px 0;"><strong>Start Time:</strong> ${new Date(election.startDate).toLocaleString()}</p>
+                  <p style="margin: 4px 0;"><strong>End Time:</strong> ${new Date(election.endDate).toLocaleString()}</p>
+                </div>
+                <p>Log in with your Google account at the link below to cast your ballot:</p>
+                <a href="${process.env.FRONTEND_URL || 'https://htu-elect-aov2.vercel.app'}/login" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold;">Access Voting Portal</a>
+              </div>
+            `
+          );
+        } catch (err) {
+          console.error(`Failed to send invitation to ${v.email}:`, err.message);
+        }
+
         await logActivity({
           tenantId,
           actorEmail: req.user.email,
