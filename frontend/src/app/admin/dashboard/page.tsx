@@ -256,7 +256,7 @@ export default function OrganizationElectionHub() {
       {/* Top Navigation Bar with Organization Settings Icon */}
       <div style={{
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         padding: '1rem 0',
         marginBottom: '2rem',
