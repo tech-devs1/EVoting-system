@@ -463,7 +463,7 @@ export default function OrganizationElectionHub() {
       {/* Filter Tabs & Search Bar */}
       <div style={{
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '1.75rem',
         flexWrap: 'wrap',

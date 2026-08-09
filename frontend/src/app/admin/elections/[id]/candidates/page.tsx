@@ -323,7 +323,7 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
                           border: '1px solid var(--border-color)',
                           display: 'flex',
                           flexDirection: 'column',
-                          justify: 'space-between',
+                          justifyContent: 'space-between',
                           position: 'relative'
                         }}
                       >
@@ -536,7 +536,7 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
           backgroundColor: 'rgba(15, 23, 42, 0.75)',
           backdropFilter: 'blur(8px)',
           display: 'flex',
-          justify: 'center',
+          justifyContent: 'center',
           alignItems: 'center',
           zIndex: 1000,
           padding: '1.5rem'
