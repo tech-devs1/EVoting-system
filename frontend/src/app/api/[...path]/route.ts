@@ -7,8 +7,9 @@ let expressApp: any = null;
 function getExpressApp() {
   if (!expressApp) {
     try {
-      // Require backend server instance
-      expressApp = require('../../../../../backend/server');
+      // Dynamic require bypasses Turbopack static module tracing
+      const dynamicRequire = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : eval('require');
+      expressApp = dynamicRequire('../../../../../backend/server');
     } catch (e) {
       console.error('[Backend Load Error]:', e);
     }
