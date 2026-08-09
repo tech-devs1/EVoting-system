@@ -54,6 +54,27 @@ async function createTables() {
   if (!pool) return;
 
   const queries = [
+    `CREATE TABLE IF NOT EXISTS users (
+      id VARCHAR(128) PRIMARY KEY,
+      tenantId VARCHAR(128),
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      phone VARCHAR(64),
+      password VARCHAR(255),
+      role VARCHAR(64) NOT NULL DEFAULT 'voter',
+      studentId VARCHAR(128),
+      indexNo VARCHAR(128),
+      accessPin VARCHAR(64),
+      status VARCHAR(32) DEFAULT 'active',
+      isVerified TINYINT(1) DEFAULT 0,
+      data JSON,
+      createdAt BIGINT,
+      updatedAt BIGINT,
+      INDEX idx_users_role (role),
+      INDEX idx_users_email (email),
+      INDEX idx_users_tenant (tenantId)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
     `CREATE TABLE IF NOT EXISTS tenants (
       id VARCHAR(128) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,

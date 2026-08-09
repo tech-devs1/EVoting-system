@@ -6,7 +6,29 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 
--- 1. TENANTS / DEPARTMENTS TABLE
+-- 1. USERS TABLE (Centralized User Directory for All System Roles)
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(128) PRIMARY KEY,
+  tenantId VARCHAR(128),
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  phone VARCHAR(64),
+  password VARCHAR(255),
+  role ENUM('superadmin', 'admin', 'voter', 'auditor') NOT NULL DEFAULT 'voter',
+  studentId VARCHAR(128),
+  indexNo VARCHAR(128),
+  accessPin VARCHAR(64),
+  status VARCHAR(32) DEFAULT 'active',
+  isVerified TINYINT(1) DEFAULT 0,
+  data JSON,
+  createdAt BIGINT NOT NULL,
+  updatedAt BIGINT NOT NULL,
+  INDEX idx_users_role (role),
+  INDEX idx_users_tenant (tenantId),
+  INDEX idx_users_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2. TENANTS / DEPARTMENTS TABLE
 CREATE TABLE IF NOT EXISTS tenants (
   id VARCHAR(128) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
