@@ -397,7 +397,7 @@ export default function OrganizationElectionHub() {
                 style={{ 
                   display: 'flex', 
                   flexDirection: 'column', 
-                  justify: 'space-between',
+                  justifyContent: 'space-between',
                   borderRadius: '16px',
                   padding: '1.5rem',
                   border: '1px solid var(--border-color)',
