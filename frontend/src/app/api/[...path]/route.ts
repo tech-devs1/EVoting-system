@@ -4,6 +4,37 @@ import { NextRequest, NextResponse } from 'next/server';
 // @ts-ignore
 import expressApp from '../../../../../backend/server';
 
+let cachedPort: number | null = null;
+let serverPromise: Promise<number> | null = null;
+
+function ensureBackendListening(): Promise<number> {
+  if (cachedPort) return Promise.resolve(cachedPort);
+  if (serverPromise) return serverPromise;
+
+  serverPromise = new Promise((resolve, reject) => {
+    try {
+      const http = require('http');
+      const server = http.createServer(expressApp);
+      server.listen(0, '127.0.0.1', () => {
+        const address = server.address();
+        cachedPort = typeof address === 'object' && address ? address.port : 5000;
+        console.log(`[API Proxy] Singleton Express backend listening on port ${cachedPort}`);
+        resolve(cachedPort);
+      });
+      server.on('error', (err: any) => {
+        console.error('[API Proxy] Server error:', err);
+        serverPromise = null;
+        reject(err);
+      });
+    } catch (err) {
+      serverPromise = null;
+      reject(err);
+    }
+  });
+
+  return serverPromise;
+}
+
 async function handleProxy(req: NextRequest) {
   try {
     const url = new URL(req.url);
@@ -15,7 +46,7 @@ async function handleProxy(req: NextRequest) {
       headers.delete('host');
 
       const method = req.method;
-      let body: any = null;
+      let body: any = undefined;
       if (method !== 'GET' && method !== 'HEAD') {
         body = await req.arrayBuffer();
       }
@@ -35,38 +66,31 @@ async function handleProxy(req: NextRequest) {
     }
 
     if (expressApp) {
-      return new Promise<NextResponse>((resolve) => {
-        const http = require('http');
-        const server = http.createServer(expressApp);
-        server.listen(0, '127.0.0.1', () => {
-          const address = server.address();
-          const port = typeof address === 'object' ? address?.port : 0;
-          const targetUrl = `http://127.0.0.1:${port}${url.pathname}${url.search}`;
+      const port = await ensureBackendListening();
+      const targetUrl = `http://127.0.0.1:${port}${url.pathname}${url.search}`;
 
-          const headers = new Headers(req.headers);
-          headers.delete('host');
+      const headers = new Headers(req.headers);
+      headers.delete('host');
 
-          req.arrayBuffer().then(buffer => {
-            const body = (req.method !== 'GET' && req.method !== 'HEAD') ? Buffer.from(buffer) : undefined;
-            fetch(targetUrl, {
-              method: req.method,
-              headers,
-              body,
-              redirect: 'manual'
-            }).then(async res => {
-              const resBuffer = await res.arrayBuffer();
-              server.close();
-              resolve(new NextResponse(resBuffer, {
-                status: res.status,
-                statusText: res.statusText,
-                headers: new Headers(res.headers)
-              }));
-            }).catch(err => {
-              server.close();
-              resolve(NextResponse.json({ status: 'error', message: err.message }, { status: 500 }));
-            });
-          });
-        });
+      const method = req.method;
+      let body: any = undefined;
+      if (method !== 'GET' && method !== 'HEAD') {
+        const buffer = await req.arrayBuffer();
+        body = Buffer.from(buffer);
+      }
+
+      const res = await fetch(targetUrl, {
+        method,
+        headers,
+        body,
+        redirect: 'manual'
+      });
+
+      const resBuffer = await res.arrayBuffer();
+      return new NextResponse(resBuffer, {
+        status: res.status,
+        statusText: res.statusText,
+        headers: new Headers(res.headers)
       });
     }
 
