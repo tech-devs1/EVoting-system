@@ -1,4 +1,3 @@
-// firebase-admin v14 uses named top-level exports (no more admin.credential namespace)
 const {
   initializeApp,
   getApps,
@@ -9,36 +8,38 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-// Initialize Firebase Admin SDK
-// Requires FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY in .env
-function initFirestore() {
-  const hasCreds =
-    process.env.FIREBASE_PROJECT_ID &&
-    process.env.FIREBASE_CLIENT_EMAIL &&
-    process.env.FIREBASE_PRIVATE_KEY;
+let firestoreDb = null;
 
-  if (!hasCreds) {
-    return null;
-  }
+function initFirestore() {
+  const projectId = process.env.FIREBASE_PROJECT_ID || 'htu-elect';
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
 
   try {
     if (getApps().length === 0) {
-      let privateKey = process.env.FIREBASE_PRIVATE_KEY;
-      if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-        privateKey = privateKey.slice(1, -1);
-      }
-      privateKey = privateKey.replace(/\\n/g, '\n');
+      if (clientEmail && privateKeyRaw && privateKeyRaw.includes('BEGIN PRIVATE KEY')) {
+        let privateKey = privateKeyRaw;
+        if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+          privateKey = privateKey.slice(1, -1);
+        }
+        privateKey = privateKey.replace(/\\n/g, '\n');
 
-      initializeApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: privateKey,
-        }),
-      });
+        initializeApp({
+          credential: cert({
+            projectId: projectId,
+            clientEmail: clientEmail,
+            privateKey: privateKey,
+          }),
+        });
+      } else {
+        // Initialize with Project ID for htu-elect
+        initializeApp({
+          projectId: projectId
+        });
+      }
     }
     firestoreDb = getFirestore();
-    console.log('✅ Firebase Admin SDK initialized — connected to project:', process.env.FIREBASE_PROJECT_ID);
+    console.log('✅ Firebase Admin SDK initialized — connected to project:', projectId);
     return firestoreDb;
   } catch (error) {
     console.error('Firebase Admin SDK initialization failed:', error.message);
@@ -48,9 +49,7 @@ function initFirestore() {
 
 firestoreDb = initFirestore();
 
-// ─── Mock Firestore ───────────────────────────────────────────────────────────
-// Used when real Firebase credentials are absent or initialization fails.
-// Data is in-memory only — lost on server restart.
+// ─── Mock Firestore Fallback ──────────────────────────────────────────────────
 function sanitizeMockUpdate(existing, update) {
   const result = { ...existing };
   for (const key in update) {
