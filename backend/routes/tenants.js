@@ -22,18 +22,6 @@ router.get('/public', async (req, res) => {
       }
     });
 
-    // Fallback default tenant if collection is empty
-    if (tenants.length === 0) {
-      tenants.push({
-        id: 'compssa',
-        name: 'Computer Science Students Association (COMPSSA)',
-        acronym: 'COMPSSA',
-        logoUrl: '/assets/htu logo.jpg',
-        brandColor: '#2563eb',
-        domain: 'htu.edu.gh'
-      });
-    }
-
     res.status(200).json({ status: 'success', data: tenants });
   } catch (error) {
     console.error('Error fetching public tenants:', error);

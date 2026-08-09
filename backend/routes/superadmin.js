@@ -89,9 +89,9 @@ router.get('/departments', async (req, res) => {
       
       return {
         id: doc.id,
-        name: data.name || (doc.id === 'compssa' ? 'COMPSSA' : 'Unknown'),
+        name: data.name || doc.id,
         domain: data.domain || '',
-        adminEmail: data.adminEmail || (doc.id === 'compssa' ? 'admin@htu.edu.gh' : 'N/A'),
+        adminEmail: data.adminEmail || 'N/A',
         status: data.status || 'active',
         createdAt: data.createdAt || null,
         electionsCount,
@@ -100,12 +100,7 @@ router.get('/departments', async (req, res) => {
       };
     }));
     
-    // Sort compssa first
-    departments.sort((a, b) => {
-      if (a.id === 'compssa') return -1;
-      if (b.id === 'compssa') return 1;
-      return (b.createdAt || 0) - (a.createdAt || 0);
-    });
+    departments.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
     res.status(200).json({
       status: 'success',
@@ -485,10 +480,7 @@ router.get('/audit/pdf', async (req, res) => {
 router.get('/audit/pdf/:tenantId', async (req, res) => {
   try {
     const { tenantId } = req.params;
-    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
-    const tenantName = tenantDoc.exists
-      ? (tenantDoc.data().name || tenantId)
-      : (tenantId === 'compssa' ? 'COMPSSA' : tenantId);
+    const tenantName = tenantDoc.exists ? (tenantDoc.data().name || tenantId) : tenantId;
 
     const snap = await db.collection('tenants').doc(tenantId).collection('activity_logs')
       .orderBy('timestamp', 'desc').limit(500).get();

@@ -24,17 +24,7 @@ async function migrateDefaultTenant() {
     const oldTenantSnap = await oldTenantRef.get();
 
     if (!oldTenantSnap.exists) {
-      console.log(`[Migration] Source '${oldTenantId}' does not exist. Initializing fresh '${newTenantId}' tenant.`);
-      // Initialize fresh compssa tenant doc
-      const hashedAdminPassword = await bcrypt.hash('admin080', 10);
-      await newTenantRef.set({
-        name: 'COMPSSA',
-        domain: '',
-        adminEmail: 'admin@htu.edu.gh',
-        adminPassword: hashedAdminPassword,
-        status: 'active',
-        createdAt: Date.now()
-      });
+      console.log(`[Migration] Fresh database detected. Ready for dynamic Firestore tenants.`);
       return;
     }
 

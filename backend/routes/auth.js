@@ -334,36 +334,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // 1. Check COMPSSA (default_tenant) legacy fallback admin
-    if (email === 'admin@htu.edu.gh') {
-      if (password === 'admin080') {
-        const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
-        const token = jwt.sign(
-          { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
-          JWT_SECRET,
-          { expiresIn: '24h' }
-        );
-        await logActivity({
-          tenantId: DEFAULT_TENANT_ID,
-          tenantName: 'COMPSSA',
-          actorEmail: email,
-          actorRole: 'admin',
-          action: 'ADMIN_LOGIN',
-          description: 'COMPSSA Administrator logged into the admin dashboard',
-          ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-          status: 'success'
-        });
-        return res.status(200).json({
-          status: 'success',
-          data: { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
-          token
-        });
-      } else {
-        return res.status(401).json({ status: 'error', message: 'Invalid credentials.' });
-      }
-    }
-
-    // 2. Check other tenants for department admin
+    // Check tenants for department admin directly from Firestore
     const tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', email).get();
     if (!tenantsSnapshot.empty) {
       const tenantDoc = tenantsSnapshot.docs[0];
@@ -507,32 +478,7 @@ router.post('/login-admin', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and password are required.' });
     }
 
-    // COMPSSA (default_tenant) legacy fallback
-    if (email === 'admin@htu.edu.gh' && password === 'admin080') {
-      const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      const token = jwt.sign(
-        { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      await logActivity({
-        tenantId: DEFAULT_TENANT_ID,
-        tenantName: 'COMPSSA',
-        actorEmail: email,
-        actorRole: 'admin',
-        action: 'ADMIN_LOGIN',
-        description: 'COMPSSA Administrator logged into the admin dashboard',
-        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-        status: 'success'
-      });
-      return res.status(200).json({
-        status: 'success',
-        data: { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
-        token
-      });
-    }
-
-    // Check other tenants for department admin (primary)
+    // Check tenants for department admin (primary) directly from Firestore
     const tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', email).get();
     if (!tenantsSnapshot.empty) {
       const tenantDoc = tenantsSnapshot.docs[0];

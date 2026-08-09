@@ -126,7 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/dashboard" className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} />
             <span style={{ fontWeight: 700, letterSpacing: '-0.5px' }}>
-              {user?.name?.replace(' Administrator', '') || 'COMPSSA'} <span style={{ color: 'var(--color-primary)' }}>✓</span>
+              {user?.name || 'Administrator'} <span style={{ color: 'var(--color-primary)' }}>✓</span>
             </span>
           </Link>
           <button 

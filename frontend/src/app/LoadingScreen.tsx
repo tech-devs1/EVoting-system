@@ -64,7 +64,7 @@ export default function LoadingScreen() {
 
   const instructions = {
     desktop: [
-      { icon: '🌐', title: 'Open in Chrome/Edge', text: 'Open COMPSSA in Google Chrome or Microsoft Edge browser.' },
+      { icon: '🌐', title: 'Open in Chrome/Edge', text: 'Open HTU Elect in Google Chrome or Microsoft Edge browser.' },
       { icon: '🖥️', title: 'Click Install Icon', text: 'Click the Install Icon (⊕ or 💻) on the right side of the address bar.' },
       { icon: '✅', title: 'Confirm Installation', text: 'Click "Install" in the prompt to launch as an app.' }
     ],
@@ -150,7 +150,7 @@ export default function LoadingScreen() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', paddingRight: '24px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #6366f1, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>📲</div>
               <div>
-                <p style={{ color: '#fff', fontWeight: 700, fontSize: '1.05rem', margin: 0 }}>Install COMPSSA App</p>
+                <p style={{ color: '#fff', fontWeight: 700, fontSize: '1.05rem', margin: 0 }}>Install HTU Elect App</p>
                 <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', margin: '2px 0 0 0' }}>Select your device for a quick setup guide</p>
               </div>
             </div>
@@ -336,7 +336,7 @@ export default function LoadingScreen() {
               textShadow: '0 4px 12px rgba(0,0,0,0.2)',
             }}
           >
-            COMPSSA <span style={{ color: '#60a5fa' }}>✓</span>
+            HTU ELECT <span style={{ color: '#60a5fa' }}>✓</span>
           </h1>
         </motion.div>
 
@@ -480,7 +480,7 @@ export default function LoadingScreen() {
           letterSpacing: '2px', fontFamily: 'var(--font-display), sans-serif', marginBottom: '2rem',
         }}
       >
-        COMPSSA <span style={{ color: '#2563eb' }}>✓</span>
+        HTU ELECT <span style={{ color: '#2563eb' }}>✓</span>
       </motion.div>
 
       <div style={{ width: '250px', height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
