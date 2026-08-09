@@ -16,10 +16,10 @@ function ensureBackendListening(): Promise<number> {
       const http = require('http');
       const server = http.createServer(expressApp);
       server.listen(0, '127.0.0.1', () => {
-        const address = server.address();
-        cachedPort = typeof address === 'object' && address ? address.port : 5000;
-        console.log(`[API Proxy] Singleton Express backend listening on port ${cachedPort}`);
-        resolve(cachedPort);
+        const port = typeof address === 'object' && address ? address.port : 5000;
+        cachedPort = port;
+        console.log(`[API Proxy] Singleton Express backend listening on port ${port}`);
+        resolve(port);
       });
       server.on('error', (err: any) => {
         console.error('[API Proxy] Server error:', err);
