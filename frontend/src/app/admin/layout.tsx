@@ -89,12 +89,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const navLinks = [
-    { label: "Executive Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-    { label: "Voter Database", href: "/admin/voters", icon: Users },
-    { label: "Manage Elections", href: "/admin/elections", icon: Settings },
-    { label: "Live Results", href: "/admin/results", icon: Activity },
-    { label: "Report", href: "/admin/reports", icon: FileText },
-    { label: "Account Settings", href: "/admin/settings", icon: ShieldCheck }
+    { label: "Election Hub", href: "/admin/dashboard", icon: LayoutDashboard },
+    { label: "Organization Settings", href: "/admin/settings", icon: Settings }
   ];
 
   if (loading) {

@@ -29,60 +29,18 @@ const statusLabelMap: Record<string, string> = {
 };
 
 export default function AdminElectionsPage() {
-  const [elections, setElections] = useState<Election[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formStartDate, setFormStartDate] = useState('');
-  const [formEndDate, setFormEndDate] = useState('');
-  const [formType, setFormType] = useState('src');
-  const [formDepartment, setFormDepartment] = useState('');
-  const [formShowResults, setFormShowResults] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  
-  const [isEditTimeModalOpen, setIsEditTimeModalOpen] = useState(false);
-  const [editElectionId, setEditElectionId] = useState<string | null>(null);
-  const [editElectionStatus, setEditElectionStatus] = useState<string>('');
-  const [editStartDate, setEditStartDate] = useState('');
-  const [editEndDate, setEditEndDate] = useState('');
-  const [editingTime, setEditingTime] = useState(false);
-
-  const [isReactivateModalOpen, setIsReactivateModalOpen] = useState(false);
-  const [reactivateElectionId, setReactivateElectionId] = useState<string | null>(null);
-  const [reactivateElectionTitle, setReactivateElectionTitle] = useState('');
-  const [reactivateEndDate, setReactivateEndDate] = useState('');
-  const [reactivating, setReactivating] = useState(false);
-
-  // CSV Pre-Validation & Roster Upload State
-  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
-  const [targetElectionForCsv, setTargetElectionForCsv] = useState<Election | null>(null);
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [csvRawText, setCsvRawText] = useState<string>('');
-  const [csvStats, setCsvStats] = useState<{ total: number; valid: number; duplicates: number; invalid: number }>({ total: 0, valid: 0, duplicates: 0, invalid: 0 });
-  const [csvPreviewRows, setCsvPreviewRows] = useState<Array<{ email: string; name: string; valid: boolean; reason?: string }>>([]);
-  const [csvUploading, setCsvUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { setMounted(true); }, []);
+  const router = useRouter();
 
   useEffect(() => {
-    async function fetchElections() {
-      try {
-        const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
-        if (res.status === 'success') setElections(res.data);
-      } catch (err) {
-        console.error('Error fetching elections:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchElections();
+    router.replace('/admin/dashboard');
+  }, [router]);
 
-    // One-time migration: fix existing elections with generic descriptions
-    apiRequest('/elections/migrate-descriptions', 'POST')
-      .then((r: any) => console.log('[Migration]', r?.message))
-      .catch(() => {}); // silent — non-critical
-  }, []);
+  return (
+    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+      Redirecting to Organization Election Hub...
+    </div>
+  );
+}
 
   const handleCreateElection = async (e: React.FormEvent) => {
     e.preventDefault();
