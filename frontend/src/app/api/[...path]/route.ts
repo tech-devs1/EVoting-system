@@ -1,41 +1,94 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+
+let expressApp: any = null;
+
+function getExpressApp() {
+  if (!expressApp) {
+    try {
+      // Require backend server instance
+      expressApp = require('../../../../../backend/server');
+    } catch (e) {
+      console.error('[Backend Load Error]:', e);
+    }
+  }
+  return expressApp;
+}
 
 async function handleProxy(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const targetUrl = `${BACKEND_URL}${url.pathname}${url.search}`;
 
-    const headers = new Headers(req.headers);
-    // Remove host header to prevent SSL/SNI host mismatch issues
-    headers.delete('host');
+    // 1. If BACKEND_URL is explicitly set in env, proxy to external backend service
+    if (BACKEND_URL) {
+      const targetUrl = `${BACKEND_URL}${url.pathname}${url.search}`;
+      const headers = new Headers(req.headers);
+      headers.delete('host');
 
-    const method = req.method;
-    let body: any = null;
+      const method = req.method;
+      let body: any = null;
+      if (method !== 'GET' && method !== 'HEAD') {
+        body = await req.arrayBuffer();
+      }
 
-    if (method !== 'GET' && method !== 'HEAD') {
-      body = await req.arrayBuffer();
+      const res = await fetch(targetUrl, {
+        method,
+        headers,
+        body,
+        redirect: 'manual'
+      });
+
+      return new NextResponse(res.body, {
+        status: res.status,
+        statusText: res.statusText,
+        headers: new Headers(res.headers)
+      });
     }
 
-    const res = await fetch(targetUrl, {
-      method,
-      headers,
-      body,
-      redirect: 'manual'
-    });
+    // 2. Direct serverless execution of Express app in-memory
+    const backend = getExpressApp();
+    if (backend) {
+      return new Promise<NextResponse>((resolve) => {
+        const http = require('http');
+        const server = http.createServer(backend);
+        server.listen(0, '127.0.0.1', () => {
+          const address = server.address();
+          const port = typeof address === 'object' ? address?.port : 0;
+          const targetUrl = `http://127.0.0.1:${port}${url.pathname}${url.search}`;
 
-    const responseHeaders = new Headers(res.headers);
+          const headers = new Headers(req.headers);
+          headers.delete('host');
 
-    return new NextResponse(res.body, {
-      status: res.status,
-      statusText: res.statusText,
-      headers: responseHeaders
-    });
+          req.arrayBuffer().then(buffer => {
+            const body = (req.method !== 'GET' && req.method !== 'HEAD') ? Buffer.from(buffer) : undefined;
+            fetch(targetUrl, {
+              method: req.method,
+              headers,
+              body,
+              redirect: 'manual'
+            }).then(async res => {
+              const resBuffer = await res.arrayBuffer();
+              server.close();
+              resolve(new NextResponse(resBuffer, {
+                status: res.status,
+                statusText: res.statusText,
+                headers: new Headers(res.headers)
+              }));
+            }).catch(err => {
+              server.close();
+              resolve(NextResponse.json({ status: 'error', message: err.message }, { status: 500 }));
+            });
+          });
+        });
+      });
+    }
+
+    return NextResponse.json({ status: 'error', message: 'Backend service unavailable.' }, { status: 503 });
   } catch (err: any) {
     console.error('[API Proxy Error]:', err);
     return NextResponse.json(
-      { status: 'error', message: 'Failed to communicate with backend API server.' },
+      { status: 'error', message: err.message || 'Failed to communicate with backend API server.' },
       { status: 502 }
     );
   }
