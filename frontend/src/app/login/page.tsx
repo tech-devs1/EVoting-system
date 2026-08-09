@@ -5,40 +5,29 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { ShieldCheck, Mail, Lock, KeyRound, Eye, EyeOff, LogIn } from 'lucide-react';
+import { ShieldCheck, FileCheck2, Users, BarChart3, Lock } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, loginWithGoogle } = useAuth();
-
-  // Mode state
   const [isAdminMode, setIsAdminMode] = useState(false);
-
-  // Admin credentials state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Handle Google Auth Sign In
   const handleGoogleLogin = async () => {
     setError('');
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      // Force account selection popup
       provider.setCustomParameters({ prompt: 'select_account' });
-
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
-
       await loginWithGoogle(idToken);
     } catch (err: any) {
       console.error('Google login error:', err);
-      // Clean up firebase canceled error messages
       if (err.code === 'auth/popup-closed-by-user') {
-        setError('Login cancelled. Please select a Google account in the popup.');
+        setError('Login cancelled. Please select your Google account in the popup.');
       } else {
         setError(err.message || 'Google Authentication failed. Please try again.');
       }
@@ -47,7 +36,6 @@ export default function LoginPage() {
     }
   };
 
-  // Handle Admin Credentials Login
   const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -66,153 +54,233 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-container animate-page-enter">
-      <div className="auth-mesh"></div>
-      
-      <div className="glass-card-strong auth-card" style={{ maxWidth: '450px', width: '100%', margin: '0 auto' }}>
-        <div className="auth-header">
-          <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: 600, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
-              HTU Elect <span style={{ color: 'var(--color-primary)' }}>✓</span>
+    <div style={{ display: 'flex', minHeight: '100vh', width: '100vw', overflowX: 'hidden', fontFamily: 'var(--font-sans, system-ui, sans-serif)', backgroundColor: '#ffffff' }}>
+      {/* Left Column - Hero Branding */}
+      <div style={{
+        flex: '1.2',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '3rem 4rem',
+        backgroundImage: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.92)), url("/images/login_hero.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        color: '#ffffff'
+      }} className="hidden-mobile">
+        {/* Top Logo Badge */}
+        <div>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            padding: '0.5rem 1rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.96)',
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+          }}>
+            <ShieldCheck size={26} style={{ color: '#2563eb' }} />
+            <span style={{ fontWeight: 700, fontSize: '1.2rem', color: '#0f172a', letterSpacing: '-0.02em' }}>
+              HTU Elect <span style={{ color: '#2563eb' }}>✓</span>
             </span>
           </div>
-          <h2 className="auth-title" style={{ marginTop: 'var(--space-4)' }}>
-            {isAdminMode ? 'Administrator Sign In' : 'Voter Secure Login'}
-          </h2>
-          <p className="auth-subtitle">
-            {isAdminMode
-              ? 'Enter your department administrator credentials to access the console.'
-              : 'Sign in instantly using your Google account to confirm identity and cast your ballot.'}
-          </p>
         </div>
 
-        {error && (
-          <div className="alert alert-danger" style={{
-            padding: 'var(--space-3) var(--space-4)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: 'var(--space-4)',
-            fontSize: 'var(--text-sm)',
-            background: 'var(--color-danger-bg)',
-            color: 'var(--color-danger)',
-            border: '1px solid rgba(239, 68, 68, 0.2)'
-          }}>
-            {error}
+        {/* Hero Content */}
+        <div style={{ maxWidth: '580px', margin: '3rem 0' }}>
+          <h1 style={{ fontSize: '3rem', fontWeight: 800, lineHeight: 1.15, marginBottom: '1.25rem', letterSpacing: '-0.03em', color: '#ffffff' }}>
+            Empowering Tomorrow's Leaders
+          </h1>
+          <p style={{ fontSize: '1.1rem', lineHeight: 1.6, color: 'rgba(241, 245, 249, 0.9)', marginBottom: '2.5rem' }}>
+            Ho Technical University's official digital election portal — connecting voters, candidates, and electoral commissions in one secure place.
+          </p>
+
+          {/* Feature List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'rgba(255, 255, 255, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+                <FileCheck2 size={20} style={{ color: '#60a5fa' }} />
+              </div>
+              <span style={{ fontSize: '1rem', color: '#f8fafc', fontWeight: 500 }}>Track applications, rosters & approvals end-to-end</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'rgba(255, 255, 255, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+                <Users size={20} style={{ color: '#60a5fa' }} />
+              </div>
+              <span style={{ fontSize: '1rem', color: '#f8fafc', fontWeight: 500 }}>Coordinate electoral supervisors across departments</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'rgba(255, 255, 255, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+                <BarChart3 size={20} style={{ color: '#60a5fa' }} />
+              </div>
+              <span style={{ fontSize: '1rem', color: '#f8fafc', fontWeight: 500 }}>Real-time voter turnout & cryptographic audit insights</span>
+            </div>
           </div>
-        )}
+        </div>
 
-        {!isAdminMode ? (
-          /* VOTER GOOGLE AUTH MODE */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="btn btn-primary btn-full hover-lift"
-              disabled={loading}
-              style={{
-                background: '#fff',
-                color: '#1f2937',
-                border: '1px solid #d1d5db',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                padding: 'var(--space-3) var(--space-4)',
-                fontWeight: 600,
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22c-.62-.63-1.05-1.41-1.18-2.63z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-              </svg>
-              {loading ? 'Authenticating...' : 'Sign In with Google'}
-            </button>
+        {/* Footer */}
+        <div style={{ fontSize: '0.875rem', color: 'rgba(203, 213, 225, 0.7)' }}>
+          © {new Date().getFullYear()} Ho Technical University. All rights reserved.
+        </div>
+      </div>
 
-            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', textAlign: 'center', lineHeight: '1.5' }}>
-              Only students and voters registered on the official EC voter lists will be granted access. Manual account creation is deprecated.
+      {/* Right Column - Authentication Form */}
+      <div style={{
+        flex: '1',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '3rem 2rem',
+        backgroundColor: '#ffffff'
+      }}>
+        <div style={{ width: '100%', maxWidth: '420px' }}>
+          
+          <div style={{ marginBottom: '2.5rem', textAlign: 'left' }}>
+            <h2 style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem', letterSpacing: '-0.025em' }}>
+              Sign in
+            </h2>
+            <p style={{ fontSize: '1rem', color: '#64748b' }}>
+              Use your Google account to access the portal
             </p>
           </div>
-        ) : (
-          /* ADMIN CREDENTIALS MODE */
-          <form onSubmit={handleAdminSubmit}>
-            <div className="form-group">
-              <label className="form-label" htmlFor="login-email">Admin Email</label>
-              <div className="form-input-container">
-                <Mail size={18} className="form-input-icon" />
-                <input
-                  type="email"
-                  id="login-email"
-                  className="form-input form-input-with-icon"
-                  placeholder="admin@htu.edu.gh"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="login-password">Password</label>
-              <div className="form-input-container" style={{ position: 'relative' }}>
-                <Lock size={18} className="form-input-icon" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="login-password"
-                  className="form-input form-input-with-icon"
-                  placeholder="••••••••••••"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
+          {error && (
+            <div style={{
+              padding: '0.875rem 1.125rem',
+              borderRadius: '10px',
+              marginBottom: '1.5rem',
+              fontSize: '0.875rem',
+              backgroundColor: '#fef2f2',
+              color: '#dc2626',
+              border: '1px solid #fecaca',
+              fontWeight: 500
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* Form Card */}
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '20px',
+            padding: '2rem',
+            boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0,0,0,0.12)',
+            border: '1px solid #f1f5f9',
+            textAlign: 'center'
+          }}>
+
+            {!isAdminMode ? (
+              <>
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
                   style={{
-                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)'
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.875rem',
+                    padding: '0.9rem 1.5rem',
+                    backgroundColor: '#ffffff',
+                    color: '#1e293b',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                    transition: 'all 0.2s ease',
+                    opacity: loading ? 0.7 : 1
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                    }
                   }}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.27v3.13C3.25 21.3 7.31 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.6H1.27C.46 8.23 0 10.06 0 12s.46 3.77 1.27 5.4l4.01-3.13z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.6l4.01 3.13c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                  </svg>
+                  <span>{loading ? 'Authenticating...' : 'Sign in with Google'}</span>
                 </button>
-              </div>
+
+                <p style={{ marginTop: '1.25rem', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.5 }}>
+                  HTU staff, EC admins, superadmins & registered voters all sign in here.
+                </p>
+              </>
+            ) : (
+              <form onSubmit={handleAdminSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>Admin Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@htu.edu.gh"
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem',
+                    backgroundColor: '#2563eb',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: 600,
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    marginTop: '0.5rem'
+                  }}
+                >
+                  {loading ? 'Signing in...' : 'Sign In with Password'}
+                </button>
+              </form>
+            )}
+
+            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
+              <button
+                type="button"
+                onClick={() => setIsAdminMode(!isAdminMode)}
+                style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
+              >
+                <Lock size={14} />
+                {isAdminMode ? 'Use Google Single Sign-On' : 'Password Login Fallback'}
+              </button>
             </div>
 
-            <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading}>
-              <KeyRound size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
-              {loading ? 'Signing In...' : 'Verify & Access Console'}
-            </button>
-          </form>
-        )}
+          </div>
 
-        <div style={{ marginTop: 'var(--space-6)', textAlign: 'center', borderTop: '1px dashed var(--border-color)', paddingTop: 'var(--space-4)' }}>
-          <button
-            type="button"
-            onClick={() => { setIsAdminMode(!isAdminMode); setError(''); }}
-            style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--color-primary)',
-              fontWeight: 'bold',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <LogIn size={16} />
-            {isAdminMode ? 'Switch to Voter Portal (Google)' : 'Switch to Admin Login (Credentials)'}
-          </button>
-        </div>
-
-        <div className="auth-security-badge" style={{ marginTop: 'var(--space-6)' }}>
-          <ShieldCheck size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
-          Protected by HTU Elect Secure Authenticator ✓
         </div>
       </div>
     </div>
