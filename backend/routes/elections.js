@@ -672,6 +672,130 @@ async function sendOtpViaBMS(phoneNumber, otp) {
   }
 }
 
+// Get elections eligible for current logged in voter based on email matching in uploaded CSV rosters
+router.get('/eligible', verifyAuth, async (req, res) => {
+  try {
+    const voterEmail = (req.user.email || '').toLowerCase().trim();
+    const voterIndex = (req.user.indexNumber || '').toLowerCase().trim();
+
+    if (!voterEmail && !voterIndex) {
+      return res.status(200).json({ status: 'success', data: [] });
+    }
+
+    // Query active and draft elections across tenant organizations
+    const snapshot = await db.collectionGroup('elections').get();
+    const eligibleElections = [];
+
+    for (const doc of snapshot.docs) {
+      const electionData = doc.data();
+      const electionId = doc.id;
+      const tenantRef = doc.ref.parent.parent;
+      const tenantId = tenantRef ? tenantRef.id : DEFAULT_TENANT_ID;
+
+      // Check if election has a per-election CSV roster
+      const rosterSnapshot = await doc.ref.collection('eligible_voters').get();
+
+      let isEligible = false;
+
+      if (rosterSnapshot.empty) {
+        // If no CSV uploaded yet for this election, allow general tenant access
+        isEligible = true;
+      } else {
+        // Check if voter's email or index matches any entry in this election's CSV roster
+        rosterSnapshot.forEach(voterDoc => {
+          const vData = voterDoc.data();
+          const csvEmail = (vData.email || '').toLowerCase().trim();
+          const csvIndex = (vData.indexNumber || '').toLowerCase().trim();
+          if ((voterEmail && csvEmail === voterEmail) || (voterIndex && csvIndex === voterIndex)) {
+            isEligible = true;
+          }
+        });
+      }
+
+      if (isEligible) {
+        // Check if voter has unlocked or voted
+        const votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters')
+          .where('voterId', '==', req.user.uid)
+          .where('electionId', '==', electionId)
+          .get();
+
+        eligibleElections.push({
+          id: electionId,
+          tenantId,
+          ...electionData,
+          hasVoted: !votedSnap.empty,
+          votedPositionsCount: votedSnap.size
+        });
+      }
+    }
+
+    res.status(200).json({ status: 'success', data: eligibleElections });
+  } catch (error) {
+    console.error('Error fetching eligible elections:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch eligible elections' });
+  }
+});
+
+// Upload CSV roster of eligible voting members for a specific election (Admin only)
+router.post('/:id/voters/upload-csv', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const { members } = req.body; // Array of { email, indexNumber, name, department }
+
+    if (!Array.isArray(members) || members.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'Members array is required and cannot be empty.' });
+    }
+
+    const electionRef = getElectionsRef(req).doc(electionId);
+    const electionDoc = await electionRef.get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+
+    const eligibleRef = electionRef.collection('eligible_voters');
+    const batchSize = 400;
+    let addedCount = 0;
+
+    for (let i = 0; i < members.length; i += batchSize) {
+      const chunk = members.slice(i, i + batchSize);
+      const batch = db.batch();
+
+      chunk.forEach(member => {
+        const docId = (member.email || member.indexNumber || Math.random().toString(36)).toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const memberRef = eligibleRef.doc(docId);
+        batch.set(memberRef, {
+          email: (member.email || '').toLowerCase().trim(),
+          indexNumber: (member.indexNumber || '').trim(),
+          name: member.name || 'Student',
+          department: member.department || '',
+          uploadedAt: Date.now()
+        });
+        addedCount++;
+      });
+
+      await batch.commit();
+    }
+
+    // Update total CSV voter count on election document
+    await electionRef.update({
+      voterCount: addedCount,
+      hasCsvRoster: true
+    });
+
+    // Invalidate election list & detail caches
+    cache.invalidatePrefix('elections:');
+
+    res.status(200).json({
+      status: 'success',
+      message: `Successfully uploaded ${addedCount} voting members to election roster.`,
+      data: { totalMembers: addedCount }
+    });
+  } catch (error) {
+    console.error('Error uploading CSV roster:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to upload CSV voter roster.' });
+  }
+});
+
 // 1. Check if voter has already unlocked access to an election
 router.get('/:id/access-status', verifyAuth, async (req, res) => {
   try {
@@ -706,6 +830,31 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'Voter profile not found.' });
     }
     const voterData = voterDoc.data();
+
+    // Verify voter email is present in the election's CSV roster if a roster was uploaded
+    const electionRef = getElectionsRef(req).doc(electionId);
+    const rosterSnap = await electionRef.collection('eligible_voters').get();
+
+    if (!rosterSnap.empty) {
+      const voterEmail = (voterData.email || req.user.email || '').toLowerCase().trim();
+      const voterIndex = (voterData.indexNumber || req.user.indexNumber || '').toLowerCase().trim();
+
+      let isAllowed = false;
+      rosterSnap.forEach(doc => {
+        const entry = doc.data();
+        if ((voterEmail && (entry.email || '').toLowerCase().trim() === voterEmail) ||
+            (voterIndex && (entry.indexNumber || '').toLowerCase().trim() === voterIndex)) {
+          isAllowed = true;
+        }
+      });
+
+      if (!isAllowed) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Your account is not listed on the official voting members roster for this election.'
+        });
+      }
+    }
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();

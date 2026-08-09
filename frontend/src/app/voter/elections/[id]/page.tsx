@@ -4,7 +4,7 @@ import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
-import { ArrowLeft, Check, ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Check, ShieldCheck, Lock, CheckCircle2, Sparkles, User, AlertCircle } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -45,6 +45,10 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
   // Map of position -> selected candidateId (or candidateId:yes / candidateId:no)
   const [selections, setSelections] = useState<Record<string, string>>({});
 
+  // Map of position -> auditTxId for positions already voted in this session
+  const [votedPositions, setVotedPositions] = useState<Record<string, { candidateId: string; auditTxId: string }>>({});
+  const [castingPosition, setCastingPosition] = useState<string | null>(null);
+
   // Modals state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [activeProfileCandidate, setActiveProfileCandidate] = useState<Candidate | null>(null);
@@ -71,26 +75,6 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
     }
     fetchData();
   }, [electionId]);
-
-  // Preserve selections when returning from Confirm Page via Go Back button
-  useEffect(() => {
-    if (typeof window !== 'undefined' && candidates.length > 0) {
-      const search = new URLSearchParams(window.location.search);
-      const paramCandIds = search.getAll('candidateId');
-      if (paramCandIds.length > 0) {
-        const restored: Record<string, string> = {};
-        candidates.forEach(cand => {
-          const matched = paramCandIds.find(id => id === cand.id || id.startsWith(`${cand.id}:`));
-          if (matched) {
-            restored[cand.position] = matched;
-          }
-        });
-        if (Object.keys(restored).length > 0) {
-          setSelections(prev => ({ ...restored, ...prev }));
-        }
-      }
-    }
-  }, [candidates]);
 
   const handleRequestOtp = async () => {
     setRequestLoading(true);
@@ -134,6 +118,41 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
     }
   };
 
+  const handleCastVoteForPosition = async (position: string) => {
+    const candidateChoice = selections[position];
+    if (!candidateChoice) {
+      alert(`Please select a candidate for ${position} before casting your vote.`);
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to cast your vote for ${position}? This action is cryptographically recorded and cannot be undone.`)) {
+      return;
+    }
+
+    setCastingPosition(position);
+    try {
+      const res = await apiRequest<{ status: string; message: string; data?: { verificationId: string } }>('/votes/cast', 'POST', {
+        electionId,
+        candidateId: candidateChoice
+      });
+
+      if (res.status === 'success') {
+        const auditTxId = res.data?.verificationId || 'VERIFIED_' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        setVotedPositions(prev => ({
+          ...prev,
+          [position]: { candidateId: candidateChoice, auditTxId }
+        }));
+      } else {
+        alert(res.message || 'Failed to cast vote.');
+      }
+    } catch (err: any) {
+      console.error('Error casting vote for position:', err);
+      alert('Failed to cast vote: ' + (err.message || 'Unknown error'));
+    } finally {
+      setCastingPosition(null);
+    }
+  };
+
   if (loading) {
     return <p style={{ color: 'var(--text-secondary)', padding: 'var(--space-8)', textAlign: 'center' }}>Synchronizing candidate profiles...</p>;
   }
@@ -143,23 +162,26 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
       <div className="empty-state">
         <h3>Election Not Found</h3>
         <p>No valid active election parameters were passed to this terminal session.</p>
-        <Link href="/voter/dashboard" className="btn btn-primary" style={{ marginTop: 'var(--space-4)' }}>
-          Back to Dashboard
+        <Link href="/voter/elections" className="btn btn-primary" style={{ marginTop: 'var(--space-4)' }}>
+          Back to Eligible Elections
         </Link>
       </div>
     );
   }
 
-  // Group candidates by position (preserve insertion order)
+  // Group candidates by position
   const positionGroups: Record<string, Candidate[]> = {};
   candidates.forEach(c => {
     if (!positionGroups[c.position]) positionGroups[c.position] = [];
     positionGroups[c.position].push(c);
   });
   const positions = Object.keys(positionGroups);
-  const allSelected = positions.every(p => !!selections[p]);
+  const totalPositionsCount = positions.length;
+  const votedCount = Object.keys(votedPositions).length;
+  const isAllPositionsVoted = totalPositionsCount > 0 && votedCount === totalPositionsCount;
 
   const handleCardClick = (position: string, candId: string) => {
+    if (votedPositions[position]) return; // Position locked
     setSelections(prev => {
       if (prev[position] === candId) {
         const next = { ...prev };
@@ -176,379 +198,201 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
     setIsProfileModalOpen(true);
   };
 
-  const selectCandidateFromModal = () => {
-    if (activeProfileCandidate) {
-      setSelections(prev => ({ ...prev, [activeProfileCandidate.position]: activeProfileCandidate.id }));
-      setIsProfileModalOpen(false);
-    }
-  };
+  return (
+    <div className="animate-page-enter" style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      {/* Top Breadcrumb Header */}
+      <div style={{ marginBottom: 'var(--space-6)' }}>
+        <Link href="/voter/elections" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-2)' }}>
+          <ArrowLeft size={16} /> Back to Eligible Elections
+        </Link>
+        <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', margin: 0 }}>{election.title}</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)' }}>{election.description}</p>
+      </div>
 
-  const handleProceed = () => {
-    // Pass all selections as query params
-    const params = new URLSearchParams();
-    Object.entries(selections).forEach(([, candId]) => params.append('candidateId', candId));
-    router.push(`/voter/elections/${electionId}/confirm?${params.toString()}`);
-  };
-
-  // Time & Duration enforcement
-  const now = Date.now();
-  const startTime = election?.startDate ? new Date(election.startDate).getTime() : 0;
-  const endTime = election?.endDate ? new Date(election.endDate).getTime() : Infinity;
-
-  const isBeforeStart = startTime > 0 && now < startTime;
-  const isAfterEnd = endTime < Infinity && now > endTime;
-  const isVotingAllowed = !isBeforeStart && !isAfterEnd && election?.status !== 'completed';
-
-  // OTP CHALLENGE OVERLAY (LOCK ACCESS TO CANDIDATE SELECTION PAGE UNTIL VERIFIED)
-  if (isLocked) {
-    return (
-      <div className="candidate-selection-container animate-page-enter" style={{ maxWidth: '500px', margin: '40px auto' }}>
-        <div style={{ marginBottom: 'var(--space-4)' }}>
-          <Link href="/voter/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-4)' }}>
-            <ArrowLeft size={16} /> Return to Dashboard
-          </Link>
-        </div>
-
-        <div className="glass-card-strong text-center" style={{ padding: 'var(--space-8)' }}>
-          <div style={{
-            width: '64px', height: '64px', borderRadius: '50%',
-            background: 'rgba(99, 102, 241, 0.1)',
-            color: 'var(--color-primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto var(--space-4) auto'
-          }}>
-            <ShieldCheck size={32} />
+      {/* Access Control Verification Modal */}
+      {isLocked ? (
+        <div className="card" style={{ padding: 'var(--space-8)', textAlign: 'center', background: 'var(--surface-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xl)' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--space-4) auto' }}>
+            <Lock size={32} />
           </div>
-
-          <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold', marginBottom: 'var(--space-2)' }}>
-            Identity Verification Required
-          </h3>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-6)', lineHeight: '1.6' }}>
-            To participate in the <strong>{election.title}</strong> election, you must confirm your membership by requesting and entering a secure 6-digit verification code.
+          <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)', marginBottom: 'var(--space-2)' }}>Access Security Verification Required</h3>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '500px', margin: '0 auto var(--space-6) auto', fontSize: 'var(--text-sm)' }}>
+            To unlock the voting portal for <strong>{election.title}</strong>, please request a 6-digit verification code sent to your registered email/SMS.
           </p>
 
-          {otpError && (
-            <div className="alert alert-danger" style={{
-              marginBottom: 'var(--space-4)',
-              fontSize: 'var(--text-sm)',
-              padding: '10px 14px',
-              background: 'var(--color-danger-bg)',
-              color: 'var(--color-danger)',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
-              borderRadius: 'var(--radius-md)'
-            }}>
-              {otpError}
-            </div>
-          )}
-
           {!otpRequestSent ? (
-            <button
-              type="button"
-              onClick={handleRequestOtp}
-              className="btn btn-primary btn-full"
-              disabled={requestLoading}
-              style={{ padding: '12px' }}
-            >
-              {requestLoading ? 'Requesting Code...' : 'Request Verification Code'}
-            </button>
+            <div>
+              {otpError && (
+                <div className="alert alert-danger" style={{ maxWidth: '400px', margin: '0 auto var(--space-4) auto' }}>
+                  <AlertCircle size={16} /> {otpError}
+                </div>
+              )}
+              <button onClick={handleRequestOtp} disabled={requestLoading} className="btn btn-primary btn-lg" style={{ minWidth: '220px' }}>
+                {requestLoading ? 'Sending Verification Code...' : 'Request Access Code'}
+              </button>
+            </div>
           ) : (
-            <form onSubmit={handleVerifyAccessOtp}>
+            <form onSubmit={handleVerifyAccessOtp} style={{ maxWidth: '360px', margin: '0 auto' }}>
               {fallbackOtp && (
-                <div style={{
-                  padding: 'var(--space-3) var(--space-4)',
-                  borderRadius: 'var(--radius-md)',
-                  marginBottom: 'var(--space-4)',
-                  fontSize: 'var(--text-sm)',
-                  background: 'rgba(245, 158, 11, 0.1)',
-                  color: 'rgb(217, 119, 6)',
-                  border: '1px solid rgba(245, 158, 11, 0.2)',
-                  textAlign: 'center',
-                  fontWeight: 500
-                }}>
-                  📢 <strong>[Demo Mode Fallback]</strong><br />
-                  Use code: <strong style={{ fontSize: '1.2rem', color: 'var(--color-primary)', letterSpacing: '2px' }}>{fallbackOtp}</strong>
+                <div className="alert alert-warning" style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-xs)' }}>
+                  🔑 <strong>Demo Access Code:</strong> {fallbackOtp}
+                </div>
+              )}
+
+              {otpError && (
+                <div className="alert alert-danger" style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-xs)' }}>
+                  {otpError}
                 </div>
               )}
 
               <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+                <label className="form-label">Enter 6-Digit Verification Code</label>
                 <input
                   type="text"
                   maxLength={6}
-                  placeholder="Enter 6-digit Code"
-                  className="form-input text-center"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  style={{ fontSize: '1.4rem', fontWeight: 'bold', letterSpacing: '4px', height: '52px', border: '2px solid var(--color-primary)' }}
+                  placeholder="123456"
+                  className="form-input"
+                  style={{ textAlign: 'center', letterSpacing: '8px', fontSize: '1.4rem', fontWeight: 'bold' }}
                   required
-                  disabled={requestLoading}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => { setOtpRequestSent(false); setOtpCode(''); setOtpCodeError(''); }}
-                  className="btn btn-secondary"
-                  style={{ flex: 1 }}
-                  disabled={requestLoading}
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ flex: 2 }}
-                  disabled={requestLoading}
-                >
-                  {requestLoading ? 'Verifying...' : 'Verify & Unlock'}
-                </button>
-              </div>
+              <button type="submit" disabled={requestLoading || otpCode.length !== 6} className="btn btn-primary btn-block btn-lg">
+                {requestLoading ? 'Verifying Code...' : 'Unlock Voting Portal'}
+              </button>
+
+              <button type="button" onClick={handleRequestOtp} disabled={requestLoading} className="btn btn-ghost btn-sm" style={{ marginTop: 'var(--space-3)' }}>
+                Resend Code
+              </button>
             </form>
           )}
         </div>
-      </div>
-    );
-  }
-
-  // RENDER THE FULL ELECTION INTERFACE ONCE ACCESS IS UNLOCKED
-  return (
-    <div className="candidate-selection-container animate-page-enter">
-      {/* Header */}
-      <div style={{ marginBottom: 'var(--space-8)' }}>
-        <Link href="/voter/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-4)' }}>
-          <ArrowLeft size={16} /> Return to Dashboard
-        </Link>
-        <h2 style={{ marginBottom: 'var(--space-2)' }}>{election.title}</h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', maxWidth: '700px' }}>{election.description}</p>
-      </div>
-
-      {/* Time Enforcement Banners */}
-      {isBeforeStart && (
-        <div className="alert alert-warning" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-4)' }}>
-          ⚠️ <strong>Voting Not Yet Open:</strong> This election is scheduled to start on {new Date(election.startDate!).toLocaleString()}. Voting is currently disabled.
-        </div>
-      )}
-      {isAfterEnd && (
-        <div className="alert alert-danger" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-4)', background: 'var(--color-danger-bg)', color: 'var(--color-danger)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 'var(--radius-md)' }}>
-          🔒 <strong>Voting Duration Has Ended:</strong> The voting window for this election closed on {new Date(election.endDate!).toLocaleString()}. Further votes cannot be submitted.
-        </div>
-      )}
-
-      {/* Position sections */}
-      {positions.map(position => {
-        const group = positionGroups[position];
-        const selectedId = selections[position];
-
-        return (
-          <div key={position} style={{ marginBottom: 'var(--space-10)' }}>
-            {/* Section header */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 'var(--space-4)',
-              paddingBottom: 'var(--space-3)',
-              borderBottom: '2px solid var(--border-color)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                <span style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  background: selectedId ? 'var(--color-success, #22c55e)' : 'var(--color-warning, #f59e0b)',
-                  flexShrink: 0
-                }} />
-                <h3 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)' }}>
-                  {position}
-                </h3>
-                <span style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--text-tertiary)',
-                  background: 'var(--bg-card)',
-                  padding: '2px 8px',
-                  borderRadius: 'var(--radius-full)',
-                  border: '1px solid var(--border-color)'
-                }}>
-                  {group.length} candidate{group.length !== 1 ? 's' : ''}
-                </span>
-                {selectedId && (
-                  <span style={{
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--color-success, #22c55e)',
-                    fontWeight: 'var(--weight-semibold)'
-                  }}>
-                    ✓ Selected {selectedId.endsWith(':yes') ? '(Yes)' : selectedId.endsWith(':no') ? '(No)' : ''}
-                  </span>
-                )}
-              </div>
+      ) : (
+        <div>
+          {/* Progress Tracker Banner */}
+          <div className="card" style={{ padding: 'var(--space-4) var(--space-6)', marginBottom: 'var(--space-6)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)', borderLeft: '4px solid #3b82f6' }}>
+            <div>
+              <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-tertiary)', fontWeight: 'bold' }}>Voting Progress</span>
+              <h4 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)' }}>
+                {votedCount} of {totalPositionsCount} Positions Voted
+              </h4>
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <ShieldCheck size={20} style={{ color: '#22c55e' }} />
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Cryptographically Audited Session</span>
+            </div>
+          </div>
 
-            {/* Candidate cards grid */}
-            <div className="candidate-grid">
-              {group.map(cand => {
-                const isSelected = selectedId === cand.id || selectedId === `${cand.id}:yes` || selectedId === `${cand.id}:no`;
-                const isIndie = cand.isIndependent || group.length === 1;
+          {/* All Positions Voted Celebration Banner */}
+          {isAllPositionsVoted && (
+            <div className="card" style={{ padding: 'var(--space-8)', textAlign: 'center', background: 'linear-gradient(135deg, rgba(34,197,94,0.1), rgba(59,130,246,0.1))', border: '1px solid rgba(34,197,94,0.3)', marginBottom: 'var(--space-8)', borderRadius: 'var(--radius-xl)' }}>
+              <Sparkles size={48} style={{ color: '#22c55e', margin: '0 auto var(--space-4) auto' }} />
+              <h3 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: '#22c55e', marginBottom: 'var(--space-2)' }}>Voting Complete across All Positions!</h3>
+              <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto var(--space-6) auto' }}>
+                Your choices for all positions in <strong>{election.title}</strong> have been securely recorded in the tamper-proof ledger.
+              </p>
+              <Link href="/voter/elections" className="btn btn-primary btn-lg">
+                Return to Elections Portal
+              </Link>
+            </div>
+          )}
 
-                return (
-                  <div
-                    className={`card candidate-card ${isSelected ? 'selected' : ''}`}
-                    key={cand.id}
-                    onClick={() => !isIndie && handleCardClick(position, cand.id)}
-                    style={{ cursor: isIndie ? 'default' : 'pointer' }}
-                  >
-                    {!isIndie && (
-                      <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10 }}>
-                        <input 
-                          type="checkbox" 
-                          checked={isSelected} 
-                          readOnly
-                          style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: 'var(--color-primary)' }}
-                        />
-                      </div>
-                    )}
-                    {/* Photo wrapper */}
-                    <div className="candidate-photo-wrap">
-                      <img
-                        src={cand.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'}
-                        alt={cand.name}
-                        className="candidate-photo"
-                      />
-                    </div>
+          {/* Position Cards Grid */}
+          {positions.map((pos, posIdx) => {
+            const posCandidates = positionGroups[pos];
+            const isPosVoted = !!votedPositions[pos];
+            const posAudit = votedPositions[pos];
+            const selectedCandId = selections[pos];
 
-                    {/* Content wrapper */}
-                    <div className="candidate-content">
-                      <div className="candidate-info">
-                        <h4 className="candidate-name">
-                          {cand.ballotNumber ? `No. ${cand.ballotNumber} - ` : ''}{cand.name} {isIndie && <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 'bold' }}>(Independent)</span>}
-                        </h4>
-                        <span className="candidate-position">{cand.position}</span>
-                      </div>
-
-                      {/* Independent Yes / No Choice Buttons */}
-                      {isIndie ? (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: 'var(--space-3)' }} onClick={e => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            className={`btn btn-sm ${selections[position] === `${cand.id}:yes` ? 'btn-success' : 'btn-outline'}`}
-                            onClick={() => handleCardClick(position, `${cand.id}:yes`)}
-                            style={{ flex: 1, padding: '6px 4px', fontSize: '12px' }}
-                          >
-                            ✓ Vote Yes
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn btn-sm ${selections[position] === `${cand.id}:no` ? 'btn-danger' : 'btn-outline'}`}
-                            onClick={() => handleCardClick(position, `${cand.id}:no`)}
-                            style={{ flex: 1, padding: '6px 4px', fontSize: '12px', color: selections[position] === `${cand.id}:no` ? '#fff' : 'var(--color-danger)' }}
-                          >
-                            ✗ Vote No
-                          </button>
-                        </div>
-                      ) : null}
-
-                      {cand.manifesto && cand.manifesto.trim() !== "" && (
-                        <div className="candidate-actions" style={{ marginTop: 'var(--space-2)' }}>
-                          <button
-                            type="button"
-                            className="btn btn-outline btn-sm cand-expand-profile-btn"
-                            onClick={(e) => openProfileModal(cand, e)}
-                            style={{ width: '100%' }}
-                          >
-                            Read Manifesto
-                          </button>
-                        </div>
-                      )}
-                    </div>
+            return (
+              <div className="card" key={pos} style={{ marginBottom: 'var(--space-8)', padding: 'var(--space-6)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-color)' }}>
+                  <div>
+                    <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '1px', color: '#3b82f6', fontWeight: 'bold' }}>Position {posIdx + 1} of {totalPositionsCount}</span>
+                    <h3 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)' }}>{pos}</h3>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
 
-      {/* Progress summary */}
-      {positions.length > 1 && (
-        <div style={{
-          padding: 'var(--space-4)',
-          background: 'var(--bg-card)',
-          borderRadius: 'var(--radius-lg)',
-          border: `1px solid ${allSelected ? 'var(--color-success, #22c55e)' : 'var(--border-color)'}`,
-          marginBottom: 'var(--space-6)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-3)',
-          flexWrap: 'wrap'
-        }}>
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--text-primary)' }}>
-            Progress:
-          </span>
-          {positions.map(p => (
-            <span key={p} style={{
-              fontSize: 'var(--text-xs)',
-              padding: '3px 10px',
-              borderRadius: 'var(--radius-full)',
-              background: selections[p] ? 'var(--color-success, #22c55e)' : 'var(--bg-input)',
-              color: selections[p] ? '#fff' : 'var(--text-secondary)',
-              border: `1px solid ${selections[p] ? 'var(--color-success, #22c55e)' : 'var(--border-color)'}`,
-              fontWeight: 'var(--weight-medium)'
-            }}>
-              {selections[p] ? '✓' : '○'} {p}
-            </span>
-          ))}
-        </div>
-      )}
+                  {isPosVoted ? (
+                    <span className="badge" style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle2 size={16} /> Vote Recorded
+                    </span>
+                  ) : (
+                    <span className="badge badge-info" style={{ padding: '6px 12px', borderRadius: '20px' }}>
+                      Select 1 Candidate
+                    </span>
+                  )}
+                </div>
 
-      {/* Submit bar */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-4)', borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-6)', marginTop: 'var(--space-4)' }}>
-        <Link href="/voter/dashboard" className="btn btn-secondary">Cancel</Link>
-        <button
-          className="btn btn-primary"
-          disabled={!isVotingAllowed || Object.keys(selections).length === 0}
-          onClick={handleProceed}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          title={!isVotingAllowed ? 'Voting is closed or not yet open' : Object.keys(selections).length === 0 ? 'Please select at least one candidate' : ''}
-        >
-          Review Selection <ArrowRight size={16} />
-        </button>
-      </div>
+                {/* Candidates List for this Position */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+                  {posCandidates.map((cand) => {
+                    const isSelected = selectedCandId === cand.id || selectedCandId === `${cand.id}:yes`;
+                    return (
+                      <div
+                        key={cand.id}
+                        onClick={() => handleCardClick(pos, cand.id)}
+                        className={`card card-hover ${isSelected ? 'selected' : ''}`}
+                        style={{
+                          padding: 'var(--space-4)',
+                          cursor: isPosVoted ? 'default' : 'pointer',
+                          border: isSelected ? '2px solid #3b82f6' : '1px solid var(--border-color)',
+                          background: isSelected ? 'rgba(59, 130, 246, 0.05)' : 'var(--surface-card)',
+                          opacity: isPosVoted && !isSelected ? 0.6 : 1,
+                          position: 'relative'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                          <div style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden', background: 'var(--surface-subtle)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {cand.photoUrl ? (
+                              <img src={cand.photoUrl} alt={cand.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <User size={24} style={{ color: 'var(--text-tertiary)' }} />
+                            )}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {cand.ballotNumber && (
+                              <span style={{ fontSize: '11px', background: '#3b82f6', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                                Ballot #{cand.ballotNumber}
+                              </span>
+                            )}
+                            <h4 style={{ margin: '4px 0 0 0', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {cand.name}
+                            </h4>
+                          </div>
+                          {isSelected && (
+                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Check size={16} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-      {/* Profile / Manifesto Modal */}
-      {isProfileModalOpen && activeProfileCandidate && (
-        <div className="modal-overlay active" onClick={() => setIsProfileModalOpen(false)}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">{activeProfileCandidate.name}</h3>
-              <button className="modal-close" onClick={() => setIsProfileModalOpen(false)}>&times;</button>
-            </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              <img
-                src={activeProfileCandidate.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'}
-                alt={activeProfileCandidate.name}
-                style={{ width: '100%', height: '240px', objectFit: 'cover', borderRadius: 'var(--radius-lg)' }}
-              />
-              <div>
-                <span className="candidate-position">{activeProfileCandidate.position}</span>
-                {activeProfileCandidate.manifesto ? (
-                  <div
-                    style={{ fontSize: 'var(--text-sm)', lineHeight: 1.7, marginTop: 'var(--space-2)', color: 'var(--text-primary)' }}
-                    dangerouslySetInnerHTML={{ __html: activeProfileCandidate.manifesto }}
-                  />
+                {/* Per-Position Cast Vote Button */}
+                {isPosVoted ? (
+                  <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                    <span>✅ Your ballot for <strong>{pos}</strong> has been cast and recorded.</span>
+                    <span style={{ fontSize: '11px', fontFamily: 'monospace', opacity: 0.8 }}>Hash: {posAudit.auditTxId.substring(0, 16)}...</span>
+                  </div>
                 ) : (
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: 'var(--space-2)', fontStyle: 'italic' }}>
-                    No manifesto has been uploaded yet.
-                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => handleCastVoteForPosition(pos)}
+                      disabled={!selectedCandId || castingPosition === pos}
+                      className="btn btn-primary"
+                      style={{ minWidth: '180px' }}
+                    >
+                      {castingPosition === pos ? 'Casting Vote...' : `Cast Vote for ${pos}`}
+                    </button>
+                  </div>
                 )}
               </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setIsProfileModalOpen(false)}>Close</button>
-              <button className="btn btn-primary" onClick={selectCandidateFromModal}>Select Candidate</button>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
     </div>

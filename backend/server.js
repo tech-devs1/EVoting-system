@@ -24,6 +24,7 @@ app.use('/api/votes', voteLimiter, require('./routes/votes'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/superadmin', require('./routes/superadmin'));
 app.use('/api/imagekit', require('./routes/imagekit'));
+app.use('/api/tenants', require('./routes/tenants'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
