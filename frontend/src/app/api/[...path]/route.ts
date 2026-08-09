@@ -1,29 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-
-let expressApp: any = null;
-
-function getExpressApp() {
-  if (!expressApp) {
-    try {
-      // Dynamic require bypasses Turbopack static module tracing
-      const dynamicRequire = typeof (globalThis as any).__non_webpack_require__ !== 'undefined'
-        ? (globalThis as any).__non_webpack_require__
-        : eval('require');
-      expressApp = dynamicRequire('../../../../../backend/server');
-    } catch (e) {
-      console.error('[Backend Load Error]:', e);
-    }
-  }
-  return expressApp;
-}
+// Direct import so Vercel bundler statically includes backend/server.js in the serverless function
+// @ts-ignore
+import expressApp from '../../../../../backend/server';
 
 async function handleProxy(req: NextRequest) {
   try {
     const url = new URL(req.url);
 
-    // 1. If BACKEND_URL is explicitly set in env, proxy to external backend service
+    const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
     if (BACKEND_URL) {
       const targetUrl = `${BACKEND_URL}${url.pathname}${url.search}`;
       const headers = new Headers(req.headers);
@@ -49,12 +34,10 @@ async function handleProxy(req: NextRequest) {
       });
     }
 
-    // 2. Direct serverless execution of Express app in-memory
-    const backend = getExpressApp();
-    if (backend) {
+    if (expressApp) {
       return new Promise<NextResponse>((resolve) => {
         const http = require('http');
-        const server = http.createServer(backend);
+        const server = http.createServer(expressApp);
         server.listen(0, '127.0.0.1', () => {
           const address = server.address();
           const port = typeof address === 'object' ? address?.port : 0;
