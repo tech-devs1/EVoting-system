@@ -1,18 +1,24 @@
 FROM node:20-alpine
 WORKDIR /app
 
-# Copy root and workspace package files
+# Copy package manifests
 COPY package*.json ./
+COPY frontend/package*.json ./frontend/
 COPY backend/package*.json ./backend/
 
-# Install backend dependencies
-RUN npm install --prefix backend
+# Install dependencies for monorepo
+RUN npm install
 
-# Copy source code
-COPY backend ./backend
+# Copy codebase
+COPY . .
 
-# Environment setup
-ENV NODE_ENV=production
-EXPOSE 5000
+# Build Next.js frontend production bundle
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build --prefix frontend
 
-CMD ["npm", "start", "--prefix", "backend"]
+EXPOSE 3000
+
+# Make start script executable
+RUN chmod +x ./scripts/start-monorepo.sh
+
+CMD ["./scripts/start-monorepo.sh"]
