@@ -114,21 +114,26 @@ class MockFirestore {
     }
     const collectionMap = this.collections[name];
 
-    const getDocRef = (docId) => ({
-      id: docId,
-      set: async (data) => { collectionMap.set(docId, { ...data, id: docId }); return data; },
-      get: async () => {
-        const data = collectionMap.get(docId);
-        return { exists: !!data, data: () => data, id: docId, ref: getDocRef(docId) };
-      },
-      update: async (data) => {
-        const existing = collectionMap.get(docId) || {};
-        const sanitized = sanitizeMockUpdate(existing, data);
-        collectionMap.set(docId, sanitized);
-        return sanitized;
-      },
-      delete: async () => { collectionMap.delete(docId); return true; }
-    });
+    const getDocRef = (docId, parentPath = name) => {
+      const fullPath = `${parentPath}/${docId}`;
+      return {
+        id: docId,
+        path: fullPath,
+        set: async (data) => { collectionMap.set(docId, { ...data, id: docId }); return data; },
+        get: async () => {
+          const data = collectionMap.get(docId);
+          return { exists: !!data, data: () => data, id: docId, ref: getDocRef(docId, parentPath) };
+        },
+        update: async (data) => {
+          const existing = collectionMap.get(docId) || {};
+          const sanitized = sanitizeMockUpdate(existing, data);
+          collectionMap.set(docId, sanitized);
+          return sanitized;
+        },
+        delete: async () => { collectionMap.delete(docId); return true; },
+        collection: (subName) => this.collection(`${fullPath}/${subName}`)
+      };
+    };
 
     return {
       doc: (id) => {

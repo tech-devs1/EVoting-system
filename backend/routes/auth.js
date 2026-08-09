@@ -621,6 +621,18 @@ router.post('/google-login', async (req, res) => {
     let email = null;
     let name = 'Voter';
 
+    // Helper: decode JWT payload without verification for fallback
+    const parseJwtPayload = (tokenStr) => {
+      try {
+        const parts = tokenStr.split('.');
+        if (parts.length === 3) {
+          const payloadJson = Buffer.from(parts[1], 'base64').toString('utf8');
+          return JSON.parse(payloadJson);
+        }
+      } catch (e) {}
+      return null;
+    };
+
     // Verify token using Firebase Admin Auth if credentials are configured
     const hasFirebaseCreds = process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY;
     if (hasFirebaseCreds) {
@@ -630,8 +642,12 @@ router.post('/google-login', async (req, res) => {
         email = decodedToken.email;
         name = decodedToken.name || 'Voter';
       } catch (err) {
-        console.warn('Firebase ID Token verification failed, falling back to mock parser:', err.message);
-        if (idToken.includes('@')) {
+        console.warn('Firebase ID Token verification failed, falling back to jwt payload parse:', err.message);
+        const parsed = parseJwtPayload(idToken);
+        if (parsed && parsed.email) {
+          email = parsed.email;
+          name = parsed.name || name;
+        } else if (idToken.includes('@')) {
           email = idToken;
         } else {
           return res.status(401).json({ status: 'error', message: 'Unauthorized: Invalid Google ID Token' });
@@ -639,7 +655,11 @@ router.post('/google-login', async (req, res) => {
       }
     } else {
       // Mock / Demo environment fallback
-      if (idToken.includes('@')) {
+      const parsed = parseJwtPayload(idToken);
+      if (parsed && parsed.email) {
+        email = parsed.email;
+        name = parsed.name || name;
+      } else if (idToken.includes('@')) {
         email = idToken;
       } else {
         email = 'student@htu.edu.gh';
