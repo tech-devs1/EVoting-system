@@ -21,41 +21,27 @@ async function runTest() {
   console.log('🚀 STARTING FULL ELECTION CYCLE INTEGRATION TEST (PORT 5001)');
   console.log('================================================================');
 
-  const { fork } = require('child_process');
-  let serverProcess;
   try {
-    // 1. Start the server on port 5001 if not already running
-    console.log('Checking health status of server...');
-    let healthy = false;
-    try {
-      const res = await fetch(`${BASE_URL}/health`);
-      if (res.ok) healthy = true;
-    } catch (e) {}
+    // 1. Start the server on port 5001 inside the SAME process to share memory singleton database
+    console.log('Starting backend server in the same process on port 5001...');
+    process.env.PORT = '5001';
+    process.env.NODE_ENV = 'development';
+    require('../server.js');
+    await delay(2000); // Wait for server to bind
 
-    if (!healthy) {
-      console.log('Spawning backend server process on port 5001...');
-      const serverPath = require.resolve('../server.js');
-      serverProcess = fork(serverPath, [], {
-        env: { ...process.env, PORT: '5001', NODE_ENV: 'development' },
-        stdio: 'ignore'
-      });
-
-      for (let i = 0; i < 15; i++) {
-        await delay(1000);
-        try {
-          const res = await fetch(`${BASE_URL}/health`);
-          if (res.ok) {
-            healthy = true;
-            break;
-          }
-        } catch (e) {}
-      }
-    }
-
-    if (!healthy) {
-      throw new Error('Server on port 5001 could not be reached after startup.');
-    }
     console.log('✅ Connected to running backend server!');
+
+    // 1.5 Seed the tenant & admin credentials
+    console.log('\n--- PHASE 0.5: SEEDING TENANT AND ADMIN ---');
+    const tenantRef = db.collection('tenants').doc(DEFAULT_TENANT_ID);
+    const hashedAdminPassword = await bcrypt.hash('admin080', 10);
+    await tenantRef.set({
+      name: 'COMPSSA',
+      adminEmail: 'admin@htu.edu.gh',
+      adminPassword: hashedAdminPassword,
+      createdAt: Date.now()
+    });
+    console.log('✅ Mock tenant/admin seeded in DB.');
 
     // 2. Prepare mock voter rolls in database
     console.log('\n--- PHASE 1: PREPARING VOTER ROLLS ---');
@@ -538,12 +524,10 @@ async function runTest() {
     console.log('================================================================');
     console.log('🎉 ALL INTEGRATION TESTS PASSED SUCCESSFULLY! FULL CYCLE TEST COMPLETE.');
     console.log('================================================================');
-    if (serverProcess) serverProcess.kill();
     process.exit(0);
 
   } catch (error) {
     console.error('\n❌ TEST FAILED:', error);
-    if (serverProcess) serverProcess.kill();
     process.exit(1);
   }
 }

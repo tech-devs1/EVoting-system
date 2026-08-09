@@ -1,5 +1,5 @@
 /* ============================================
-   COMPSSA — Design Tokens
+   COMPSSA — Design Tokens (Lightweight & Simple)
    ============================================ */
 
 :root {
@@ -68,12 +68,12 @@
   --bg-tertiary: #F1F5F9;
   --bg-card: #FFFFFF;
   --bg-sidebar: #FFFFFF;
-  --bg-hover: rgba(241, 245, 249, 0.8);
+  --bg-hover: #F1F5F9;
   --bg-active: #EFF6FF;
   --bg-input: #FFFFFF;
-  --bg-glass: rgba(255, 255, 255, 0.72);
-  --bg-glass-strong: rgba(255, 255, 255, 0.88);
-  --bg-overlay: rgba(15, 23, 42, 0.5);
+  --bg-glass: #FFFFFF;
+  --bg-glass-strong: #FFFFFF;
+  --bg-overlay: rgba(15, 23, 42, 0.4);
   --bg-code: #F1F5F9;
   --bg-badge: #F1F5F9;
 
@@ -93,9 +93,9 @@
   --icon-secondary: #94A3B8;
 
   /* ---- Typography ---- */
-  --font-display: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --text-xs: 0.75rem;     /* 12px */
   --text-sm: 0.875rem;    /* 14px */
@@ -151,29 +151,30 @@
   --space-28: 7rem;
   --space-32: 8rem;
 
-  /* ---- Shadows ---- */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
-  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.04);
+  /* ---- Shadows (Simplified and Flat) ---- */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 10px 15px rgba(0, 0, 0, 0.05);
+  --shadow-2xl: 0 15px 25px rgba(0, 0, 0, 0.1);
+  --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 
-  --shadow-glow-blue: 0 0 24px rgba(37, 99, 235, 0.25);
-  --shadow-glow-green: 0 0 24px rgba(16, 185, 129, 0.25);
-  --shadow-glow-purple: 0 0 24px rgba(124, 58, 237, 0.25);
-  --shadow-glow-red: 0 0 24px rgba(239, 68, 68, 0.25);
-  --shadow-glow-amber: 0 0 24px rgba(245, 158, 11, 0.25);
+  /* Eliminated heavy neon glows, keeping them as plain border accents */
+  --shadow-glow-blue: 0 0 0 1px var(--color-primary);
+  --shadow-glow-green: 0 0 0 1px var(--color-success);
+  --shadow-glow-purple: 0 0 0 1px var(--color-purple);
+  --shadow-glow-red: 0 0 0 1px var(--color-danger);
+  --shadow-glow-amber: 0 0 0 1px var(--color-warning);
 
   /* ---- Border Radius ---- */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 20px;
-  --radius-3xl: 24px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
   --radius-full: 9999px;
 
   /* ---- Transitions ---- */
@@ -184,10 +185,10 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-  --duration-fast: 150ms;
-  --duration-base: 250ms;
-  --duration-slow: 350ms;
-  --duration-slower: 500ms;
+  --duration-fast: 100ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 400ms;
 
   --transition-fast: var(--duration-fast) var(--ease-default);
   --transition-base: var(--duration-base) var(--ease-default);
@@ -207,41 +208,50 @@
   --z-max: 9999;
 
   /* ---- Layout ---- */
-  --sidebar-width: 264px;
-  --sidebar-collapsed: 72px;
-  --topbar-height: 64px;
-  --bottom-nav-height: 68px;
-  --content-max-width: 1400px;
-  --container-padding: var(--space-6);
+  --sidebar-width: 240px;
+  --sidebar-collapsed: 64px;
+  --topbar-height: 56px;
+  --bottom-nav-height: 60px;
+  --content-max-width: 1200px;
+  --container-padding: var(--space-4);
 
-  /* ---- Breakpoints (for reference) ---- */
-  /* sm: 640px, md: 768px, lg: 1024px, xl: 1280px, 2xl: 1536px */
+  /* ---- Glassmorphism (Replaced with flat borders and transparent backgrounds) ---- */
+  --glass-blur: 0px;
+  --glass-blur-strong: 0px;
+  --glass-border: 1px solid var(--border-color);
 
-  /* ---- Glassmorphism ---- */
-  --glass-blur: 16px;
-  --glass-blur-strong: 24px;
-  --glass-border: 1px solid rgba(255, 255, 255, 0.18);
+  /* ---- Gradient Presets (Simplified to flat clean fallbacks or simple vertical gradients) ---- */
+  --gradient-primary: linear-gradient(to bottom, #2563EB, #1D4ED8);
+  --gradient-hero: #0F172A;
+  --gradient-hero-light: #F8FAFC;
+  --gradient-success: #10B981;
+  --gradient-danger: #EF4444;
+  --gradient-warm: #F59E0B;
+  --gradient-cool: #2563EB;
+  --gradient-card: #FFFFFF;
+  --gradient-glass: #FFFFFF;
+  --gradient-mesh: transparent;
 }
 
 /* ============================================
-   Dark Theme
+   Dark Theme (Simplified)
    ============================================ */
 [data-theme="dark"] {
   --bg-primary: #0F172A;
   --bg-secondary: #1E293B;
-  --bg-tertiary: #293548;
+  --bg-tertiary: #1E293B;
   --bg-card: #1E293B;
-  --bg-sidebar: #151F32;
-  --bg-hover: rgba(51, 65, 85, 0.6);
-  --bg-active: rgba(37, 99, 235, 0.15);
+  --bg-sidebar: #1E293B;
+  --bg-hover: #334155;
+  --bg-active: #334155;
   --bg-input: #1E293B;
-  --bg-glass: rgba(15, 23, 42, 0.75);
-  --bg-glass-strong: rgba(15, 23, 42, 0.9);
-  --bg-overlay: rgba(0, 0, 0, 0.7);
-  --bg-code: #293548;
-  --bg-badge: #293548;
+  --bg-glass: #1E293B;
+  --bg-glass-strong: #1E293B;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --bg-code: #1E293B;
+  --bg-badge: #334155;
 
-  --text-primary: #F1F5F9;
+  --text-primary: #F8FAFC;
   --text-secondary: #94A3B8;
   --text-tertiary: #64748B;
   --text-placeholder: #475569;
@@ -254,38 +264,33 @@
   --icon-primary: #94A3B8;
   --icon-secondary: #64748B;
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 15px 25px rgba(0, 0, 0, 0.15);
 
-  --shadow-glow-blue: 0 0 30px rgba(37, 99, 235, 0.2);
-  --shadow-glow-green: 0 0 30px rgba(16, 185, 129, 0.2);
-  --shadow-glow-purple: 0 0 30px rgba(124, 58, 237, 0.2);
-  --shadow-glow-red: 0 0 30px rgba(239, 68, 68, 0.2);
+  --shadow-glow-blue: 0 0 0 1px var(--color-primary);
+  --shadow-glow-green: 0 0 0 1px var(--color-success);
+  --shadow-glow-purple: 0 0 0 1px var(--color-purple);
+  --shadow-glow-red: 0 0 0 1px var(--color-danger);
 
-  --glass-border: 1px solid rgba(255, 255, 255, 0.06);
+  --glass-border: 1px solid var(--border-color);
 
-  --color-success-bg: rgba(34, 197, 94, 0.1);
-  --color-warning-bg: rgba(245, 158, 11, 0.1);
-  --color-danger-bg: rgba(239, 68, 68, 0.1);
-  --color-info-bg: rgba(59, 130, 246, 0.1);
-}
+  --color-success-bg: rgba(34, 197, 94, 0.08);
+  --color-warning-bg: rgba(245, 158, 11, 0.08);
+  --color-danger-bg: rgba(239, 68, 68, 0.08);
+  --color-info-bg: rgba(59, 130, 246, 0.08);
 
-/* ---- Gradient Presets ---- */
-:root {
-  --gradient-primary: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
-  --gradient-hero: linear-gradient(135deg, #0F172A 0%, #1E3A8A 40%, #7C3AED 100%);
-  --gradient-hero-light: linear-gradient(135deg, #EFF6FF 0%, #F5F3FF 50%, #ECFDF5 100%);
-  --gradient-success: linear-gradient(135deg, #10B981 0%, #22C55E 100%);
-  --gradient-danger: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-  --gradient-warm: linear-gradient(135deg, #EF4444 0%, #F59E0B 100%);
-  --gradient-cool: linear-gradient(135deg, #2563EB 0%, #06B6D4 100%);
-  --gradient-card: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
-  --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-  --gradient-mesh: radial-gradient(at 40% 20%, rgba(37, 99, 235, 0.15) 0px, transparent 50%),
-                   radial-gradient(at 80% 0%, rgba(124, 58, 237, 0.12) 0px, transparent 50%),
-                   radial-gradient(at 0% 50%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+  --gradient-primary: linear-gradient(to bottom, #3B82F6, #2563EB);
+  --gradient-hero: #0F172A;
+  --gradient-hero-light: #0F172A;
+  --gradient-success: #10B981;
+  --gradient-danger: #EF4444;
+  --gradient-warm: #F59E0B;
+  --gradient-cool: #3B82F6;
+  --gradient-card: #1E293B;
+  --gradient-glass: #1E293B;
+  --gradient-mesh: transparent;
 }

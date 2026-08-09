@@ -42,16 +42,12 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
   const [requestLoading, setRequestLoading] = useState(false);
   const [fallbackOtp, setFallbackOtp] = useState('');
 
-  // Map of position -> selected candidateId (or candidateId:yes / candidateId:no)
+  // Map of position -> selected candidateId
   const [selections, setSelections] = useState<Record<string, string>>({});
 
   // Map of position -> auditTxId for positions already voted in this session
   const [votedPositions, setVotedPositions] = useState<Record<string, { candidateId: string; auditTxId: string }>>({});
   const [castingPosition, setCastingPosition] = useState<string | null>(null);
-
-  // Modals state
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [activeProfileCandidate, setActiveProfileCandidate] = useState<Candidate | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -62,7 +58,6 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
         const candidatesRes = await apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${electionId}`);
         if (candidatesRes.status === 'success') setCandidates(candidatesRes.data);
 
-        // Fetch OTP access control lock status for this election
         const accessRes = await apiRequest<{ status: string; data: { unlocked: boolean } }>(`/elections/${electionId}/access-status`);
         if (accessRes.status === 'success') {
           setIsLocked(!accessRes.data.unlocked);
@@ -125,7 +120,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
       return;
     }
 
-    if (!confirm(`Are you sure you want to cast your vote for ${position}? This action is cryptographically recorded and cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to cast your vote for ${position}? This choice is final and cryptographically logged.`)) {
       return;
     }
 
@@ -154,15 +149,33 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
   };
 
   if (loading) {
-    return <p style={{ color: 'var(--text-secondary)', padding: 'var(--space-8)', textAlign: 'center' }}>Synchronizing candidate profiles...</p>;
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-secondary, #475569)', fontSize: '13px' }}>Synchronizing candidate profiles...</p>
+      </div>
+    );
   }
 
   if (!election) {
     return (
-      <div className="empty-state">
-        <h3>Election Not Found</h3>
-        <p>No valid active election parameters were passed to this terminal session.</p>
-        <Link href="/voter/elections" className="btn btn-primary" style={{ marginTop: 'var(--space-4)' }}>
+      <div style={{
+        textAlign: 'center',
+        padding: '4rem 2rem',
+        border: '1px dashed var(--border-color)',
+        borderRadius: '8px',
+        backgroundColor: 'var(--bg-secondary)'
+      }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Election Not Found</h3>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0 1.5rem 0' }}>No valid active election parameters were passed to this terminal session.</p>
+        <Link href="/voter/elections" style={{
+          padding: '0.55rem 1rem',
+          borderRadius: '6px',
+          backgroundColor: 'var(--color-primary, #2563EB)',
+          color: '#ffffff',
+          fontWeight: 600,
+          textDecoration: 'none',
+          fontSize: '12px'
+        }}>
           Back to Eligible Elections
         </Link>
       </div>
@@ -181,7 +194,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
   const isAllPositionsVoted = totalPositionsCount > 0 && votedCount === totalPositionsCount;
 
   const handleCardClick = (position: string, candId: string) => {
-    if (votedPositions[position]) return; // Position locked
+    if (votedPositions[position]) return; // locked
     setSelections(prev => {
       if (prev[position] === candId) {
         const next = { ...prev };
@@ -192,78 +205,161 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
     });
   };
 
-  const openProfileModal = (cand: Candidate, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setActiveProfileCandidate(cand);
-    setIsProfileModalOpen(true);
-  };
-
   return (
-    <div className="animate-page-enter" style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      {/* Top Breadcrumb Header */}
-      <div style={{ marginBottom: 'var(--space-6)' }}>
-        <Link href="/voter/elections" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-2)' }}>
-          <ArrowLeft size={16} /> Back to Eligible Elections
+    <div style={{ maxWidth: '800px', margin: '0 auto', fontFamily: 'var(--font-body, system-ui, sans-serif)' }}>
+
+      {/* Top Header */}
+      <div style={{ marginBottom: '1.75rem' }}>
+        <Link href="/voter/elections" style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          color: 'var(--text-secondary, #475569)',
+          fontSize: '12px',
+          fontWeight: 600,
+          textDecoration: 'none',
+          marginBottom: '0.75rem'
+        }}>
+          <ArrowLeft size={14} /> Back to Eligible Elections
         </Link>
-        <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', margin: 0 }}>{election.title}</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)' }}>{election.description}</p>
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', margin: 0 }}>{election.title}</h2>
+        <p style={{ color: 'var(--text-secondary, #475569)', fontSize: '13px', margin: '0.25rem 0 0 0', lineHeight: 1.4 }}>{election.description}</p>
       </div>
 
-      {/* Access Control Verification Modal */}
       {isLocked ? (
-        <div className="card" style={{ padding: 'var(--space-8)', textAlign: 'center', background: 'var(--surface-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xl)' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--space-4) auto' }}>
-            <Lock size={32} />
+        <div style={{
+          backgroundColor: 'var(--bg-secondary, #FFFFFF)',
+          border: '1px solid var(--border-color, #E2E8F0)',
+          borderRadius: 'var(--radius-xl, 12px)',
+          padding: '2.5rem 1.5rem',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--color-primary-50, #EFF6FF)',
+            color: 'var(--color-primary, #2563EB)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.25rem auto'
+          }}>
+            <Lock size={22} />
           </div>
-          <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)', marginBottom: 'var(--space-2)' }}>Access Security Verification Required</h3>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '500px', margin: '0 auto var(--space-6) auto', fontSize: 'var(--text-sm)' }}>
-            To unlock the voting portal for <strong>{election.title}</strong>, please request a 6-digit verification code sent to your registered email/SMS.
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem 0' }}>Access Verification Required</h3>
+          <p style={{
+            fontSize: '13px',
+            color: 'var(--text-secondary, #475569)',
+            maxWidth: '440px',
+            margin: '0 auto 1.5rem auto',
+            lineHeight: 1.5
+          }}>
+            Please request a verification code sent to your registered email/SMS to securely unlock the ballot for <strong>{election.title}</strong>.
           </p>
 
           {!otpRequestSent ? (
             <div>
               {otpError && (
-                <div className="alert alert-danger" style={{ maxWidth: '400px', margin: '0 auto var(--space-4) auto' }}>
-                  <AlertCircle size={16} /> {otpError}
-                </div>
+                <div style={{
+                  maxWidth: '360px',
+                  margin: '0 auto 1rem auto',
+                  padding: '0.65rem',
+                  backgroundColor: 'var(--color-danger-bg)',
+                  color: 'var(--color-danger)',
+                  border: '1px solid var(--border-error)',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  textAlign: 'left'
+                }}>{otpError}</div>
               )}
-              <button onClick={handleRequestOtp} disabled={requestLoading} className="btn btn-primary btn-lg" style={{ minWidth: '220px' }}>
-                {requestLoading ? 'Sending Verification Code...' : 'Request Access Code'}
+              <button onClick={handleRequestOtp} disabled={requestLoading} style={{
+                padding: '0.65rem 1.25rem',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-primary, #2563EB)',
+                color: '#ffffff',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '13px'
+              }}>
+                {requestLoading ? 'Sending...' : 'Request Access Code'}
               </button>
             </div>
           ) : (
-            <form onSubmit={handleVerifyAccessOtp} style={{ maxWidth: '360px', margin: '0 auto' }}>
+            <form onSubmit={handleVerifyAccessOtp} style={{ maxWidth: '320px', margin: '0 auto' }}>
               {fallbackOtp && (
-                <div className="alert alert-warning" style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-xs)' }}>
-                  🔑 <strong>Demo Access Code:</strong> {fallbackOtp}
+                <div style={{
+                  padding: '0.65rem',
+                  backgroundColor: 'var(--color-warning-bg)',
+                  color: 'var(--color-warning)',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  marginBottom: '1rem',
+                  fontWeight: 600
+                }}>
+                  🔑 Demo Code: {fallbackOtp}
                 </div>
               )}
 
               {otpError && (
-                <div className="alert alert-danger" style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-xs)' }}>
-                  {otpError}
-                </div>
+                <div style={{
+                  padding: '0.65rem',
+                  backgroundColor: 'var(--color-danger-bg)',
+                  color: 'var(--color-danger)',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  marginBottom: '1rem'
+                }}>{otpError}</div>
               )}
 
-              <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-                <label className="form-label">Enter 6-Digit Verification Code</label>
+              <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>Enter 6-Digit Code</label>
                 <input
                   type="text"
                   maxLength={6}
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="123456"
-                  className="form-input"
-                  style={{ textAlign: 'center', letterSpacing: '8px', fontSize: '1.4rem', fontWeight: 'bold' }}
+                  placeholder="000000"
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-input)',
+                    color: 'var(--text-primary)',
+                    textAlign: 'center',
+                    letterSpacing: '6px',
+                    fontSize: '1.25rem',
+                    fontWeight: 'bold'
+                  }}
                   required
                 />
               </div>
 
-              <button type="submit" disabled={requestLoading || otpCode.length !== 6} className="btn btn-primary btn-block btn-lg">
-                {requestLoading ? 'Verifying Code...' : 'Unlock Voting Portal'}
+              <button type="submit" disabled={requestLoading || otpCode.length !== 6} style={{
+                width: '100%',
+                padding: '0.65rem',
+                backgroundColor: 'var(--color-primary, #2563EB)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}>
+                {requestLoading ? 'Verifying...' : 'Unlock Ballot'}
               </button>
 
-              <button type="button" onClick={handleRequestOtp} disabled={requestLoading} className="btn btn-ghost btn-sm" style={{ marginTop: 'var(--space-3)' }}>
+              <button type="button" onClick={handleRequestOtp} disabled={requestLoading} style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-tertiary)',
+                fontSize: '11px',
+                fontWeight: 600,
+                marginTop: '0.75rem',
+                cursor: 'pointer'
+              }}>
                 Resend Code
               </button>
             </form>
@@ -271,35 +367,58 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
         </div>
       ) : (
         <div>
-          {/* Progress Tracker Banner */}
-          <div className="card" style={{ padding: 'var(--space-4) var(--space-6)', marginBottom: 'var(--space-6)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)', borderLeft: '4px solid #3b82f6' }}>
+          {/* Flat Session Bar */}
+          <div style={{
+            backgroundColor: 'var(--bg-secondary, #FFFFFF)',
+            border: '1px solid var(--border-color, #E2E8F0)',
+            borderLeft: '4px solid var(--color-primary, #2563EB)',
+            borderRadius: 'var(--radius-md, 8px)',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '0.5rem'
+          }}>
             <div>
-              <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-tertiary)', fontWeight: 'bold' }}>Voting Progress</span>
-              <h4 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)' }}>
-                {votedCount} of {totalPositionsCount} Positions Voted
-              </h4>
+              <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Voting Progress</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{votedCount} of {totalPositionsCount} Positions Cast</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <ShieldCheck size={20} style={{ color: '#22c55e' }} />
-              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Cryptographically Audited Session</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--color-success)' }}>
+              <ShieldCheck size={14} /> <span>Audited Secure Session</span>
             </div>
           </div>
 
-          {/* All Positions Voted Celebration Banner */}
           {isAllPositionsVoted && (
-            <div className="card" style={{ padding: 'var(--space-8)', textAlign: 'center', background: 'linear-gradient(135deg, rgba(34,197,94,0.1), rgba(59,130,246,0.1))', border: '1px solid rgba(34,197,94,0.3)', marginBottom: 'var(--space-8)', borderRadius: 'var(--radius-xl)' }}>
-              <Sparkles size={48} style={{ color: '#22c55e', margin: '0 auto var(--space-4) auto' }} />
-              <h3 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: '#22c55e', marginBottom: 'var(--space-2)' }}>Voting Complete across All Positions!</h3>
-              <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto var(--space-6) auto' }}>
-                Your choices for all positions in <strong>{election.title}</strong> have been securely recorded in the tamper-proof ledger.
+            <div style={{
+              backgroundColor: 'var(--bg-secondary, #FFFFFF)',
+              border: '1px solid var(--color-success)',
+              borderRadius: 'var(--radius-xl, 12px)',
+              padding: '2.5rem 1.5rem',
+              textAlign: 'center',
+              marginBottom: '2rem'
+            }}>
+              <Sparkles size={36} style={{ color: 'var(--color-success)', marginBottom: '1rem' }} />
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-success)', margin: '0 0 0.5rem 0' }}>All Ballots Cast Successfully!</h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem auto', lineHeight: 1.5 }}>
+                Your choices have been securely locked and sequentialized with cryptographic signatures. You may now safely leave this portal.
               </p>
-              <Link href="/voter/elections" className="btn btn-primary btn-lg">
-                Return to Elections Portal
+              <Link href="/voter/elections" style={{
+                padding: '0.6rem 1.25rem',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-primary, #2563EB)',
+                color: '#ffffff',
+                fontWeight: 600,
+                textDecoration: 'none',
+                fontSize: '12px'
+              }}>
+                Return to Elections List
               </Link>
             </div>
           )}
 
-          {/* Position Cards Grid */}
+          {/* List of Positions */}
           {positions.map((pos, posIdx) => {
             const posCandidates = positionGroups[pos];
             const isPosVoted = !!votedPositions[pos];
@@ -307,86 +426,144 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
             const selectedCandId = selections[pos];
 
             return (
-              <div className="card" key={pos} style={{ marginBottom: 'var(--space-8)', padding: 'var(--space-6)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-color)' }}>
+              <div key={pos} style={{
+                backgroundColor: 'var(--bg-secondary, #FFFFFF)',
+                border: '1px solid var(--border-color, #E2E8F0)',
+                borderRadius: 'var(--radius-xl, 12px)',
+                padding: '1.5rem',
+                marginBottom: '1.5rem'
+              }}>
+                {/* Position Title & Tag */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderBottom: '1px solid var(--border-light, #F1F5F9)',
+                  paddingBottom: '0.75rem',
+                  marginBottom: '1.25rem'
+                }}>
                   <div>
-                    <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '1px', color: '#3b82f6', fontWeight: 'bold' }}>Position {posIdx + 1} of {totalPositionsCount}</span>
-                    <h3 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)' }}>{pos}</h3>
+                    <span style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 700, textTransform: 'uppercase' }}>Position {posIdx + 1} of {totalPositionsCount}</span>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0.15rem 0 0 0' }}>{pos}</h3>
                   </div>
 
                   {isPosVoted ? (
-                    <span className="badge" style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <CheckCircle2 size={16} /> Vote Recorded
+                    <span style={{ fontSize: '11px', color: 'var(--color-success)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle2 size={13} /> Vote Logged
                     </span>
                   ) : (
-                    <span className="badge badge-info" style={{ padding: '6px 12px', borderRadius: '20px' }}>
-                      Select 1 Candidate
-                    </span>
+                    <span style={{ fontSize: '10px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>Select 1</span>
                   )}
                 </div>
 
-                {/* Candidates List for this Position */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+                {/* Candidate Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                  gap: '1rem',
+                  marginBottom: '1.25rem'
+                }}>
                   {posCandidates.map((cand) => {
-                    const isSelected = selectedCandId === cand.id || selectedCandId === `${cand.id}:yes`;
+                    const isSelected = selectedCandId === cand.id;
                     return (
                       <div
                         key={cand.id}
                         onClick={() => handleCardClick(pos, cand.id)}
-                        className={`card card-hover ${isSelected ? 'selected' : ''}`}
                         style={{
-                          padding: 'var(--space-4)',
+                          backgroundColor: isSelected ? 'var(--bg-active, #EFF6FF)' : 'var(--bg-secondary, #FFFFFF)',
+                          border: isSelected ? '1.5px solid var(--color-primary, #2563EB)' : '1px solid var(--border-color, #E2E8F0)',
+                          borderRadius: 'var(--radius-lg, 10px)',
+                          padding: '1rem',
                           cursor: isPosVoted ? 'default' : 'pointer',
-                          border: isSelected ? '2px solid #3b82f6' : '1px solid var(--border-color)',
-                          background: isSelected ? 'rgba(59, 130, 246, 0.05)' : 'var(--surface-card)',
-                          opacity: isPosVoted && !isSelected ? 0.6 : 1,
-                          position: 'relative'
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          opacity: isPosVoted && !isSelected ? 0.65 : 1,
+                          transition: 'all var(--transition-fast)'
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                          <div style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden', background: 'var(--surface-subtle)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {cand.photoUrl ? (
-                              <img src={cand.photoUrl} alt={cand.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              <User size={24} style={{ color: 'var(--text-tertiary)' }} />
-                            )}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            {cand.ballotNumber && (
-                              <span style={{ fontSize: '11px', background: '#3b82f6', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
-                                Ballot #{cand.ballotNumber}
-                              </span>
-                            )}
-                            <h4 style={{ margin: '4px 0 0 0', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {cand.name}
-                            </h4>
-                          </div>
-                          {isSelected && (
-                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Check size={16} />
-                            </div>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          overflow: 'hidden',
+                          backgroundColor: 'var(--bg-tertiary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {cand.photoUrl ? (
+                            <img src={cand.photoUrl} alt={cand.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <User size={18} style={{ color: 'var(--text-tertiary)' }} />
                           )}
                         </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {cand.ballotNumber && (
+                            <span style={{ fontSize: '9px', backgroundColor: 'var(--color-primary)', color: '#ffffff', padding: '1px 4px', borderRadius: '3px', fontWeight: 700 }}>
+                              #{cand.ballotNumber}
+                            </span>
+                          )}
+                          <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {cand.name}
+                          </h4>
+                        </div>
+
+                        {isSelected && (
+                          <div style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            backgroundColor: 'var(--color-primary, #2563EB)',
+                            color: '#ffffff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <Check size={11} />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
 
-                {/* Per-Position Cast Vote Button */}
+                {/* Submit action panel */}
                 {isPosVoted ? (
-                  <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-                    <span>✅ Your ballot for <strong>{pos}</strong> has been cast and recorded.</span>
-                    <span style={{ fontSize: '11px', fontFamily: 'monospace', opacity: 0.8 }}>Hash: {posAudit.auditTxId.substring(0, 16)}...</span>
+                  <div style={{
+                    backgroundColor: 'var(--color-success-bg)',
+                    color: 'var(--color-success)',
+                    padding: '0.65rem 1rem',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <span>Your vote has been securely submitted.</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>ID: {posAudit.auditTxId.substring(0, 12)}...</span>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button
                       onClick={() => handleCastVoteForPosition(pos)}
                       disabled={!selectedCandId || castingPosition === pos}
-                      className="btn btn-primary"
-                      style={{ minWidth: '180px' }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: selectedCandId ? 'var(--color-primary, #2563EB)' : 'var(--bg-tertiary)',
+                        color: selectedCandId ? '#ffffff' : 'var(--text-tertiary)',
+                        fontWeight: 600,
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        cursor: selectedCandId ? 'pointer' : 'not-allowed'
+                      }}
                     >
-                      {castingPosition === pos ? 'Casting Vote...' : `Cast Vote for ${pos}`}
+                      {castingPosition === pos ? 'Casting...' : `Submit Vote for ${pos}`}
                     </button>
                   </div>
                 )}

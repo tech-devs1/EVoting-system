@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Direct import so Vercel bundler statically includes backend/server.js in the serverless function
-// @ts-ignore
-import expressApp from '../../../../../backend/server';
-
 let cachedPort: number | null = null;
 let serverPromise: Promise<number> | null = null;
+
+// Lazily load expressApp at runtime to avoid Next.js static build compiling backend peer dependencies
+let expressApp: any = null;
+function getExpressApp() {
+  if (expressApp) return expressApp;
+  try {
+    expressApp = require('../../../../../backend/server');
+  } catch (err) {
+    console.error('[API Proxy] Failed to load expressApp lazily:', err);
+  }
+  return expressApp;
+}
 
 function ensureBackendListening(): Promise<number> {
   if (cachedPort) return Promise.resolve(cachedPort);
@@ -14,7 +22,7 @@ function ensureBackendListening(): Promise<number> {
   serverPromise = new Promise((resolve, reject) => {
     try {
       const http = require('http');
-      const server = http.createServer(expressApp);
+      const server = http.createServer(getExpressApp());
       server.listen(0, '127.0.0.1', () => {
         const address = server.address();
         const port = typeof address === 'object' && address ? address.port : 5000;
@@ -66,7 +74,7 @@ async function handleProxy(req: NextRequest) {
       });
     }
 
-    if (expressApp) {
+    if (getExpressApp()) {
       const port = await ensureBackendListening();
       const targetUrl = `http://127.0.0.1:${port}${url.pathname}${url.search}`;
 

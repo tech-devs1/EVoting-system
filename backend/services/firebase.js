@@ -78,6 +78,27 @@ class MockFirestore {
     };
   }
 
+  async runTransaction(updateFunction) {
+    const transaction = {
+      get: async (docRef) => {
+        return docRef.get();
+      },
+      set: (docRef, data, options) => {
+        docRef.set(data, options);
+        return transaction;
+      },
+      update: (docRef, data) => {
+        docRef.update(data);
+        return transaction;
+      },
+      delete: (docRef) => {
+        docRef.delete();
+        return transaction;
+      }
+    };
+    return updateFunction(transaction);
+  }
+
   batch() {
     const ops = [];
     return {
@@ -200,7 +221,7 @@ class MockFirestore {
   }
 }
 
-const { initMySQL, db: mysqlDb } = require('./mysql');
+const { initMySQL, db: mysqlDb, isMySQLConnected } = require('./mysql');
 
 // Auto-start MySQL connection check
 initMySQL().catch(err => console.warn('MySQL auto-init:', err.message));
@@ -208,7 +229,10 @@ initMySQL().catch(err => console.warn('MySQL auto-init:', err.message));
 const mockInstance = new MockFirestore();
 const db = new Proxy({}, {
   get(target, prop) {
-    const activeDb = process.env.MYSQL_URL || process.env.MYSQL_HOST ? mysqlDb : (firestoreDb || initFirestore() || mysqlDb || mockInstance);
+    const useMySQL = (process.env.MYSQL_URL || process.env.MYSQL_HOST) && isMySQLConnected();
+    const activeDb = useMySQL
+      ? mysqlDb
+      : (firestoreDb || initFirestore() || (isMySQLConnected() ? mysqlDb : mockInstance));
     const value = activeDb[prop];
     return typeof value === 'function' ? value.bind(activeDb) : value;
   }
