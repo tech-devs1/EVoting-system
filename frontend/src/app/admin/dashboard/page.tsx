@@ -714,17 +714,26 @@ export default function OrganizationElectionHub() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Category / Type</label>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {['Executive', 'Departmental', 'Student Council', 'General Assembly', 'Board'].map(cat => (
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Election Category / Type *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Type election category (e.g. Hall Election, Alumni Executive, Faculty...)"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', marginBottom: '0.65rem' }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Quick suggestions:</span>
+                    {['Executive', 'Departmental', 'Student Council', 'General Assembly', 'Hall Election', 'Faculty'].map(cat => (
                       <button
                         key={cat}
                         type="button"
                         onClick={() => setCategory(cat)}
                         style={{
-                          padding: '0.5rem 0.85rem',
-                          borderRadius: '8px',
-                          fontSize: '0.85rem',
+                          padding: '0.35rem 0.65rem',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
                           fontWeight: 600,
                           border: category === cat ? '1.5px solid #2563eb' : '1px solid var(--border-color)',
                           backgroundColor: category === cat ? 'rgba(37, 99, 235, 0.1)' : 'var(--bg-input)',
