@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Poppins } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -28,11 +28,14 @@ const poppins = Poppins({
 import LoadingScreen from "./LoadingScreen";
 import ServiceWorkerRegistrar from "./ServiceWorkerRegistrar";
 
+export const viewport: Viewport = {
+  themeColor: "#2563eb",
+};
+
 export const metadata: Metadata = {
   title: "HTU Elect ✓ - Secure Digital Elections & Cryptographic Verification",
   description: "Secure, digital, and end-to-end verifiable e-voting for organizations. Audit-trail verified elections using SHA-256 with real-time AI security diagnostics.",
   manifest: "/manifest.json",
-  themeColor: "#2563eb",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

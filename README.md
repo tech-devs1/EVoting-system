@@ -1,6 +1,6 @@
-# 🗳️ COMPSSA – Secure Electronic Voting System
+# 🗳️ HTU-Elect – Secure Electronic Voting System
 
-A full-stack, PWA-ready electronic voting platform built for HTU. Features real-time vote tracking, fraud monitoring, admin dashboards, candidate image uploads via ImageKit, and Firebase-backed authentication and data storage.
+A full-stack, PWA-ready electronic voting platform built for HTU. Features real-time vote tracking, fraud monitoring, admin dashboards, candidate image uploads via ImageKit, rate-limited APIs, and Firebase-backed authentication and data storage.
 
 ---
 
@@ -11,7 +11,9 @@ A full-stack, PWA-ready electronic voting platform built for HTU. Features real-
 - [Prerequisites](#-prerequisites)
 - [Running Locally](#-running-locally)
 - [Installing the App (PWA)](#-installing-the-app-pwa)
-- [How to use the app](#-registering-account-and-voting)
+- [Registering Account and Voting](#-registering-account-and-voting)
+- [Monorepo Deployment Guide](docs/DEPLOYMENT.md)
+- [cPanel Deployment Guide](docs/CPANEL_DEPLOYMENT.md)
 - [Live App](#-live-app)
 
 ---
@@ -21,65 +23,83 @@ A full-stack, PWA-ready electronic voting platform built for HTU. Features real-
 | Layer | Technology |
 |---|---|
 | **Frontend** | Next.js 16, React 19, TypeScript |
-| **Styling** | Vanilla CSS with CSS variables |
+| **Styling** | Vanilla CSS Design System with CSS variables |
 | **Charts** | Chart.js + react-chartjs-2 |
 | **Animations** | Framer Motion |
 | **Icons** | Lucide React |
 | **PWA** | @ducanh2912/next-pwa |
-| **Backend** | Node.js, Express 5 |
+| **Backend** | Node.js, Express 5, express-rate-limit |
 | **Database** | Firebase Firestore |
 | **Auth** | Firebase Auth + JWT |
 | **Image Uploads** | ImageKit |
-| **Email** | EmailJS |
-| **Biometrics** | deepface.dev Cloud API |
+| **Email & SMS** | EmailJS + BMS Africa Quick SMS |
 | **Deployment** | Vercel |
-
 
 ---
 
-## 📁 Project Structure
+## 📁 Monorepo Project Structure
 
 ```text
-EVoting-system/
-├── backend/                  # Express API server
-│   ├── routes/               # API route handlers
-│   │   ├── auth.js           # Login, register, JWT
-│   │   ├── elections.js      # CRUD for elections + PDF export
-│   │   ├── candidates.js     # Candidate management
-│   │   ├── votes.js          # Voting logic + fraud detection
-│   │   ├── admin.js          # Dashboard stats, fraud alerts
-│   │   └── imagekit.js       # ImageKit auth token endpoint
-│   ├── services/
-│   │   ├── firebase.js       # Firebase Admin SDK init
-│   │   ├── fraud.js          # Fraud alert logging
-│   │   └── audit.js          # Election integrity verification
-│   ├── middleware/
-│   │   └── auth.js           # JWT verify + admin guard
-│   ├── server.js             # Express app entry point
-│   ├── .env                  # Local environment variables (DO NOT COMMIT)
-│   └── package.json
-│
-├── frontend/                 # Next.js application
+HTU-Elect/
+├── assets/                       # Brand logos & media assets
+│   ├── logo.png
+│   └── htu logo.jpg
+├── data/                         # Roster CSVs & export data
+│   ├── voters_export.csv
+│   └── voted_voters_export.csv
+├── docs/                         # Technical documentation & reports
+│   ├── DOCUMENTATION.md
+│   ├── IMPLEMENTATION_REPORT.md
+│   └── TODO.md
+├── backend/                      # Express 5 Backend API
+│   ├── middleware/               # Auth, RateLimiter, Validation
+│   │   ├── auth.js
+│   │   ├── rateLimiter.js
+│   │   └── validate.js
+│   ├── routes/                   # Express router handlers
+│   │   ├── admin.js
+│   │   ├── auth.js
+│   │   ├── candidates.js
+│   │   ├── elections.js
+│   │   ├── imagekit.js
+│   │   ├── superadmin.js
+│   │   └── votes.js
+│   ├── services/                 # Core domain services
+│   │   ├── activityLog.js
+│   │   ├── audit.js
+│   │   ├── cache.js
+│   │   ├── firebase.js
+│   │   ├── fraud.js
+│   │   └── migrateDefaultTenant.js
+│   ├── scripts/                  # Backend utility scripts
+│   │   ├── seed-students.js
+│   │   ├── test-audit.js
+│   │   ├── test_ik.js
+│   │   └── migrate-embeddings.js
+│   ├── package.json
+│   └── server.js
+├── frontend/                     # Next.js 16 App Router Frontend
+│   ├── public/                   # Public static assets & PWA files
+│   │   ├── assets/               # Synced brand images & icons
+│   │   └── manifest.json
 │   ├── src/
-│   │   ├── app/              # Next.js App Router pages
-│   │   │   ├── page.tsx      # Landing / splash screen
-│   │   │   ├── login/        # Voter login
-│   │   │   ├── register/     # Voter registration
-│   │   │   ├── vote/         # Voting interface
-│   │   │   └── admin/        # Admin panel
-│   │   │       ├── dashboard/    # KPI cards + live candidate chart
-│   │   │       ├── elections/    # Election management
-│   │   │       ├── elections/[id]/candidates/  # Candidate management
-│   │   │       ├── results/      # Real-time vote results
-│   │   │       └── fraud/        # Duplicate vote monitor
-│   │   ├── lib/
-│   │   │   └── api.ts        # Typed API request helper
-│   │   └── styles/           # Global CSS + page-specific styles
-│   ├── public/               # Static assets (icons, manifest)
-│   ├── next.config.js        # Next.js + PWA configuration
+│   │   ├── app/                  # Next.js App Router pages
+│   │   ├── components/           # Shared modular UI components
+│   │   │   ├── common/           # Alert, Modal, Button, Loading
+│   │   │   ├── layout/           # Sidebar, Navbar, Footer
+│   │   │   ├── admin/            # Admin charts, KPI cards, table widgets
+│   │   │   └── voter/            # Ballot cards, candidate selector
+│   │   ├── context/              # AuthContext
+│   │   ├── lib/                  # API client & Firebase config
+│   │   ├── styles/               # CSS design system
+│   │   └── types/                # TypeScript interface definitions
+│   ├── next.config.mjs
 │   └── package.json
-│
-└── vercel.json               # Vercel monorepo build config
+├── .firebaserc
+├── .gitignore
+├── firebase.json
+├── firestore.rules
+└── vercel.json
 ```
 
 ---
@@ -99,10 +119,6 @@ Install all of the following before running the project locally:
 - Download: [Git Downloads](https://git-scm.com/downloads)
 - Verify: `git --version`
 
-### 4. A modern web browser
-- **Chrome** (recommended for local PWA testing)
-- **Firefox**, **Edge**, or **Safari** also work
-
 ---
 
 ## 🚀 Running Locally
@@ -115,13 +131,13 @@ cd EVoting-system
 ```
 
 ### Step 2 — Set up the Backend
-cd into the folder you cloned the repo in:
+
 ```bash
 cd backend
 npm install
 ```
 
-Create a `.env` file in the `backend` directory and add the necessary configuration parameters:
+Create a `.env` file in the `backend` directory:
 ```env
 PORT=5000
 JWT_SECRET=your_jwt_secret
@@ -134,14 +150,13 @@ EMAILJS_TEMPLATE_ID=your_emailjs_template_id
 EMAILJS_PUBLIC_KEY=your_emailjs_public_key
 EMAILJS_PRIVATE_KEY=your_emailjs_private_key
 
+BMS_API_KEY=your_bms_mnotify_api_key
+BMS_SENDER_ID=COMPSSA
+
 IMAGEKIT_PUBLIC_KEY="your_imagekit_public_key"
 IMAGEKIT_PRIVATE_KEY="your_imagekit_private_key"
 IMAGEKIT_URL_ENDPOINT="your_imagekit_url_endpoint"
-
-# deepface.dev cloud verification key (obtain from deepface.dev dashboard)
-DEEPFACE_API_KEY=your_deepface_api_key
 ```
-
 
 Start the backend server:
 ```bash
@@ -149,108 +164,38 @@ npm start
 ```
 The backend will run at **http://localhost:5000**
 
-Verify it's working:
-`GET http://localhost:5000/api/health`
-
 ---
 
 ### Step 3 — Set up the Frontend
 
-Open a **new terminal window** and run:
-cd into the folder you cloned the repo in:
+Open a **new terminal window**:
 ```bash
 cd frontend
 npm install
-```
-
-Start the frontend dev server:
-```bash
 npm run dev
 ```
-
 The frontend will run at **http://localhost:3000**
-
-### Step 4 — You're ready!
-
-| URL | Purpose |
-|---|---|
-| http://localhost:3000 | Voter-facing app (register, vote) |
-| http://localhost:3000/admin/dashboard | Admin panel |
-| http://localhost:5000/api/health | Backend health check |
-
-**Default Admin Access:**  
-- **Admin email**: `admin@htu.edu.gh`
-- **Admin password**: `admin080`
-
----
-
-## 🌐 Live App
-The live app is available at: [compssa.vercel.app](https://compssa.vercel.app)
-
----
-
-## 📱 Installing the App (PWA)
-
-COMPSSA is a **Progressive Web App (PWA)** — it can be installed on any device for a native app-like experience.
-
-### Android (Chrome)
-
-1. Open the live app URL in **Google Chrome**
-2. Tap the **"Install App"** button on the landing screen
-3. Tap **Install** to confirm
-4. > If the install prompt doesn't appear, open Chrome menu (⋮) → **Add to Home screen**
-5. The app icon appears on your home screen
-
-### iOS (Safari)
-
-1. Open the live app URL in **Safari** (must be Safari — Chrome on iOS does not support PWA install)
-2. Tap the **"Install App"** button on the landing screen
-3. Follow the on-screen instructions:
-   - Tap the **Share button** (□↑) at the bottom of Safari
-   - Scroll down and tap **"Add to Home Screen"**
-   - Tap **"Add"** to confirm
-4. The COMPSSA icon appears on your home screen
-
-### Desktop (Chrome / Edge)
-
-1. Open the live app in Chrome or Edge
-2. Look for the **install icon (⊕)** in the right side of the address bar
-3. Click it and confirm installation
-4. COMPSSA opens as a standalone app window
 
 ---
 
 ## 📋 Registering Account and Voting
 
-We used our class list in the database for now.
-
 ### First Time Registration
 
 1. Open the app, and click **Register Account**.
-2. Enter your index number. The system fetches your ID in the database and postfixes it with HTU email standard (`@htu.edu.gh`).
-3. Set your password following the requirements.
-4. **Biometric Enrollment:** Align your face to the camera frame and capture your biometric photo to register your facial profile template.
-5. You will be sent an OTP via email (check spam if not found) to verify.
-6. You will be redirected to login and verify OTP again.
-7. If elections are available, you can view them, read manifestos, and proceed to vote.
-
-### Already Registered
-
-1. Login with your credentials.
-2. If elections are available, you can view them and select your preferred candidate.
-3. **Biometric Face Verification:** When submitting your vote, the camera overlay will open. Tap "Verify & Submit" to compare your live face against your enrolled profile using the **deepface.dev** cloud verification system to prevent voter fraud.
-4. Once verified, your ballot is cast securely.
+2. Enter your student index number. The system fetches your record in the database.
+3. Set your password following the complexity requirements.
+4. An OTP verification code will be sent via email/SMS.
+5. Once verified, log in to view active elections.
 
 ---
 
-## 🔒 Biometric Security (deepface.dev Cloud API)
+## 🔒 Security & Concurrency Design
 
-COMPSSA employs state-of-the-art biometric verification to prevent double-voting and identity spoofing:
-- **Enrollment:** During registration, a base64 photo of the voter's face is securely stored in their Firestore document.
-- **Verification:** When casting a ballot, COMPSSA captures a live face snapshot and sends it to the backend. The backend securely queries the **deepface.dev** cloud verification gateway (via `POST https://api.deepface.dev/verify`) using the `Facenet` model and `cosine` distance metric to guarantee that only the owner of the index number can cast the ballot.
-- **Privacy & Security:** Verification is processed on the server-side, protecting the `DEEPFACE_API_KEY` and avoiding heavy browser-side ML resource usage.
+- **API Rate Limiting:** Protected authentication (`/api/auth/*`) and voting (`/api/votes/cast`) routes against brute-force and DDOS.
+- **Atomic Transactions with Exponential Backoff:** High-concurrency vote registration handles database contention automatically with jittered exponential retries.
+- **Cryptographic Audit Log:** Every cast ballot generates an immutable SHA-256 audit transaction record.
 
 ---
 
 *Built with ❤️ by the Techdevstudios team.*
-

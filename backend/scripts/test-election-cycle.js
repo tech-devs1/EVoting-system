@@ -10,7 +10,7 @@ const bcrypt = require('bcryptjs');
 const { verifyElectionIntegrity } = require('../services/audit');
 
 const PORT = 5001;
-const BASE_URL = `http://localhost:${PORT}/api`;
+const BASE_URL = `http://127.0.0.1:${PORT}/api`;
 
 async function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -21,26 +21,39 @@ async function runTest() {
   console.log('🚀 STARTING FULL ELECTION CYCLE INTEGRATION TEST (PORT 5001)');
   console.log('================================================================');
 
+  const { fork } = require('child_process');
   let serverProcess;
   try {
-    // 1. Start the server on port 5001 in background (handled by bash shell, but we can check if it responds)
+    // 1. Start the server on port 5001 if not already running
     console.log('Checking health status of server...');
     let healthy = false;
-    for (let i = 0; i < 10; i++) {
-      try {
-        const res = await fetch(`${BASE_URL}/health`);
-        if (res.ok) {
-          healthy = true;
-          break;
-        }
-      } catch (e) {
-        // server not ready yet
+    try {
+      const res = await fetch(`${BASE_URL}/health`);
+      if (res.ok) healthy = true;
+    } catch (e) {}
+
+    if (!healthy) {
+      console.log('Spawning backend server process on port 5001...');
+      const serverPath = require.resolve('../server.js');
+      serverProcess = fork(serverPath, [], {
+        env: { ...process.env, PORT: '5001', NODE_ENV: 'development' },
+        stdio: 'ignore'
+      });
+
+      for (let i = 0; i < 15; i++) {
+        await delay(1000);
+        try {
+          const res = await fetch(`${BASE_URL}/health`);
+          if (res.ok) {
+            healthy = true;
+            break;
+          }
+        } catch (e) {}
       }
-      await delay(1000);
     }
 
     if (!healthy) {
-      throw new Error('Server on port 5001 is not running or not responding. Please make sure the backend server is running on port 5001.');
+      throw new Error('Server on port 5001 could not be reached after startup.');
     }
     console.log('✅ Connected to running backend server!');
 
@@ -525,10 +538,12 @@ async function runTest() {
     console.log('================================================================');
     console.log('🎉 ALL INTEGRATION TESTS PASSED SUCCESSFULLY! FULL CYCLE TEST COMPLETE.');
     console.log('================================================================');
+    if (serverProcess) serverProcess.kill();
     process.exit(0);
 
   } catch (error) {
     console.error('\n❌ TEST FAILED:', error);
+    if (serverProcess) serverProcess.kill();
     process.exit(1);
   }
 }

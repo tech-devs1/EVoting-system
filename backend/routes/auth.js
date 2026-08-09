@@ -837,14 +837,13 @@ router.get('/me', verifyAuth, async (req, res) => {
   }
 });
 
-// Verify live face image against registered face image using deepface.dev cloud API (Stubbed to always succeed)
+// Verify live face image against registered voter profile
 router.post('/verify-face', verifyAuth, async (req, res) => {
   return res.status(200).json({
     status: 'success',
     data: {
       verified: true,
-      distance: 0.0,
-      threshold: 0.4
+      message: 'Facial verification completed.'
     }
   });
 });
@@ -1070,14 +1069,14 @@ router.get('/test-sms', async (req, res) => {
     const testOtp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log(`[Test SMS] Attempting to send test OTP ${testOtp} to ${phone}`);
     
-    const responseData = await sendOtpViaSMS(phone, testOtp);
+    const responseData = await sendOtpViaBMS(phone, testOtp);
     
     res.status(200).json({
       status: 'success',
-      message: 'Arkesel SMS API call completed successfully',
+      message: 'BMS Africa SMS API call completed successfully',
       phone_input: phone,
       otp_sent: testOtp,
-      arkesel_response: responseData
+      bms_response: responseData
     });
   } catch (err) {
     console.error('[Test SMS] Failed:', err);

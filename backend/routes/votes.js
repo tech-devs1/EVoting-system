@@ -130,33 +130,51 @@ router.post('/cast', verifyAuth, async (req, res) => {
     // 2. Generate Cryptographic Audit Trail prior to state lock
     const auditTxId = await recordVoteAudit(votePayload, electionId, { candidateName, position });
 
-    // 3. ATOMIC TRANSACTION: Check double vote & Increment candidate vote count safely
-    await db.runTransaction(async (transaction) => {
-      const votedDoc = await transaction.get(votedRef);
+    // 3. ATOMIC TRANSACTION: Check double vote & Increment candidate vote count safely (WITH EXPONENTIAL BACKOFF RETRIES)
+    const MAX_RETRIES = 4;
+    let attempt = 0;
+    let transactionSuccess = false;
 
-      if (votedDoc.exists) {
-        throw new Error('DUPLICATE_VOTE');
+    while (attempt < MAX_RETRIES && !transactionSuccess) {
+      try {
+        await db.runTransaction(async (transaction) => {
+          const votedDoc = await transaction.get(votedRef);
+
+          if (votedDoc.exists) {
+            throw new Error('DUPLICATE_VOTE');
+          }
+
+          // Increment candidate vote tally atomically using FieldValue
+          const updateData = (choice === 'no')
+            ? { noVotes: FieldValue.increment(1) }
+            : { votes: FieldValue.increment(1) };
+
+          transaction.update(candidateRef, updateData);
+          // Create anonymized vote record
+          const votesRef = getVotesRef(req).doc();
+          transaction.set(votesRef, votePayload);
+
+          // Mark voter as voted for this position
+          transaction.set(votedRef, {
+            voterId,
+            electionId,
+            position,
+            timestamp: Date.now(),
+            auditTxId
+          });
+        });
+        transactionSuccess = true;
+      } catch (err) {
+        attempt++;
+        const isContention = (err.message || '').toLowerCase().includes('contention') || err.code === 10 || err.code === 4;
+        if (err.message === 'DUPLICATE_VOTE' || !isContention || attempt >= MAX_RETRIES) {
+          throw err;
+        }
+        const backoffMs = Math.pow(2, attempt) * 100 + Math.floor(Math.random() * 50);
+        console.warn(`[Cast Vote] Retrying transaction conflict (Attempt ${attempt}/${MAX_RETRIES}) after ${backoffMs}ms...`);
+        await new Promise(res => setTimeout(res, backoffMs));
       }
-
-      // Increment candidate vote tally atomically using FieldValue
-      const updateData = (choice === 'no')
-        ? { noVotes: FieldValue.increment(1) }
-        : { votes: FieldValue.increment(1) };
-
-      transaction.update(candidateRef, updateData);
-      // Create anonymized vote record
-      const votesRef = getVotesRef(req).doc();
-      transaction.set(votesRef, votePayload);
-
-      // Mark voter as voted for this position
-      transaction.set(votedRef, {
-        voterId,
-        electionId,
-        position,
-        timestamp: Date.now(),
-        auditTxId
-      });
-    });
+    }
 
     console.log('[Cast Vote] Vote cast successfully:', { voterId, candidateId, position, choice: choice || 'yes' });
 
