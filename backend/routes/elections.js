@@ -1035,7 +1035,7 @@ router.post('/:id/verify-access-otp', verifyAuth, async (req, res) => {
 });
 
 // 4. Send Voting Invitations to all Roster Voters
-router.post('/:id/send-invitations', verifyAuth, verifyAdminRole, async (req, res) => {
+router.post('/:id/send-invitations', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
     const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
@@ -1103,7 +1103,7 @@ router.post('/:id/send-invitations', verifyAuth, verifyAdminRole, async (req, re
 });
 
 // 5. Broadcast Final Results to Roster Voters
-router.post('/:id/broadcast-results', verifyAuth, verifyAdminRole, async (req, res) => {
+router.post('/:id/broadcast-results', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
     const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
@@ -1141,7 +1141,7 @@ router.post('/:id/broadcast-results', verifyAuth, verifyAdminRole, async (req, r
 });
 
 // 6. Export Raw Cryptographic Audit Ledger (CSV)
-router.get('/:id/export-audit', verifyAuth, verifyAdminRole, async (req, res) => {
+router.get('/:id/export-audit', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
     const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;

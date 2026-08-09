@@ -76,9 +76,9 @@ router.post('/onboard-request', async (req, res) => {
 });
 
 // POST /api/tenants/branding - Update organization logo & branding settings
-const { verifyAuth, verifyAdminRole } = require('../middleware/auth');
+const { verifyAuth, requireAdmin } = require('../middleware/auth');
 
-router.post('/branding', verifyAuth, verifyAdminRole, async (req, res) => {
+router.post('/branding', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
     const { logoUrl, brandColor } = req.body;
