@@ -1,10 +1,27 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
 import { apiRequest } from '@/lib/api';
-import { Plus, ArrowLeft, Trash, Users } from 'lucide-react';
+import { 
+  Plus, 
+  Trash2, 
+  Users, 
+  Layers, 
+  Eye, 
+  Upload, 
+  Check, 
+  Award,
+  ChevronUp,
+  ChevronDown
+} from 'lucide-react';
+
+interface Position {
+  id: string;
+  title: string;
+  maxChoices: number;
+  isReferendum?: boolean;
+  order: number;
+}
 
 interface Candidate {
   id: string;
@@ -18,428 +35,545 @@ interface Candidate {
   ballotNumber?: string | number;
 }
 
-interface Election {
-  id: string;
-  title: string;
-}
+export default function PerElectionCandidatesPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = React.use(params);
+  const electionId = resolvedParams.id;
 
-export default function AdminElectionCandidatesPage({ params }: { params: Promise<{ id: string }> }) {
-  const [electionId, setElectionId] = React.useState<string>('');
-  const [election, setElection] = useState<Election | null>(null);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Predefined positions list
-  const PRESET_POSITIONS = [
-    'President',
-    'Financial Secretary',
-    ' General Secretary',
-    'Organizing Secretary',
-    'Public Relations Officer (PRO)',
-    'WOCOM',
-  ];
+  // Position Modal State
+  const [isPosModalOpen, setIsPosModalOpen] = useState(false);
+  const [posTitle, setPosTitle] = useState('');
+  const [posMaxChoices, setPosMaxChoices] = useState(1);
+  const [posIsReferendum, setPosIsReferendum] = useState(false);
+  const [posSubmitting, setPosSubmitting] = useState(false);
 
-  // Add candidate modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formName, setFormName] = useState('');
-  const [formPosSelect, setFormPosSelect] = useState('');   // dropdown value
-  const [formPosCustom, setFormPosCustom] = useState('');   // free-text when "custom"
-  const [formIsIndependent, setFormIsIndependent] = useState(false);
-  const [formBallotNumber, setFormBallotNumber] = useState('');
-  const [formManifesto, setFormManifesto] = useState('');
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  // Candidate Modal State
+  const [isCandModalOpen, setIsCandModalOpen] = useState(false);
+  const [candName, setCandName] = useState('');
+  const [candPosition, setCandPosition] = useState('');
+  const [candManifesto, setCandManifesto] = useState('');
+  const [candPhotoUrl, setCandPhotoUrl] = useState('');
+  const [candIsIndependent, setCandIsIndependent] = useState(false);
+  const [candSubmitting, setCandSubmitting] = useState(false);
 
-  // Resolved position — either the dropdown pick or the custom text
-  const formPos = formPosSelect === '__custom__' ? formPosCustom : formPosSelect;
+  // Live Ballot Preview Modal State
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  // Edit manifesto modal
-  const [editManifestoCand, setEditManifestoCand] = useState<Candidate | null>(null);
-  const [manifestoContent, setManifestoContent] = useState<string>('');
-  const [savingManifesto, setSavingManifesto] = useState(false);
-
-  // Ref to imperatively clear the add-manifesto rich-text editor
-  const addManifestoEditorRef = useRef<HTMLDivElement>(null);
-
-  const clearAddManifestoEditor = () => {
-    setFormManifesto('');
-    if (addManifestoEditorRef.current) addManifestoEditorRef.current.innerHTML = '';
-  };
-
-  // Unwrap params
-  React.useEffect(() => {
-    params.then(p => setElectionId(p.id));
-  }, [params]);
-
-  useEffect(() => {
-    if (!electionId) return;
-    async function fetchData() {
-      try {
-        const elRes = await apiRequest<{ status: string; data: Election }>(`/elections/${electionId}`);
-        if (elRes.status === 'success') setElection(elRes.data);
-
-        const candRes = await apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${electionId}`);
-        if (candRes.status === 'success') setCandidates(candRes.data);
-      } catch (err) {
-        console.error('Error loading candidates:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [electionId]);
-
-  const openEditManifesto = (cand: Candidate) => {
-    setManifestoContent(cand.manifesto || '');
-    setEditManifestoCand(cand);
-  };
-
-  const closeEditManifesto = () => {
-    setEditManifestoCand(null);
-    setManifestoContent('');
-  };
-
-  const handleManifestoSave = async () => {
-    if (!editManifestoCand) return;
-    setSavingManifesto(true);
+  async function fetchPositionsAndCandidates() {
     try {
-      await apiRequest(`/candidates/${editManifestoCand.id}`, 'PATCH', { manifesto: manifestoContent });
-      setCandidates(prev =>
-        prev.map(c => c.id === editManifestoCand.id ? { ...c, manifesto: manifestoContent } : c)
-      );
-      closeEditManifesto();
-      alert('Manifesto updated successfully!');
-    } catch (err: any) {
-      alert('Failed to update manifesto: ' + err.message);
-    } finally {
-      setSavingManifesto(false);
-    }
-  };
+      setLoading(true);
+      
+      const [posRes, candRes] = await Promise.all([
+        apiRequest<{ status: string; data: Position[] }>(`/elections/${electionId}/positions`),
+        apiRequest<{ status: string; data: Candidate[] }>(`/elections/${electionId}/candidates`)
+      ]);
 
-  const handleDeleteCandidate = async (candidateId: string) => {
-    if (!confirm('Are you sure you want to remove this candidate?')) return;
-    try {
-      await apiRequest(`/candidates/${candidateId}`, 'DELETE');
-      setCandidates(prev => prev.filter(c => c.id !== candidateId));
-    } catch (err: any) {
-      alert('Failed to remove candidate: ' + err.message);
-    }
-  };
-
-  const handleAddCandidate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      let photoUrl = '';
-
-      if (photoFile) {
-        const authRes = await apiRequest<{ signature: string; expire: number; token: string }>('/imagekit/auth', 'GET');
-        if (!authRes?.signature) throw new Error('Failed to fetch ImageKit auth parameters');
-
-        const publicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || 'public_IdMY8+9qGvRoDF3lZfo+avVLvpw=';
-        const formData = new FormData();
-        formData.append('file', photoFile);
-        formData.append('publicKey', publicKey);
-        formData.append('signature', authRes.signature);
-        formData.append('expire', authRes.expire.toString());
-        formData.append('token', authRes.token);
-        formData.append('fileName', `candidate_${Date.now()}_${photoFile.name}`);
-        formData.append('folder', '/candidates');
-
-        const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', { method: 'POST', body: formData });
-        const uploadData = await uploadRes.json();
-        if (uploadRes.ok) {
-          photoUrl = uploadData.url;
-        } else {
-          throw new Error(uploadData.message || 'ImageKit upload failed');
+      if (posRes.status === 'success' && Array.isArray(posRes.data)) {
+        setPositions(posRes.data);
+        if (posRes.data.length > 0 && !candPosition) {
+          setCandPosition(posRes.data[0].title);
         }
       }
 
-      const res = await apiRequest<{ status: string; data: Candidate }>('/candidates', 'POST', {
-        name: formName,
-        position: formPos,
-        manifesto: formManifesto,
-        photoUrl,
-        electionId,
-        isIndependent: formIsIndependent,
-        ballotNumber: formBallotNumber,
-      });
+      if (candRes.status === 'success' && Array.isArray(candRes.data)) {
+        setCandidates(candRes.data);
+      }
+    } catch (err) {
+      console.error('Error fetching positions/candidates:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-      if (res.status === 'success') {
-        setCandidates(prev => [...prev, res.data]);
-        setIsModalOpen(false);
-        setFormName(''); setFormPosSelect(''); setFormPosCustom(''); setFormIsIndependent(false); setFormBallotNumber(''); clearAddManifestoEditor();
-        setPhotoFile(null);
-      } else {
-        alert('Failed to add candidate: ' + (res as any).message || 'Unknown error');
+  useEffect(() => {
+    if (electionId) fetchPositionsAndCandidates();
+  }, [electionId]);
+
+  // Create Position Submit
+  const handleCreatePosition = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!posTitle.trim()) return;
+    setPosSubmitting(true);
+
+    try {
+      const payload = {
+        title: posTitle.trim(),
+        maxChoices: posMaxChoices,
+        isReferendum: posIsReferendum,
+        order: positions.length + 1
+      };
+
+      const res = await apiRequest<{ status: string; data: Position }>(`/elections/${electionId}/positions`, 'POST', payload);
+      if (res.status === 'success' && res.data) {
+        setPositions(prev => [...prev, res.data]);
+        setPosTitle('');
+        setPosMaxChoices(1);
+        setPosIsReferendum(false);
+        setIsPosModalOpen(false);
       }
     } catch (err: any) {
-      alert('Failed to add candidate: ' + err.message);
+      alert(err.message || 'Failed to create position.');
     } finally {
-      setSubmitting(false);
+      setPosSubmitting(false);
     }
   };
 
-  if (loading) return <p style={{ color: 'var(--text-secondary)' }}>Loading candidate directory...</p>;
+  // Delete Position
+  const handleDeletePosition = async (posId: string) => {
+    if (!confirm('Are you sure you want to delete this position type?')) return;
+    try {
+      await apiRequest(`/elections/${electionId}/positions/${posId}`, 'DELETE');
+      setPositions(prev => prev.filter(p => p.id !== posId));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete position.');
+    }
+  };
+
+  // Create Candidate Submit
+  const handleCreateCandidate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!candName.trim() || !candPosition) return;
+    setCandSubmitting(true);
+
+    try {
+      const payload = {
+        name: candName.trim(),
+        position: candPosition,
+        manifesto: candManifesto.trim(),
+        photoUrl: candPhotoUrl.trim(),
+        isIndependent: candIsIndependent
+      };
+
+      const res = await apiRequest<{ status: string; data: Candidate }>(`/elections/${electionId}/candidates`, 'POST', payload);
+      if (res.status === 'success' && res.data) {
+        setCandidates(prev => [...prev, res.data]);
+        setCandName('');
+        setCandManifesto('');
+        setCandPhotoUrl('');
+        setCandIsIndependent(false);
+        setIsCandModalOpen(false);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to add candidate.');
+    } finally {
+      setCandSubmitting(false);
+    }
+  };
+
+  // Delete Candidate
+  const handleDeleteCandidate = async (candId: string) => {
+    if (!confirm('Are you sure you want to remove this candidate?')) return;
+    try {
+      await apiRequest(`/elections/${electionId}/candidates/${candId}`, 'DELETE');
+      setCandidates(prev => prev.filter(c => c.id !== candId));
+    } catch (err: any) {
+      alert(err.message || 'Failed to remove candidate.');
+    }
+  };
+
+  // Group candidates strictly by Position Title
+  const candidatesByPosition: Record<string, Candidate[]> = {};
+  positions.forEach(pos => {
+    candidatesByPosition[pos.title] = [];
+  });
+  candidates.forEach(cand => {
+    const posName = cand.position || 'General';
+    if (!candidatesByPosition[posName]) candidatesByPosition[posName] = [];
+    candidatesByPosition[posName].push(cand);
+  });
 
   return (
     <div className="animate-page-enter">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+      {/* Workspace Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <Link href="/admin/elections" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>
-            <ArrowLeft size={14} /> Return to Elections
-          </Link>
-          <h2 style={{ fontSize: 'var(--text-xl)' }}>{election?.title || 'Election'} — Candidates Directory</h2>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            Positions & Candidates Builder
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '0.875rem' }}>
+            Define position types, set selection rules, and organize candidates into position groups
+          </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Plus size={16} /> Add Candidate
-        </button>
+
+        {/* Header Action Buttons */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={() => setIsPosModalOpen(true)} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
+            <Plus size={16} /> Add Position Type
+          </button>
+          <button onClick={() => setIsCandModalOpen(true)} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, backgroundColor: '#2563eb' }}>
+            <Plus size={16} /> Register Candidate
+          </button>
+          <button onClick={() => setIsPreviewOpen(true)} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Eye size={16} /> Live Ballot Preview
+          </button>
+        </div>
       </div>
 
-      {/* Candidate Grid */}
-      <div
-        className="candidate-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 'var(--space-4)',
-          padding: 'var(--space-4)',
-        }}
-      >
-        {candidates.length === 0 ? (
-          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-            <Users size={48} style={{ color: 'var(--text-tertiary)' }} />
-            <h3>No Candidates</h3>
-            <p>No candidate entries exist for this ballot. Tap Add Candidate above to get started.</p>
-          </div>
-        ) : (
-          candidates.map(cand => (
-            <div className="card candidate-card" key={cand.id}>
-              {/* Photo wrapper — fixed size so image is always fully visible */}
-              <div className="candidate-photo-wrap">
-                <img
-                  src={cand.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'}
-                  alt={cand.name}
-                  className="candidate-photo"
+      {/* Position Types Configured Bar */}
+      <div className="card" style={{ padding: '1.25rem', marginBottom: '1.75rem', backgroundColor: 'var(--bg-card)' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Layers size={18} style={{ color: '#2563eb' }} /> Configured Position Types ({positions.length})
+        </h3>
+        
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {positions.map((pos) => (
+            <div 
+              key={pos.id}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                backgroundColor: 'var(--bg-input)',
+                border: '1px solid var(--border-color)',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '10px',
+                fontSize: '0.85rem'
+              }}
+            >
+              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{pos.title}</span>
+              <span className="badge badge-info" style={{ fontSize: '10px' }}>
+                Select {pos.maxChoices}
+              </span>
+              {pos.isReferendum && (
+                <span className="badge badge-warning" style={{ fontSize: '10px' }}>YES/NO</span>
+              )}
+              <button 
+                onClick={() => handleDeletePosition(pos.id)}
+                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, marginLeft: '4px' }}
+                title="Remove Position"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Candidates Grouped Strictly by Position Cards */}
+      {loading ? (
+        <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>Loading position lineups...</p>
+      ) : Object.keys(candidatesByPosition).length === 0 ? (
+        <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No position types configured yet. Click "+ Add Position Type" to begin.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+          {Object.entries(candidatesByPosition).map(([posTitle, candList]) => {
+            const posMeta = positions.find(p => p.title === posTitle);
+
+            return (
+              <div 
+                key={posTitle}
+                className="card"
+                style={{ 
+                  padding: '1.5rem',
+                  borderRadius: '18px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)'
+                }}
+              >
+                {/* Position Group Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                      color: '#2563eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 700
+                    }}>
+                      <Award size={18} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                        {posTitle}
+                      </h3>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        Voters select up to {posMeta?.maxChoices || 1} candidate{posMeta?.maxChoices !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="badge badge-primary" style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', border: '1px solid rgba(37, 99, 235, 0.3)' }}>
+                    {candList.length} Candidate{candList.length !== 1 ? 's' : ''} Listed
+                  </span>
+                </div>
+
+                {/* Candidate Cards Grid for THIS Position */}
+                {candList.length === 0 ? (
+                  <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-input)', borderRadius: '12px' }}>
+                    No candidates registered under {posTitle} yet. Click "+ Register Candidate" above to add one.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                    {candList.map((cand, idx) => (
+                      <div 
+                        key={cand.id}
+                        style={{
+                          backgroundColor: 'var(--bg-input)',
+                          borderRadius: '14px',
+                          padding: '1.25rem',
+                          border: '1px solid var(--border-color)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justify: 'space-between',
+                          position: 'relative'
+                        }}
+                      >
+                        <div>
+                          {/* Photo & Name */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '0.85rem' }}>
+                            <div style={{
+                              width: '52px',
+                              height: '52px',
+                              borderRadius: '50%',
+                              backgroundColor: 'var(--border-color)',
+                              overflow: 'hidden',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '1.1rem',
+                              border: '2px solid #2563eb'
+                            }}>
+                              {cand.photoUrl ? (
+                                <img src={cand.photoUrl} alt={cand.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                cand.name.substring(0, 2).toUpperCase()
+                              )}
+                            </div>
+
+                            <div>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase' }}>
+                                Ballot #{idx + 1}
+                              </span>
+                              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '2px 0 0 0', color: 'var(--text-primary)' }}>
+                                {cand.name}
+                              </h4>
+                            </div>
+                          </div>
+
+                          {/* Manifesto Snippet */}
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4, margin: '0 0 1rem 0' }}>
+                            {cand.manifesto || 'No manifesto summary provided.'}
+                          </p>
+                        </div>
+
+                        {/* Card Action Buttons */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                          <button
+                            onClick={() => handleDeleteCandidate(cand.id)}
+                            className="btn btn-outline"
+                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                          >
+                            <Trash2 size={14} /> Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add Position Modal */}
+      {isPosModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          padding: '1.5rem'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '480px', padding: '1.75rem', borderRadius: '18px' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 1rem 0' }}>Add Custom Position Type</h3>
+
+            <form onSubmit={handleCreatePosition} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Position Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Financial Secretary"
+                  value={posTitle}
+                  onChange={(e) => setPosTitle(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
                 />
               </div>
 
-              {/* Content */}
-              <div className="candidate-content">
-                <div className="candidate-info">
-                  <h4 className="candidate-name">
-                    {cand.ballotNumber ? `No. ${cand.ballotNumber} - ` : ''}{cand.name} {cand.isIndependent && <span style={{ fontSize: '11px', color: 'var(--color-primary)' }}>(Independent)</span>}
-                  </h4>
-                  <span className="candidate-position">{cand.position}</span>
-                  {cand.isIndependent ? (
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)', display: 'block' }}>
-                      Yes: <strong style={{ color: 'var(--color-success, #22c55e)' }}>{cand.votes || 0}</strong> | No: <strong style={{ color: 'var(--color-danger, #ef4444)' }}>{cand.noVotes || 0}</strong>
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)', display: 'block' }}>
-                      Votes: <strong style={{ color: 'var(--text-primary)' }}>{cand.votes || 0}</strong>
-                    </span>
-                  )}
-                </div>
-
-                <div className="candidate-actions">
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm"
-                    onClick={() => openEditManifesto(cand)}
-                  >
-                    {cand.manifesto ? 'Edit Manifesto' : 'Upload Manifesto'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    style={{ background: 'var(--color-danger-bg)', color: 'var(--color-danger)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    onClick={() => handleDeleteCandidate(cand.id)}
-                  >
-                    <Trash size={13} /> Remove
-                  </button>
-                </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Max Candidate Choices Allowed</label>
+                <select
+                  value={posMaxChoices}
+                  onChange={(e) => setPosMaxChoices(Number(e.target.value))}
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                >
+                  <option value={1}>Select 1 (Single Winner / First-Past-The-Post)</option>
+                  <option value={2}>Select 2 (Top 2 Winners)</option>
+                  <option value={3}>Select 3 (Top 3 Winners)</option>
+                  <option value={4}>Select 4 (Top 4 Winners)</option>
+                </select>
               </div>
-            </div>
-          ))
-        )}
-      </div>
 
-      {/* Add Candidate Modal — portal to escape overflow:hidden on app-shell */}
-      {mounted && isModalOpen && createPortal(
-        <div
-          onClick={() => { setIsModalOpen(false); setFormPosSelect(''); setFormPosCustom(''); clearAddManifestoEditor(); }}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9000,
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            padding: '80px 16px 88px 16px',
-            overflowY: 'auto',
-          }}
-        >
-          <div
-            className="modal-container"
-            onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '560px', maxHeight: 'calc(100dvh - 180px)' }}
-          >
-            <div className="modal-header">
-              <h3 className="modal-title">Add Candidate Profile</h3>
-              <button className="modal-close" onClick={() => setIsModalOpen(false)}>&times;</button>
-            </div>
-            <form onSubmit={handleAddCandidate}>
-              <div className="modal-body">
-                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-                  <label className="form-label" htmlFor="cand-name" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Name</label>
-                  <input type="text" id="cand-name" className="form-input" placeholder="e.g. John Doe" required value={formName} onChange={e => setFormName(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-                </div>
-                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-                  <label className="form-label" htmlFor="cand-ballot" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Ballot Number / Order (e.g. 1 for No. 1)</label>
-                  <input type="text" id="cand-ballot" className="form-input" placeholder="e.g. 1" value={formBallotNumber} onChange={e => setFormBallotNumber(e.target.value)} style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-                </div>
-                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-                  <label className="form-label" htmlFor="cand-pos" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Position</label>
-                  <select
-                    id="cand-pos"
-                    className="form-input"
-                    required
-                    value={formPosSelect}
-                    onChange={e => { setFormPosSelect(e.target.value); setFormPosCustom(''); }}
-                    style={{ width: '100%', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: formPosSelect ? 'var(--text-primary)' : 'var(--text-tertiary)', appearance: 'auto' }}
-                  >
-                    <option value="" disabled>Select a position…</option>
-                    {PRESET_POSITIONS.map(p => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                    <option value="__custom__">✏️ Custom position…</option>
-                  </select>
-                  {formPosSelect === '__custom__' && (
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Enter custom position name"
-                      required
-                      value={formPosCustom}
-                      onChange={e => setFormPosCustom(e.target.value)}
-                      autoFocus
-                      style={{ width: '100%', marginTop: 'var(--space-2)', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-primary, #6366f1)', background: 'var(--bg-input)', color: 'var(--text-primary)', outline: 'none' }}
-                    />
-                  )}
-                </div>
-                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>
-                    <input
-                      type="checkbox"
-                      checked={formIsIndependent}
-                      onChange={e => setFormIsIndependent(e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-primary)' }}
-                    />
-                    Independent / Unopposed Candidate (Yes / No Vote)
-                  </label>
-                </div>
-                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-                  <label style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)' }}>
-                    Manifesto Statement <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span>
-                  </label>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', padding: 'var(--space-2)', background: 'var(--bg-input)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', border: '1px solid var(--border-color)', borderBottom: 'none' }}>
-                    <button type="button" className="btn btn-outline btn-sm" style={{ fontWeight: 'bold', minWidth: 32 }} onMouseDown={e => { e.preventDefault(); document.execCommand('bold'); }}>B</button>
-                    <button type="button" className="btn btn-outline btn-sm" style={{ fontStyle: 'italic', minWidth: 32 }} onMouseDown={e => { e.preventDefault(); document.execCommand('italic'); }}>I</button>
-                    <button type="button" className="btn btn-outline btn-sm" style={{ textDecoration: 'underline', minWidth: 32 }} onMouseDown={e => { e.preventDefault(); document.execCommand('underline'); }}>U</button>
-                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 2px' }} />
-                    <button type="button" className="btn btn-outline btn-sm" onMouseDown={e => { e.preventDefault(); document.execCommand('insertUnorderedList'); }}>• List</button>
-                    <button type="button" className="btn btn-outline btn-sm" onMouseDown={e => { e.preventDefault(); document.execCommand('insertOrderedList'); }}>1. List</button>
-                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 2px' }} />
-                    <button type="button" className="btn btn-outline btn-sm" onMouseDown={e => { e.preventDefault(); document.execCommand('justifyLeft'); }}>≡ Left</button>
-                    <button type="button" className="btn btn-outline btn-sm" onMouseDown={e => { e.preventDefault(); document.execCommand('justifyCenter'); }}>≡ Center</button>
-                  </div>
-                  <div
-                    id="add-manifesto-editor"
-                    ref={addManifestoEditorRef}
-                    contentEditable
-                    suppressContentEditableWarning
-                    onInput={e => setFormManifesto(e.currentTarget.innerHTML)}
-                    style={{ minHeight: '130px', padding: 'var(--space-3)', borderRadius: '0 0 var(--radius-md) var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', overflowY: 'auto', lineHeight: 1.7, fontSize: 'var(--text-sm)', outline: 'none' }}
-                    data-placeholder="Write the candidate's manifesto here…"
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-                  <label className="form-label" htmlFor="cand-photo" style={{ display: 'block', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>Candidate Photo — Optional</label>
-                  <input type="file" id="cand-photo" accept="image/*" className="form-input" onChange={e => e.target.files && setPhotoFile(e.target.files[0])} style={{ width: '100%', padding: 'var(--space-1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="referendum-check"
+                  checked={posIsReferendum}
+                  onChange={(e) => setPosIsReferendum(e.target.checked)}
+                />
+                <label htmlFor="referendum-check" style={{ fontSize: '0.875rem', cursor: 'pointer' }}>
+                  Enable YES / NO Referendum Mode for Unopposed Candidates
+                </label>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={submitting}>
-                  {submitting ? 'Saving...' : 'Save Candidate'}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+                <button type="button" onClick={() => setIsPosModalOpen(false)} className="btn btn-outline">Cancel</button>
+                <button type="submit" disabled={posSubmitting} className="btn btn-primary" style={{ backgroundColor: '#2563eb' }}>
+                  {posSubmitting ? 'Saving Position...' : 'Save Position'}
                 </button>
               </div>
             </form>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
-      {/* Edit Manifesto Modal — portal to escape overflow:hidden on app-shell */}
-      {mounted && editManifestoCand && createPortal(
-        <div
-          onClick={closeEditManifesto}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9000,
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            padding: '80px 16px 88px 16px',
-            overflowY: 'auto',
-          }}
-        >
-          <div
-            className="modal-container"
-            onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '560px', maxHeight: 'calc(100dvh - 180px)' }}
-          >
-            <div className="modal-header">
-              <h3 className="modal-title">
-                {editManifestoCand.manifesto ? 'Edit' : 'Upload'} Manifesto — {editManifestoCand.name}
-              </h3>
-              <button className="modal-close" onClick={closeEditManifesto}>&times;</button>
-            </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', padding: 'var(--space-2)', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-                <button type="button" className="btn btn-outline btn-sm" style={{ fontWeight: 'bold' }} onClick={() => document.execCommand('bold')}>B</button>
-                <button type="button" className="btn btn-outline btn-sm" style={{ fontStyle: 'italic' }} onClick={() => document.execCommand('italic')}>I</button>
-                <button type="button" className="btn btn-outline btn-sm" style={{ textDecoration: 'underline' }} onClick={() => document.execCommand('underline')}>U</button>
-                <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('insertUnorderedList')}>• List</button>
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('insertOrderedList')}>1. List</button>
-                <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('justifyLeft')}>≡ Left</button>
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => document.execCommand('justifyCenter')}>≡ Center</button>
+      {/* Add Candidate Modal */}
+      {isCandModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          padding: '1.5rem'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '520px', padding: '1.75rem', borderRadius: '18px' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 1rem 0' }}>Register Candidate</h3>
+
+            <form onSubmit={handleCreateCandidate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Full Candidate Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Kwame Mensah"
+                  value={candName}
+                  onChange={(e) => setCandName(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
               </div>
-              <div
-                id="manifesto-editor"
-                contentEditable
-                suppressContentEditableWarning
-                style={{ minHeight: '220px', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', overflowY: 'auto', lineHeight: 1.7, fontSize: 'var(--text-sm)', outline: 'none' }}
-                onInput={e => setManifestoContent(e.currentTarget.innerHTML)}
-                dangerouslySetInnerHTML={{ __html: manifestoContent }}
-              />
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Position Category *</label>
+                <select
+                  required
+                  value={candPosition}
+                  onChange={(e) => setCandPosition(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                >
+                  {positions.map(p => (
+                    <option key={p.id} value={p.title}>{p.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Candidate Photo URL</label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={candPhotoUrl}
+                  onChange={(e) => setCandPhotoUrl(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Manifesto & Bio Snippet</label>
+                <textarea
+                  rows={3}
+                  placeholder="Brief campaign promise..."
+                  value={candManifesto}
+                  onChange={(e) => setCandManifesto(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+                <button type="button" onClick={() => setIsCandModalOpen(false)} className="btn btn-outline">Cancel</button>
+                <button type="submit" disabled={candSubmitting} className="btn btn-primary" style={{ backgroundColor: '#2563eb' }}>
+                  {candSubmitting ? 'Registering Candidate...' : 'Register Candidate'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Live Ballot Preview Modal */}
+      {isPreviewOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          justify: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          padding: '1.5rem'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '640px', maxHeight: '85vh', overflowY: 'auto', padding: '2rem', borderRadius: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>📱 Live Voter Ballot Preview</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>This is how voters will experience the ballot</p>
+              </div>
+              <button onClick={() => setIsPreviewOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={closeEditManifesto}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleManifestoSave} disabled={savingManifesto}>
-                {savingManifesto ? 'Saving...' : 'Save Manifesto'}
-              </button>
+
+            {/* Ballot Paper View */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {Object.entries(candidatesByPosition).map(([posTitle, candList]) => (
+                <div key={posTitle} style={{ backgroundColor: 'var(--bg-input)', padding: '1.25rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.85rem 0', color: '#2563eb' }}>{posTitle}</h4>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {candList.map(cand => (
+                      <div key={cand.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                            {cand.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{cand.name}</span>
+                        </div>
+                        <input type="radio" name={posTitle} disabled style={{ width: '18px', height: '18px' }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );

@@ -1258,4 +1258,72 @@ router.get('/:id/security-alerts', verifyAuth, requireAdmin, async (req, res) =>
   }
 });
 
+// 10. Position Management Endpoints
+router.get('/:id/positions', verifyAuth, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user?.tenantId || DEFAULT_TENANT_ID;
+
+    const positionsSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('positions').orderBy('order', 'asc').get();
+    const positions = positionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    if (positions.length === 0) {
+      const defaults = [
+        { id: 'pos_1', title: 'President', maxChoices: 1, order: 1 },
+        { id: 'pos_2', title: 'Vice President', maxChoices: 1, order: 2 },
+        { id: 'pos_3', title: 'General Secretary', maxChoices: 1, order: 3 },
+        { id: 'pos_4', title: 'Financial Secretary', maxChoices: 1, order: 4 },
+        { id: 'pos_5', title: 'WOCOM', maxChoices: 1, order: 5 },
+      ];
+      return res.status(200).json({ status: 'success', data: defaults });
+    }
+
+    res.status(200).json({ status: 'success', data: positions });
+  } catch (error) {
+    console.error('Error fetching positions:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch positions.' });
+  }
+});
+
+router.post('/:id/positions', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+    const { title, maxChoices, isReferendum, order } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Position title is required.' });
+    }
+
+    const posRef = db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('positions').doc();
+    const newPos = {
+      id: posRef.id,
+      title: title.trim(),
+      maxChoices: Number(maxChoices) || 1,
+      isReferendum: Boolean(isReferendum),
+      order: Number(order) || 1,
+      createdAt: Date.now()
+    };
+
+    await posRef.set(newPos);
+    res.status(201).json({ status: 'success', data: newPos });
+  } catch (error) {
+    console.error('Error creating position:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to create position.' });
+  }
+});
+
+router.delete('/:id/positions/:posId', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const { id: electionId, posId } = req.params;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+
+    await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('positions').doc(posId).delete();
+    res.status(200).json({ status: 'success', message: 'Position deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting position:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to delete position.' });
+  }
+});
+
 module.exports = router;

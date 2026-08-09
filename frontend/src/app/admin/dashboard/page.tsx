@@ -1,27 +1,26 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { 
   Plus, 
   Clock, 
   CheckCircle2, 
-  AlertCircle, 
   Calendar, 
   Users, 
   Vote, 
   ArrowRight, 
-  FileText, 
   Upload, 
   Sparkles,
   Search,
-  Filter,
   Layers,
-  ChevronRight,
+  Settings,
+  Zap,
   TrendingUp,
-  ShieldAlert
+  LogOut
 } from 'lucide-react';
 
 interface Election {
@@ -47,6 +46,8 @@ interface KPIStats {
 
 export default function OrganizationElectionHub() {
   const router = useRouter();
+  const { user, logout } = useAuth();
+
   const [elections, setElections] = useState<Election[]>([]);
   const [stats, setStats] = useState<KPIStats>({
     totalElections: 0,
@@ -57,7 +58,6 @@ export default function OrganizationElectionHub() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('grid');
 
   // Wizard Modal State
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -121,9 +121,7 @@ export default function OrganizationElectionHub() {
       const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
       if (lines.length === 0) return;
 
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
       const rows = lines.slice(1);
-
       let validCount = 0;
       let duplicateCount = 0;
       let invalidCount = 0;
@@ -250,72 +248,231 @@ export default function OrganizationElectionHub() {
     }
   };
 
+  const adminName = user?.name?.split(' ')[0] || 'Electoral Commissioner';
+
   return (
-    <div className="animate-page-enter">
-      {/* Header Banner */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-        <div>
-          <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
-            Organization Election Hub
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', margin: 'var(--space-1) 0 0 0', fontSize: 'var(--text-sm)' }}>
-            Manage all organization elections, rosters, and live command centers
-          </p>
+    <div className="animate-page-enter" style={{ paddingBottom: '4rem' }}>
+      
+      {/* Top Navigation Bar with Organization Settings Icon */}
+      <div style={{
+        display: 'flex',
+        justify: 'space-between',
+        alignItems: 'center',
+        padding: '1rem 0',
+        marginBottom: '2rem',
+        borderBottom: '1px solid var(--border-color)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '10px',
+            backgroundColor: '#2563eb',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+            fontSize: '1.2rem'
+          }}>
+            ⚡
+          </div>
+          <div>
+            <h1 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              HTU Elect
+            </h1>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Electoral Commission Terminal</span>
+          </div>
         </div>
-        <button
-          onClick={() => { resetWizard(); setIsWizardOpen(true); }}
-          className="btn btn-primary"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', borderRadius: '12px', fontWeight: 600 }}
-        >
-          <Plus size={18} /> + Create New Election
-        </button>
+
+        {/* Right Action Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Organization Settings Button */}
+          <Link
+            href="/admin/settings"
+            className="btn btn-outline"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              borderRadius: '10px',
+              padding: '0.55rem 1rem',
+              fontSize: '0.85rem',
+              fontWeight: 600
+            }}
+          >
+            <Settings size={16} style={{ color: '#2563eb' }} />
+            <span>Organization Settings</span>
+          </Link>
+
+          <button
+            onClick={logout}
+            className="btn btn-outline"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              borderRadius: '10px',
+              padding: '0.55rem 0.85rem',
+              fontSize: '0.85rem',
+              color: 'var(--color-danger)'
+            }}
+          >
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
 
-      {/* KPI Cards Bar */}
-      <div className="admin-grid-top" style={{ marginBottom: 'var(--space-6)' }}>
-        <div className="card kpi-card">
-          <div className="kpi-details">
-            <span className="kpi-label">Total Elections</span>
-            <span className="kpi-value">{stats.totalElections}</span>
-            <div className="kpi-trend"><span>Across organization</span></div>
-          </div>
-          <div className="kpi-icon-wrapper blue"><Layers size={20} /></div>
+      {/* Center Hero Welcome Greeting (TicketFlow Style) */}
+      <div style={{ textAlign: 'center', maxWidth: '680px', margin: '0 auto 2.5rem auto' }}>
+        {/* Floating Pill Badge */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          color: '#2563eb',
+          padding: '0.4rem 1rem',
+          borderRadius: '999px',
+          fontSize: '0.825rem',
+          fontWeight: 700,
+          marginBottom: '1rem',
+          border: '1px solid rgba(37, 99, 235, 0.2)'
+        }}>
+          <Sparkles size={14} /> Your Election Management Hub
         </div>
 
-        <div className="card kpi-card">
-          <div className="kpi-details">
-            <span className="kpi-label">Active Polls</span>
-            <span className="kpi-value" style={{ color: 'var(--color-success)' }}>{stats.activeElectionsCount}</span>
-            <div className="kpi-trend up"><span>Live voting in progress</span></div>
+        {/* Main Headline */}
+        <h1 style={{
+          fontSize: '2.5rem',
+          fontWeight: 800,
+          letterSpacing: '-0.03em',
+          margin: '0 0 0.75rem 0',
+          background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent'
+        }}>
+          Welcome Back, {adminName}!
+        </h1>
+
+        <p style={{ fontSize: '1.05rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+          Select an election to manage its command center or launch a new election.
+        </p>
+      </div>
+
+      {/* KPI Metrics Summary Row (Live Elections, Total Elections, Registered Voters) */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '1.25rem',
+        maxWidth: '780px',
+        margin: '0 auto 2.5rem auto'
+      }}>
+        {/* Live Elections Card */}
+        <div className="card" style={{
+          padding: '1.25rem',
+          borderRadius: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          border: '1px solid var(--border-color)',
+          backgroundColor: 'var(--bg-card)'
+        }}>
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(16, 185, 129, 0.12)',
+            color: '#10b981',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <CheckCircle2 size={22} />
           </div>
-          <div className="kpi-icon-wrapper green"><CheckCircle2 size={20} /></div>
+          <div>
+            <span style={{ fontSize: '1.6rem', fontWeight: 800, display: 'block', color: 'var(--text-primary)', lineHeight: 1.1 }}>
+              {stats.activeElectionsCount}
+            </span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Live Elections</span>
+          </div>
         </div>
 
-        <div className="card kpi-card">
-          <div className="kpi-details">
-            <span className="kpi-label">Registered Voters</span>
-            <span className="kpi-value">{stats.totalVoters.toLocaleString()}</span>
-            <div className="kpi-trend"><span>Across election rosters</span></div>
+        {/* Total Elections Card */}
+        <div className="card" style={{
+          padding: '1.25rem',
+          borderRadius: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          border: '1px solid var(--border-color)',
+          backgroundColor: 'var(--bg-card)'
+        }}>
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(37, 99, 235, 0.12)',
+            color: '#2563eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Layers size={22} />
           </div>
-          <div className="kpi-icon-wrapper purple"><Users size={20} /></div>
+          <div>
+            <span style={{ fontSize: '1.6rem', fontWeight: 800, display: 'block', color: 'var(--text-primary)', lineHeight: 1.1 }}>
+              {stats.totalElections}
+            </span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Elections</span>
+          </div>
         </div>
 
-        <div className="card kpi-card">
-          <div className="kpi-details">
-            <span className="kpi-label">Total Ballots Cast</span>
-            <span className="kpi-value">{stats.totalVotesCast.toLocaleString()}</span>
-            <div className="kpi-trend up"><TrendingUp size={12} /><span>Cryptographically verified</span></div>
+        {/* Total Registered Voters Card */}
+        <div className="card" style={{
+          padding: '1.25rem',
+          borderRadius: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          border: '1px solid var(--border-color)',
+          backgroundColor: 'var(--bg-card)'
+        }}>
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(124, 58, 237, 0.12)',
+            color: '#7c3aed',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Users size={22} />
           </div>
-          <div className="kpi-icon-wrapper amber"><Vote size={20} /></div>
+          <div>
+            <span style={{ fontSize: '1.6rem', fontWeight: 800, display: 'block', color: 'var(--text-primary)', lineHeight: 1.1 }}>
+              {stats.totalVoters.toLocaleString()}
+            </span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Registered Voters</span>
+          </div>
         </div>
       </div>
 
-      {/* Filter & Toolbar Bar */}
-      <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      {/* Filter Tabs & Search Bar */}
+      <div style={{
+        display: 'flex',
+        justify: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1.75rem',
+        flexWrap: 'wrap',
+        gap: '1rem'
+      }}>
         {/* Status Filter Tabs */}
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {[
-            { id: 'all', label: 'All Elections' },
+            { id: 'all', label: `All Elections (${elections.length})` },
             { id: 'active', label: 'Live Now 🟢' },
             { id: 'scheduled', label: 'Scheduled ⏰' },
             { id: 'draft', label: 'Drafts 📝' },
@@ -325,13 +482,13 @@ export default function OrganizationElectionHub() {
               key={tab.id}
               onClick={() => setFilterStatus(tab.id)}
               style={{
-                padding: '0.4rem 0.85rem',
-                borderRadius: '8px',
+                padding: '0.45rem 0.95rem',
+                borderRadius: '10px',
                 fontSize: '0.85rem',
                 fontWeight: 600,
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: filterStatus === tab.id ? 'var(--color-primary)' : 'var(--bg-input)',
+                backgroundColor: filterStatus === tab.id ? '#2563eb' : 'var(--bg-input)',
                 color: filterStatus === tab.id ? '#ffffff' : 'var(--text-secondary)',
                 transition: 'all 0.2s ease'
               }}
@@ -341,29 +498,27 @@ export default function OrganizationElectionHub() {
           ))}
         </div>
 
-        {/* Search Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-            <input
-              type="text"
-              placeholder="Search election title..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                paddingLeft: '32px',
-                paddingRight: '12px',
-                paddingTop: '6px',
-                paddingBottom: '6px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                fontSize: '0.85rem',
-                backgroundColor: 'var(--bg-input)',
-                color: 'var(--text-primary)',
-                width: '220px'
-              }}
-            />
-          </div>
+        {/* Search Input */}
+        <div style={{ position: 'relative' }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+          <input
+            type="text"
+            placeholder="Search election title..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              paddingLeft: '36px',
+              paddingRight: '14px',
+              paddingTop: '8px',
+              paddingBottom: '8px',
+              borderRadius: '10px',
+              border: '1px solid var(--border-color)',
+              fontSize: '0.85rem',
+              backgroundColor: 'var(--bg-input)',
+              color: 'var(--text-primary)',
+              width: '240px'
+            }}
+          />
         </div>
       </div>
 
@@ -372,19 +527,49 @@ export default function OrganizationElectionHub() {
         <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
           Loading organization elections...
         </div>
-      ) : filteredElections.length === 0 ? (
-        <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
-          <Sparkles size={40} style={{ color: 'var(--color-primary)', marginBottom: '1rem' }} />
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>No Elections Found</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-            {filterStatus === 'all' ? 'Create your organization\'s first election to launch the election workspace.' : `No elections match the filter "${filterStatus}".`}
-          </p>
-          <button onClick={() => { resetWizard(); setIsWizardOpen(true); }} className="btn btn-primary">
-            + Create New Election
-          </button>
-        </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+          
+          {/* Dashed Create New Election Card (TicketFlow Style) */}
+          <div 
+            onClick={() => { resetWizard(); setIsWizardOpen(true); }}
+            style={{ 
+              border: '2px dashed #2563eb',
+              borderRadius: '20px',
+              padding: '2rem 1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              cursor: 'pointer',
+              backgroundColor: 'rgba(37, 99, 235, 0.03)',
+              transition: 'all 0.25s ease',
+              minHeight: '260px'
+            }}
+          >
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(37, 99, 235, 0.12)',
+              color: '#2563eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <Plus size={28} />
+            </div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 0.35rem 0', color: 'var(--text-primary)' }}>
+              Create New Election
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, maxWidth: '220px' }}>
+              Launch a new election workspace and set up voter rosters
+            </p>
+          </div>
+
+          {/* Election Cards */}
           {filteredElections.map(election => {
             const turnout = (election.totalVoters && election.totalVoters > 0)
               ? Math.min(100, Math.round(((election.totalVotesCast || 0) / election.totalVoters) * 100))
@@ -398,22 +583,23 @@ export default function OrganizationElectionHub() {
                   display: 'flex', 
                   flexDirection: 'column', 
                   justifyContent: 'space-between',
-                  borderRadius: '16px',
+                  borderRadius: '20px',
                   padding: '1.5rem',
                   border: '1px solid var(--border-color)',
                   transition: 'all 0.25s ease',
-                  position: 'relative'
+                  backgroundColor: 'var(--bg-card)',
+                  minHeight: '260px'
                 }}
               >
                 <div>
-                  {/* Category Pill & Status Badge */}
+                  {/* Category & Status */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
                     <span style={{ 
                       fontSize: '0.75rem', 
                       fontWeight: 700, 
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: 'var(--color-primary)',
+                      color: '#2563eb',
                       backgroundColor: 'rgba(37, 99, 235, 0.1)',
                       padding: '2px 8px',
                       borderRadius: '6px'
@@ -423,7 +609,7 @@ export default function OrganizationElectionHub() {
                     {getStatusBadge(election.status)}
                   </div>
 
-                  {/* Election Title */}
+                  {/* Title */}
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: 'var(--text-primary)', lineHeight: 1.3 }}>
                     {election.title}
                   </h3>
@@ -437,18 +623,18 @@ export default function OrganizationElectionHub() {
                   </div>
 
                   {/* Turnout Progress Bar */}
-                  <div style={{ backgroundColor: 'var(--bg-input)', borderRadius: '8px', padding: '0.85rem', marginBottom: '1.25rem' }}>
+                  <div style={{ backgroundColor: 'var(--bg-input)', borderRadius: '10px', padding: '0.85rem', marginBottom: '1.25rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Live Voter Turnout</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>Voter Turnout</span>
                       <span style={{ color: 'var(--text-primary)' }}>{turnout}% ({election.totalVotesCast || 0} / {election.totalVoters || 0})</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--border-color)', borderRadius: '999px', overflow: 'hidden' }}>
-                      <div style={{ width: `${turnout}%`, height: '100%', backgroundColor: 'var(--color-primary)', borderRadius: '999px', transition: 'width 0.4s ease' }}></div>
+                      <div style={{ width: `${turnout}%`, height: '100%', backgroundColor: '#2563eb', borderRadius: '999px', transition: 'width 0.4s ease' }} />
                     </div>
                   </div>
                 </div>
 
-                {/* Primary Action Button -> Enters Dedicated Workspace */}
+                {/* Open Workspace Button */}
                 <Link
                   href={`/admin/elections/${election.id}/dashboard`}
                   className="btn btn-primary"
@@ -459,13 +645,15 @@ export default function OrganizationElectionHub() {
                     justifyContent: 'center',
                     gap: '0.5rem',
                     padding: '0.75rem',
-                    borderRadius: '10px',
-                    fontWeight: 600,
-                    fontSize: '0.9rem'
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    backgroundColor: '#2563eb',
+                    color: '#ffffff'
                   }}
                 >
-                  <span>Manage Election</span>
-                  <ArrowRight size={16} />
+                  <Zap size={16} />
+                  <span>Open Workspace</span>
                 </Link>
               </div>
             );
@@ -500,7 +688,7 @@ export default function OrganizationElectionHub() {
             {/* Step Progress Bar */}
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.75rem' }}>
               {[1, 2, 3, 4].map(step => (
-                <div key={step} style={{ flex: 1, height: '4px', backgroundColor: step <= wizardStep ? 'var(--color-primary)' : 'var(--border-color)', borderRadius: '999px' }} />
+                <div key={step} style={{ flex: 1, height: '4px', backgroundColor: step <= wizardStep ? '#2563eb' : 'var(--border-color)', borderRadius: '999px' }} />
               ))}
             </div>
 
@@ -538,9 +726,9 @@ export default function OrganizationElectionHub() {
                           borderRadius: '8px',
                           fontSize: '0.85rem',
                           fontWeight: 600,
-                          border: category === cat ? '1.5px solid var(--color-primary)' : '1px solid var(--border-color)',
+                          border: category === cat ? '1.5px solid #2563eb' : '1px solid var(--border-color)',
                           backgroundColor: category === cat ? 'rgba(37, 99, 235, 0.1)' : 'var(--bg-input)',
-                          color: category === cat ? 'var(--color-primary)' : 'var(--text-secondary)',
+                          color: category === cat ? '#2563eb' : 'var(--text-secondary)',
                           cursor: 'pointer'
                         }}
                       >
@@ -600,7 +788,7 @@ export default function OrganizationElectionHub() {
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Upload Eligible Voter CSV Roster</label>
                   <div style={{ border: '2px dashed var(--border-color)', borderRadius: '12px', padding: '1.5rem', textAlign: 'center', backgroundColor: 'var(--bg-input)' }}>
-                    <Upload size={32} style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }} />
+                    <Upload size={32} style={{ color: '#2563eb', marginBottom: '0.5rem' }} />
                     <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>Drop your CSV file here or click to browse</p>
                     <input type="file" accept=".csv" onChange={handleCsvChange} style={{ fontSize: '0.85rem' }} />
                   </div>
@@ -664,7 +852,7 @@ export default function OrganizationElectionHub() {
               ) : <div />}
 
               {wizardStep < 4 ? (
-                <button type="button" onClick={() => setWizardStep(wizardStep + 1)} className="btn btn-primary">
+                <button type="button" onClick={() => setWizardStep(wizardStep + 1)} className="btn btn-primary" style={{ backgroundColor: '#2563eb' }}>
                   Next Step ➔
                 </button>
               ) : (
@@ -682,7 +870,7 @@ export default function OrganizationElectionHub() {
                     disabled={isCreating}
                     onClick={() => handleWizardSubmit(true)}
                     className="btn btn-primary"
-                    style={{ fontWeight: 700 }}
+                    style={{ fontWeight: 700, backgroundColor: '#2563eb' }}
                   >
                     {isCreating ? 'Creating Workspace...' : '🚀 Launch Election Workspace'}
                   </button>

@@ -221,36 +221,6 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
         </div>
       )}
 
-      {/* Per-Election Workspace Sub-Navigation Tabs */}
-      <div className="card" style={{ padding: '0.5rem', marginBottom: '1.5rem', display: 'flex', gap: '0.35rem', overflowX: 'auto' }}>
-        {[
-          { label: 'Overview', path: `/admin/elections/${electionId}/dashboard`, active: true },
-          { label: 'Roster & CSV', path: `/admin/elections/${electionId}/voters`, active: false },
-          { label: 'Candidates', path: `/admin/elections/${electionId}/candidates`, active: false },
-          { label: 'Live Results', path: `/admin/elections/${electionId}/results`, active: false },
-          { label: '360° Audit Ledger', path: `/admin/elections/${electionId}/audit`, active: false },
-          { label: 'Access Security', path: `/admin/elections/${electionId}/fraud`, active: false },
-        ].map(tab => (
-          <Link
-            key={tab.label}
-            href={tab.path}
-            style={{
-              padding: '0.55rem 1rem',
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              whiteSpace: 'nowrap',
-              backgroundColor: tab.active ? 'var(--color-primary)' : 'transparent',
-              color: tab.active ? '#ffffff' : 'var(--text-secondary)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </div>
-
       {/* Election Workspace KPI Cards */}
       <div className="admin-grid-top" style={{ marginBottom: '1.5rem' }}>
         <div className="card kpi-card">
