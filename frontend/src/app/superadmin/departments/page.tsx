@@ -377,7 +377,6 @@ export default function SuperAdminDepartments() {
             <input type="text" className="form-input" placeholder="e.g. cs.htu.edu.gh" value={createForm.domain} onChange={e => setCreateForm({ ...createForm, domain: e.target.value })} />
           </div>
           <div className="form-group">
-          <div className="form-group">
             <label className="form-label">EC Admin Google Auth Email</label>
             <input type="email" className="form-input" required placeholder="ec@compssa.htu.edu.gh" value={createForm.adminEmail} onChange={e => setCreateForm({ ...createForm, adminEmail: e.target.value })} />
             <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px', display: 'block' }}>
