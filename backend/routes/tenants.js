@@ -75,4 +75,32 @@ router.post('/onboard-request', async (req, res) => {
   }
 });
 
+// POST /api/tenants/branding - Update organization logo & branding settings
+const { verifyAuth, verifyAdminRole } = require('../middleware/auth');
+
+router.post('/branding', verifyAuth, verifyAdminRole, async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+    const { logoUrl, brandColor } = req.body;
+
+    const updateData = {
+      updatedAt: Date.now()
+    };
+    if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
+    if (brandColor !== undefined) updateData.brandColor = brandColor;
+
+    await db.collection('tenants').doc(tenantId).set(updateData, { merge: true });
+    await db.collection('organizations').doc(tenantId).set(updateData, { merge: true });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Organization branding updated successfully.',
+      data: { logoUrl, brandColor }
+    });
+  } catch (error) {
+    console.error('Error updating tenant branding:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update organization branding.' });
+  }
+});
+
 module.exports = router;

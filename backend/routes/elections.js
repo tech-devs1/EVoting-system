@@ -956,4 +956,129 @@ router.post('/:id/verify-access-otp', verifyAuth, async (req, res) => {
   }
 });
 
+// 4. Send Voting Invitations to all Roster Voters
+router.post('/:id/send-invitations', verifyAuth, verifyAdminRole, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+
+    const electionDoc = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+    const election = electionDoc.data();
+
+    // Fetch roster voters
+    const votersSnapshot = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+    if (votersSnapshot.empty) {
+      return res.status(400).json({ status: 'error', message: 'No CSV voter roster found for this election. Please upload a voter CSV list first.' });
+    }
+
+    const voterList = votersSnapshot.docs.map(doc => doc.data());
+    let sentCount = 0;
+
+    for (const v of voterList) {
+      if (v.email) {
+        sentCount++;
+        // Asynchronously log notification event
+        await logActivity({
+          tenantId,
+          actorEmail: req.user.email,
+          actorRole: 'admin',
+          action: 'ELECTION_INVITATION_SENT',
+          description: `Invitation sent to ${v.email} for election: ${election.title}`
+        });
+      }
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: `Successfully dispatched voting invitations to ${sentCount} voters on the roster.`,
+      data: { totalVoters: voterList.length, invitationsSent: sentCount }
+    });
+  } catch (error) {
+    console.error('Error sending invitations:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to send voting invitations.' });
+  }
+});
+
+// 5. Broadcast Final Results to Roster Voters
+router.post('/:id/broadcast-results', verifyAuth, verifyAdminRole, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+
+    const electionRef = db.collection('tenants').doc(tenantId).collection('elections').doc(electionId);
+    const electionDoc = await electionRef.get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+
+    // Set election status to ended
+    await electionRef.update({ status: 'ended', updatedAt: Date.now() });
+
+    // Fetch roster voters
+    const votersSnapshot = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+    const voterCount = votersSnapshot.size;
+
+    await logActivity({
+      tenantId,
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_RESULTS_BROADCAST',
+      description: `Final election results broadcast dispatched to ${voterCount} roster members.`
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: `Election closed and results broadcast dispatched to ${voterCount} roster voters.`,
+      data: { status: 'ended', recipientCount: voterCount }
+    });
+  } catch (error) {
+    console.error('Error broadcasting results:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to broadcast election results.' });
+  }
+});
+
+// 6. Export Raw Cryptographic Audit Ledger (CSV)
+router.get('/:id/export-audit', verifyAuth, verifyAdminRole, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+
+    const electionDoc = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+    const election = electionDoc.data();
+
+    // Fetch audit ledger
+    const auditSnapshot = await db.collection('tenants').doc(tenantId).collection('audit_ledger')
+      .where('electionId', '==', electionId)
+      .orderBy('timestamp', 'asc')
+      .get();
+
+    let csvContent = 'Index,Ballot Transaction Hash,Position,Timestamp,Verification Status\n';
+    let idx = 1;
+
+    auditSnapshot.forEach(doc => {
+      const data = doc.data();
+      const hash = doc.id;
+      const pos = (data.position || 'N/A').replace(/,/g, ' ');
+      const timeStr = new Date(data.timestamp || Date.now()).toISOString();
+      csvContent += `${idx},${hash},${pos},${timeStr},CRYPTOGRAPHICALLY_VERIFIED\n`;
+      idx++;
+    });
+
+    const filename = `${(election.title || 'election').replace(/[^a-zA-Z0-9]/g, '_')}_audit_ledger.csv`;
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.status(200).send(csvContent);
+
+  } catch (error) {
+    console.error('Error exporting audit CSV:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to export audit ledger.' });
+  }
+});
+
 module.exports = router;

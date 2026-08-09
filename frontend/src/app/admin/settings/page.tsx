@@ -214,8 +214,50 @@ export default function AdminSettingsPage() {
         </form>
 
         <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          
+          <span>🔒 Password updates apply securely across your assigned department tenant.</span>
         </div>
+      </div>
+
+      {/* Organization Branding Customization Card */}
+      <div className="card" style={{ padding: 'var(--space-6)', marginTop: 'var(--space-6)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--space-5)', paddingBottom: 'var(--space-4)', borderBottom: '1px solid var(--border-color)' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-lg)', background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ShieldCheck size={20} style={{ color: 'white' }} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)' }}>Organization Branding & Header</h3>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Customize your logo and portal accent colors</p>
+          </div>
+        </div>
+
+        <form onSubmit={async (e) => {
+          e.preventDefault();
+          const target = e.target as any;
+          const logoUrl = target.logoUrl.value;
+          const brandColor = target.brandColor.value;
+          try {
+            const res = await apiRequest<{ status: string }>('/tenants/branding', 'POST', { logoUrl, brandColor });
+            if (res.status === 'success') alert('✅ Organization branding updated successfully!');
+            else alert('Failed to update branding');
+          } catch (err: any) {
+            alert('Error updating branding: ' + err.message);
+          }
+        }}>
+          <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+            <label className="form-label">Organization Logo Image URL</label>
+            <input type="url" name="logoUrl" className="form-input" placeholder="https://example.com/logo.png" />
+          </div>
+          <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+            <label className="form-label">Primary Brand Accent Color</label>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input type="color" name="brandColor" defaultValue="#3b82f6" style={{ width: '44px', height: '38px', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} />
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Select theme accent color for voting portal</span>
+            </div>
+          </div>
+          <button type="submit" className="btn btn-success" style={{ width: '100%', padding: '12px', fontWeight: 600 }}>
+            Save Branding Customization
+          </button>
+        </form>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
-import { Plus, FolderOpen, Settings, Activity, Trash, ArrowLeft, Download, Clock, RefreshCw } from 'lucide-react';
+import { Plus, FolderOpen, Settings, Activity, Trash, ArrowLeft, Download, Clock, RefreshCw, Send, Radio, Upload, CheckCircle2, AlertTriangle, FileSpreadsheet } from 'lucide-react';
 
 interface Election {
   id: string;
@@ -48,6 +48,20 @@ export default function AdminElectionsPage() {
   const [editingTime, setEditingTime] = useState(false);
 
   const [isReactivateModalOpen, setIsReactivateModalOpen] = useState(false);
+  const [reactivateElectionId, setReactivateElectionId] = useState<string | null>(null);
+  const [reactivateElectionTitle, setReactivateElectionTitle] = useState('');
+  const [reactivateEndDate, setReactivateEndDate] = useState('');
+  const [reactivating, setReactivating] = useState(false);
+
+  // CSV Pre-Validation & Roster Upload State
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [targetElectionForCsv, setTargetElectionForCsv] = useState<Election | null>(null);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvRawText, setCsvRawText] = useState<string>('');
+  const [csvStats, setCsvStats] = useState<{ total: number; valid: number; duplicates: number; invalid: number }>({ total: 0, valid: 0, duplicates: 0, invalid: 0 });
+  const [csvPreviewRows, setCsvPreviewRows] = useState<Array<{ email: string; name: string; valid: boolean; reason?: string }>>([]);
+  const [csvUploading, setCsvUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [reactivateElectionId, setReactivateElectionId] = useState<string | null>(null);
   const [reactivateElectionTitle, setReactivateElectionTitle] = useState('');
   const [reactivateEndDate, setReactivateEndDate] = useState('');
@@ -260,6 +274,121 @@ export default function AdminElectionsPage() {
     }
   };
 
+  // CSV Pre-Validation & Roster Upload Handlers
+  const handleOpenCsvModal = (el: Election) => {
+    setTargetElectionForCsv(el);
+    setCsvFile(null);
+    setCsvRawText('');
+    setCsvStats({ total: 0, valid: 0, duplicates: 0, invalid: 0 });
+    setCsvPreviewRows([]);
+    setIsCsvModalOpen(true);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFile(file);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setCsvRawText(text);
+
+      const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+      let total = 0;
+      let valid = 0;
+      let duplicates = 0;
+      let invalid = 0;
+
+      const seenEmails = new Set<string>();
+      const preview: Array<{ email: string; name: string; valid: boolean; reason?: string }> = [];
+
+      lines.forEach((line, index) => {
+        // Skip header if line 1 has 'email'
+        if (index === 0 && line.toLowerCase().includes('email')) return;
+
+        total++;
+        const parts = line.split(',').map(p => p.trim().replace(/^["']|["']$/g, ''));
+        const email = parts[0] || '';
+        const name = parts[1] || 'Voter';
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+          invalid++;
+          preview.push({ email, name, valid: false, reason: 'Invalid Email Format' });
+        } else if (seenEmails.has(email.toLowerCase())) {
+          duplicates++;
+          preview.push({ email, name, valid: false, reason: 'Duplicate Email' });
+        } else {
+          valid++;
+          seenEmails.add(email.toLowerCase());
+          preview.push({ email, name, valid: true });
+        }
+      });
+
+      setCsvStats({ total, valid, duplicates, invalid });
+      setCsvPreviewRows(preview);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmCsvUpload = async () => {
+    if (!targetElectionForCsv || !csvRawText) return;
+    setCsvUploading(true);
+    try {
+      const res = await apiRequest<{ status: string; count?: number; message?: string }>(
+        `/elections/${targetElectionForCsv.id}/voters/upload-csv`,
+        'POST',
+        { csvText: csvRawText }
+      );
+      if (res.status === 'success') {
+        alert(`✅ Roster uploaded successfully! ${res.count || csvStats.valid} eligible voters registered for "${targetElectionForCsv.title}".`);
+        setIsCsvModalOpen(false);
+      } else {
+        alert('Failed to upload roster: ' + (res.message || 'Unknown error'));
+      }
+    } catch (err: any) {
+      alert('Error uploading roster: ' + err.message);
+    } finally {
+      setCsvUploading(false);
+    }
+  };
+
+  const handleSendInvitations = async (el: Election) => {
+    if (!confirm(`Send voting invitation emails to all roster voters for "${el.title}"?`)) return;
+    try {
+      const res = await apiRequest<{ status: string; message?: string; data?: { invitationsSent: number } }>(
+        `/elections/${el.id}/send-invitations`,
+        'POST'
+      );
+      if (res.status === 'success') {
+        alert(`📧 Voting invitations dispatched to ${res.data?.invitationsSent || 0} roster voters!`);
+      } else {
+        alert('Failed to send invitations: ' + (res.message || 'Unknown error'));
+      }
+    } catch (err: any) {
+      alert('Error sending invitations: ' + err.message);
+    }
+  };
+
+  const handleBroadcastResults = async (el: Election) => {
+    if (!confirm(`Are you sure you want to CLOSE voting and broadcast the final results for "${el.title}" to all roster voters?`)) return;
+    try {
+      const res = await apiRequest<{ status: string; message?: string; data?: { recipientCount: number } }>(
+        `/elections/${el.id}/broadcast-results`,
+        'POST'
+      );
+      if (res.status === 'success') {
+        setElections(prev => prev.map(item => item.id === el.id ? { ...item, status: 'completed' } : item));
+        alert(`🎉 Election closed and final results broadcast dispatched to ${res.data?.recipientCount || 0} roster voters!`);
+      } else {
+        alert('Failed to broadcast results: ' + (res.message || 'Unknown error'));
+      }
+    } catch (err: any) {
+      alert('Error broadcasting results: ' + err.message);
+    }
+  };
+
   return (
     <div className="animate-page-enter">
       {/* Header */}
@@ -303,6 +432,20 @@ export default function AdminElectionsPage() {
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                 <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => handleOpenCsvModal(el)}
+                  style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <FileSpreadsheet size={12} /> Upload Voter CSV
+                </button>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => handleSendInvitations(el)}
+                  style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <Send size={12} /> Send Invitations
+                </button>
+                <button
                   className={`btn btn-sm ${el.showResults ? 'btn-success' : 'btn-outline'}`}
                   onClick={() => handleToggleResults(el.id, !el.showResults)}
                   style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -315,9 +458,14 @@ export default function AdminElectionsPage() {
                   </button>
                 )}
                 {el.status === 'active' && (
-                  <button className="btn btn-secondary btn-sm" onClick={() => handleChangeStatus(el.id, 'completed')} style={{ fontSize: 'var(--text-xs)' }}>
-                    Close Election
-                  </button>
+                  <>
+                    <button className="btn btn-primary btn-sm" onClick={() => handleBroadcastResults(el)} style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Radio size={12} /> Broadcast Results & End
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleChangeStatus(el.id, 'completed')} style={{ fontSize: 'var(--text-xs)' }}>
+                      Close Election
+                    </button>
+                  </>
                 )}
                 {el.status === 'completed' && (
                   <>
@@ -561,6 +709,138 @@ export default function AdminElectionsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+      {/* CSV Roster Pre-Validation & Preview Modal */}
+      {mounted && isCsvModalOpen && targetElectionForCsv && createPortal(
+        <div
+          onClick={() => setIsCsvModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9500,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            padding: '40px 16px 40px 16px',
+            overflowY: 'auto',
+            background: 'rgba(0,0,0,0.6)',
+          }}
+        >
+          <div
+            className="modal-container"
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '650px', maxHeight: 'calc(100dvh - 80px)' }}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileSpreadsheet size={20} style={{ color: 'var(--color-primary)' }} />
+                Roster CSV Pre-Validation & Import
+              </h3>
+              <button className="modal-close" onClick={() => setIsCsvModalOpen(false)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-3)' }}>
+                Target Election: <strong style={{ color: 'var(--text-primary)' }}>{targetElectionForCsv.title}</strong>
+              </p>
+
+              <div style={{
+                border: '2px dashed var(--border-color)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-5)',
+                textAlign: 'center',
+                backgroundColor: 'var(--bg-secondary)',
+                cursor: 'pointer',
+                marginBottom: 'var(--space-4)'
+              }} onClick={() => fileInputRef.current?.click()}>
+                <Upload size={32} style={{ color: 'var(--color-primary)', marginBottom: 'var(--space-2)' }} />
+                <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>
+                  {csvFile ? csvFile.name : 'Click to select CSV File (email, name)'}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+                  Format: <code>email, name</code> per line
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.txt"
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                />
+              </div>
+
+              {/* Live Validation Summary */}
+              {csvFile && (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+                    <div style={{ background: 'var(--bg-secondary)', padding: '10px', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Total Rows</div>
+                      <div style={{ fontSize: '16px', fontWeight: 700 }}>{csvStats.total}</div>
+                    </div>
+                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '10px', borderRadius: 'var(--radius-sm)', textAlign: 'center', color: '#10B981' }}>
+                      <div style={{ fontSize: '11px' }}>Valid Emails</div>
+                      <div style={{ fontSize: '16px', fontWeight: 700 }}>{csvStats.valid}</div>
+                    </div>
+                    <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '10px', borderRadius: 'var(--radius-sm)', textAlign: 'center', color: '#F59E0B' }}>
+                      <div style={{ fontSize: '11px' }}>Duplicates</div>
+                      <div style={{ fontSize: '16px', fontWeight: 700 }}>{csvStats.duplicates}</div>
+                    </div>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '10px', borderRadius: 'var(--radius-sm)', textAlign: 'center', color: '#EF4444' }}>
+                      <div style={{ fontSize: '11px' }}>Invalid Format</div>
+                      <div style={{ fontSize: '16px', fontWeight: 700 }}>{csvStats.invalid}</div>
+                    </div>
+                  </div>
+
+                  {/* Preview Table */}
+                  <h4 style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    Previewing First 10 Rows
+                  </h4>
+                  <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                          <th style={{ padding: '6px 10px' }}>Email</th>
+                          <th style={{ padding: '6px 10px' }}>Name</th>
+                          <th style={{ padding: '6px 10px' }}>Validation</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {csvPreviewRows.slice(0, 10).map((row, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid var(--border-color)', background: row.valid ? 'transparent' : 'rgba(239, 68, 68, 0.05)' }}>
+                            <td style={{ padding: '6px 10px' }}><code>{row.email}</code></td>
+                            <td style={{ padding: '6px 10px' }}>{row.name}</td>
+                            <td style={{ padding: '6px 10px' }}>
+                              {row.valid ? (
+                                <span style={{ color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
+                                  <CheckCircle2 size={12} /> Valid
+                                </span>
+                              ) : (
+                                <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
+                                  <AlertTriangle size={12} /> {row.reason}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setIsCsvModalOpen(false)}>Cancel</button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!csvFile || csvStats.valid === 0 || csvUploading}
+                onClick={handleConfirmCsvUpload}
+              >
+                {csvUploading ? 'Uploading Roster...' : `Confirm & Import ${csvStats.valid} Voters`}
+              </button>
+            </div>
           </div>
         </div>,
         document.body

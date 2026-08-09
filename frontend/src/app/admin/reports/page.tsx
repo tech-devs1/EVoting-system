@@ -188,6 +188,31 @@ export default function AdminReportPage() {
           </button>
 
           <button 
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/elections/active/export-audit', {
+                  headers: { 'Authorization': localStorage.getItem('COMPSSA_token') || '' }
+                });
+                if (!res.ok) throw new Error('Failed to export audit ledger');
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `audit_ledger_${Date.now()}.csv`;
+                a.click();
+              } catch (e: any) {
+                alert('Audit export error: ' + e.message);
+              }
+            }} 
+            className="btn btn-secondary" 
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            disabled={loading}
+          >
+            <Download size={16} />
+            Export Audit Ledger (CSV)
+          </button>
+
+          <button 
             onClick={downloadPDFReport} 
             className="btn btn-primary" 
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
