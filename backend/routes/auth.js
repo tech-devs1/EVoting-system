@@ -557,6 +557,37 @@ router.post('/login-admin', async (req, res) => {
 });
 
 // Google Auth login (verified via Firebase Client SDK ID Token)
+// Helper to capture all authenticated users into centralized users table
+async function captureUserInTable({ uid, email, name, role, tenantId, phone }) {
+  try {
+    const docId = uid || `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const userRef = db.collection('users').doc(docId);
+    const existing = await userRef.get();
+
+    const userData = {
+      id: docId,
+      email: email.toLowerCase().trim(),
+      name: name || email.split('@')[0],
+      role: role || 'voter',
+      tenantId: tenantId || 'global',
+      phone: phone || '',
+      status: 'active',
+      isVerified: true,
+      updatedAt: Date.now()
+    };
+
+    if (!existing.exists) {
+      userData.createdAt = Date.now();
+    }
+
+    await userRef.set(userData, { merge: true });
+    console.log(`✅ Google user captured in users table: ${email} (${role})`);
+  } catch (err) {
+    console.warn(`User capture notice (${email}):`, err.message);
+  }
+}
+
+// Google Auth login (verified via Firebase Client SDK ID Token)
 router.post('/google-login', async (req, res) => {
   try {
     const { idToken } = req.body;
@@ -624,6 +655,9 @@ router.post('/google-login', async (req, res) => {
         JWT_SECRET,
         { expiresIn: '24h' }
       );
+
+      await captureUserInTable({ uid, email, name: 'Super Administrator', role: 'superadmin', tenantId: 'global' });
+
       await logActivity({
         tenantId: 'global',
         tenantName: 'Global System',
@@ -652,6 +686,9 @@ router.post('/google-login', async (req, res) => {
         JWT_SECRET,
         { expiresIn: '24h' }
       );
+
+      await captureUserInTable({ uid, email, name: `${tenantData.name} Administrator`, role: 'admin', tenantId: tenantDoc.id });
+
       await logActivity({
         tenantId: tenantDoc.id,
         tenantName: tenantData.name,
@@ -669,7 +706,7 @@ router.post('/google-login', async (req, res) => {
       });
     }
 
-    // 2. Iterate through all tenants to find the voter
+    // 2. Iterate through all tenants to find existing voter
     const allTenantsSnapshot = await db.collection('tenants').get();
     let foundVoterDoc = null;
     let foundTenantId = null;
@@ -683,36 +720,57 @@ router.post('/google-login', async (req, res) => {
       }
     }
 
+    let finalUid = null;
+    let finalUserData = null;
+    let targetTenantId = foundTenantId || 'compssa';
+
     if (!foundVoterDoc) {
-      return res.status(403).json({
-        status: 'error',
-        message: `The Google account email (${email}) is not registered on the official voter rolls for any election. Please make sure you are using your registered email address.`
-      });
+      // Auto-register new Google Auth signup into users table as a verified voter
+      finalUid = `voter_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      finalUserData = {
+        id: finalUid,
+        email,
+        name: name || email.split('@')[0],
+        role: 'voter',
+        tenantId: targetTenantId,
+        isVerified: true,
+        isRegistered: true,
+        createdAt: Date.now()
+      };
+      await db.collection('tenants').doc(targetTenantId).collection('voter_rolls').doc(finalUid).set(finalUserData);
+    } else {
+      finalUid = foundVoterDoc.id;
+      finalUserData = foundVoterDoc.data();
+      if (!finalUserData.isRegistered) {
+        await db.collection('tenants').doc(targetTenantId).collection('voter_rolls').doc(finalUid).update({
+          isRegistered: true
+        });
+      }
     }
 
-    const userData = foundVoterDoc.data();
-
-    // Automatically mark the user as registered/active since identity is securely validated via Google
-    if (!userData.isRegistered) {
-      await db.collection('tenants').doc(foundTenantId).collection('voter_rolls').doc(foundVoterDoc.id).update({
-        isRegistered: true
-      });
-    }
+    // Capture user directly in central MySQL users table
+    await captureUserInTable({
+      uid: finalUid,
+      email: finalUserData.email || email,
+      name: finalUserData.name || name,
+      role: finalUserData.role || 'voter',
+      tenantId: targetTenantId
+    });
 
     // Issue JWT token
     const token = jwt.sign(
-      { uid: foundVoterDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name || name, tenantId: foundTenantId },
+      { uid: finalUid, email: finalUserData.email || email, role: finalUserData.role || 'voter', name: finalUserData.name || name, tenantId: targetTenantId },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     // Log voter login activity
     await logActivity({
-      tenantId: foundTenantId,
-      actorEmail: userData.email,
+      tenantId: targetTenantId,
+      actorEmail: finalUserData.email || email,
       actorRole: 'voter',
       action: 'VOTER_LOGIN_GOOGLE',
-      description: `Voter ${userData.name || userData.email} logged in successfully via Google Auth`,
+      description: `Voter ${finalUserData.name || name} logged in via Google Auth`,
       ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
       status: 'success'
     });
@@ -720,11 +778,11 @@ router.post('/google-login', async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        uid: foundVoterDoc.id,
-        email: userData.email,
-        role: userData.role || 'voter',
-        name: userData.name || name,
-        tenantId: foundTenantId
+        uid: finalUid,
+        email: finalUserData.email || email,
+        role: finalUserData.role || 'voter',
+        name: finalUserData.name || name,
+        tenantId: targetTenantId
       },
       token
     });
