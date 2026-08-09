@@ -365,26 +365,22 @@ export default function SuperAdminDepartments() {
 
       {/* ── Create Modal ── */}
       {modalType === 'create' && renderModal(
-        'Provision New Department',
+        'Onboard New Organization',
         handleCreate,
         <>
           <div className="form-group">
-            <label className="form-label">Department Name</label>
-            <input type="text" className="form-input" required placeholder="e.g. Computer Science Department" value={createForm.name} onChange={e => setCreateForm({ ...createForm, name: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Sub-Domain / Identifier (Optional)</label>
-            <input type="text" className="form-input" placeholder="e.g. cs.htu.edu.gh" value={createForm.domain} onChange={e => setCreateForm({ ...createForm, domain: e.target.value })} />
+            <label className="form-label">Organization Name</label>
+            <input type="text" className="form-input" required placeholder="e.g. Computer Science Society" value={createForm.name} onChange={e => setCreateForm({ ...createForm, name: e.target.value })} />
           </div>
           <div className="form-group">
             <label className="form-label">EC Admin Google Auth Email</label>
-            <input type="email" className="form-input" required placeholder="ec@compssa.htu.edu.gh" value={createForm.adminEmail} onChange={e => setCreateForm({ ...createForm, adminEmail: e.target.value })} />
+            <input type="email" className="form-input" required placeholder="admin@organization.org" value={createForm.adminEmail} onChange={e => setCreateForm({ ...createForm, adminEmail: e.target.value })} />
             <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px', display: 'block' }}>
-              Passwordless Google Auth: When the administrator signs in with this Google email, they will automatically gain EC Admin access to their dashboard.
+              Passwordless Google Auth: When the administrator signs in with this Google email, they will automatically gain EC Admin access to manage their organization's elections.
             </span>
           </div>
         </>,
-        'Provision Organization'
+        'Onboard Organization'
       )}
 
       {/* ── Edit Name Modal ── */}
