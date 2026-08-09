@@ -14,22 +14,24 @@ router.post('/departments', async (req, res) => {
   try {
     const { name, domain, adminEmail, adminPassword } = req.body;
     
-    if (!name || !adminEmail || !adminPassword) {
-      return res.status(400).json({ status: 'error', message: 'Name, admin email, and admin password are required' });
+    if (!name || !adminEmail) {
+      return res.status(400).json({ status: 'error', message: 'Organization name and EC admin email are required' });
     }
+
+    const normalizedAdminEmail = adminEmail.toLowerCase().trim();
 
     // Check if a department with this email already exists
-    const existingAdmins = await db.collection('tenants').where('adminEmail', '==', adminEmail).get();
+    const existingAdmins = await db.collection('tenants').where('adminEmail', '==', normalizedAdminEmail).get();
     if (!existingAdmins.empty) {
-      return res.status(400).json({ status: 'error', message: 'A department with this admin email already exists' });
+      return res.status(400).json({ status: 'error', message: 'An organization with this EC admin email already exists' });
     }
 
-    const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
+    const hashedAdminPassword = adminPassword ? await bcrypt.hash(adminPassword, 10) : null;
     const tenantId = `dept_${Date.now()}`;
     const newTenant = {
-      name,
+      name: name.trim(),
       domain: domain || '',
-      adminEmail,
+      adminEmail: normalizedAdminEmail,
       adminPassword: hashedAdminPassword,
       status: 'active',
       createdAt: Date.now()

@@ -377,15 +377,15 @@ export default function SuperAdminDepartments() {
             <input type="text" className="form-input" placeholder="e.g. cs.htu.edu.gh" value={createForm.domain} onChange={e => setCreateForm({ ...createForm, domain: e.target.value })} />
           </div>
           <div className="form-group">
-            <label className="form-label">Admin Login Email</label>
-            <input type="email" className="form-input" required placeholder="admin@cs.htu.edu.gh" value={createForm.adminEmail} onChange={e => setCreateForm({ ...createForm, adminEmail: e.target.value })} />
-          </div>
           <div className="form-group">
-            <label className="form-label">Admin Initial Password</label>
-            <input type="password" className="form-input" required placeholder="Enter secure password" value={createForm.adminPassword} onChange={e => setCreateForm({ ...createForm, adminPassword: e.target.value })} />
+            <label className="form-label">EC Admin Google Auth Email</label>
+            <input type="email" className="form-input" required placeholder="ec@compssa.htu.edu.gh" value={createForm.adminEmail} onChange={e => setCreateForm({ ...createForm, adminEmail: e.target.value })} />
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px', display: 'block' }}>
+              Passwordless Google Auth: When the administrator signs in with this Google email, they will automatically gain EC Admin access to their dashboard.
+            </span>
           </div>
         </>,
-        'Provision Tenant'
+        'Provision Organization'
       )}
 
       {/* ── Edit Name Modal ── */}
