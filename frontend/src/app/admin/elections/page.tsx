@@ -62,10 +62,6 @@ export default function AdminElectionsPage() {
   const [csvPreviewRows, setCsvPreviewRows] = useState<Array<{ email: string; name: string; valid: boolean; reason?: string }>>([]);
   const [csvUploading, setCsvUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [reactivateElectionId, setReactivateElectionId] = useState<string | null>(null);
-  const [reactivateElectionTitle, setReactivateElectionTitle] = useState('');
-  const [reactivateEndDate, setReactivateEndDate] = useState('');
-  const [reactivating, setReactivating] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
