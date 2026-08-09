@@ -2,9 +2,15 @@ const mysql = require('mysql2/promise');
 
 let pool = null;
 let isConnected = false;
+let isInitializing = false;
+let tablesCreated = false;
 
-// Initialize MySQL Connection Pool
-async function initMySQL() {
+// Initialize MySQL Connection Pool with auto-retry
+async function initMySQL(retries = 5, delayMs = 3000) {
+  if (isConnected && pool) return pool;
+  if (isInitializing) return pool;
+  isInitializing = true;
+
   const mysqlUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
   const host = process.env.MYSQL_HOST || '127.0.0.1';
   const port = parseInt(process.env.MYSQL_PORT || '3306', 10);
@@ -12,41 +18,51 @@ async function initMySQL() {
   const password = process.env.MYSQL_PASSWORD || '';
   const database = process.env.MYSQL_DATABASE || 'htu_elect';
 
-  try {
-    if (mysqlUrl) {
-      pool = mysql.createPool(mysqlUrl);
-      console.log('🐬 Connecting to MySQL via URL connection string...');
-    } else {
-      pool = mysql.createPool({
-        host,
-        port,
-        user,
-        password,
-        database,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0
-      });
-      console.log(`🐬 Connecting to MySQL at ${host}:${port}/${database}...`);
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      if (!pool) {
+        if (mysqlUrl) {
+          pool = mysql.createPool(mysqlUrl);
+          console.log(`🐬 Connecting to MySQL via URL string (attempt ${attempt}/${retries})...`);
+        } else {
+          pool = mysql.createPool({
+            host,
+            port,
+            user,
+            password,
+            database,
+            waitForConnections: true,
+            connectionLimit: 10,
+            queueLimit: 0
+          });
+          console.log(`🐬 Connecting to MySQL at ${host}:${port}/${database} (attempt ${attempt}/${retries})...`);
+        }
+      }
+
+      const connection = await pool.getConnection();
+      await connection.ping();
+      connection.release();
+
+      isConnected = true;
+      isInitializing = false;
+      console.log('✅ Connected to MySQL database successfully.');
+
+      await createTables();
+      tablesCreated = true;
+      return pool;
+    } catch (err) {
+      console.warn(`⚠️ MySQL Connection attempt ${attempt}/${retries} failed:`, err.message);
+      pool = null;
+      if (attempt < retries) {
+        await new Promise(res => setTimeout(res, delayMs));
+      }
     }
-
-    // Verify connection
-    const connection = await pool.getConnection();
-    await connection.ping();
-    connection.release();
-
-    isConnected = true;
-    console.log('✅ Connected to MySQL database successfully.');
-
-    // Auto-create required SQL tables
-    await createTables();
-    return pool;
-  } catch (err) {
-    console.warn('⚠️ MySQL Connection Warning:', err.message);
-    console.warn('⚠️ Backend running with fallback in-memory database store until MYSQL_URL is configured.');
-    isConnected = false;
-    return null;
   }
+
+  isInitializing = false;
+  isConnected = false;
+  console.warn('⚠️ MySQL backend running with fallback in-memory store until MYSQL_URL is available.');
+  return null;
 }
 
 // Automatically create database tables if they do not exist
@@ -58,7 +74,7 @@ async function createTables() {
       id VARCHAR(128) PRIMARY KEY,
       tenantId VARCHAR(128),
       name VARCHAR(255) NOT NULL,
-      email VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL UNIQUE,
       phone VARCHAR(64),
       password VARCHAR(255),
       role VARCHAR(64) NOT NULL DEFAULT 'voter',
@@ -244,6 +260,31 @@ async function createTables() {
     }
   }
 
+  // Seed default accounts into users table if empty
+  try {
+    const [rows] = await pool.query('SELECT COUNT(*) as count FROM users');
+    if (rows[0].count === 0) {
+      const bcrypt = require('bcryptjs');
+      const superadminPassword = await bcrypt.hash('superadmin080', 10);
+      const adminPassword = await bcrypt.hash('admin080', 10);
+      const now = Date.now();
+
+      await pool.query(
+        `INSERT INTO users (id, tenantId, name, email, password, role, status, isVerified, data, createdAt, updatedAt)
+         VALUES 
+         (?, 'global', 'Super Administrator', 'superadmin@htu.edu.gh', ?, 'superadmin', 'active', 1, '{}', ?, ?),
+         (?, 'compssa', 'EC Administrator', 'admin@htu.edu.gh', ?, 'admin', 'active', 1, '{}', ?, ?)`,
+        [
+          'usr_superadmin', superadminPassword, now, now,
+          'usr_admin', adminPassword, now, now
+        ]
+      );
+      console.log('✅ Default users seeded into MySQL users table.');
+    }
+  } catch (err) {
+    console.warn('User seed check notice:', err.message);
+  }
+
   console.log('✅ MySQL schema tables created / verified.');
 }
 
@@ -306,6 +347,10 @@ class MySQLDocumentReference {
         const name = updated.name || updated.title || null;
         const acronym = updated.acronym || null;
         const domain = updated.domain || null;
+        const email = updated.email || updated.adminEmail || null;
+        const password = updated.password || updated.adminPassword || null;
+        const role = updated.role || 'voter';
+        const tenantId = updated.tenantId || null;
         const status = updated.status || 'active';
         const createdAt = updated.createdAt || Date.now();
         const updatedAt = Date.now();
@@ -316,6 +361,29 @@ class MySQLDocumentReference {
            ON DUPLICATE KEY UPDATE data = VALUES(data), name = VALUES(name), acronym = VALUES(acronym), domain = VALUES(domain), status = VALUES(status), updatedAt = VALUES(updatedAt)`,
           [this.id, payload, name, acronym, domain, status, createdAt, updatedAt]
         );
+
+        // Synchronize with centralized users table if updating user/admin/voter doc
+        if (this.collectionName === 'users' || this.collectionName === 'voters' || this.collectionName === 'tenants') {
+          if (email) {
+            await pool.query(
+              `INSERT INTO users (id, tenantId, name, email, password, role, status, data, createdAt, updatedAt)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE name = VALUES(name), password = VALUES(password), role = VALUES(role), updatedAt = VALUES(updatedAt)`,
+              [
+                `usr_${this.id}`,
+                tenantId,
+                name || email,
+                email,
+                password,
+                role,
+                status,
+                payload,
+                createdAt,
+                updatedAt
+              ]
+            ).catch(() => {});
+          }
+        }
       } catch (err) {
         console.warn(`MySQL set error (${this.collectionName}/${this.id}):`, err.message);
       }
