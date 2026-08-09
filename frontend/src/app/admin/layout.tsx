@@ -103,6 +103,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const currentTitle = navLinks.find(link => pathname.startsWith(link.href))?.label || "Admin Console";
 
+  if (pathname === '/admin/dashboard') {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', padding: '0 2.5rem' }}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)', position: 'relative' }}>
       {/* Mobile Drawer Overlay */}

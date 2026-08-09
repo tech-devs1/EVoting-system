@@ -11,22 +11,18 @@ dotenv.config();
 
 // Initialize Firebase Admin SDK
 // Requires FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY in .env
-const hasFirebaseCreds =
-  process.env.FIREBASE_PROJECT_ID &&
-  process.env.FIREBASE_CLIENT_EMAIL &&
-  process.env.FIREBASE_PRIVATE_KEY;
+function initFirestore() {
+  const hasCreds =
+    process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_CLIENT_EMAIL &&
+    process.env.FIREBASE_PRIVATE_KEY;
 
-let firestoreDb = null;
+  if (!hasCreds) {
+    return null;
+  }
 
-if (!hasFirebaseCreds) {
-  console.warn('⚠️  WARNING: Firebase credentials are missing from .env (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).');
-  console.warn('⚠️  Student index numbers cannot be fetched from the real database — falling back to in-memory MockFirestore.');
-  console.warn('⚠️  Add the Firebase service account credentials to backend/.env and restart the server to fix this.');
-} else {
   try {
-    // Only initialize if not already done (prevents duplicate app error on hot-reload)
     if (getApps().length === 0) {
-      // Sanitize the private key in case it is wrapped in double quotes by Vercel
       let privateKey = process.env.FIREBASE_PRIVATE_KEY;
       if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
         privateKey = privateKey.slice(1, -1);
@@ -43,12 +39,14 @@ if (!hasFirebaseCreds) {
     }
     firestoreDb = getFirestore();
     console.log('✅ Firebase Admin SDK initialized — connected to project:', process.env.FIREBASE_PROJECT_ID);
+    return firestoreDb;
   } catch (error) {
     console.error('Firebase Admin SDK initialization failed:', error.message);
-    console.warn('⚠️  Falling back to in-memory MockFirestore. Student records will not persist across restarts.');
-    firestoreDb = null;
+    return null;
   }
 }
+
+firestoreDb = initFirestore();
 
 // ─── Mock Firestore ───────────────────────────────────────────────────────────
 // Used when real Firebase credentials are absent or initialization fails.
@@ -203,10 +201,15 @@ class MockFirestore {
   }
 }
 
-const db = firestoreDb || new MockFirestore();
+const mockInstance = new MockFirestore();
+const db = new Proxy({}, {
+  get(target, prop) {
+    const activeDb = firestoreDb || initFirestore() || mockInstance;
+    const value = activeDb[prop];
+    return typeof value === 'function' ? value.bind(activeDb) : value;
+  }
+});
 
-// Multi-Tenant Migration Constant
-// During the migration, all non-tenant specific API requests will hit the compssa tenant
 const DEFAULT_TENANT_ID = 'compssa';
 
 module.exports = { db, DEFAULT_TENANT_ID };
