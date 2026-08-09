@@ -5,6 +5,33 @@ let isConnected = false;
 let isInitializing = false;
 let tablesCreated = false;
 
+// Resolve Firestore collection / subcollection names to primary MySQL relational tables
+function resolveTableName(name) {
+  if (!name) return 'tenants';
+  if (name === 'tenants' || name === 'departments') return 'tenants';
+  if (name === 'organizations' || name === 'orgs') return 'organizations';
+  if (name === 'users' || name === 'accounts') return 'users';
+  if (name === 'elections') return 'elections';
+  if (name === 'positions') return 'positions';
+  if (name === 'candidates') return 'candidates';
+  if (name === 'voters') return 'voters';
+  if (name === 'votes') return 'votes';
+  if (name === 'voted_voters') return 'voted_voters';
+  if (name === 'activity_logs') return 'activity_logs';
+  if (name === 'fraud_alerts') return 'fraud_alerts';
+  if (name === 'onboarding_requests') return 'onboarding_requests';
+
+  // Subcollections pattern matching
+  if (name.includes('_elections')) return 'elections';
+  if (name.includes('_voter_rolls') || name.includes('_voters')) return 'voters';
+  if (name.includes('_candidates')) return 'candidates';
+  if (name.includes('_positions')) return 'positions';
+  if (name.includes('_votes')) return 'votes';
+  if (name.includes('_activity_logs') || name.includes('_logs')) return 'activity_logs';
+
+  return 'tenants';
+}
+
 // Initialize MySQL Connection Pool with auto-retry
 async function initMySQL(retries = 5, delayMs = 3000) {
   if (isConnected && pool) return pool;
@@ -304,8 +331,9 @@ class MySQLDocumentReference {
   async get() {
     if (isConnected && pool) {
       try {
+        const targetTable = resolveTableName(this.collectionName);
         const [rows] = await pool.query(
-          `SELECT * FROM \`${this.collectionName}\` WHERE id = ? LIMIT 1`,
+          `SELECT * FROM \`${targetTable}\` WHERE id = ? LIMIT 1`,
           [this.id]
         );
         if (rows.length > 0) {
@@ -343,46 +371,97 @@ class MySQLDocumentReference {
 
     if (isConnected && pool) {
       try {
+        const targetTable = resolveTableName(this.collectionName);
         const payload = JSON.stringify(updated);
-        const name = updated.name || updated.title || null;
-        const acronym = updated.acronym || null;
-        const domain = updated.domain || null;
-        const email = updated.email || updated.adminEmail || null;
-        const password = updated.password || updated.adminPassword || null;
-        const role = updated.role || 'voter';
-        const tenantId = updated.tenantId || null;
+        const name = updated.name || updated.title || 'Untitled';
+        const acronym = updated.acronym || (name ? name.substring(0, 6).toUpperCase() : '');
+        const domain = updated.domain || '';
+        const adminEmail = updated.adminEmail || updated.email || null;
+        const adminPassword = updated.adminPassword || updated.password || null;
+        const logoUrl = updated.logoUrl || null;
+        const brandColor = updated.brandColor || '#3B82F6';
         const status = updated.status || 'active';
         const createdAt = updated.createdAt || Date.now();
         const updatedAt = Date.now();
 
-        await pool.query(
-          `INSERT INTO \`${this.collectionName}\` (id, data, name, acronym, domain, status, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE data = VALUES(data), name = VALUES(name), acronym = VALUES(acronym), domain = VALUES(domain), status = VALUES(status), updatedAt = VALUES(updatedAt)`,
-          [this.id, payload, name, acronym, domain, status, createdAt, updatedAt]
-        );
+        if (targetTable === 'tenants') {
+          await pool.query(
+            `INSERT INTO tenants (id, name, acronym, domain, adminEmail, adminPassword, logoUrl, brandColor, status, data, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE 
+               name = VALUES(name), 
+               acronym = VALUES(acronym), 
+               domain = VALUES(domain), 
+               adminEmail = COALESCE(VALUES(adminEmail), adminEmail), 
+               adminPassword = COALESCE(VALUES(adminPassword), adminPassword), 
+               status = VALUES(status), 
+               data = VALUES(data), 
+               updatedAt = VALUES(updatedAt)`,
+            [this.id, name, acronym, domain, adminEmail, adminPassword, logoUrl, brandColor, status, payload, createdAt, updatedAt]
+          );
 
-        // Synchronize with centralized users table if updating user/admin/voter doc
-        if (this.collectionName === 'users' || this.collectionName === 'voters' || this.collectionName === 'tenants') {
-          if (email) {
+          // ALSO mirror into organizations table
+          await pool.query(
+            `INSERT INTO organizations (id, name, acronym, domain, logoUrl, brandColor, status, data, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE 
+               name = VALUES(name), 
+               acronym = VALUES(acronym), 
+               domain = VALUES(domain), 
+               status = VALUES(status), 
+               data = VALUES(data), 
+               updatedAt = VALUES(updatedAt)`,
+            [this.id, name, acronym, domain, logoUrl, brandColor, status, payload, createdAt, updatedAt]
+          );
+
+          // ALSO mirror into users table if adminEmail exists
+          if (adminEmail) {
             await pool.query(
               `INSERT INTO users (id, tenantId, name, email, password, role, status, data, createdAt, updatedAt)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-               ON DUPLICATE KEY UPDATE name = VALUES(name), password = VALUES(password), role = VALUES(role), updatedAt = VALUES(updatedAt)`,
-              [
-                `usr_${this.id}`,
-                tenantId,
-                name || email,
-                email,
-                password,
-                role,
-                status,
-                payload,
-                createdAt,
-                updatedAt
-              ]
-            ).catch(() => {});
+               VALUES (?, ?, ?, ?, ?, 'admin', ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE 
+                 name = VALUES(name), 
+                 password = COALESCE(VALUES(password), password), 
+                 role = 'admin', 
+                 status = VALUES(status), 
+                 data = VALUES(data), 
+                 updatedAt = VALUES(updatedAt)`,
+              [`usr_${this.id}`, this.id, `${name} Administrator`, adminEmail, adminPassword, status, payload, createdAt, updatedAt]
+            );
           }
+        } else if (targetTable === 'organizations') {
+          await pool.query(
+            `INSERT INTO organizations (id, name, acronym, domain, logoUrl, brandColor, status, data, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE 
+               name = VALUES(name), 
+               acronym = VALUES(acronym), 
+               domain = VALUES(domain), 
+               status = VALUES(status), 
+               data = VALUES(data), 
+               updatedAt = VALUES(updatedAt)`,
+            [this.id, name, acronym, domain, logoUrl, brandColor, status, payload, createdAt, updatedAt]
+          );
+        } else if (targetTable === 'users') {
+          await pool.query(
+            `INSERT INTO users (id, tenantId, name, email, password, role, status, data, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE 
+               name = VALUES(name), 
+               password = COALESCE(VALUES(password), password), 
+               role = VALUES(role), 
+               status = VALUES(status), 
+               data = VALUES(data), 
+               updatedAt = VALUES(updatedAt)`,
+            [this.id, updated.tenantId || 'global', name, updated.email || '', updated.password || null, updated.role || 'voter', status, payload, createdAt, updatedAt]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO \`${targetTable}\` (id, data, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE data = VALUES(data), updatedAt = VALUES(updatedAt)`,
+            [this.id, payload, createdAt, updatedAt]
+          );
         }
       } catch (err) {
         console.warn(`MySQL set error (${this.collectionName}/${this.id}):`, err.message);
@@ -402,7 +481,11 @@ class MySQLDocumentReference {
 
     if (isConnected && pool) {
       try {
-        await pool.query(`DELETE FROM \`${this.collectionName}\` WHERE id = ?`, [this.id]);
+        const targetTable = resolveTableName(this.collectionName);
+        await pool.query(`DELETE FROM \`${targetTable}\` WHERE id = ?`, [this.id]);
+        if (targetTable === 'tenants') {
+          await pool.query(`DELETE FROM organizations WHERE id = ?`, [this.id]).catch(() => {});
+        }
       } catch (err) {
         console.warn(`MySQL delete error (${this.collectionName}/${this.id}):`, err.message);
       }
@@ -435,13 +518,14 @@ class MySQLQuery {
 
     if (isConnected && pool) {
       try {
-        let sql = `SELECT * FROM \`${this.collectionName}\``;
+        const targetTable = resolveTableName(this.collectionName);
+        let sql = `SELECT * FROM \`${targetTable}\``;
         const params = [];
         const whereClauses = [];
 
         for (const f of this.filters) {
-          whereClauses.push(`JSON_UNQUOTE(JSON_EXTRACT(data, '$.${f.field}')) = ?`);
-          params.push(String(f.value));
+          whereClauses.push(`(JSON_UNQUOTE(JSON_EXTRACT(data, '$.${f.field}')) = ? OR \`${f.field}\` = ?)`);
+          params.push(String(f.value), String(f.value));
         }
 
         if (whereClauses.length > 0) {
@@ -449,14 +533,21 @@ class MySQLQuery {
         }
 
         if (this.orderByVal) {
-          sql += ` ORDER BY JSON_EXTRACT(data, '$.${this.orderByVal.field}') ${this.orderByVal.direction.toUpperCase()}`;
+          sql += ` ORDER BY createdAt ${this.orderByVal.direction.toUpperCase()}`;
         }
 
         if (this.limitVal) {
           sql += ` LIMIT ${parseInt(this.limitVal, 10)}`;
         }
 
-        const [rows] = await pool.query(sql, params);
+        let [rows] = await pool.query(sql, params);
+
+        // Fallback for organizations query if organizations table is empty but tenants has rows
+        if (rows.length === 0 && targetTable === 'organizations') {
+          const [tenantRows] = await pool.query(`SELECT * FROM tenants`);
+          rows = tenantRows;
+        }
+
         docs = rows.map(r => {
           const parsedData = r.data ? (typeof r.data === 'string' ? JSON.parse(r.data) : r.data) : {};
           const fullData = { ...r, ...parsedData };
