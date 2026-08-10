@@ -745,106 +745,10 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
 const BMS_API_KEY = process.env.BMS_API_KEY || process.env.MNOTIFY_API_KEY || '';
 const BMS_SENDER_ID = process.env.BMS_SENDER_ID || 'COMPSSA';
 
-const nodemailer = require('nodemailer');
+const { sendEmailNotification, sendOtpViaEmail } = require('../services/emailService');
 
-const gmailTransporter = nodemailer.createTransport({
-  service: 'gmail',
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.GMAIL_USER || 'issakasaddick14@gmail.com',
-    pass: process.env.GMAIL_APP_PASSWORD || 'yjmnwwgtkkuafumu'
-  },
-  connectionTimeout: 6000,
-  greetingTimeout: 6000,
-  socketTimeout: 6000
-});
-
-async function sendEmailNotification(to, subject, text, html) {
-  try {
-    const gmailUser = process.env.GMAIL_USER || 'issakasaddick14@gmail.com';
-    const info = await gmailTransporter.sendMail({
-      from: `"HTU Elect" <${gmailUser}>`,
-      to,
-      subject,
-      text,
-      html: html || `<div style="font-family: sans-serif; padding: 20px;"><h2>${subject}</h2><p>${text}</p></div>`
-    });
-    console.log('[Gmail SMTP] Email dispatched to', to, 'Message ID:', info.messageId);
-    return info;
-  } catch (err) {
-    console.error('[Gmail SMTP Error]:', err.message || err);
-    return null;
-  }
-}
-
-// Helper: Send OTP via Gmail SMTP (with fallback to EmailJS)
 async function sendOtpViaEmailJS(email, name, otp) {
-  try {
-    const gmailUser = process.env.GMAIL_USER || 'issakasaddick14@gmail.com';
-    await gmailTransporter.sendMail({
-      from: `"HTU Elect" <${gmailUser}>`,
-      to: email,
-      subject: 'HTU Elect - Your Voting Portal 6-Digit Access Code',
-      text: `Hello ${name || 'Voter'},\n\nYour 6-digit access OTP for the voting portal is: ${otp}\n\nThis code will expire in 10 minutes.\n\nThank you,\nHTU Elect Team`,
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 24px; background-color: #f4f6f9; border-radius: 8px;">
-          <h2 style="color: #2563eb;">HTU Elect Voting Access Code</h2>
-          <p>Hello <strong>${name || 'Voter'}</strong>,</p>
-          <p>Use the following 6-digit verification code to unlock your voting ballot:</p>
-          <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #10b981; padding: 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; text-align: center; margin: 20px 0;">
-            ${otp}
-          </div>
-          <p style="font-size: 13px; color: #6b7280;">This code is valid for 10 minutes. If you did not request this, please ignore this email.</p>
-        </div>
-      `
-    });
-    console.log('[Gmail SMTP] OTP email dispatched successfully to', email);
-    return;
-  } catch (gmailErr) {
-    console.warn('[Gmail SMTP Warning]: Falling back to EmailJS REST API:', gmailErr.message);
-  }
-
-  // Fallback: Send via EmailJS REST API
-  const serviceId = process.env.EMAILJS_SERVICE_ID;
-  const templateId = process.env.EMAILJS_TEMPLATE_ID;
-  const publicKey = process.env.EMAILJS_PUBLIC_KEY;
-  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
-
-  if (!serviceId || !templateId || !publicKey) {
-    console.warn('[EmailJS Warning] Missing EmailJS env variables. Code for', email, 'is:', otp);
-    return;
-  }
-
-  const payload = {
-    service_id: serviceId,
-    template_id: templateId,
-    user_id: publicKey,
-    accessToken: privateKey,
-    template_params: {
-      to_name: name || 'Student',
-      to_email: email,
-      reset_code: otp,
-      otp_code: otp,
-      otp: otp
-    }
-  };
-
-  try {
-    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error('[EmailJS Error]:', errText);
-    }
-  } catch (err) {
-    console.error('[EmailJS Failure]:', err.message || err);
-  }
+  return sendOtpViaEmail(email, name, otp);
 }
 
 // Helper: Send OTP via BMS Africa (mNotify) Quick SMS API

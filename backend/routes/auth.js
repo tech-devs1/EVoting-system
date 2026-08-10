@@ -27,48 +27,11 @@ function cosineDistance(vec1, vec2) {
   return 1 - (dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2)));
 }
 
-// Helper: Send OTP via EmailJS REST API
+const { sendOtpViaEmail } = require('../services/emailService');
+
+// Helper: Send OTP via Gmail SMTP (with EmailJS fallback)
 async function sendOtpViaEmailJS(email, name, otp) {
-  const serviceId = process.env.EMAILJS_SERVICE_ID;
-  const templateId = process.env.EMAILJS_TEMPLATE_ID;
-  const publicKey = process.env.EMAILJS_PUBLIC_KEY;
-  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
-
-  if (!serviceId || !templateId || !publicKey) {
-    console.warn('[EmailJS Warning] Missing EmailJS env variables (EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY). Code for', email, 'is:', otp);
-    return;
-  }
-
-  const payload = {
-    service_id: serviceId,
-    template_id: templateId,
-    user_id: publicKey,
-    accessToken: privateKey,
-    template_params: {
-      to_name: name || 'Student',
-      to_email: email,
-      reset_code: otp,
-      otp_code: otp,
-      otp: otp
-    }
-  };
-
-  try {
-    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error('[EmailJS Error]:', errText);
-      throw new Error('EmailJS error: ' + errText);
-    }
-  } catch (err) {
-    console.error('[EmailJS Failure]:', err.message || err);
-    throw err;
-  }
+  return sendOtpViaEmail(email, name, otp);
 }
 
 // Helper: Send OTP via BMS Africa (mNotify) Quick SMS API
