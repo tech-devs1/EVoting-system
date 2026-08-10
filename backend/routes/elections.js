@@ -13,6 +13,14 @@ const getElectionsRef = (req) => {
   const tenantId = getTenantId(req);
   return db.collection('tenants').doc(tenantId).collection('elections');
 };
+const getCandidatesRef = (req) => {
+  const tenantId = getTenantId(req);
+  return db.collection('tenants').doc(tenantId).collection('candidates');
+};
+const getVotedVotersRef = (req) => {
+  const tenantId = getTenantId(req);
+  return db.collection('tenants').doc(tenantId).collection('voted_voters');
+};
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
 const cache = require('../services/cache');
@@ -122,6 +130,68 @@ router.get('/:id', async (req, res) => {
     }
     console.error('Error fetching election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch election' });
+  }
+});
+
+// Get detailed election results & candidate tallies
+router.get('/:id/results', async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const electionDoc = await getElectionsRef(req).doc(electionId).get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
+
+    const electionData = electionDoc.data();
+
+    // 1. Fetch candidates for this election
+    const candsSnap = await getCandidatesRef(req).where('electionId', '==', electionId).get();
+    const candidates = [];
+    candsSnap.forEach(doc => {
+      candidates.push({ id: doc.id, ...doc.data() });
+    });
+
+    candidates.sort((a, b) => {
+      const numA = a.ballotNumber !== undefined && a.ballotNumber !== null && a.ballotNumber !== '' ? Number(a.ballotNumber) : 999;
+      const numB = b.ballotNumber !== undefined && b.ballotNumber !== null && b.ballotNumber !== '' ? Number(b.ballotNumber) : 999;
+      if (numA !== numB) return numA - numB;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    // 2. Calculate unique voted voters
+    const votedSnap = await getVotedVotersRef(req).where('electionId', '==', electionId).get();
+    const uniqueVotersCast = votedSnap.size;
+
+    let candidateTotalVotes = 0;
+    candidates.forEach(c => {
+      candidateTotalVotes += (c.votes || 0) + (c.noVotes || 0);
+    });
+
+    const totalVotesCast = electionData.totalVotesCast || uniqueVotersCast || candidateTotalVotes;
+
+    // 3. Calculate total roster voters
+    let totalVoters = electionData.totalVoters || 0;
+    if (!totalVoters) {
+      const votersSnap = await getElectionsRef(req).doc(electionId).collection('eligible_voters').get();
+      totalVoters = votersSnap.size;
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        election: {
+          id: electionId,
+          ...electionData,
+          totalVoters,
+          totalVotesCast
+        },
+        candidates,
+        totalVotes: totalVotesCast
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching election results:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch election results' });
   }
 });
 
