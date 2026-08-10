@@ -937,6 +937,12 @@ router.post('/:id/voters/upload-csv', verifyAuth, requireAdmin, async (req, res)
 
         batch.set(electionRef.collection('eligible_voters').doc(docId), memberData);
         batch.set(electionRef.collection('voter_roster').doc(docId), memberData);
+        batch.set(db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(docId), {
+          ...memberData,
+          isRegistered: true,
+          role: 'voter',
+          createdAt: Date.now()
+        });
         addedCount++;
       });
 
@@ -1446,8 +1452,45 @@ router.get('/:id/voters', verifyAuth, requireAdmin, async (req, res) => {
     const electionId = req.params.id;
     const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
 
-    const rosterSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
-    const voters = rosterSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    let rosterSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+    
+    if (rosterSnap.empty) {
+      rosterSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+    }
+
+    if (rosterSnap.empty) {
+      rosterSnap = await db.collection('tenants').doc(tenantId).collection('voter_rolls').get();
+    }
+
+    // Check voted voters to flag hasVoted status accurately
+    const votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters').where('electionId', '==', electionId).get();
+    const votedSet = new Set();
+    votedSnap.forEach(d => {
+      const data = d.data();
+      if (data.voterId) votedSet.add(data.voterId);
+      if (data.studentId) votedSet.add(data.studentId);
+      if (data.email) votedSet.add(data.email.toLowerCase());
+    });
+
+    const voters = rosterSnap.docs.map(doc => {
+      const data = doc.data();
+      const id = doc.id;
+      const studentId = data.studentId || data.indexNumber || id;
+      const email = (data.email || '').toLowerCase();
+      const hasVoted = votedSet.has(id) || votedSet.has(studentId) || (email && votedSet.has(email));
+
+      return {
+        id,
+        studentId,
+        indexNumber: studentId,
+        name: data.name || data.fullName || 'Student Voter',
+        email: data.email || 'N/A',
+        phone: data.phone || data.phoneNumber || data.phoneNo || 'N/A',
+        department: data.department || '',
+        isRegistered: data.isRegistered !== false,
+        hasVoted: hasVoted
+      };
+    });
 
     res.status(200).json({ status: 'success', data: voters });
   } catch (error) {
