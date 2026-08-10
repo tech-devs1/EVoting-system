@@ -248,9 +248,6 @@ export default function OrganizationElectionHub() {
     }
   };
 
-  const adminName = user?.name?.split(' ')[0] || 'Electoral Commissioner';
-
-  return (
   const adminName = user?.name?.split(' ')[0] || 'Admin';
 
   return (
