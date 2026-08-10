@@ -21,6 +21,41 @@ const getVotedVotersRef = (req) => {
   const tenantId = getTenantId(req);
   return db.collection('tenants').doc(tenantId).collection('voted_voters');
 };
+
+/**
+ * Universal helper to find an election document regardless of tenant context or collection path
+ */
+async function findElectionDoc(electionId, req) {
+  if (!electionId) return { doc: null, ref: null, tenantId: null };
+
+  const requestedTenantId = getTenantId(req);
+
+  // 1. Try requested tenant path in 'tenants'
+  let ref = db.collection('tenants').doc(requestedTenantId).collection('elections').doc(electionId);
+  let doc = await ref.get();
+  if (doc.exists) return { doc, ref, tenantId: requestedTenantId };
+
+  // 2. Try requested tenant path in 'organizations'
+  ref = db.collection('organizations').doc(requestedTenantId).collection('elections').doc(electionId);
+  doc = await ref.get();
+  if (doc.exists) return { doc, ref, tenantId: requestedTenantId };
+
+  // 3. Search across all elections in collectionGroup
+  try {
+    const snapshot = await db.collectionGroup('elections').get();
+    const match = snapshot.docs.find(d => d.id === electionId);
+    if (match) {
+      const parentTenant = match.ref.parent.parent;
+      const matchTenantId = parentTenant ? parentTenant.id : requestedTenantId;
+      return { doc: match, ref: match.ref, tenantId: matchTenantId };
+    }
+  } catch (err) {
+    console.warn('[findElectionDoc Warning]:', err.message);
+  }
+
+  return { doc: null, ref: null, tenantId: null };
+}
+
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
 const cache = require('../services/cache');
@@ -190,8 +225,8 @@ router.get('/:id', async (req, res) => {
     const cacheKey = `elections:detail:${electionId}`;
 
     const election = await cache.getOrSet(cacheKey, async () => {
-      const doc = await getElectionsRef(req).doc(electionId).get();
-      if (!doc.exists) {
+      const { doc, ref } = await findElectionDoc(electionId, req);
+      if (!doc || !doc.exists) {
         throw new Error('NOT_FOUND');
       }
       
@@ -204,12 +239,12 @@ router.get('/:id', async (req, res) => {
 
       if (electionData.status === 'active' && electionData.endDate && endTime < now) {
         updatedStatus = 'completed';
-        await getElectionsRef(req).doc(doc.id).update({ status: 'completed' });
+        await ref.update({ status: 'completed' });
         cache.invalidatePrefix('elections:');
         cache.invalidatePrefix('admin:');
       } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
         updatedStatus = 'active';
-        await getElectionsRef(req).doc(doc.id).update({ status: 'active' });
+        await ref.update({ status: 'active' });
         cache.invalidatePrefix('elections:');
         cache.invalidatePrefix('admin:');
       }
@@ -222,8 +257,8 @@ router.get('/:id', async (req, res) => {
 
       // 1. Compute total voters from subcollections if missing/zero
       try {
-        const rosterSnap = await getElectionsRef(req).doc(electionId).collection('voter_roster').get();
-        const eligibleSnap = await getElectionsRef(req).doc(electionId).collection('eligible_voters').get();
+        const rosterSnap = await ref.collection('voter_roster').get();
+        const eligibleSnap = await ref.collection('eligible_voters').get();
         const subcolCount = Math.max(rosterSnap.size, eligibleSnap.size);
         if (subcolCount > 0) {
           totalVoters = Math.max(totalVoters, subcolCount);
@@ -284,8 +319,8 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/results', async (req, res) => {
   try {
     const electionId = req.params.id;
-    const electionDoc = await getElectionsRef(req).doc(electionId).get();
-    if (!electionDoc.exists) {
+    const { doc: electionDoc } = await findElectionDoc(electionId, req);
+    if (!electionDoc || !electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
 
@@ -427,9 +462,8 @@ const updateElectionHandler = async (req, res) => {
     const electionId = req.params.id;
     const { title, description, category, startDate, endDate, status, showResults, otpRequired } = req.body;
 
-    const electionRef = getElectionsRef(req).doc(electionId);
-    const electionDoc = await electionRef.get();
-    if (!electionDoc.exists) {
+    const { doc: electionDoc, ref: electionRef } = await findElectionDoc(electionId, req);
+    if (!electionDoc || !electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found.' });
     }
 
@@ -472,8 +506,8 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'startDate and endDate are required' });
     }
 
-    const electionDoc = await getElectionsRef(req).doc(req.params.id).get();
-    if (!electionDoc.exists) {
+    const { doc: electionDoc, ref: electionRef } = await findElectionDoc(req.params.id, req);
+    if (!electionDoc || !electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
 
@@ -998,9 +1032,8 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
     const voterData = voterDoc.data();
 
     // Verify scheduled start date/time and end date/time
-    const electionRef = getElectionsRef(req).doc(electionId);
-    const electionDoc = await electionRef.get();
-    if (!electionDoc.exists) {
+    const { doc: electionDoc, ref: electionRef } = await findElectionDoc(electionId, req);
+    if (!electionDoc || !electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found.' });
     }
     const electionData = electionDoc.data();
@@ -1636,10 +1669,13 @@ router.get('/:id/security-alerts', verifyAuth, requireAdmin, async (req, res) =>
 router.get('/:id/positions', verifyAuth, async (req, res) => {
   try {
     const electionId = req.params.id;
-    const tenantId = req.user?.tenantId || DEFAULT_TENANT_ID;
+    const { ref: electionRef } = await findElectionDoc(electionId, req);
 
-    const positionsSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('positions').orderBy('order', 'asc').get();
-    const positions = positionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    let positionsSnap = { empty: true, docs: [] };
+    if (electionRef) {
+      positionsSnap = await electionRef.collection('positions').orderBy('order', 'asc').get().catch(() => ({ empty: true, docs: [] }));
+    }
+    const positions = positionsSnap.docs ? positionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) : [];
 
     if (positions.length === 0) {
       const defaults = [

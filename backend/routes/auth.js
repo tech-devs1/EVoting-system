@@ -17,7 +17,6 @@ const loginLimiter = rateLimit({
   max: 30, // 30 login attempts per IP per 15 min window
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
   message: { status: 'error', message: 'Too many login attempts from this IP. Please try again after 15 minutes.' }
 });
 
