@@ -13,9 +13,9 @@ const gmailTransporter = nodemailer.createTransport({
     pass: gmailPass
   },
   tls: { rejectUnauthorized: false },
-  connectionTimeout: 8000,
-  greetingTimeout: 8000,
-  socketTimeout: 8000
+  connectionTimeout: 2500,
+  greetingTimeout: 2500,
+  socketTimeout: 2500
 });
 
 // Secondary Fallback Transporter (Port 587 STARTTLS)
@@ -28,9 +28,9 @@ const fallbackTransporter = nodemailer.createTransport({
     pass: gmailPass
   },
   tls: { rejectUnauthorized: false },
-  connectionTimeout: 8000,
-  greetingTimeout: 8000,
-  socketTimeout: 8000
+  connectionTimeout: 2500,
+  greetingTimeout: 2500,
+  socketTimeout: 2500
 });
 
 /**

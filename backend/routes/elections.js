@@ -1021,6 +1021,26 @@ async function sendOtpViaBMS(phoneNumber, otp) {
       }
     }
 
+    const isStillUnregistered2 = responseText.toLowerCase().includes('sender id is not registered') ||
+                                 responseText.toLowerCase().includes('sender id not approved');
+    if (isStillUnregistered2 && payload.sender !== 'COMPSSA') {
+      console.warn(`[BMS SMS Warning] Fallback "BMS Africa" not registered. Retrying with fallback "COMPSSA"...`);
+      payload.sender = 'COMPSSA';
+      res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000)
+      });
+      responseText = await res.text();
+      console.log('[BMS SMS Fallback 3] Response:', responseText);
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`BMS API returned non-JSON response: ${responseText.substring(0, 100)}`);
+      }
+    }
+
     if (!res.ok || (responseData.status !== 'success' && responseData.code !== '2000' && responseData.status !== 2000)) {
       throw new Error('BMS API returned error: ' + (responseData.message || responseData.error || responseText));
     }
