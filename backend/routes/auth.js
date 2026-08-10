@@ -140,16 +140,68 @@ router.post('/test-email-debug', async (req, res) => {
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required.' });
 
     console.log('[DEBUG EMAIL] Request received to test email dispatch to:', email);
-    const result = await sendOtpViaEmailJS(email, 'Debug User', '123456');
-    
+
+    const nodemailer = require('nodemailer');
+    const gmailUser = process.env.GMAIL_USER || 'issakasaddick14@gmail.com';
+    const envPass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+    const gmailPass = envPass || 'gvdpedxakuwihtuq';
+
+    const mailOptions = {
+      from: `"HTU ELECT" <${gmailUser}>`,
+      to: email,
+      subject: 'HTU Elect - Test OTP Email (Debug Route)',
+      text: 'This is a test email.'
+    };
+
+    let p465Result = 'not_tried';
+    let p465Error = null;
+    let p587Result = 'not_tried';
+    let p587Error = null;
+
+    // Test 1: Port 587 STARTTLS (gmailTransporter)
+    try {
+      const tx = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: { user: gmailUser, pass: gmailPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000
+      });
+      const info = await tx.sendMail(mailOptions);
+      p587Result = 'Success: ' + info.messageId;
+    } catch (err) {
+      p587Result = 'Failed';
+      p587Error = err.message || err.toString();
+    }
+
+    // Test 2: Standard Gmail Service (fallbackTransporter)
+    try {
+      const tx = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: gmailUser, pass: gmailPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000
+      });
+      const info = await tx.sendMail(mailOptions);
+      p465Result = 'Success: ' + info.messageId;
+    } catch (err) {
+      p465Result = 'Failed';
+      p465Error = err.message || err.toString();
+    }
+
     res.status(200).json({
       status: 'success',
       message: 'Debug process completed.',
-      result: result ? 'Success (email sent)' : 'Failed (returned null/false)',
-      envKeys: Object.keys(process.env).filter(k => k.includes('MAIL') || k.includes('SEND') || k.includes('EMAIL') || k.includes('KEY') || k.includes('PASS') || k.includes('PORT') || k.includes('BMS')),
+      p587: { result: p587Result, error: p587Error },
+      p465: { result: p465Result, error: p465Error },
       config: {
-        GMAIL_USER: process.env.GMAIL_USER || 'issakasaddick14@gmail.com',
-        GMAIL_APP_PASSWORD_length: (process.env.GMAIL_APP_PASSWORD || '').length
+        GMAIL_USER: gmailUser,
+        GMAIL_APP_PASSWORD_length: gmailPass.length
       }
     });
   } catch (error) {
