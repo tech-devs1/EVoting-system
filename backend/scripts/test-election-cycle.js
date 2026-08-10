@@ -115,6 +115,27 @@ async function runTest() {
     const electionId = electionResult.data.id;
     console.log(`✅ Election created successfully. ID: ${electionId}`);
 
+    // Upload CSV roster for this election to make voters eligible
+    console.log('Uploading mock voter roster to the election...');
+    const uploadRosterRes = await fetch(`${BASE_URL}/elections/${electionId}/voters/upload-csv`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        members: [
+          { email: 'voter1@htu.edu.gh', indexNumber: 'voter-001', name: 'Voter One' },
+          { email: 'voter2@htu.edu.gh', indexNumber: 'voter-002', name: 'Voter Two' }
+        ]
+      })
+    });
+    const uploadRosterData = await uploadRosterRes.json();
+    if (uploadRosterData.status !== 'success') {
+      throw new Error(`Failed to upload voter roster: ${JSON.stringify(uploadRosterData)}`);
+    }
+    console.log('✅ Voter roster uploaded successfully.');
+
     // 5. Add candidates with positions and fixed ballot numbers (No. 1, No. 2...)
     console.log('\n--- PHASE 4: REGISTER CANDIDATES WITH ASSIGNED BALLOT NUMBERS ---');
 

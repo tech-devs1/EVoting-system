@@ -159,36 +159,22 @@ router.get('/eligible', verifyAuth, async (req, res) => {
       let isEligible = isAdmin;
 
       if (!isEligible) {
-        // If election is public or allows all voters, allow access
-        if (electionData.isPublic === true || electionData.allowAllVoters === true || electionData.otpRequired === false) {
-          isEligible = true;
-        }
-
-        // Check CSV voter rosters under this election (voter_roster & eligible_voters)
+        // Normal voters MUST be explicitly on the uploaded voter roster of the election to see it or vote
         const voterRosterSnap = await ref.collection('voter_roster').get().catch(() => ({ empty: true, docs: [] }));
         const eligibleVotersSnap = await ref.collection('eligible_voters').get().catch(() => ({ empty: true, docs: [] }));
 
-        const hasRoster = (voterRosterSnap.docs && voterRosterSnap.docs.length > 0) ||
-                          (eligibleVotersSnap.docs && eligibleVotersSnap.docs.length > 0);
+        const allRosterDocs = [...(voterRosterSnap.docs || []), ...(eligibleVotersSnap.docs || [])];
+        for (const rDoc of allRosterDocs) {
+          const rData = rDoc.data() || {};
+          const rEmail = (rData.email || '').toLowerCase().trim();
+          const rIndex = (rData.indexNumber || rData.studentId || rDoc.id || '').toLowerCase().trim();
 
-        if (!hasRoster) {
-          // If no roster uploaded, allow general access
-          isEligible = true;
-        } else {
-          // Roster exists: check if voter's email, index, studentId, or UID matches any roster document
-          const allRosterDocs = [...(voterRosterSnap.docs || []), ...(eligibleVotersSnap.docs || [])];
-          for (const rDoc of allRosterDocs) {
-            const rData = rDoc.data() || {};
-            const rEmail = (rData.email || '').toLowerCase().trim();
-            const rIndex = (rData.indexNumber || rData.studentId || rDoc.id || '').toLowerCase().trim();
-
-            if ((voterEmail && rEmail === voterEmail) ||
-                (voterIndex && rIndex === voterIndex) ||
-                (voterEmail && rIndex === voterEmail) ||
-                (voterIndex && rEmail === voterIndex)) {
-              isEligible = true;
-              break;
-            }
+          if ((voterEmail && rEmail === voterEmail) ||
+              (voterIndex && rIndex === voterIndex) ||
+              (voterEmail && rIndex === voterEmail) ||
+              (voterIndex && rEmail === voterIndex)) {
+            isEligible = true;
+            break;
           }
         }
       }
@@ -209,10 +195,16 @@ router.get('/eligible', verifyAuth, async (req, res) => {
         // Check if voter has cast a vote in this election
         let hasVoted = false;
         try {
-          const votedSnap = await db.collectionGroup('voted_voters')
-            .where('voterId', '==', req.user.uid)
+          let votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters')
             .where('electionId', '==', electionId)
+            .where('voterId', '==', req.user.uid)
             .get();
+          if (votedSnap.empty) {
+            votedSnap = await db.collection('organizations').doc(tenantId).collection('voted_voters')
+              .where('electionId', '==', electionId)
+              .where('voterId', '==', req.user.uid)
+              .get();
+          }
           hasVoted = !votedSnap.empty;
         } catch (vErr) {}
 
@@ -338,15 +330,18 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/results', async (req, res) => {
   try {
     const electionId = req.params.id;
-    const { doc: electionDoc } = await findElectionDoc(electionId, req);
+    const { doc: electionDoc, ref: electionRef, tenantId: resolvedTenantId } = await findElectionDoc(electionId, req);
     if (!electionDoc || !electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
 
     const electionData = electionDoc.data();
 
-    // 1. Fetch candidates for this election
-    const candsSnap = await getCandidatesRef(req).where('electionId', '==', electionId).get();
+    // 1. Fetch candidates for this election from the resolved tenant / organization
+    let candsSnap = await db.collection('tenants').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+    if (candsSnap.empty) {
+      candsSnap = await db.collection('organizations').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+    }
     const candidates = [];
     candsSnap.forEach(doc => {
       candidates.push({ id: doc.id, ...doc.data() });
@@ -359,8 +354,11 @@ router.get('/:id/results', async (req, res) => {
       return (a.name || '').localeCompare(b.name || '');
     });
 
-    // 2. Calculate unique voted voters
-    const votedSnap = await getVotedVotersRef(req).where('electionId', '==', electionId).get();
+    // 2. Calculate unique voted voters from the resolved tenant / organization
+    let votedSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).get();
+    if (votedSnap.empty) {
+      votedSnap = await db.collection('organizations').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).get();
+    }
     const uniqueVotersCast = votedSnap.size;
 
     let candidateTotalVotes = 0;
@@ -373,7 +371,10 @@ router.get('/:id/results', async (req, res) => {
     // 3. Calculate total roster voters
     let totalVoters = electionData.totalVoters || 0;
     if (!totalVoters) {
-      const votersSnap = await getElectionsRef(req).doc(electionId).collection('eligible_voters').get();
+      let votersSnap = await electionRef.collection('eligible_voters').get();
+      if (votersSnap.empty) {
+        votersSnap = await electionRef.collection('voter_roster').get();
+      }
       totalVoters = votersSnap.size;
     }
 
@@ -399,7 +400,7 @@ router.get('/:id/results', async (req, res) => {
 // Create new election (Admin only)
 router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const { title, description, startDate, endDate, organizationId, type, department, showResults } = req.body;
+    const { title, description, startDate, endDate, organizationId, type, department, showResults, previewImageUrl } = req.body;
     
     if (!title || !startDate || !endDate) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
@@ -425,6 +426,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       department: department || '',
       status: req.body.status || 'draft',
       showResults: showResults === true,
+      previewImageUrl: previewImageUrl || '',
       createdBy: 'admin',
       createdAt: Date.now()
     };
@@ -479,7 +481,7 @@ router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) 
 const updateElectionHandler = async (req, res) => {
   try {
     const electionId = req.params.id;
-    const { title, description, category, startDate, endDate, status, showResults, otpRequired } = req.body;
+    const { title, description, category, startDate, endDate, status, showResults, otpRequired, previewImageUrl } = req.body;
 
     const { doc: electionDoc, ref: electionRef } = await findElectionDoc(electionId, req);
     if (!electionDoc || !electionDoc.exists) {
@@ -495,6 +497,7 @@ const updateElectionHandler = async (req, res) => {
     if (status !== undefined) updateFields.status = status;
     if (showResults !== undefined) updateFields.showResults = Boolean(showResults);
     if (otpRequired !== undefined) updateFields.otpRequired = Boolean(otpRequired);
+    if (previewImageUrl !== undefined) updateFields.previewImageUrl = previewImageUrl.trim();
 
     await electionRef.update(updateFields);
 
@@ -705,26 +708,37 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
 
     const report = await cache.getOrSet(cacheKey, async () => {
       // 1. Get election details (1 Read)
-      const electionDoc = await getElectionsRef(req).doc(electionId).get();
-      if (!electionDoc.exists) {
+      const { doc: electionDoc, tenantId: resolvedTenantId } = await findElectionDoc(electionId, req);
+      if (!electionDoc || !electionDoc.exists) {
         throw new Error('NOT_FOUND');
       }
       const election = { id: electionId, ...electionDoc.data() };
       
       // 2. Get candidates (1 Read per candidate, usually ~10 Reads)
-      const candidatesSnapshot = await db.collection('candidates').where('electionId', '==', electionId).get();
+      let candidatesSnapshot = await db.collection('tenants').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+      if (candidatesSnapshot.empty) {
+        candidatesSnapshot = await db.collection('organizations').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+      }
       const candidates = [];
       candidatesSnapshot.forEach(doc => {
         candidates.push({ id: doc.id, ...doc.data() });
       });
       
       // 3. OPTIMIZED: Get total votes cast using count() (~2 Reads instead of 2,000 Reads)
-      const votesCountSnap = await db.collection('votes').where('electionId', '==', electionId).count().get();
-      const totalVotes = votesCountSnap.data().count;
+      let votesCountSnap = await db.collection('tenants').doc(resolvedTenantId).collection('votes').where('electionId', '==', electionId).count().get();
+      let totalVotes = votesCountSnap.data().count;
+      if (totalVotes === 0) {
+        votesCountSnap = await db.collection('organizations').doc(resolvedTenantId).collection('votes').where('electionId', '==', electionId).count().get();
+        totalVotes = votesCountSnap.data().count;
+      }
       
       // 4. OPTIMIZED: Get unique voters count using count() (~2 Reads instead of 2,000 Reads)
-      const votedVotersCountSnap = await db.collection('voted_voters').where('electionId', '==', electionId).count().get();
-      const uniqueVoters = votedVotersCountSnap.data().count;
+      let votedVotersCountSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).count().get();
+      let uniqueVoters = votedVotersCountSnap.data().count;
+      if (uniqueVoters === 0) {
+        votedVotersCountSnap = await db.collection('organizations').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).count().get();
+        uniqueVoters = votedVotersCountSnap.data().count;
+      }
       
       return {
         election: {
@@ -771,32 +785,49 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
 
     const reportData = await cache.getOrSet(cacheKey, async () => {
       // 1. Get election details
-      const electionDoc = await getElectionsRef(req).doc(electionId).get();
-      if (!electionDoc.exists) {
+      const { doc: electionDoc, tenantId: resolvedTenantId } = await findElectionDoc(electionId, req);
+      if (!electionDoc || !electionDoc.exists) {
         throw new Error('NOT_FOUND');
       }
       const election = { id: electionId, ...electionDoc.data() };
       
       // 2. Get candidates
-      const candidatesSnapshot = await db.collection('candidates').where('electionId', '==', electionId).get();
+      let candidatesSnapshot = await db.collection('tenants').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+      if (candidatesSnapshot.empty) {
+        candidatesSnapshot = await db.collection('organizations').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+      }
       const candidates = [];
       candidatesSnapshot.forEach(doc => {
         candidates.push({ id: doc.id, ...doc.data() });
       });
       
       // 3. OPTIMIZED: Fast aggregation count for total votes
-      const votesCountSnap = await db.collection('votes').where('electionId', '==', electionId).count().get();
-      const totalVotes = votesCountSnap.data().count;
+      let votesCountSnap = await db.collection('tenants').doc(resolvedTenantId).collection('votes').where('electionId', '==', electionId).count().get();
+      let totalVotes = votesCountSnap.data().count;
+      if (totalVotes === 0) {
+        votesCountSnap = await db.collection('organizations').doc(resolvedTenantId).collection('votes').where('electionId', '==', electionId).count().get();
+        totalVotes = votesCountSnap.data().count;
+      }
       
       // 4. OPTIMIZED: Fast aggregation count for unique voters
-      const votedVotersCountSnap = await db.collection('voted_voters').where('electionId', '==', electionId).count().get();
-      const uniqueVoters = votedVotersCountSnap.data().count;
+      let votedVotersCountSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).count().get();
+      let uniqueVoters = votedVotersCountSnap.data().count;
+      if (uniqueVoters === 0) {
+        votedVotersCountSnap = await db.collection('organizations').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).count().get();
+        uniqueVoters = votedVotersCountSnap.data().count;
+      }
 
       // 5. Fetch ONLY the 50 most recent verification hashes to prevent PDF overload & quota exhaustion
-      const verificationLogsSnap = await db.collection('voted_voters')
+      let verificationLogsSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voted_voters')
         .where('electionId', '==', electionId)
         .limit(50)
         .get();
+      if (verificationLogsSnap.empty) {
+        verificationLogsSnap = await db.collection('organizations').doc(resolvedTenantId).collection('voted_voters')
+          .where('electionId', '==', electionId)
+          .limit(50)
+          .get();
+      }
 
       const verificationIds = [];
       verificationLogsSnap.forEach(doc => {
@@ -1020,51 +1051,64 @@ router.get('/:id/access-status', verifyAuth, async (req, res) => {
   try {
     const electionId = req.params.id;
     const voterId = req.user.uid;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
 
-    const { doc: electionDoc, ref: electionRef } = await findElectionDoc(electionId, req);
+    const { doc: electionDoc, ref: electionRef, tenantId: resolvedTenantId } = await findElectionDoc(electionId, req);
     if (!electionDoc || !electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found.' });
     }
 
-    // Check if the election has an active voter roster/eligibility lists
+    const electionData = electionDoc.data();
+
+    // Check if voter has already unlocked access via OTP verification
+    const unlockedDoc = await db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
+    if (unlockedDoc.exists || electionData.otpRequired === false) {
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          unlocked: true
+        }
+      });
+    }
+
+    // Check if user is in voter roster
     const voterRosterSnap = await electionRef.collection('voter_roster').get().catch(() => ({ empty: true, docs: [] }));
     const eligibleVotersSnap = await electionRef.collection('eligible_voters').get().catch(() => ({ empty: true, docs: [] }));
 
-    const hasElectionRoster = !voterRosterSnap.empty || !eligibleVotersSnap.empty;
     const voterEmail = (req.user.email || '').toLowerCase().trim();
     const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
 
-    if (hasElectionRoster) {
-      let matchedRosterEntry = null;
-      const allRosterDocs = [...(voterRosterSnap.docs || []), ...(eligibleVotersSnap.docs || [])];
-      for (const rDoc of allRosterDocs) {
-        const entry = rDoc.data();
-        const entryEmail = (entry.email || '').toLowerCase().trim();
-        const entryIndex = (entry.indexNumber || entry.studentId || rDoc.id || '').toLowerCase().trim();
+    let matchedRosterEntry = null;
+    const allRosterDocs = [...(voterRosterSnap.docs || []), ...(eligibleVotersSnap.docs || [])];
+    for (const rDoc of allRosterDocs) {
+      const entry = rDoc.data();
+      const entryEmail = (entry.email || '').toLowerCase().trim();
+      const entryIndex = (entry.indexNumber || entry.studentId || rDoc.id || '').toLowerCase().trim();
 
-        if ((voterEmail && entryEmail === voterEmail) || (voterIndex && entryIndex === voterIndex)) {
-          matchedRosterEntry = entry;
-          break;
-        }
-      }
-
-      if (!matchedRosterEntry) {
-        return res.status(200).json({
-          status: 'success',
-          data: {
-            unlocked: false,
-            reason: 'not_on_roster',
-            message: 'Your Google email account is not listed on the official voter roster for this election.'
-          }
-        });
+      if ((voterEmail && entryEmail === voterEmail) || (voterIndex && entryIndex === voterIndex)) {
+        matchedRosterEntry = entry;
+        break;
       }
     }
 
-    // Google Auth logged in + eligible/no roster = fully unlocked and ready to vote!
+    if (!matchedRosterEntry) {
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          unlocked: false,
+          reason: 'not_on_roster',
+          message: 'You have no access to vote in this election. Please contact your organization EC admin.'
+        }
+      });
+    }
+
+    // Voter is on the roster, but hasn't unlocked with OTP yet
     res.status(200).json({
       status: 'success',
       data: {
-        unlocked: true
+        unlocked: false,
+        reason: 'otp_required',
+        message: 'Identity verification code required to unlock your ballot.'
       }
     });
   } catch (error) {
@@ -1081,7 +1125,7 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
     const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
 
     // 1. Verify election exists and check active time window
-    const { doc: electionDoc, ref: electionRef } = await findElectionDoc(electionId, req);
+    const { doc: electionDoc, ref: electionRef, tenantId: resolvedTenantId } = await findElectionDoc(electionId, req);
     if (!electionDoc || !electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found.' });
     }
@@ -1107,45 +1151,42 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
     }
 
     // 2. Look into all voter roster entries (voter_roster & eligible_voters) for THIS PARTICULAR ELECTION
-    const voterRosterSnap = await electionRef.collection('voter_roster').get();
-    const eligibleVotersSnap = await electionRef.collection('eligible_voters').get();
+    const voterRosterSnap = await electionRef.collection('voter_roster').get().catch(() => ({ empty: true, docs: [] }));
+    const eligibleVotersSnap = await electionRef.collection('eligible_voters').get().catch(() => ({ empty: true, docs: [] }));
 
-    const hasElectionRoster = !voterRosterSnap.empty || !eligibleVotersSnap.empty;
     const voterEmail = (req.user.email || '').toLowerCase().trim();
     const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
 
     let matchedRosterEntry = null;
 
-    if (hasElectionRoster) {
-      const allRosterDocs = [...voterRosterSnap.docs, ...eligibleVotersSnap.docs];
-      for (const rDoc of allRosterDocs) {
-        const entry = rDoc.data();
-        const entryEmail = (entry.email || '').toLowerCase().trim();
-        const entryIndex = (entry.indexNumber || entry.studentId || rDoc.id || '').toLowerCase().trim();
+    const allRosterDocs = [...(voterRosterSnap.docs || []), ...(eligibleVotersSnap.docs || [])];
+    for (const rDoc of allRosterDocs) {
+      const entry = rDoc.data();
+      const entryEmail = (entry.email || '').toLowerCase().trim();
+      const entryIndex = (entry.indexNumber || entry.studentId || rDoc.id || '').toLowerCase().trim();
 
-        if ((voterEmail && entryEmail === voterEmail) || (voterIndex && entryIndex === voterIndex)) {
-          matchedRosterEntry = entry;
-          break;
-        }
+      if ((voterEmail && entryEmail === voterEmail) || (voterIndex && entryIndex === voterIndex)) {
+        matchedRosterEntry = entry;
+        break;
       }
+    }
 
-      if (!matchedRosterEntry) {
-        return res.status(403).json({
-          status: 'error',
-          message: 'Your account or student ID is not listed on the official voter roster for this election.'
-        });
-      }
+    if (!matchedRosterEntry) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'You have no access to vote in this election. Please contact your organization EC admin.'
+      });
     }
 
     // 3. Resolve voter profile details (from election roster match, voter_rolls, or token payload)
     let voterData = null;
-    let voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
+    let voterRef = db.collection('tenants').doc(resolvedTenantId).collection('voter_rolls').doc(voterId);
     let voterDoc = await voterRef.get();
 
     if (voterDoc.exists) {
       voterData = voterDoc.data();
     } else {
-      voterRef = db.collection('organizations').doc(tenantId).collection('voter_rolls').doc(voterId);
+      voterRef = db.collection('organizations').doc(resolvedTenantId).collection('voter_rolls').doc(voterId);
       voterDoc = await voterRef.get();
       if (voterDoc.exists) {
         voterData = voterDoc.data();
@@ -1158,7 +1199,7 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
         name: matchedRosterEntry?.name || req.user.name || (req.user.email ? req.user.email.split('@')[0] : 'Voter'),
         phone: matchedRosterEntry?.phone || req.user.phone || ''
       };
-      voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
+      voterRef = db.collection('tenants').doc(resolvedTenantId).collection('voter_rolls').doc(voterId);
     }
 
     // Generate 6-digit OTP
@@ -1182,35 +1223,17 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
 
     console.log('[Access OTP] Prepared dispatch details:', { targetEmail, targetName, targetPhone, voterId, electionId });
 
-    // Dispatch via email with 3.5s non-blocking race timeout
     if (targetEmail) {
       try {
-        const emailPromise = sendOtpViaEmailJS(targetEmail, targetName, otp)
-          .then(result => {
-            if (result) {
-              console.log(`[Access OTP] ✅ Access OTP email successfully sent to ${targetEmail}`);
-              return true;
-            }
-            return false;
-          })
-          .catch(err => {
-            console.error('[Access OTP] Email delivery error:', err.message);
-            return false;
-          });
-
-        const timeoutPromise = new Promise(resolve => setTimeout(() => resolve('timeout'), 3500));
-        const raceResult = await Promise.race([emailPromise, timeoutPromise]);
-
-        if (raceResult === true) {
+        const { sendOtpViaEmail } = require('../services/emailService');
+        const info = await sendOtpViaEmail(targetEmail, targetName, otp);
+        if (info) {
           emailSent = true;
-        } else if (raceResult === 'timeout') {
-          console.warn(`[Access OTP] ⏳ Email dispatch backgrounded after 3.5s timeout for ${targetEmail}`);
+          console.log(`[Access OTP] ✅ Access OTP email successfully sent to ${targetEmail}`);
         }
       } catch (err) {
-        console.error('[Access OTP] Email dispatch wrapper error:', err.message);
+        console.error('[Access OTP] Email dispatch error:', err.message);
       }
-    } else {
-      console.warn('[Access OTP] No target email found for voter', voterId);
     }
 
     // Dispatch via SMS
