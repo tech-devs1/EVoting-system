@@ -50,8 +50,8 @@ export default function Modal({
         width: '100vw',
         height: '100vh',
         backgroundColor: 'rgba(15, 23, 42, 0.65)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -68,8 +68,8 @@ export default function Modal({
           backgroundColor: '#FFFFFF',
           borderRadius: '24px',
           border: '1px solid #E2E8F0',
-          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
-          padding: '2rem',
+          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.8) inset',
+          padding: '2.25rem',
           width: '100%',
           maxWidth,
           maxHeight: '90vh',
@@ -82,17 +82,17 @@ export default function Modal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #F1F5F9' }}>
           <div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>{title}</h3>
-            {subtitle && <p style={{ fontSize: '0.85rem', color: '#64748B', margin: '4px 0 0 0' }}>{subtitle}</p>}
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0F172A', letterSpacing: '-0.02em' }}>{title}</h3>
+            {subtitle && <p style={{ fontSize: '0.875rem', color: '#64748B', margin: '4px 0 0 0', fontWeight: 500 }}>{subtitle}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
             style={{
-              width: '34px',
-              height: '34px',
+              width: '36px',
+              height: '36px',
               borderRadius: '50%',
               backgroundColor: '#F1F5F9',
               border: 'none',
@@ -103,7 +103,8 @@ export default function Modal({
               color: '#64748B',
               fontSize: '1rem',
               fontWeight: 700,
-              flexShrink: 0
+              flexShrink: 0,
+              transition: 'all 0.2s ease'
             }}
           >
             ✕

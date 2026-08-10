@@ -65,6 +65,43 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
   const [candIsIndependent, setCandIsIndependent] = useState(false);
   const [candSubmitting, setCandSubmitting] = useState(false);
 
+  // Form Style Constants
+  const mInputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '0.85rem 1.1rem',
+    borderRadius: '14px',
+    border: '1.5px solid #CBD5E1',
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
+    fontSize: '0.95rem',
+    fontWeight: 500,
+    outline: 'none',
+    boxSizing: 'border-box',
+    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+  };
+
+  const mSelectStyle: React.CSSProperties = {
+    ...mInputStyle,
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    MozAppearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2523475569' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 1rem center',
+    backgroundSize: '1.25rem',
+    paddingRight: '2.5rem',
+    cursor: 'pointer',
+  };
+
+  const mLabelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '0.875rem',
+    fontWeight: 700,
+    marginBottom: '0.45rem',
+    color: '#0F172A',
+    letterSpacing: '-0.01em',
+  };
+
   // Live Ballot Preview Modal State
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
@@ -397,21 +434,23 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
         isOpen={isPosModalOpen}
         onClose={() => setIsPosModalOpen(false)}
         title="Add Custom Position Type"
+        subtitle="Define position category name and voting selection limit"
       >
         <form onSubmit={handleCreatePosition} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Position Title *</label>
+            <label style={mLabelStyle}>Position Title *</label>
             <input
               type="text"
               required
               placeholder="e.g. Financial Secretary, SRC President"
               value={posTitle}
               onChange={(e) => setPosTitle(e.target.value)}
+              style={mInputStyle}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>
+            <label style={mLabelStyle}>
               Maximum Number of Candidate Choices Allowed *
             </label>
             <input
@@ -422,28 +461,29 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
               placeholder="Enter max candidate choices (e.g. 1 for FPTP, 2 for top 2)"
               value={posMaxChoices}
               onChange={(e) => setPosMaxChoices(Math.max(1, parseInt(e.target.value) || 1))}
+              style={mInputStyle}
             />
             <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '6px 0 0 0' }}>
               Enter the exact maximum number of candidates a voter can select for this position (1 = Single Winner).
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: '#F8FAFC', padding: '0.85rem 1.1rem', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
             <input
               type="checkbox"
               id="referendum-check"
               checked={posIsReferendum}
               onChange={(e) => setPosIsReferendum(e.target.checked)}
-              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#2563EB' }}
             />
-            <label htmlFor="referendum-check" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>
+            <label htmlFor="referendum-check" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
               Enable YES / NO Referendum Mode for Unopposed Candidates
             </label>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-            <button type="button" onClick={() => setIsPosModalOpen(false)} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={posSubmitting} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #F1F5F9' }}>
+            <button type="button" onClick={() => setIsPosModalOpen(false)} style={{ padding: '0.75rem 1.4rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={posSubmitting} style={{ padding: '0.75rem 1.6rem', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.4)' }}>
               {posSubmitting ? 'Saving Position...' : 'Save Position'}
             </button>
           </div>
@@ -458,25 +498,28 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
           setCandImagePreview('');
         }}
         title="Register Candidate"
+        subtitle="Add a candidate profile and photo to this election workspace"
       >
         <form onSubmit={handleCreateCandidate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Full Candidate Name *</label>
+            <label style={mLabelStyle}>Full Candidate Name *</label>
             <input
               type="text"
               required
               placeholder="e.g. Kwame Mensah"
               value={candName}
               onChange={(e) => setCandName(e.target.value)}
+              style={mInputStyle}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Position Category *</label>
+            <label style={mLabelStyle}>Position Category *</label>
             <select
               required
               value={candPosition}
               onChange={(e) => setCandPosition(e.target.value)}
+              style={mSelectStyle}
             >
               {positions.map(p => (
                 <option key={p.id} value={p.title}>{p.title}</option>
@@ -485,34 +528,35 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>
+            <label style={mLabelStyle}>
               Candidate Profile Photo Upload
             </label>
             
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', backgroundColor: '#F8FAFC', padding: '1.25rem', borderRadius: '18px', border: '1.5px dashed #CBD5E1' }}>
               {/* Live Preview Avatar */}
               <div style={{
-                width: '72px',
-                height: '72px',
-                borderRadius: '18px',
-                backgroundColor: '#F1F5F9',
-                border: '2px dashed #94A3B8',
+                width: '80px',
+                height: '80px',
+                borderRadius: '22px',
+                backgroundColor: '#EFF6FF',
+                border: '2px solid #BFDBFE',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
-                flexShrink: 0
+                flexShrink: 0,
+                boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.2)'
               }}>
                 {candImagePreview || candPhotoUrl ? (
                   <img src={candImagePreview || candPhotoUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <Upload size={24} style={{ color: '#64748B' }} />
+                  <Upload size={28} style={{ color: '#2563EB' }} />
                 )}
               </div>
 
               {/* Controls */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label htmlFor="candidate-file-picker" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.65rem 1rem', borderRadius: '12px', border: '1.5px solid #2563EB', backgroundColor: '#EFF6FF', color: '#2563EB', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', width: 'fit-content' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <label htmlFor="candidate-file-picker" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.7rem 1.25rem', borderRadius: '12px', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', width: 'fit-content', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)' }}>
                   <Upload size={16} /> Choose Photo Image File
                 </label>
                 <input
@@ -535,30 +579,32 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
                 />
                 <input
                   type="url"
-                  placeholder="Or paste image URL (https://...)"
+                  placeholder="Or paste photo URL (https://...)"
                   value={candPhotoUrl}
                   onChange={(e) => {
                     setCandPhotoUrl(e.target.value);
                     setCandImagePreview(e.target.value);
                   }}
+                  style={{ ...mInputStyle, fontSize: '0.85rem', padding: '0.65rem 0.9rem' }}
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Manifesto & Bio Snippet</label>
+            <label style={mLabelStyle}>Manifesto & Bio Snippet</label>
             <textarea
               rows={3}
               placeholder="Brief campaign promise..."
               value={candManifesto}
               onChange={(e) => setCandManifesto(e.target.value)}
+              style={{ ...mInputStyle, resize: 'vertical' }}
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-            <button type="button" onClick={() => setIsCandModalOpen(false)} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={candSubmitting} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #F1F5F9' }}>
+            <button type="button" onClick={() => setIsCandModalOpen(false)} style={{ padding: '0.75rem 1.4rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={candSubmitting} style={{ padding: '0.75rem 1.6rem', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.4)' }}>
               {candSubmitting ? 'Registering Candidate...' : 'Register Candidate'}
             </button>
           </div>
