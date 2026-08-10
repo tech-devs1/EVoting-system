@@ -3,19 +3,19 @@ const rateLimit = require('express-rate-limit');
 // Limiter for authentication routes (login, register, OTP verification)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15, // Limit each IP to 15 requests per windowMs
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  max: 1000, // High capacity for shared campus NATs
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
     status: 'error',
-    message: 'Too many authentication attempts from this IP. Please try again after 15 minutes.'
+    message: 'Too many authentication attempts. Please wait a moment and try again.'
   }
 });
 
-// Limiter for voting operations (prevent spam ballot casting)
+// Limiter for voting operations (high throughput concurrent ballot casting)
 const voteLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 30, // Limit each IP to 30 vote requests per minute
+  max: 5000, // High capacity for 1,000+ concurrent voters on campus Wi-Fi
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -27,7 +27,7 @@ const voteLimiter = rateLimit({
 // General limiter for general API queries
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // Limit each IP to 100 requests per minute
+  max: 10000, // High capacity for general API endpoints
   standardHeaders: true,
   legacyHeaders: false,
   message: {

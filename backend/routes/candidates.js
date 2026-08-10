@@ -44,15 +44,29 @@ router.get('/election/:electionId', async (req, res) => {
 
     const candidates = await cache.getOrSet(cacheKey, async () => {
       // Fetch election to see if live charts are published to voters
-      const electionDoc = await getElectionsRef(req).doc(electionId).get();
-      if (!electionDoc.exists) {
+      const tenantId = getTenantId(req);
+      let electionDoc = await getElectionsRef(req).doc(electionId).get();
+      if (!electionDoc || !electionDoc.exists) {
+        electionDoc = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).get();
+      }
+      if (!electionDoc || !electionDoc.exists) {
+        const snap = await db.collectionGroup('elections').get();
+        electionDoc = snap.docs.find(d => d.id === electionId);
+      }
+
+      if (!electionDoc || !electionDoc.exists) {
         throw new Error('ELECTION_NOT_FOUND');
       }
       const electionData = electionDoc.data();
       const showResults = electionData.showResults === true;
 
-      const candidatesRef = getCandidatesRef(req);
-      const snapshot = await candidatesRef.where('electionId', '==', electionId).get();
+      let snapshot = await getCandidatesRef(req).where('electionId', '==', electionId).get();
+      if (snapshot.empty) {
+        snapshot = await db.collection('organizations').doc(tenantId).collection('candidates').where('electionId', '==', electionId).get();
+      }
+      if (snapshot.empty) {
+        snapshot = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+      }
       
       const list = [];
       snapshot.forEach(doc => {

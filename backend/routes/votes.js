@@ -71,20 +71,44 @@ router.post('/cast', verifyAuth, async (req, res) => {
 
     // Verify voter has unlocked access to this election via OTP verification
     const tenantId = getTenantId(req);
-    const unlockedDoc = await db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
-    if (!unlockedDoc.exists) {
-      return res.status(403).json({ status: 'error', message: 'You must verify your identity via OTP before casting your ballot.' });
+    let isUnlocked = false;
+    let unlockedDoc = await db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
+    if (unlockedDoc.exists) {
+      isUnlocked = true;
+    } else {
+      unlockedDoc = await db.collection('organizations').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
+      if (unlockedDoc.exists) {
+        isUnlocked = true;
+      } else {
+        unlockedDoc = await db.collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
+        if (unlockedDoc.exists) isUnlocked = true;
+      }
     }
 
     // 1. Check if election is active and within valid time window
-    // (We get this from Cache to avoid reading elections document every single time a vote is cast!)
     const election = await cache.getOrSet(`elections:detail:${electionId}`, async () => {
-      const doc = await getElectionsRef(req).doc(electionId).get();
-      if (!doc.exists) {
+      let doc = await getElectionsRef(req).doc(electionId).get();
+      if (!doc || !doc.exists) {
+        doc = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).get();
+      }
+      if (!doc || !doc.exists) {
+        const snap = await db.collectionGroup('elections').get();
+        doc = snap.docs.find(d => d.id === electionId);
+      }
+      if (!doc || !doc.exists) {
         throw new Error('ELECTION_NOT_FOUND');
       }
       return { id: doc.id, ...doc.data() };
     }, 15000);
+
+    // If election does not enforce mandatory OTP verification, bypass unlocked check
+    if (election.otpRequired === false) {
+      isUnlocked = true;
+    }
+
+    if (!isUnlocked) {
+      return res.status(403).json({ status: 'error', message: 'You must verify your identity via OTP before casting your ballot.' });
+    }
 
     if (election.status !== 'active') {
       return res.status(400).json({ status: 'error', message: 'Election is not active' });
@@ -98,17 +122,21 @@ router.post('/cast', verifyAuth, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Voting duration for this election has expired.' });
     }
 
-    // Pre-calculate references
-    const candidateRef = getCandidatesRef(req).doc(candidateId);
-
-    // Cache candidate details to prevent heavy Firestore read storms on static data
+    // Pre-calculate candidate details with multi-tenant fallback
     const candidateData = await cache.getOrSet(`candidates:detail:${candidateId}`, async () => {
-      const candidateDoc = await candidateRef.get();
-      if (!candidateDoc.exists) {
+      let candidateDoc = await getCandidatesRef(req).doc(candidateId).get();
+      if (!candidateDoc || !candidateDoc.exists) {
+        candidateDoc = await db.collection('organizations').doc(tenantId).collection('candidates').doc(candidateId).get();
+      }
+      if (!candidateDoc || !candidateDoc.exists) {
+        const snap = await db.collectionGroup('candidates').get();
+        candidateDoc = snap.docs.find(d => d.id === candidateId);
+      }
+      if (!candidateDoc || !candidateDoc.exists) {
         throw new Error('CANDIDATE_NOT_FOUND');
       }
       return candidateDoc.data();
-    }, 15000); // Cache for 15 seconds
+    }, 15000);
 
     if (candidateData.electionId !== electionId) {
       return res.status(400).json({ status: 'error', message: 'Invalid candidate for this election' });
