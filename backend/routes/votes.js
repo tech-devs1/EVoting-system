@@ -142,6 +142,19 @@ router.post('/cast', verifyAuth, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Invalid candidate for this election' });
     }
 
+    // Resolve exact candidate document reference for atomic transaction updates
+    let candidateRef = getCandidatesRef(req).doc(candidateId);
+    let cDocTest = await candidateRef.get();
+    if (!cDocTest.exists) {
+      candidateRef = db.collection('organizations').doc(tenantId).collection('candidates').doc(candidateId);
+      cDocTest = await candidateRef.get();
+      if (!cDocTest.exists) {
+        const snap = await db.collectionGroup('candidates').get();
+        const match = snap.docs.find(d => d.id === candidateId);
+        if (match) candidateRef = match.ref;
+      }
+    }
+
     const position = candidateData.position || 'General';
     const candidateName = candidateData.name || '';
     const positionKey = position.toLowerCase().replace(/[^a-z0-9]/g, '_');
