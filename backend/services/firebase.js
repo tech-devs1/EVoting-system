@@ -279,10 +279,7 @@ initMySQL().catch(err => console.warn('MySQL auto-init:', err.message));
 const mockInstance = new MockFirestore();
 const db = new Proxy({}, {
   get(target, prop) {
-    const useMySQL = (process.env.MYSQL_URL || process.env.MYSQL_HOST) && isMySQLConnected();
-    const activeDb = useMySQL
-      ? mysqlDb
-      : (firestoreDb || initFirestore() || (isMySQLConnected() ? mysqlDb : mockInstance));
+    const activeDb = firestoreDb || initFirestore() || (isMySQLConnected() ? mysqlDb : mockInstance);
     const value = activeDb[prop];
     return typeof value === 'function' ? value.bind(activeDb) : value;
   }
