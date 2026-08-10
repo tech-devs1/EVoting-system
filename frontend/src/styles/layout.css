@@ -449,11 +449,20 @@
   .admin-layout-container {
     padding: 0.75rem !important;
     gap: 0.75rem !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .admin-main-container-col {
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .admin-main-content {
     padding: 1.25rem !important;
     border-radius: 18px !important;
+    overflow-y: visible !important;
   }
 
   .admin-profile-meta {

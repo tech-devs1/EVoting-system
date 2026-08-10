@@ -251,7 +251,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100vh',
+      maxHeight: '100vh',
+      overflow: 'hidden',
       backgroundColor: '#F4F6F9',
       color: '#0F172A',
       fontFamily: 'var(--font-body, "Plus Jakarta Sans", system-ui, sans-serif)',
@@ -266,6 +268,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <aside className="admin-desktop-sidebar" style={{
           width: '260px',
           flexShrink: 0,
+          height: 'calc(100vh - 2.5rem)',
+          overflowY: 'auto',
           backgroundColor: '#FFFFFF',
           borderRadius: '24px',
           border: '1px solid #E2E8F0',
@@ -273,7 +277,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)'
+          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)',
+          boxSizing: 'border-box'
         }}>
           {renderNavigationContent()}
         </aside>
@@ -319,7 +324,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0, width: '100%' }}>
+      <div className="admin-main-container-col" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0, width: '100%', height: 'calc(100vh - 2.5rem)', overflow: 'hidden' }}>
         {/* Top Navigation Bar */}
         <header style={{
           backgroundColor: '#FFFFFF',
@@ -610,6 +615,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           border: '1px solid #E2E8F0',
           padding: '2rem',
           flex: 1,
+          minHeight: 0,
           boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)',
           overflowY: 'auto'
         }}>
