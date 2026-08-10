@@ -707,8 +707,8 @@ export default function OrganizationElectionHub() {
 
       {/* 4-Step Election Creation Wizard Modal */}
       {mounted && isWizardOpen ? createPortal(
-        <div className="modal-overlay" onClick={() => setIsWizardOpen(false)}>
-          <div className="modal-card" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsWizardOpen(false); }}>
+          <div className="modal-card" style={{ maxWidth: '640px' }}>
             
             {/* Modal Header & Step Indicator */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>

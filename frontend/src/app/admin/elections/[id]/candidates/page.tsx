@@ -393,8 +393,8 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
 
       {/* Add Position Modal */}
       {mounted && isPosModalOpen && createPortal(
-        <div className="modal-overlay" onClick={() => setIsPosModalOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsPosModalOpen(false); }}>
+          <div className="modal-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>Add Custom Position Type</h3>
               <button onClick={() => setIsPosModalOpen(false)} style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#F1F5F9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}>✕</button>
@@ -452,8 +452,8 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
 
       {/* Add Candidate Modal */}
       {mounted && isCandModalOpen && createPortal(
-        <div className="modal-overlay" onClick={() => setIsCandModalOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsCandModalOpen(false); }}>
+          <div className="modal-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>Register Candidate</h3>
               <button onClick={() => setIsCandModalOpen(false)} style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#F1F5F9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}>✕</button>
@@ -518,8 +518,8 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
 
       {/* Live Ballot Preview Modal */}
       {mounted && isPreviewOpen && createPortal(
-        <div className="modal-overlay" onClick={() => setIsPreviewOpen(false)}>
-          <div className="modal-card" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsPreviewOpen(false); }}>
+          <div className="modal-card" style={{ maxWidth: '640px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <div>
                 <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>📱 Live Voter Ballot Preview</h3>
