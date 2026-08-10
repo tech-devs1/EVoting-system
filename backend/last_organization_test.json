@@ -1,13 +1,13 @@
 {
-  "tenantId": "dept_org_1786353899598",
-  "orgName": "Engineering & Technology Faculty (9598)",
-  "adminEmail": "ec_admin_1786353899598@htu.edu.gh",
-  "adminPassword": "AdminPass@9598",
-  "electionId": "LGWl9LQcV4gzHo1D7dTg",
-  "electionTitle": "Faculty & Departmental Leadership Elections 2026 (9598)",
+  "tenantId": "dept_org_1786354231938",
+  "orgName": "Engineering & Technology Faculty (1938)",
+  "adminEmail": "ec_admin_1786354231938@htu.edu.gh",
+  "adminPassword": "AdminPass@1938",
+  "electionId": "waKitv0PfxrbX7f0lqEt",
+  "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1938)",
   "sampleVoter": {
-    "email": "voter1_1786353899598@htu.edu.gh",
+    "email": "voter1_1786354231938@htu.edu.gh",
     "password": "Voter@123"
   },
-  "createdAt": "2026-08-10T09:26:49.475Z"
+  "createdAt": "2026-08-10T09:32:27.892Z"
 }
