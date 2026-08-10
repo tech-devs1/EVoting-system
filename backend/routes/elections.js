@@ -224,7 +224,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       organizationId: organizationId || 'default',
       type: electionType,
       department: department || '',
-      status: 'draft',
+      status: req.body.status || 'draft',
       showResults: showResults === true,
       createdBy: 'admin',
       createdAt: Date.now()
