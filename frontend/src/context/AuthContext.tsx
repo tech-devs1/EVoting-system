@@ -37,13 +37,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  // Helper to save session tokens isolated by role
+  // Helper to save session tokens isolated by role & tab
   const saveSession = (data: UserProfile, token: string) => {
     const bearerToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
     const userStr = JSON.stringify(data);
     const tenant = data.tenantId || 'default_tenant';
 
-    if (data.role === 'admin' || data.role === 'superadmin') {
+    // 1. ALWAYS set tab-specific session storage
+    sessionStorage.setItem('COMPSSA_tab_token', bearerToken);
+    sessionStorage.setItem('COMPSSA_tab_user', userStr);
+    sessionStorage.setItem('COMPSSA_tab_tenantId', tenant);
+
+    // 2. Set role-isolated storage keys
+    if (data.role === 'superadmin') {
+      sessionStorage.setItem('COMPSSA_superadmin_token', bearerToken);
+      sessionStorage.setItem('COMPSSA_superadmin_user', userStr);
+      sessionStorage.setItem('COMPSSA_superadmin_tenantId', tenant);
+      localStorage.setItem('COMPSSA_superadmin_token', bearerToken);
+      localStorage.setItem('COMPSSA_superadmin_user', userStr);
+      localStorage.setItem('COMPSSA_superadmin_tenantId', tenant);
+    } else if (data.role === 'admin') {
       sessionStorage.setItem('COMPSSA_admin_token', bearerToken);
       sessionStorage.setItem('COMPSSA_admin_user', userStr);
       sessionStorage.setItem('COMPSSA_admin_tenantId', tenant);
@@ -75,18 +88,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let storedToken: string | null = null;
         let storedUserStr: string | null = null;
 
-        if (path.startsWith('/admin') || path.startsWith('/superadmin')) {
-          storedToken = sessionStorage.getItem('COMPSSA_admin_token') || localStorage.getItem('COMPSSA_admin_token') || localStorage.getItem('COMPSSA_token');
-          storedUserStr = sessionStorage.getItem('COMPSSA_admin_user') || localStorage.getItem('COMPSSA_admin_user') || localStorage.getItem('COMPSSA_user');
-        } else if (path.startsWith('/voter')) {
-          storedToken = sessionStorage.getItem('COMPSSA_voter_token') || localStorage.getItem('COMPSSA_voter_token') || localStorage.getItem('COMPSSA_token');
-          storedUserStr = sessionStorage.getItem('COMPSSA_voter_user') || localStorage.getItem('COMPSSA_voter_user') || localStorage.getItem('COMPSSA_user');
-        } else {
-          storedToken = sessionStorage.getItem('COMPSSA_admin_token') || localStorage.getItem('COMPSSA_admin_token') ||
-                        sessionStorage.getItem('COMPSSA_voter_token') || localStorage.getItem('COMPSSA_voter_token') ||
+        if (path.startsWith('/superadmin')) {
+          storedToken = sessionStorage.getItem('COMPSSA_tab_token') ||
+                        sessionStorage.getItem('COMPSSA_superadmin_token') ||
+                        localStorage.getItem('COMPSSA_superadmin_token') ||
                         localStorage.getItem('COMPSSA_token');
-          storedUserStr = sessionStorage.getItem('COMPSSA_admin_user') || localStorage.getItem('COMPSSA_admin_user') ||
-                          sessionStorage.getItem('COMPSSA_voter_user') || localStorage.getItem('COMPSSA_voter_user') ||
+          storedUserStr = sessionStorage.getItem('COMPSSA_tab_user') ||
+                          sessionStorage.getItem('COMPSSA_superadmin_user') ||
+                          localStorage.getItem('COMPSSA_superadmin_user') ||
+                          localStorage.getItem('COMPSSA_user');
+        } else if (path.startsWith('/admin')) {
+          storedToken = sessionStorage.getItem('COMPSSA_tab_token') ||
+                        sessionStorage.getItem('COMPSSA_admin_token') ||
+                        localStorage.getItem('COMPSSA_admin_token') ||
+                        localStorage.getItem('COMPSSA_token');
+          storedUserStr = sessionStorage.getItem('COMPSSA_tab_user') ||
+                          sessionStorage.getItem('COMPSSA_admin_user') ||
+                          localStorage.getItem('COMPSSA_admin_user') ||
+                          localStorage.getItem('COMPSSA_user');
+        } else if (path.startsWith('/voter')) {
+          storedToken = sessionStorage.getItem('COMPSSA_tab_token') ||
+                        sessionStorage.getItem('COMPSSA_voter_token') ||
+                        localStorage.getItem('COMPSSA_voter_token') ||
+                        localStorage.getItem('COMPSSA_token');
+          storedUserStr = sessionStorage.getItem('COMPSSA_tab_user') ||
+                          sessionStorage.getItem('COMPSSA_voter_user') ||
+                          localStorage.getItem('COMPSSA_voter_user') ||
+                          localStorage.getItem('COMPSSA_user');
+        } else {
+          storedToken = sessionStorage.getItem('COMPSSA_tab_token') ||
+                        sessionStorage.getItem('COMPSSA_superadmin_token') ||
+                        sessionStorage.getItem('COMPSSA_admin_token') ||
+                        sessionStorage.getItem('COMPSSA_voter_token') ||
+                        localStorage.getItem('COMPSSA_token');
+          storedUserStr = sessionStorage.getItem('COMPSSA_tab_user') ||
+                          sessionStorage.getItem('COMPSSA_superadmin_user') ||
+                          sessionStorage.getItem('COMPSSA_admin_user') ||
+                          sessionStorage.getItem('COMPSSA_voter_user') ||
                           localStorage.getItem('COMPSSA_user');
         }
 
@@ -209,7 +247,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
-    if (path.startsWith('/admin') || path.startsWith('/superadmin')) {
+    
+    sessionStorage.removeItem('COMPSSA_tab_token');
+    sessionStorage.removeItem('COMPSSA_tab_user');
+    sessionStorage.removeItem('COMPSSA_tab_tenantId');
+
+    if (path.startsWith('/superadmin')) {
+      sessionStorage.removeItem('COMPSSA_superadmin_token');
+      sessionStorage.removeItem('COMPSSA_superadmin_user');
+      localStorage.removeItem('COMPSSA_superadmin_token');
+      localStorage.removeItem('COMPSSA_superadmin_user');
+    } else if (path.startsWith('/admin')) {
       sessionStorage.removeItem('COMPSSA_admin_token');
       sessionStorage.removeItem('COMPSSA_admin_user');
       localStorage.removeItem('COMPSSA_admin_token');
