@@ -139,102 +139,108 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
     }
 
     const fullData = await cache.getOrSet(`admin:${tenantId}:dashboard-full`, async () => {
-      // --- KPIs ---
-      let activeElectionIds = [];
-      try {
-        const activeElectionsSnap = await getElectionsRef(req).where('status', '==', 'active').get();
-        activeElectionsSnap.forEach(doc => activeElectionIds.push(doc.id));
-      } catch (e) {
-        console.error('Error fetching active elections:', e);
+      // 1. Fetch elections with fallback
+      let electionsSnap = await getElectionsRef(req).get();
+      if (electionsSnap.empty) {
+        const altCollection = getTenantCollection(req) === 'tenants' ? 'organizations' : 'tenants';
+        electionsSnap = await db.collection(altCollection).doc(tenantId).collection('elections').get();
+      }
+      if (electionsSnap.empty) {
+        electionsSnap = await db.collectionGroup('elections').get();
       }
 
-      let totalElections = 0;
-      let totalVoters = 0;
+      const elections = [];
+      const now = Date.now();
+      const statusUpdates = [];
+      let activeElectionIds = [];
       let completedElectionsCount = 0;
-      let totalStudents = 0;
 
-      try {
-        const [electionsCountSnap, votersCountSnap, completedSnap, studentsSnap] = await Promise.all([
-          getElectionsRef(req).count().get(),
-          getUsersRef(req).where('isRegistered', '==', true).count().get(),
-          getElectionsRef(req).where('status', '==', 'completed').count().get(),
-          getUsersRef(req).where('role', '!=', 'admin').count().get()
-        ]);
-        totalElections = electionsCountSnap.data().count;
-        totalVoters = votersCountSnap.data().count;
-        completedElectionsCount = completedSnap.data().count;
-        totalStudents = studentsSnap.data().count;
-      } catch (countErr) {
-        console.warn('[Dashboard] Aggregation count() failed, falling back to snapshot size:', countErr.message);
-        // Fallback to .get().size if count() is unsupported or fails
-        const [elSnap, vSnap, compSnap, stSnap] = await Promise.all([
-          getElectionsRef(req).get(),
-          getUsersRef(req).where('isRegistered', '==', true).get(),
-          getElectionsRef(req).where('status', '==', 'completed').get(),
-          getUsersRef(req).get()
-        ]);
-        totalElections = elSnap.size;
-        totalVoters = vSnap.size;
-        completedElectionsCount = compSnap.size;
-        totalStudents = stSnap.docs.filter(d => d.data().role !== 'admin').length;
+      electionsSnap.forEach(doc => {
+        const electionData = doc.data();
+        // Ignore elections not belonging to this tenant/org in collectionGroup query
+        if (doc.ref.parent && doc.ref.parent.parent && doc.ref.parent.parent.id !== tenantId) return;
+        
+        let updatedStatus = electionData.status || 'draft';
+        const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
+        const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
+
+        if (electionData.status && electionData.status !== 'draft') {
+          if (now >= startTime && now <= endTime) {
+            if (electionData.status !== 'active') {
+              updatedStatus = 'active';
+              statusUpdates.push(doc.ref.update({ status: 'active' }));
+            }
+          } else if (now < startTime) {
+            if (electionData.status !== 'scheduled') {
+              updatedStatus = 'scheduled';
+              statusUpdates.push(doc.ref.update({ status: 'scheduled' }));
+            }
+          } else if (now > endTime) {
+            if (electionData.status !== 'completed' && electionData.status !== 'ended') {
+              updatedStatus = 'completed';
+              statusUpdates.push(doc.ref.update({ status: 'completed' }));
+            }
+          }
+        }
+
+        if (updatedStatus === 'active') activeElectionIds.push(doc.id);
+        if (updatedStatus === 'completed' || updatedStatus === 'ended') completedElectionsCount++;
+
+        elections.push({ id: doc.id, ...electionData, status: updatedStatus });
+      });
+
+      // Fire status updates in parallel
+      if (statusUpdates.length > 0) {
+        Promise.all(statusUpdates).catch(e => console.error('Status update error:', e));
+      }
+
+      // 2. Fetch voter rolls size (voters count)
+      let votersSnap = await getUsersRef(req).get();
+      if (votersSnap.empty) {
+        const altCollection = getTenantCollection(req) === 'tenants' ? 'organizations' : 'tenants';
+        votersSnap = await db.collection(altCollection).doc(tenantId).collection('voter_rolls').get();
+      }
+      const totalVoters = votersSnap.size;
+      const totalStudents = votersSnap.docs.filter(d => d.data().role !== 'admin').length;
+
+      // 3. Fetch candidates
+      let candsSnap = await getCandidatesRef(req).get();
+      if (candsSnap.empty) {
+        const altCollection = getTenantCollection(req) === 'tenants' ? 'organizations' : 'tenants';
+        candsSnap = await db.collection(altCollection).doc(tenantId).collection('candidates').get();
+      }
+      if (candsSnap.empty) {
+        candsSnap = await db.collectionGroup('candidates').get();
       }
 
       let totalVotesCast = 0;
-      let uniqueVotersCount = 0;
-
-      try {
-        let targetElectionIds = [...activeElectionIds];
-        if (targetElectionIds.length === 0) {
-          const allElectionsSnap = await getElectionsRef(req).get();
-          allElectionsSnap.forEach(doc => targetElectionIds.push(doc.id));
-        }
-
-        if (targetElectionIds.length > 0) {
-          const [votesSnap, votersSnap] = await Promise.all([
-            getVotesRef(req).where('electionId', 'in', targetElectionIds.slice(0, 30)).count().get(),
-            getVotedVotersRef(req).where('electionId', 'in', targetElectionIds.slice(0, 30)).count().get()
-          ]);
-          totalVotesCast = votesSnap.data().count;
-          uniqueVotersCount = votersSnap.data().count;
-        }
-      } catch (e) {
-        console.warn('[Dashboard] Fallback for votes/voters count:', e.message);
-      }
-
-      if (totalVotesCast === 0) {
-        try {
-          const candsSnap = await getCandidatesRef(req).get();
-          let candTotal = 0;
-          const posTotals = {};
-          candsSnap.forEach(doc => {
-            const d = doc.data();
-            const v = (d.votes || 0) + (d.noVotes || 0);
-            candTotal += v;
-            const pos = d.position || 'General';
-            posTotals[pos] = (posTotals[pos] || 0) + v;
-          });
-          totalVotesCast = candTotal;
-          if (uniqueVotersCount === 0) {
-            uniqueVotersCount = Math.max(0, ...Object.values(posTotals));
-          }
-        } catch (err) {
-          console.warn('[Dashboard-full] Candidate fallback failed:', err.message);
-        }
-      }
-
+      const posTotals = {};
       const topCandidates = [];
-      try {
-        const topCandidatesSnap = await getCandidatesRef(req).orderBy('votes', 'desc').limit(10).get();
-        topCandidatesSnap.forEach(doc => {
-          const d = doc.data();
-          topCandidates.push({ name: d.name, votes: d.votes || 0 });
-        });
-      } catch (e) {
-        console.error('Error fetching top candidates:', e);
-      }
+
+      candsSnap.forEach(doc => {
+        const d = doc.data();
+        if (d.electionId && !elections.some(el => el.id === d.electionId)) return;
+        const v = (d.votes || 0) + (d.noVotes || 0);
+        totalVotesCast += v;
+        const pos = d.position || 'General';
+        posTotals[pos] = (posTotals[pos] || 0) + v;
+      });
+
+      // Get top candidates sorted by votes
+      const sortedCands = [...candsSnap.docs]
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(c => c.electionId && elections.some(el => el.id === c.electionId))
+        .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+        .slice(0, 10);
+      
+      sortedCands.forEach(c => {
+        topCandidates.push({ name: c.name, votes: c.votes || 0 });
+      });
+
+      const uniqueVotersCount = Math.max(0, ...Object.values(posTotals));
 
       const stats = {
-        totalElections,
+        totalElections: elections.length,
         totalVoters,
         totalVotesCast,
         activeAlerts: 0,
@@ -245,47 +251,14 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
         topCandidates
       };
 
-      // --- Elections + Candidates (for charts) ---
-      const electionsSnap = await getElectionsRef(req).get();
-      const elections = [];
-      const now = Date.now();
-      const statusUpdates = [];
-
-      electionsSnap.forEach(doc => {
-        const electionData = doc.data();
-        let updatedStatus = electionData.status;
-        const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
-        const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
-
-        if (electionData.status === 'active' && electionData.endDate && endTime < now) {
-          updatedStatus = 'completed';
-          statusUpdates.push(getElectionsRef(req).doc(doc.id).update({ status: 'completed' }));
-        } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
-          updatedStatus = 'active';
-          statusUpdates.push(getElectionsRef(req).doc(doc.id).update({ status: 'active' }));
-        }
-
-        elections.push({ id: doc.id, ...electionData, status: updatedStatus });
-      });
-
-      // Fire status updates in parallel (don't await — non-blocking)
-      if (statusUpdates.length > 0) {
-        Promise.all(statusUpdates).catch(e => console.error('Status update error:', e));
-      }
-
-      // Fetch candidates for all elections in parallel
-      const candidateResults = await Promise.allSettled(
-        elections.map(el => getCandidatesRef(req).where('electionId', '==', el.id).get())
-      );
-
-      const electionResults = elections.map((election, i) => {
-        const result = candidateResults[i];
+      const electionResults = elections.map(election => {
         const candidates = [];
-        if (result.status === 'fulfilled') {
-          result.value.forEach(doc => {
-            candidates.push({ id: doc.id, ...doc.data() });
-          });
-        }
+        candsSnap.forEach(doc => {
+          const d = doc.data();
+          if (d.electionId === election.id) {
+            candidates.push({ id: doc.id, ...d });
+          }
+        });
         const totalVotes = candidates.reduce((s, c) => s + (c.votes || 0) + (c.noVotes || 0), 0);
         return { election, candidates, totalVotes };
       });
