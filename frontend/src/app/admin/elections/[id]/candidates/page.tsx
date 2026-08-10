@@ -61,6 +61,7 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
   const [candPosition, setCandPosition] = useState('');
   const [candManifesto, setCandManifesto] = useState('');
   const [candPhotoUrl, setCandPhotoUrl] = useState('');
+  const [candImagePreview, setCandImagePreview] = useState('');
   const [candIsIndependent, setCandIsIndependent] = useState(false);
   const [candSubmitting, setCandSubmitting] = useState(false);
 
@@ -403,23 +404,28 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
             <input
               type="text"
               required
-              placeholder="e.g. Financial Secretary"
+              placeholder="e.g. Financial Secretary, SRC President"
               value={posTitle}
               onChange={(e) => setPosTitle(e.target.value)}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Max Candidate Choices Allowed</label>
-            <select
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>
+              Maximum Number of Candidate Choices Allowed *
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={50}
+              required
+              placeholder="Enter max candidate choices (e.g. 1 for FPTP, 2 for top 2)"
               value={posMaxChoices}
-              onChange={(e) => setPosMaxChoices(Number(e.target.value))}
-            >
-              <option value={1}>Select 1 (Single Winner / First-Past-The-Post)</option>
-              <option value={2}>Select 2 (Top 2 Winners)</option>
-              <option value={3}>Select 3 (Top 3 Winners)</option>
-              <option value={4}>Select 4 (Top 4 Winners)</option>
-            </select>
+              onChange={(e) => setPosMaxChoices(Math.max(1, parseInt(e.target.value) || 1))}
+            />
+            <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '6px 0 0 0' }}>
+              Enter the exact maximum number of candidates a voter can select for this position (1 = Single Winner).
+            </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -447,7 +453,10 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
       {/* Add Candidate Modal */}
       <Modal
         isOpen={isCandModalOpen}
-        onClose={() => setIsCandModalOpen(false)}
+        onClose={() => {
+          setIsCandModalOpen(false);
+          setCandImagePreview('');
+        }}
         title="Register Candidate"
       >
         <form onSubmit={handleCreateCandidate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -476,13 +485,65 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Candidate Photo URL</label>
-            <input
-              type="url"
-              placeholder="https://..."
-              value={candPhotoUrl}
-              onChange={(e) => setCandPhotoUrl(e.target.value)}
-            />
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>
+              Candidate Profile Photo Upload
+            </label>
+            
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              {/* Live Preview Avatar */}
+              <div style={{
+                width: '72px',
+                height: '72px',
+                borderRadius: '18px',
+                backgroundColor: '#F1F5F9',
+                border: '2px dashed #94A3B8',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                flexShrink: 0
+              }}>
+                {candImagePreview || candPhotoUrl ? (
+                  <img src={candImagePreview || candPhotoUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <Upload size={24} style={{ color: '#64748B' }} />
+                )}
+              </div>
+
+              {/* Controls */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label htmlFor="candidate-file-picker" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.65rem 1rem', borderRadius: '12px', border: '1.5px solid #2563EB', backgroundColor: '#EFF6FF', color: '#2563EB', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', width: 'fit-content' }}>
+                  <Upload size={16} /> Choose Photo Image File
+                </label>
+                <input
+                  id="candidate-file-picker"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        const result = reader.result as string;
+                        setCandImagePreview(result);
+                        setCandPhotoUrl(result);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+                <input
+                  type="url"
+                  placeholder="Or paste image URL (https://...)"
+                  value={candPhotoUrl}
+                  onChange={(e) => {
+                    setCandPhotoUrl(e.target.value);
+                    setCandImagePreview(e.target.value);
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
           <div>
