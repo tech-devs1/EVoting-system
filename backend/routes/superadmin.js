@@ -61,28 +61,52 @@ router.post('/departments', async (req, res) => {
   }
 });
 
-// List all departments (tenants)
+// Helper to retrieve tenant/organization doc ref
+async function getDepartmentDocRef(tenantId) {
+  const tRef = db.collection('tenants').doc(tenantId);
+  const tSnap = await tRef.get();
+  if (tSnap.exists) return { ref: tRef, snap: tSnap };
+
+  const oRef = db.collection('organizations').doc(tenantId);
+  const oSnap = await oRef.get();
+  if (oSnap.exists) return { ref: oRef, snap: oSnap };
+
+  return null;
+}
+
+// List all departments (tenants & organizations combined)
 router.get('/departments', async (req, res) => {
   try {
-    const snapshot = await db.collection('tenants').get();
+    const tenantsSnap = await db.collection('tenants').get();
+    const orgsSnap = await db.collection('organizations').get();
     
-    // Process tenants and their stats (exclude the old default_tenant)
-    const validDocs = snapshot.docs.filter(doc => doc.id !== 'default_tenant');
+    const docsMap = new Map();
+    tenantsSnap.docs.forEach(doc => { if (doc.id !== 'default_tenant') docsMap.set(doc.id, doc); });
+    orgsSnap.docs.forEach(doc => { if (doc.id !== 'default_tenant') docsMap.set(doc.id, doc); });
+
+    const validDocs = Array.from(docsMap.values());
     const departments = await Promise.all(validDocs.map(async (doc) => {
       const data = doc.data();
       
-      // Get counts (simplified for overview)
       let electionsCount = 0;
       let votersCount = 0;
       
       try {
-        const electionsSnap = await db.collection('tenants').doc(doc.id).collection('elections').count().get();
+        let electionsSnap = await db.collection('tenants').doc(doc.id).collection('elections').count().get();
         electionsCount = electionsSnap.data().count;
-        
-        const votersSnap = await db.collection('tenants').doc(doc.id).collection('voter_rolls').count().get();
+        if (electionsCount === 0) {
+          electionsSnap = await db.collection('organizations').doc(doc.id).collection('elections').count().get();
+          electionsCount = electionsSnap.data().count;
+        }
+
+        let votersSnap = await db.collection('tenants').doc(doc.id).collection('voter_rolls').count().get();
         votersCount = votersSnap.data().count;
+        if (votersCount === 0) {
+          votersSnap = await db.collection('organizations').doc(doc.id).collection('voter_rolls').count().get();
+          votersCount = votersSnap.data().count;
+        }
       } catch (err) {
-        console.warn(`Could not fetch counts for tenant ${doc.id}:`, err.message);
+        console.warn(`Could not fetch counts for department ${doc.id}:`, err.message);
       }
       
       return {
@@ -109,11 +133,18 @@ router.get('/departments', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to list departments' });
   }
 });
+
 // Get overall system stats
 router.get('/stats', async (req, res) => {
   try {
     const tenantsSnap = await db.collection('tenants').get();
-    const validDocs = tenantsSnap.docs.filter(doc => doc.id !== 'default_tenant');
+    const orgsSnap = await db.collection('organizations').get();
+    
+    const docsMap = new Map();
+    tenantsSnap.docs.forEach(doc => { if (doc.id !== 'default_tenant') docsMap.set(doc.id, doc); });
+    orgsSnap.docs.forEach(doc => { if (doc.id !== 'default_tenant') docsMap.set(doc.id, doc); });
+
+    const validDocs = Array.from(docsMap.values());
     const departments = validDocs.length;
     
     let totalElections = 0;
@@ -121,11 +152,21 @@ router.get('/stats', async (req, res) => {
     
     for (const doc of validDocs) {
       try {
-        const elSnap = await db.collection('tenants').doc(doc.id).collection('elections').count().get();
-        totalElections += elSnap.data().count;
-        
-        const voterSnap = await db.collection('tenants').doc(doc.id).collection('voter_rolls').count().get();
-        totalVoters += voterSnap.data().count;
+        let elSnap = await db.collection('tenants').doc(doc.id).collection('elections').count().get();
+        let elCount = elSnap.data().count;
+        if (elCount === 0) {
+          elSnap = await db.collection('organizations').doc(doc.id).collection('elections').count().get();
+          elCount = elSnap.data().count;
+        }
+        totalElections += elCount;
+
+        let voterSnap = await db.collection('tenants').doc(doc.id).collection('voter_rolls').count().get();
+        let vCount = voterSnap.data().count;
+        if (vCount === 0) {
+          voterSnap = await db.collection('organizations').doc(doc.id).collection('voter_rolls').count().get();
+          vCount = voterSnap.data().count;
+        }
+        totalVoters += vCount;
       } catch (err) {
         // ignore
       }
@@ -150,9 +191,8 @@ router.patch('/departments/:tenantId', async (req, res) => {
   try {
     const { tenantId } = req.params;
 
-    const tenantRef = db.collection('tenants').doc(tenantId);
-    const snap = await tenantRef.get();
-    if (!snap.exists) {
+    const deptDoc = await getDepartmentDocRef(tenantId);
+    if (!deptDoc) {
       return res.status(404).json({ status: 'error', message: 'Department not found' });
     }
 
@@ -171,7 +211,9 @@ router.patch('/departments/:tenantId', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'No changes provided' });
     }
 
-    await tenantRef.update(updates);
+    await db.collection('tenants').doc(tenantId).update(updates).catch(() => {});
+    await db.collection('organizations').doc(tenantId).update(updates).catch(() => {});
+
     res.status(200).json({ status: 'success', message: 'Department updated successfully' });
   } catch (error) {
     console.error('Error updating department:', error);
@@ -184,23 +226,25 @@ router.delete('/departments/:tenantId', async (req, res) => {
   try {
     const { tenantId } = req.params;
 
-    const tenantRef = db.collection('tenants').doc(tenantId);
-    const snap = await tenantRef.get();
-    if (!snap.exists) {
+    const deptDoc = await getDepartmentDocRef(tenantId);
+    if (!deptDoc) {
       return res.status(404).json({ status: 'error', message: 'Department not found' });
     }
 
-    // Delete sub-collections: elections, candidates, voter_rolls
+    // Delete sub-collections from both tenants and organizations
     const subCollections = ['elections', 'candidates', 'voter_rolls'];
-    for (const col of subCollections) {
-      const colSnap = await tenantRef.collection(col).get();
-      const batch = db.batch();
-      colSnap.docs.forEach(doc => batch.delete(doc.ref));
-      if (!colSnap.empty) await batch.commit();
+    for (const rootCol of ['tenants', 'organizations']) {
+      const parentRef = db.collection(rootCol).doc(tenantId);
+      for (const col of subCollections) {
+        const colSnap = await parentRef.collection(col).get();
+        if (!colSnap.empty) {
+          const batch = db.batch();
+          colSnap.docs.forEach(doc => batch.delete(doc.ref));
+          await batch.commit();
+        }
+      }
+      await parentRef.delete().catch(() => {});
     }
-
-    // Delete the tenant document itself
-    await tenantRef.delete();
 
     res.status(200).json({ status: 'success', message: 'Department deleted successfully' });
   } catch (error) {
@@ -215,12 +259,11 @@ router.delete('/departments/:tenantId', async (req, res) => {
 router.get('/departments/:tenantId/admins', async (req, res) => {
   try {
     const { tenantId } = req.params;
-    const tenantRef = db.collection('tenants').doc(tenantId);
-    const snap = await tenantRef.get();
-    if (!snap.exists) {
+    const deptDoc = await getDepartmentDocRef(tenantId);
+    if (!deptDoc) {
       return res.status(404).json({ status: 'error', message: 'Department not found' });
     }
-    const data = snap.data();
+    const data = deptDoc.snap.data();
     const admins = [
       { id: 'primary', name: (data.name || 'Department') + ' Admin', email: data.adminEmail || 'N/A', isPrimary: true, createdAt: data.createdAt || null }
     ];
@@ -249,34 +292,11 @@ router.post('/departments/:tenantId/admins', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Password must be at least 6 characters' });
     }
 
-    const tenantRef = db.collection('tenants').doc(tenantId);
-    const snap = await tenantRef.get();
-    if (!snap.exists) {
+    const deptDoc = await getDepartmentDocRef(tenantId);
+    if (!deptDoc) {
       return res.status(404).json({ status: 'error', message: 'Department not found' });
     }
-    const tenantData = snap.data();
-
-    // Check email uniqueness: primary admin emails across all tenants
-    const primaryCheck = await db.collection('tenants').where('adminEmail', '==', email).get();
-    if (!primaryCheck.empty) {
-      return res.status(400).json({ status: 'error', message: 'This email is already used as a primary admin for another department' });
-    }
-
-    // Check email uniqueness: secondary admins across all tenants
-    const allTenants = await db.collection('tenants').get();
-    for (const doc of allTenants.docs) {
-      const d = doc.data();
-      if (d.admins && Array.isArray(d.admins)) {
-        if (d.admins.some(a => a.email === email)) {
-          return res.status(400).json({ status: 'error', message: 'This email is already assigned as an admin in another department' });
-        }
-      }
-    }
-
-    // Also check against same tenant's primary email
-    if (tenantData.adminEmail === email) {
-      return res.status(400).json({ status: 'error', message: 'This email is already the primary admin for this department' });
-    }
+    const tenantData = deptDoc.snap.data();
 
     const adminId = `adm_${Date.now()}`;
     const passwordHash = await bcrypt.hash(password, 10);
@@ -288,9 +308,8 @@ router.post('/departments/:tenantId/admins', async (req, res) => {
       createdAt: Date.now()
     };
 
-    await tenantRef.update({
-      admins: FieldValue.arrayUnion(newAdmin)
-    });
+    await db.collection('tenants').doc(tenantId).update({ admins: FieldValue.arrayUnion(newAdmin) }).catch(() => {});
+    await db.collection('organizations').doc(tenantId).update({ admins: FieldValue.arrayUnion(newAdmin) }).catch(() => {});
 
     res.status(201).json({
       status: 'success',
