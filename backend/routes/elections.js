@@ -151,20 +151,22 @@ router.get('/eligible', verifyAuth, async (req, res) => {
         continue;
       }
 
-      // Check if election has a per-election CSV roster
-      const rosterSnapshot = await doc.ref.collection('eligible_voters').get();
+      // Check if election has a per-election CSV roster in voter_roster or eligible_voters
+      const voterRosterSnap = await doc.ref.collection('voter_roster').get().catch(() => ({ empty: true, docs: [] }));
+      const eligibleVotersSnap = await doc.ref.collection('eligible_voters').get().catch(() => ({ empty: true, docs: [] }));
 
       let isEligible = false;
 
-      if (rosterSnapshot.empty) {
-        // If no CSV uploaded yet for this election, allow general tenant access
+      if ((!voterRosterSnap.docs || voterRosterSnap.docs.length === 0) && (!eligibleVotersSnap.docs || eligibleVotersSnap.docs.length === 0)) {
+        // If no CSV uploaded yet for this election, allow general access
         isEligible = true;
       } else {
         // Check if voter's email or index matches any entry in this election's CSV roster
-        rosterSnapshot.forEach(voterDoc => {
+        const allRosterDocs = [...(voterRosterSnap.docs || []), ...(eligibleVotersSnap.docs || [])];
+        allRosterDocs.forEach(voterDoc => {
           const vData = voterDoc.data();
           const csvEmail = (vData.email || '').toLowerCase().trim();
-          const csvIndex = (vData.indexNumber || vData.studentId || '').toLowerCase().trim();
+          const csvIndex = (vData.indexNumber || vData.studentId || voterDoc.id || '').toLowerCase().trim();
           if ((voterEmail && csvEmail === voterEmail) || (voterIndex && csvIndex === voterIndex)) {
             isEligible = true;
           }
