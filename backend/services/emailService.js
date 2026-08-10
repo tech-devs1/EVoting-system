@@ -4,17 +4,14 @@ const gmailUser = process.env.GMAIL_USER || 'issakasaddick14@gmail.com';
 const envPass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
 const gmailPass = envPass || 'gvdpedxakuwihtuq';
 
-// Primary Transporter (Port 465 SSL)
+// Primary Transporter (Standard Gmail Service)
 const gmailTransporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: gmailUser,
     pass: gmailPass
   },
-  tls: { rejectUnauthorized: false },
-  connectionTimeout: 8000,
-  greetingTimeout: 8000,
-  socketTimeout: 8000
+  tls: { rejectUnauthorized: false }
 });
 
 // Secondary Fallback Transporter (Port 587 STARTTLS)
@@ -26,10 +23,7 @@ const fallbackTransporter = nodemailer.createTransport({
     user: gmailUser,
     pass: gmailPass
   },
-  tls: { rejectUnauthorized: false },
-  connectionTimeout: 8000,
-  greetingTimeout: 8000,
-  socketTimeout: 8000
+  tls: { rejectUnauthorized: false }
 });
 
 /**

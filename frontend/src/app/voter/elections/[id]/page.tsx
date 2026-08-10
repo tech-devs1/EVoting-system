@@ -4,6 +4,7 @@ import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, Check, ShieldCheck, Lock, CheckCircle2, Sparkles, User, AlertCircle } from 'lucide-react';
 
 interface Candidate {
@@ -13,19 +14,22 @@ interface Candidate {
   manifesto: string;
   photoUrl: string;
   isIndependent?: boolean;
-  ballotNumber?: string | number;
+  ballotNumber?: number | string;
 }
 
 interface Election {
   id: string;
   title: string;
   description: string;
-  startDate?: string;
-  endDate?: string;
-  status?: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  positions?: string[];
+  otpRequired?: boolean;
 }
 
-export default function CandidateSelectionPage({ params }: { params: Promise<{ id: string }> }) {
+export default function VoterElectionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { user } = useAuth();
   const router = useRouter();
   const resolvedParams = use(params);
   const electionId = resolvedParams.id;
