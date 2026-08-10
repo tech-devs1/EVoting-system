@@ -45,6 +45,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     document.documentElement.setAttribute('data-theme', nextTheme);
   };
 
+  // Check if current route is the main Organization Hub Dashboard
+  const isDashboard = pathname === '/admin/dashboard';
+
   // Detect Per-Election Workspace Context
   const electionMatch = pathname.match(/\/admin\/elections\/([^/]+)/);
   const isElectionWorkspace = Boolean(electionMatch);
@@ -90,157 +93,161 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       display: 'flex',
       padding: '1.25rem',
       gap: '1.25rem',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      maxWidth: isDashboard ? '1380px' : '100%',
+      margin: isDashboard ? '0 auto' : '0'
     }}>
-      {/* Floating Justadmin Left Navigation Sidebar */}
-      <aside style={{
-        width: '260px',
-        flexShrink: 0,
-        backgroundColor: '#FFFFFF',
-        borderRadius: '24px',
-        border: '1px solid #E2E8F0',
-        padding: '1.5rem 1.25rem',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)'
-      }}>
-        <div>
-          {/* Logo Brand Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem', paddingLeft: '0.5rem' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-              backgroundColor: '#2563EB',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-            }}>
-              <ShieldCheck size={24} />
-            </div>
-            <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em' }}>
-              HTU Elect <span style={{ color: '#2563EB' }}>✓</span>
-            </span>
-          </div>
-
-          {/* Context Back Button if in Per-Election Workspace */}
-          {isElectionWorkspace && (
-            <Link
-              href="/admin/dashboard"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                color: '#2563EB',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                textDecoration: 'none',
-                padding: '0.6rem 0.85rem',
-                borderRadius: '12px',
-                backgroundColor: '#EFF6FF',
-                marginBottom: '1.25rem',
-                width: '100%',
-                boxSizing: 'border-box'
-              }}
-            >
-              <ArrowLeft size={16} /> Back to All Elections
-            </Link>
-          )}
-
-          {/* Navigation Category: Menu */}
-          <div style={{ marginBottom: '1.75rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
-              {isElectionWorkspace ? 'Election Workspace' : 'Menu'}
-            </div>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {activeNavLinks.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.85rem',
-                      padding: '0.85rem 1rem',
-                      borderRadius: '16px',
-                      fontSize: '0.9rem',
-                      fontWeight: isActive ? 700 : 500,
-                      textDecoration: 'none',
-                      backgroundColor: isActive ? '#2563EB' : 'transparent',
-                      color: isActive ? '#FFFFFF' : '#64748B',
-                      boxShadow: isActive ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <Icon size={19} style={{ color: isActive ? '#FFFFFF' : '#64748B' }} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Navigation Category 2: Miscellaneous */}
+      {/* Floating Justadmin Left Navigation Sidebar (Hidden on /admin/dashboard) */}
+      {!isDashboard && (
+        <aside style={{
+          width: '260px',
+          flexShrink: 0,
+          backgroundColor: '#FFFFFF',
+          borderRadius: '24px',
+          border: '1px solid #E2E8F0',
+          padding: '1.5rem 1.25rem',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)'
+        }}>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
-              Miscellaneous
+            {/* Logo Brand Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem', paddingLeft: '0.5rem' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                backgroundColor: '#2563EB',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+              }}>
+                <ShieldCheck size={24} />
+              </div>
+              <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em' }}>
+                HTU Elect <span style={{ color: '#2563EB' }}>✓</span>
+              </span>
             </div>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+
+            {/* Context Back Button if in Per-Election Workspace */}
+            {isElectionWorkspace && (
               <Link
-                href="/admin/settings"
+                href="/admin/dashboard"
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.85rem',
-                  padding: '0.85rem 1rem',
-                  borderRadius: '16px',
-                  fontSize: '0.9rem',
-                  fontWeight: pathname === '/admin/settings' ? 700 : 500,
+                  gap: '0.5rem',
+                  color: '#2563EB',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
                   textDecoration: 'none',
-                  backgroundColor: pathname === '/admin/settings' ? '#2563EB' : 'transparent',
-                  color: pathname === '/admin/settings' ? '#FFFFFF' : '#64748B',
-                  boxShadow: pathname === '/admin/settings' ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
-                  transition: 'all 0.2s ease'
+                  padding: '0.6rem 0.85rem',
+                  borderRadius: '12px',
+                  backgroundColor: '#EFF6FF',
+                  marginBottom: '1.25rem',
+                  width: '100%',
+                  boxSizing: 'border-box'
                 }}
               >
-                <Settings size={19} style={{ color: pathname === '/admin/settings' ? '#FFFFFF' : '#64748B' }} />
-                <span>Settings</span>
+                <ArrowLeft size={16} /> Back to All Elections
               </Link>
-            </nav>
-          </div>
-        </div>
+            )}
 
-        {/* Sign Out Button */}
-        <button
-          onClick={logout}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.85rem',
-            padding: '0.85rem 1rem',
-            borderRadius: '16px',
-            fontSize: '0.9rem',
-            fontWeight: 600,
-            color: '#DC2626',
-            backgroundColor: '#FEF2F2',
-            border: 'none',
-            cursor: 'pointer',
-            marginTop: '1.5rem',
-            width: '100%',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <LogOut size={19} />
-          <span>Log out</span>
-        </button>
-      </aside>
+            {/* Navigation Category: Menu */}
+            <div style={{ marginBottom: '1.75rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
+                {isElectionWorkspace ? 'Election Workspace' : 'Menu'}
+              </div>
+              <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {activeNavLinks.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.85rem',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '16px',
+                        fontSize: '0.9rem',
+                        fontWeight: isActive ? 700 : 500,
+                        textDecoration: 'none',
+                        backgroundColor: isActive ? '#2563EB' : 'transparent',
+                        color: isActive ? '#FFFFFF' : '#64748B',
+                        boxShadow: isActive ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Icon size={19} style={{ color: isActive ? '#FFFFFF' : '#64748B' }} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Navigation Category 2: Miscellaneous */}
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
+                Miscellaneous
+              </div>
+              <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <Link
+                  href="/admin/settings"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.85rem',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '16px',
+                    fontSize: '0.9rem',
+                    fontWeight: pathname === '/admin/settings' ? 700 : 500,
+                    textDecoration: 'none',
+                    backgroundColor: pathname === '/admin/settings' ? '#2563EB' : 'transparent',
+                    color: pathname === '/admin/settings' ? '#FFFFFF' : '#64748B',
+                    boxShadow: pathname === '/admin/settings' ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Settings size={19} style={{ color: pathname === '/admin/settings' ? '#FFFFFF' : '#64748B' }} />
+                  <span>Settings</span>
+                </Link>
+              </nav>
+            </div>
+          </div>
+
+          {/* Sign Out Button */}
+          <button
+            onClick={logout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.85rem',
+              padding: '0.85rem 1rem',
+              borderRadius: '16px',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              color: '#DC2626',
+              backgroundColor: '#FEF2F2',
+              border: 'none',
+              cursor: 'pointer',
+              marginTop: '1.5rem',
+              width: '100%',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <LogOut size={19} />
+            <span>Log out</span>
+          </button>
+        </aside>
+      )}
 
       {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0 }}>
@@ -255,29 +262,50 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           alignItems: 'center',
           boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)'
         }}>
-          {/* Left Title & Back Button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <button
-              onClick={() => router.back()}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
+          {/* Left Title / Brand Logo for Dashboard */}
+          {isDashboard ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
                 backgroundColor: '#2563EB',
                 color: '#FFFFFF',
-                border: 'none',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A' }}>
-              {currentTitle}
-            </span>
-          </div>
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+              }}>
+                <ShieldCheck size={22} />
+              </div>
+              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
+                HTU Elect <span style={{ color: '#2563EB' }}>✓</span>
+              </span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button
+                onClick={() => router.back()}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  backgroundColor: '#2563EB',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A' }}>
+                {currentTitle}
+              </span>
+            </div>
+          )}
 
           {/* Right Action Icons & User Profile Badge */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -340,6 +368,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             }}>
               <Bell size={18} />
             </button>
+
+            {/* Settings Link on Dashboard Topbar */}
+            {isDashboard && (
+              <Link
+                href="/admin/settings"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  backgroundColor: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#64748B',
+                  cursor: 'pointer',
+                  textDecoration: 'none'
+                }}
+              >
+                <Settings size={18} />
+              </Link>
+            )}
 
             {/* Divider */}
             <div style={{ width: '1px', height: '24px', backgroundColor: '#E2E8F0' }} />
