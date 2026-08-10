@@ -1045,14 +1045,6 @@ export default function OrganizationElectionHub() {
             {/* STEP 4: Review & Launch */}
             {wizardStep === 4 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-input)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>{title || 'Untitled Election'}</h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 0.85rem 0' }}>Category: <strong>{category}</strong></p>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <div><strong>Start Window:</strong> {startDate ? new Date(startDate).toLocaleString() : 'Not Set'}</div>
-                    <div><strong>End Window:</strong> {endDate ? new Date(endDate).toLocaleString() : 'Not Set'}</div>
-                    <div><strong>Uploaded Roster:</strong> {csvStats.valid} eligible voters</div>
-                  </div>
                 <div style={{ backgroundColor: '#F8FAFC', padding: '1.25rem', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
                   <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 0.75rem 0', color: '#0F172A' }}>Election Summary</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem' }}>
