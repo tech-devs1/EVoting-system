@@ -1209,11 +1209,12 @@ router.post('/:id/verify-access-otp', verifyAuth, async (req, res) => {
   }
 });
 
-// 4. Send Voting Invitations to all Roster Voters
+// 4. Send Voting Invitations to Roster or Specific Voters
 router.post('/:id/send-invitations', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
     const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+    const { recipientFilter, selectedEmails, customEmails } = req.body;
 
     let electionDoc = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).get();
     if (!electionDoc.exists) {
@@ -1224,28 +1225,55 @@ router.post('/:id/send-invitations', verifyAuth, requireAdmin, async (req, res) 
     }
     const election = electionDoc.data();
 
-    // Fetch roster voters
-    let votersSnapshot = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
-    if (votersSnapshot.empty) {
-      votersSnapshot = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
-    }
-    if (votersSnapshot.empty) {
-      votersSnapshot = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
-    }
-    if (votersSnapshot.empty) {
-      votersSnapshot = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
-    }
+    let voterList = [];
 
-    if (votersSnapshot.empty) {
-      return res.status(400).json({ status: 'error', message: 'No voter roster found for this election. Please upload a voter CSV list first.' });
-    }
+    if (recipientFilter === 'custom') {
+      let emailsRaw = Array.isArray(customEmails) ? customEmails : (customEmails || '').split(/[\s,;]+/);
+      const cleanEmails = [...new Set(emailsRaw.map(e => (e || '').trim().toLowerCase()).filter(e => e.includes('@')))];
+      if (cleanEmails.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'No valid custom email addresses provided.' });
+      }
+      voterList = cleanEmails.map(email => ({
+        email,
+        name: email.split('@')[0]
+      }));
+    } else if (recipientFilter === 'individual') {
+      let targetEmailsRaw = Array.isArray(selectedEmails) ? selectedEmails : (selectedEmails || '').split(/[\s,;]+/);
+      const targetEmailsSet = new Set(targetEmailsRaw.map(e => (e || '').trim().toLowerCase()));
 
-    const voterList = votersSnapshot.docs.map(doc => doc.data()).filter(v => v.email);
+      let votersSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+      if (votersSnap.empty) votersSnap = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+      if (votersSnap.empty) votersSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+      if (votersSnap.empty) votersSnap = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+
+      voterList = votersSnap.docs.map(doc => doc.data()).filter(v => v.email && targetEmailsSet.has(v.email.toLowerCase()));
+
+      if (voterList.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'None of the selected individual voters were found on the roster.' });
+      }
+    } else {
+      let votersSnapshot = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+      if (votersSnapshot.empty) {
+        votersSnapshot = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+      }
+      if (votersSnapshot.empty) {
+        votersSnapshot = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+      }
+      if (votersSnapshot.empty) {
+        votersSnapshot = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+      }
+
+      if (votersSnapshot.empty) {
+        return res.status(400).json({ status: 'error', message: 'No voter roster found for this election. Please upload a voter CSV list first.' });
+      }
+
+      voterList = votersSnapshot.docs.map(doc => doc.data()).filter(v => v.email);
+    }
 
     // Respond immediately to client to prevent HTTP timeouts
     res.status(200).json({
       status: 'success',
-      message: `Successfully initiated voting invitations to ${voterList.length} voters on the roster.`,
+      message: `Successfully initiated voting invitations to ${voterList.length} recipients.`,
       data: { totalVoters: voterList.length, invitationsSent: voterList.length }
     });
 
@@ -1336,37 +1364,67 @@ router.post('/:id/broadcast-message', verifyAuth, requireAdmin, async (req, res)
   try {
     const electionId = req.params.id;
     const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
-    const { channel, recipientFilter, subject, body } = req.body;
+    const { channel, recipientFilter, selectedEmails, customEmails, subject, body } = req.body;
 
     if (!body || !body.trim()) {
       return res.status(400).json({ status: 'error', message: 'Message body content is required.' });
     }
 
-    const electionDoc = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).get();
+    let electionDoc = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).get();
+    if (!electionDoc.exists) {
+      electionDoc = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).get();
+    }
     if (!electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found.' });
     }
     const election = electionDoc.data();
 
-    // Fetch roster voters
-    const votersSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
-    const votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters').where('electionId', '==', electionId).get();
-    
-    const votedEmailSet = new Set(votedSnap.docs.map(doc => (doc.data().voterEmail || doc.data().email || '').toLowerCase()));
+    let rosterList = [];
 
-    let rosterList = votersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (recipientFilter === 'custom') {
+      let emailsRaw = Array.isArray(customEmails) ? customEmails : (customEmails || '').split(/[\s,;]+/);
+      const cleanEmails = [...new Set(emailsRaw.map(e => (e || '').trim().toLowerCase()).filter(e => e.includes('@')))];
+      if (cleanEmails.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'No valid custom email addresses provided.' });
+      }
+      rosterList = cleanEmails.map(email => ({
+        email,
+        name: email.split('@')[0],
+        studentId: 'CUSTOM_RECIPIENT'
+      }));
+    } else if (recipientFilter === 'individual') {
+      let targetEmailsRaw = Array.isArray(selectedEmails) ? selectedEmails : (selectedEmails || '').split(/[\s,;]+/);
+      const targetEmailsSet = new Set(targetEmailsRaw.map(e => (e || '').trim().toLowerCase()));
 
-    if (rosterList.length === 0) {
-      // Fallback to eligible_voters if voter_roster subcollection is empty
-      const eligibleSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
-      rosterList = eligibleSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    }
+      let votersSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+      if (votersSnap.empty) votersSnap = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+      if (votersSnap.empty) votersSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+      if (votersSnap.empty) votersSnap = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
 
-    // Filter recipients based on selection
-    if (recipientFilter === 'pending') {
-      rosterList = rosterList.filter(v => !votedEmailSet.has((v.email || '').toLowerCase()));
-    } else if (recipientFilter === 'voted') {
-      rosterList = rosterList.filter(v => votedEmailSet.has((v.email || '').toLowerCase()));
+      rosterList = votersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(v => v.email && targetEmailsSet.has(v.email.toLowerCase()));
+
+      if (rosterList.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'None of the selected individual voters were found on the roster.' });
+      }
+    } else {
+      // Batch filters: 'all', 'pending', 'voted'
+      let votersSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+      if (votersSnap.empty) votersSnap = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+      if (votersSnap.empty) votersSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+      if (votersSnap.empty) votersSnap = await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+
+      rosterList = votersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      let votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters').where('electionId', '==', electionId).get();
+      if (votedSnap.empty) votedSnap = await db.collection('organizations').doc(tenantId).collection('voted_voters').where('electionId', '==', electionId).get();
+      const votedEmailSet = new Set(votedSnap.docs.map(doc => (doc.data().voterEmail || doc.data().email || '').toLowerCase()));
+
+      if (recipientFilter === 'pending') {
+        rosterList = rosterList.filter(v => !votedEmailSet.has((v.email || '').toLowerCase()));
+      } else if (recipientFilter === 'voted') {
+        rosterList = rosterList.filter(v => votedEmailSet.has((v.email || '').toLowerCase()));
+      }
     }
 
     if (rosterList.length === 0) {

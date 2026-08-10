@@ -40,6 +40,13 @@ interface BroadcastLog {
   createdAt: number;
 }
 
+interface RosterVoter {
+  id: string;
+  name: string;
+  email: string;
+  studentId: string;
+}
+
 export default function ElectionMessagesPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params);
   const electionId = resolvedParams.id;
@@ -48,9 +55,15 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<BroadcastLog[]>([]);
 
+  // Roster Voters & Target Email Selection States
+  const [rosterVoters, setRosterVoters] = useState<RosterVoter[]>([]);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [customEmailsInput, setCustomEmailsInput] = useState('');
+  const [voterSearch, setVoterSearch] = useState('');
+
   // Composer Form States
   const [channel, setChannel] = useState<'both' | 'email' | 'sms'>('both');
-  const [recipientFilter, setRecipientFilter] = useState<'all' | 'pending' | 'voted'>('pending');
+  const [recipientFilter, setRecipientFilter] = useState<'all' | 'pending' | 'voted' | 'individual' | 'custom'>('pending');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
 
@@ -72,6 +85,12 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
         const histRes = await apiRequest<{ status: string; data: BroadcastLog[] }>(`/elections/${electionId}/broadcast-history`);
         if (histRes.status === 'success' && Array.isArray(histRes.data)) {
           setHistory(histRes.data);
+        }
+
+        const rosterRes = await apiRequest<{ status: string; data: RosterVoter[] }>(`/elections/${electionId}/voters`);
+        if (rosterRes.status === 'success' && Array.isArray(rosterRes.data)) {
+          const cleanVoters = rosterRes.data.filter(v => v.email && v.email !== 'N/A');
+          setRosterVoters(cleanVoters);
         }
       } catch (err) {
         console.error('Error initializing message hub:', err);
@@ -105,11 +124,36 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
     }
   };
 
+  const toggleSelectEmail = (email: string) => {
+    setSelectedEmails(prev => 
+      prev.includes(email) ? prev.filter(e => e !== email) : [...prev, email]
+    );
+  };
+
+  const handleSelectAllRoster = () => {
+    const allEmails = rosterVoters.map(v => v.email.toLowerCase());
+    setSelectedEmails(allEmails);
+  };
+
+  const handleClearSelectedRoster = () => {
+    setSelectedEmails([]);
+  };
+
   // Dispatch Broadcast Message
   const handleSendBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!body.trim()) {
       setFeedback({ type: 'error', text: 'Message body cannot be empty.' });
+      return;
+    }
+
+    if (recipientFilter === 'individual' && selectedEmails.length === 0) {
+      setFeedback({ type: 'error', text: 'Please select at least one individual voter email address.' });
+      return;
+    }
+
+    if (recipientFilter === 'custom' && !customEmailsInput.trim()) {
+      setFeedback({ type: 'error', text: 'Please enter at least one custom email address.' });
       return;
     }
 
@@ -124,7 +168,14 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
       const res = await apiRequest<{ status: string; message: string; data?: BroadcastLog }>(
         `/elections/${electionId}/broadcast-message`,
         'POST',
-        { channel, recipientFilter, subject, body }
+        { 
+          channel, 
+          recipientFilter, 
+          selectedEmails, 
+          customEmails: customEmailsInput, 
+          subject, 
+          body 
+        }
       );
 
       if (res.status === 'success') {
@@ -352,13 +403,135 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
                     fontWeight: 600,
                     backgroundColor: '#F8FAFC',
                     color: '#0F172A',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    marginBottom: '0.75rem'
                   }}
                 >
-                  <option value="pending">Pending Voters (Voters who have NOT cast their ballot yet)</option>
-                  <option value="all">All Roster Voters (Entire Election Directory)</option>
-                  <option value="voted">Verified Voted Members (Ballot Receipt Acknowledgement)</option>
+                  <option value="pending">⚡ Batch: Pending Voters (Voters who have NOT cast their ballot yet)</option>
+                  <option value="all">👥 Batch: All Roster Voters (Entire Directory)</option>
+                  <option value="voted">✅ Batch: Verified Voted Members Only</option>
+                  <option value="individual">🎯 Individual: Select Specific Voter(s) from Roster List</option>
+                  <option value="custom">✍️ Custom: Input Specific Email Address(es)</option>
                 </select>
+
+                {/* INDIVIDUAL VOTER SELECTION WIDGET */}
+                {recipientFilter === 'individual' && (
+                  <div style={{
+                    padding: '1rem',
+                    borderRadius: '12px',
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: '#F8FAFC',
+                    marginTop: '0.5rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2563EB' }}>
+                        Selected ({selectedEmails.length} / {rosterVoters.length} Voters)
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={handleSelectAllRoster}
+                          style={{ border: 'none', background: 'none', color: '#2563EB', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Select All
+                        </button>
+                        <span style={{ color: '#94A3B8' }}>|</span>
+                        <button
+                          type="button"
+                          onClick={handleClearSelectedRoster}
+                          style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Search voter by name, email, or student ID..."
+                      value={voterSearch}
+                      onChange={(e) => setVoterSearch(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '8px',
+                        border: '1px solid #CBD5E1',
+                        fontSize: '0.8rem',
+                        marginBottom: '0.65rem',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+
+                    <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {rosterVoters
+                        .filter(v => 
+                          (v.name || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
+                          (v.email || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
+                          (v.studentId || '').toLowerCase().includes(voterSearch.toLowerCase())
+                        )
+                        .map(v => {
+                          const isSelected = selectedEmails.includes(v.email.toLowerCase());
+                          return (
+                            <label
+                              key={v.id || v.email}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.4rem 0.65rem',
+                                borderRadius: '6px',
+                                backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                                border: isSelected ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectEmail(v.email.toLowerCase())}
+                                style={{ accentColor: '#2563EB' }}
+                              />
+                              <div style={{ flex: 1, overflow: 'hidden' }}>
+                                <div style={{ fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {v.name} ({v.studentId})
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {v.email}
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* CUSTOM EMAIL INPUT WIDGET */}
+                {recipientFilter === 'custom' && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '0.35rem' }}>
+                      Enter Custom Email Address(es) (separated by commas or newlines)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={customEmailsInput}
+                      onChange={(e) => setCustomEmailsInput(e.target.value)}
+                      placeholder="e.g. voter1@htu.edu.gh, voter2@htu.edu.gh, dean@htu.edu.gh"
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '10px',
+                        border: '1px solid #CBD5E1',
+                        fontSize: '0.85rem',
+                        fontFamily: 'inherit',
+                        backgroundColor: '#FFFFFF',
+                        color: '#0F172A',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Subject Line (For Email & Dual) */}

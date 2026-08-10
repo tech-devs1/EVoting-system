@@ -60,6 +60,31 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
   const [editShowResults, setEditShowResults] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Send Invitations Modal States
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteMode, setInviteMode] = useState<'all' | 'individual' | 'custom'>('all');
+  const [rosterVoters, setRosterVoters] = useState<{ id: string; name: string; email: string; studentId: string }[]>([]);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [customEmailsInput, setCustomEmailsInput] = useState('');
+  const [voterSearch, setVoterSearch] = useState('');
+  const [sendingInvites, setSendingInvites] = useState(false);
+
+  const fetchRosterVoters = async () => {
+    try {
+      const res = await apiRequest<{ status: string; data: any[] }>(`/elections/${electionId}/voters`);
+      if (res.status === 'success' && Array.isArray(res.data)) {
+        setRosterVoters(res.data.filter(v => v.email && v.email !== 'N/A'));
+      }
+    } catch (e) {
+      console.error('Failed to fetch roster voters:', e);
+    }
+  };
+
+  const openInviteModal = () => {
+    setIsInviteModalOpen(true);
+    fetchRosterVoters();
+  };
+
   async function fetchElectionData() {
     try {
       setLoading(true);
@@ -168,18 +193,28 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
   };
 
   // Send Invitations Action
-  const handleSendInvitations = async () => {
-    setActionLoading(true);
+  const handleSendInvitations = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSendingInvites(true);
     setMessage(null);
     try {
-      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}/send-invitations`, 'POST');
+      const res = await apiRequest<{ status: string; message: string }>(
+        `/elections/${electionId}/send-invitations`,
+        'POST',
+        {
+          recipientFilter: inviteMode,
+          selectedEmails,
+          customEmails: customEmailsInput
+        }
+      );
       if (res.status === 'success') {
-        setMessage({ type: 'success', text: res.message || 'Voting invitations dispatched to roster voters!' });
+        setMessage({ type: 'success', text: res.message || 'Voting invitations dispatched successfully!' });
+        setIsInviteModalOpen(false);
       }
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to dispatch invitations.' });
     } finally {
-      setActionLoading(false);
+      setSendingInvites(false);
     }
   };
 
@@ -284,7 +319,7 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
                 <Square size={14} /> End Election
               </button>
             )}
-            <button disabled={actionLoading} onClick={handleSendInvitations} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+            <button disabled={actionLoading} onClick={openInviteModal} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
               <Mail size={14} /> Send Invitations
             </button>
             <button disabled={actionLoading} onClick={handleBroadcastResults} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
@@ -598,6 +633,191 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
               }}
             >
               {savingEdit ? 'Saving Changes...' : 'Save Election Parameters'}
+            </button>
+          </div>
+        </form>
+      {/* SEND INVITATIONS MODAL */}
+      <Modal isOpen={isInviteModalOpen} onClose={() => setIsInviteModalOpen(false)} title="Dispatch Voting Invitations">
+        <form onSubmit={handleSendInvitations} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0.5rem 0' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+              Target Recipient Selection Mode
+            </label>
+            <select
+              value={inviteMode}
+              onChange={(e: any) => setInviteMode(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                borderRadius: '10px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-primary)',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                boxSizing: 'border-box'
+              }}
+            >
+              <option value="all">👥 Batch: All Roster Members (Entire Election Directory)</option>
+              <option value="individual">🎯 Individual: Select Specific Voter(s) from Roster List</option>
+              <option value="custom">✍️ Custom: Input Specific Email Address(es)</option>
+            </select>
+          </div>
+
+          {/* INDIVIDUAL VOTER SELECTION WIDGET */}
+          {inviteMode === 'individual' && (
+            <div style={{
+              padding: '1rem',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color)',
+              backgroundColor: 'var(--bg-input)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2563EB' }}>
+                  Selected ({selectedEmails.length} / {rosterVoters.length} Voters)
+                </span>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEmails(rosterVoters.map(v => v.email.toLowerCase()))}
+                    style={{ border: 'none', background: 'none', color: '#2563EB', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Select All
+                  </button>
+                  <span style={{ color: '#94A3B8' }}>|</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEmails([])}
+                    style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Search voter by name, email, or student ID..."
+                value={voterSearch}
+                onChange={(e) => setVoterSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.8rem',
+                  marginBottom: '0.65rem',
+                  boxSizing: 'border-box'
+                }}
+              />
+
+              <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {rosterVoters
+                  .filter(v => 
+                    (v.name || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
+                    (v.email || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
+                    (v.studentId || '').toLowerCase().includes(voterSearch.toLowerCase())
+                  )
+                  .map(v => {
+                    const isSelected = selectedEmails.includes(v.email.toLowerCase());
+                    return (
+                      <label
+                        key={v.id || v.email}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.4rem 0.65rem',
+                          borderRadius: '6px',
+                          backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.1)' : 'var(--bg-card)',
+                          border: isSelected ? '1px solid #2563EB' : '1px solid var(--border-color)',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            const emailLower = v.email.toLowerCase();
+                            setSelectedEmails(prev => prev.includes(emailLower) ? prev.filter(e => e !== emailLower) : [...prev, emailLower]);
+                          }}
+                          style={{ accentColor: '#2563EB' }}
+                        />
+                        <div style={{ flex: 1, overflow: 'hidden' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {v.name} ({v.studentId})
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {v.email}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+          {/* CUSTOM EMAIL INPUT WIDGET */}
+          {inviteMode === 'custom' && (
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                Enter Custom Email Address(es) (separated by commas or newlines)
+              </label>
+              <textarea
+                rows={4}
+                value={customEmailsInput}
+                onChange={(e) => setCustomEmailsInput(e.target.value)}
+                placeholder="e.g. voter1@htu.edu.gh, voter2@htu.edu.gh, observer@htu.edu.gh"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.875rem',
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+            <button
+              type="button"
+              onClick={() => setIsInviteModalOpen(false)}
+              style={{
+                padding: '0.7rem 1.25rem',
+                borderRadius: '14px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={sendingInvites}
+              style={{
+                padding: '0.7rem 1.4rem',
+                borderRadius: '14px',
+                border: 'none',
+                backgroundColor: '#2563EB',
+                color: '#FFFFFF',
+                fontWeight: 700,
+                cursor: sendingInvites ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)'
+              }}
+            >
+              {sendingInvites ? 'Dispatching Invitations...' : 'Dispatch Invitations'}
             </button>
           </div>
         </form>
