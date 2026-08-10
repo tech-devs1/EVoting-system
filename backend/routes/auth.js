@@ -60,24 +60,26 @@ async function sendOtpViaBMS(phoneNumber, otp) {
     formattedPhone = '0' + formattedPhone;
   }
 
+  const messageText = `Your verification code is ${otp}. It expires in 10 minutes. Do not share this code.`;
+
   const payload = {
     recipient: [formattedPhone],
     sender: BMS_SENDER_ID,
-    message: `Your COMPSSA verification code is ${otp}. It expires in 10 minutes. Do not share this code.`,
+    message: messageText,
     is_schedule: false
   };
 
   console.log(`[BMS SMS] Dispatching OTP ${otp} to ${formattedPhone} via BMS Africa (Sender ID: ${BMS_SENDER_ID})`);
 
   try {
-    const res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+    let res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(8000)
     });
 
-    const responseText = await res.text();
+    let responseText = await res.text();
     console.log('[BMS SMS] Response:', responseText);
 
     let responseData;
@@ -87,8 +89,72 @@ async function sendOtpViaBMS(phoneNumber, otp) {
       throw new Error(`BMS API returned non-JSON response: ${responseText.substring(0, 100)}`);
     }
 
+    const isUnregistered = responseText.toLowerCase().includes('sender id is not registered') ||
+                           responseText.toLowerCase().includes('sender id not approved') ||
+                           responseText.toLowerCase().includes('unregistered') ||
+                           responseData.code === '1005' ||
+                           (responseData.error && responseText.toLowerCase().includes('sender id'));
+
+    if (isUnregistered && BMS_SENDER_ID !== 'mNotify') {
+      console.warn(`[BMS SMS Warning] Sender ID "${BMS_SENDER_ID}" not registered. Retrying with fallback "mNotify"...`);
+      payload.sender = 'mNotify';
+      res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000)
+      });
+      responseText = await res.text();
+      console.log('[BMS SMS Fallback 1] Response:', responseText);
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`BMS API returned non-JSON response: ${responseText.substring(0, 100)}`);
+      }
+    }
+
+    const isStillUnregistered = responseText.toLowerCase().includes('sender id is not registered') ||
+                                responseText.toLowerCase().includes('sender id not approved');
+    if (isStillUnregistered && payload.sender !== 'BMS Africa') {
+      console.warn(`[BMS SMS Warning] Fallback "mNotify" not registered. Retrying with fallback "BMS Africa"...`);
+      payload.sender = 'BMS Africa';
+      res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000)
+      });
+      responseText = await res.text();
+      console.log('[BMS SMS Fallback 2] Response:', responseText);
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`BMS API returned non-JSON response: ${responseText.substring(0, 100)}`);
+      }
+    }
+
+    const isStillUnregistered2 = responseText.toLowerCase().includes('sender id is not registered') ||
+                                 responseText.toLowerCase().includes('sender id not approved');
+    if (isStillUnregistered2 && payload.sender !== 'COMPSSA') {
+      console.warn(`[BMS SMS Warning] Fallback "BMS Africa" not registered. Retrying with fallback "COMPSSA"...`);
+      payload.sender = 'COMPSSA';
+      res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000)
+      });
+      responseText = await res.text();
+      console.log('[BMS SMS Fallback 3] Response:', responseText);
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`BMS API returned non-JSON response: ${responseText.substring(0, 100)}`);
+      }
+    }
+
     if (!res.ok || (responseData.status !== 'success' && responseData.code !== '2000' && responseData.status !== 2000)) {
-      throw new Error('BMS API returned error: ' + (responseData.message || responseText));
+      throw new Error('BMS API returned error: ' + (responseData.message || responseData.error || responseText));
     }
 
     return responseData;

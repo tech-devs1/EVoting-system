@@ -948,25 +948,104 @@ async function sendOtpViaBMS(phoneNumber, otp) {
     formattedPhone = '0' + formattedPhone;
   }
 
+  const messageText = `Your HTU Elect verification code to unlock election access is ${otp}. It expires in 10 minutes.`;
+
   const payload = {
     recipient: [formattedPhone],
     sender: BMS_SENDER_ID,
-    message: `Your COMPSSA verification code to unlock election access is ${otp}. It expires in 10 minutes.`,
+    message: messageText,
     is_schedule: false
   };
 
-  console.log(`[BMS SMS] Dispatching OTP ${otp} to ${formattedPhone} via BMS Africa`);
+  console.log(`[BMS SMS] Dispatching OTP ${otp} to ${formattedPhone} via BMS Africa (Sender ID: ${BMS_SENDER_ID})`);
 
   try {
-    const res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+    let res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(8000)
     });
 
-    const responseText = await res.text();
+    let responseText = await res.text();
     console.log('[BMS SMS] Response:', responseText);
+
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      throw new Error(`BMS API returned non-JSON response: ${responseText.substring(0, 100)}`);
+    }
+
+    const isUnregistered = responseText.toLowerCase().includes('sender id is not registered') ||
+                           responseText.toLowerCase().includes('sender id not approved') ||
+                           responseText.toLowerCase().includes('unregistered') ||
+                           responseData.code === '1005' ||
+                           (responseData.error && responseText.toLowerCase().includes('sender id'));
+
+    if (isUnregistered && BMS_SENDER_ID !== 'mNotify') {
+      console.warn(`[BMS SMS Warning] Sender ID "${BMS_SENDER_ID}" not registered. Retrying with fallback "mNotify"...`);
+      payload.sender = 'mNotify';
+      res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000)
+      });
+      responseText = await res.text();
+      console.log('[BMS SMS Fallback 1] Response:', responseText);
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`BMS API returned non-JSON response: ${responseText.substring(0, 100)}`);
+      }
+    }
+
+    const isStillUnregistered = responseText.toLowerCase().includes('sender id is not registered') ||
+                                responseText.toLowerCase().includes('sender id not approved');
+    if (isStillUnregistered && payload.sender !== 'BMS Africa') {
+      console.warn(`[BMS SMS Warning] Fallback "mNotify" not registered. Retrying with fallback "BMS Africa"...`);
+      payload.sender = 'BMS Africa';
+      res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000)
+      });
+      responseText = await res.text();
+      console.log('[BMS SMS Fallback 2] Response:', responseText);
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`BMS API returned non-JSON response: ${responseText.substring(0, 100)}`);
+      }
+    }
+
+    const isStillUnregistered2 = responseText.toLowerCase().includes('sender id is not registered') ||
+                                 responseText.toLowerCase().includes('sender id not approved');
+    if (isStillUnregistered2 && payload.sender !== 'COMPSSA') {
+      console.warn(`[BMS SMS Warning] Fallback "BMS Africa" not registered. Retrying with fallback "COMPSSA"...`);
+      payload.sender = 'COMPSSA';
+      res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000)
+      });
+      responseText = await res.text();
+      console.log('[BMS SMS Fallback 3] Response:', responseText);
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`BMS API returned non-JSON response: ${responseText.substring(0, 100)}`);
+      }
+    }
+
+    if (!res.ok || (responseData.status !== 'success' && responseData.code !== '2000' && responseData.status !== 2000)) {
+      throw new Error('BMS API returned error: ' + (responseData.message || responseData.error || responseText));
+    }
+
+    return responseData;
   } catch (err) {
     console.error('[BMS SMS Error]:', err.message || err);
     throw err;
@@ -1060,9 +1139,28 @@ router.get('/:id/access-status', verifyAuth, async (req, res) => {
 
     const electionData = electionDoc.data();
 
-    // Check if voter has already unlocked access via OTP verification
-    const unlockedDoc = await db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
-    if (unlockedDoc.exists || electionData.otpRequired === false) {
+    // Check if voter has already unlocked access via OTP verification under any potential paths
+    let unlocked = false;
+
+    const checkPaths = [
+      db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get(),
+      db.collection('organizations').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get()
+    ];
+
+    if (resolvedTenantId && resolvedTenantId !== tenantId) {
+      checkPaths.push(db.collection('tenants').doc(resolvedTenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get());
+      checkPaths.push(db.collection('organizations').doc(resolvedTenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get());
+    }
+
+    const checkSnaps = await Promise.allSettled(checkPaths);
+    for (const snapResult of checkSnaps) {
+      if (snapResult.status === 'fulfilled' && snapResult.value && snapResult.value.exists) {
+        unlocked = true;
+        break;
+      }
+    }
+
+    if (unlocked || electionData.otpRequired === false) {
       return res.status(200).json({
         status: 'success',
         data: {
@@ -1273,9 +1371,32 @@ router.post('/:id/verify-access-otp', verifyAuth, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Verification code is required.' });
     }
 
-    // Fetch voter profile
-    const voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
-    const voterDoc = await voterRef.get();
+    // Find the election and resolve its dynamic resolvedTenantId
+    const { doc: electionDoc, tenantId: resolvedTenantId } = await findElectionDoc(electionId, req);
+    if (!electionDoc || !electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+
+    const tenantIdToUse = resolvedTenantId || tenantId;
+
+    // Fetch voter profile from resolved tenant's tenants/organizations or fallbacks
+    let voterRef = db.collection('tenants').doc(tenantIdToUse).collection('voter_rolls').doc(voterId);
+    let voterDoc = await voterRef.get();
+
+    if (!voterDoc.exists) {
+      voterRef = db.collection('organizations').doc(tenantIdToUse).collection('voter_rolls').doc(voterId);
+      voterDoc = await voterRef.get();
+    }
+
+    if (!voterDoc.exists && tenantId && tenantId !== tenantIdToUse) {
+      voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
+      voterDoc = await voterRef.get();
+      if (!voterDoc.exists) {
+        voterRef = db.collection('organizations').doc(tenantId).collection('voter_rolls').doc(voterId);
+        voterDoc = await voterRef.get();
+      }
+    }
+
     if (!voterDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Voter profile not found.' });
     }
@@ -1290,14 +1411,26 @@ router.post('/:id/verify-access-otp', verifyAuth, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Verification code has expired. Please request a new one.' });
     }
 
-    // Log the unlocked status for this user in this election
-    await db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).set({
+    // Log the unlocked status for this user in this election under all possible paths to prevent cross-tenant lockout issues
+    const unlockedPayload = {
       voterId,
       electionId,
       verifiedAt: Date.now()
-    });
+    };
 
-    // Invalidate voter OTP fields
+    const writePromises = [
+      db.collection('tenants').doc(tenantIdToUse).collection('unlocked_elections').doc(`${voterId}_${electionId}`).set(unlockedPayload),
+      db.collection('organizations').doc(tenantIdToUse).collection('unlocked_elections').doc(`${voterId}_${electionId}`).set(unlockedPayload)
+    ];
+
+    if (tenantId && tenantId !== tenantIdToUse) {
+      writePromises.push(db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).set(unlockedPayload));
+      writePromises.push(db.collection('organizations').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).set(unlockedPayload));
+    }
+
+    await Promise.allSettled(writePromises);
+
+    // Invalidate voter OTP fields on the verified voter reference document
     await voterRef.update({
       accessOtp: null,
       accessOtpExpiry: null
