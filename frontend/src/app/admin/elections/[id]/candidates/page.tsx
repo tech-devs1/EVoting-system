@@ -12,6 +12,7 @@ import {
   Upload, 
   Check, 
   Award,
+  Pencil,
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
@@ -96,11 +97,22 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
   const [isCandModalOpen, setIsCandModalOpen] = useState(false);
   const [candName, setCandName] = useState('');
   const [candPosition, setCandPosition] = useState('');
+  const [candBallotNumber, setCandBallotNumber] = useState<number>(1);
   const [candManifesto, setCandManifesto] = useState('');
   const [candPhotoUrl, setCandPhotoUrl] = useState('');
   const [candImagePreview, setCandImagePreview] = useState('');
   const [candIsIndependent, setCandIsIndependent] = useState(false);
   const [candSubmitting, setCandSubmitting] = useState(false);
+
+  // Edit Candidate Modal State
+  const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPosition, setEditPosition] = useState('');
+  const [editBallotNumber, setEditBallotNumber] = useState<number>(1);
+  const [editManifesto, setEditManifesto] = useState('');
+  const [editPhotoUrl, setEditPhotoUrl] = useState('');
+  const [editImagePreview, setEditImagePreview] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // Form Style Constants
   const mInputStyle: React.CSSProperties = {
@@ -225,6 +237,7 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
         manifesto: candManifesto.trim(),
         photoUrl: candPhotoUrl.trim(),
         isIndependent: candIsIndependent,
+        ballotNumber: Number(candBallotNumber) || 1,
         electionId
       };
 
@@ -242,6 +255,55 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
       alert(err.message || 'Failed to add candidate.');
     } finally {
       setCandSubmitting(false);
+    }
+  };
+
+  // Open Edit Candidate Modal
+  const openEditCandidateModal = (cand: Candidate) => {
+    setEditingCandidate(cand);
+    setEditName(cand.name);
+    setEditPosition(cand.position);
+    setEditBallotNumber(cand.ballotNumber ? Number(cand.ballotNumber) : 1);
+    setEditManifesto(cand.manifesto || '');
+    setEditPhotoUrl(cand.photoUrl || '');
+    setEditImagePreview(cand.photoUrl || '');
+  };
+
+  // Update Candidate Submit
+  const handleUpdateCandidate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCandidate || !editName.trim() || !editPosition) return;
+    setEditSubmitting(true);
+
+    try {
+      const payload = {
+        name: editName.trim(),
+        position: editPosition,
+        manifesto: editManifesto.trim(),
+        photoUrl: editPhotoUrl.trim(),
+        ballotNumber: Number(editBallotNumber) || 1
+      };
+
+      const res = await apiRequest<{ status: string }>(`/candidates/${editingCandidate.id}`, 'PATCH', payload);
+      if (res.status === 'success') {
+        setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? { ...c, ...payload } : c));
+        setEditingCandidate(null);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update candidate.');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  // Update Ballot Number directly
+  const handleUpdateBallotNumber = async (candId: string, newBallotNo: number) => {
+    const num = Math.max(1, newBallotNo);
+    setCandidates(prev => prev.map(c => c.id === candId ? { ...c, ballotNumber: num } : c));
+    try {
+      await apiRequest(`/candidates/${candId}`, 'PATCH', { ballotNumber: num });
+    } catch (err: any) {
+      console.error('Failed to update ballot number:', err);
     }
   };
 
@@ -265,6 +327,16 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
     const posName = cand.position || 'General';
     if (!candidatesByPosition[posName]) candidatesByPosition[posName] = [];
     candidatesByPosition[posName].push(cand);
+  });
+
+  // Sort candidates within each position strictly by ballotNumber (ascending)
+  Object.keys(candidatesByPosition).forEach(posTitle => {
+    candidatesByPosition[posTitle].sort((a, b) => {
+      const numA = a.ballotNumber !== undefined && a.ballotNumber !== null && a.ballotNumber !== '' ? Number(a.ballotNumber) : 999;
+      const numB = b.ballotNumber !== undefined && b.ballotNumber !== null && b.ballotNumber !== '' ? Number(b.ballotNumber) : 999;
+      if (numA !== numB) return numA - numB;
+      return (a.name || '').localeCompare(b.name || '');
+    });
   });
 
   return (
@@ -432,11 +504,32 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
                               )}
                             </div>
 
-                            <div>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase' }}>
-                                Ballot #{idx + 1}
-                              </span>
-                              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '2px 0 0 0', color: 'var(--text-primary)' }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '2px' }}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2563eb', backgroundColor: '#EFF6FF', padding: '2px 8px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
+                                  Ballot #{cand.ballotNumber || idx + 1}
+                                </span>
+                                <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>Pos #</label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={100}
+                                  value={cand.ballotNumber || idx + 1}
+                                  onChange={(e) => handleUpdateBallotNumber(cand.id, parseInt(e.target.value) || 1)}
+                                  style={{
+                                    width: '46px',
+                                    padding: '2px 4px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    border: '1.5px solid #CBD5E1',
+                                    textAlign: 'center',
+                                    backgroundColor: '#FFFFFF'
+                                  }}
+                                  title="Change ballot position number"
+                                />
+                              </div>
+                              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '4px 0 0 0', color: 'var(--text-primary)' }}>
                                 {cand.name}
                               </h4>
                             </div>
@@ -449,14 +542,26 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
                         </div>
 
                         {/* Card Action Buttons */}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
-                          <button
-                            onClick={() => handleDeleteCandidate(cand.id)}
-                            className="btn btn-outline"
-                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
-                          >
-                            <Trash2 size={14} /> Remove
-                          </button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                            {cand.isIndependent ? 'Independent' : 'Candidate'}
+                          </span>
+                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <button
+                              onClick={() => openEditCandidateModal(cand)}
+                              className="btn btn-outline"
+                              style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#2563eb', borderColor: 'rgba(37, 99, 235, 0.3)' }}
+                            >
+                              <Pencil size={14} /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCandidate(cand.id)}
+                              className="btn btn-outline"
+                              style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                            >
+                              <Trash2 size={14} /> Remove
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -567,6 +672,23 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
           </div>
 
           <div>
+            <label style={mLabelStyle}>Ballot Position Number *</label>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              required
+              placeholder="e.g. 1 (Ballot #1)"
+              value={candBallotNumber}
+              onChange={(e) => setCandBallotNumber(Math.max(1, parseInt(e.target.value) || 1))}
+              style={mInputStyle}
+            />
+            <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '4px 0 0 0' }}>
+              Specifies the fixed placement order of this candidate on voter screens (1 = Top position).
+            </p>
+          </div>
+
+          <div>
             <label style={mLabelStyle}>
               Candidate Profile Photo Upload
             </label>
@@ -645,6 +767,139 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
             <button type="button" onClick={() => setIsCandModalOpen(false)} style={{ padding: '0.75rem 1.4rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={candSubmitting} style={{ padding: '0.75rem 1.6rem', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.4)' }}>
               {candSubmitting ? 'Registering Candidate...' : 'Register Candidate'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Candidate Modal */}
+      <Modal
+        isOpen={!!editingCandidate}
+        onClose={() => {
+          setEditingCandidate(null);
+          setEditImagePreview('');
+        }}
+        title="Edit Candidate Profile"
+        subtitle="Update candidate details, photo, and ballot position number"
+      >
+        <form onSubmit={handleUpdateCandidate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div>
+            <label style={mLabelStyle}>Full Candidate Name *</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Kwame Mensah"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              style={mInputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={mLabelStyle}>Position Category *</label>
+            <select
+              required
+              value={editPosition}
+              onChange={(e) => setEditPosition(e.target.value)}
+              style={mSelectStyle}
+            >
+              {positions.map(p => (
+                <option key={p.id} value={p.title}>{p.title}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={mLabelStyle}>Ballot Position Number *</label>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              required
+              placeholder="e.g. 1"
+              value={editBallotNumber}
+              onChange={(e) => setEditBallotNumber(Math.max(1, parseInt(e.target.value) || 1))}
+              style={mInputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={mLabelStyle}>
+              Candidate Profile Photo Upload
+            </label>
+            
+            <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', backgroundColor: '#F8FAFC', padding: '1.25rem', borderRadius: '18px', border: '1.5px dashed #CBD5E1' }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '22px',
+                backgroundColor: '#EFF6FF',
+                border: '2px solid #BFDBFE',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                flexShrink: 0,
+                boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.2)'
+              }}>
+                {editImagePreview || editPhotoUrl ? (
+                  <img src={editImagePreview || editPhotoUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <Upload size={28} style={{ color: '#2563EB' }} />
+                )}
+              </div>
+
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <label htmlFor="edit-candidate-file-picker" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.7rem 1.25rem', borderRadius: '12px', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', width: 'fit-content', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)' }}>
+                  <Upload size={16} /> Choose New Photo File
+                </label>
+                <input
+                  id="edit-candidate-file-picker"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const compressedBase64 = await compressImageFile(file, 300, 300, 0.8);
+                        setEditImagePreview(compressedBase64);
+                        setEditPhotoUrl(compressedBase64);
+                      } catch (err) {
+                        console.error('Failed to compress image file:', err);
+                      }
+                    }
+                  }}
+                />
+                <input
+                  type="url"
+                  placeholder="Or paste photo URL (https://...)"
+                  value={editPhotoUrl}
+                  onChange={(e) => {
+                    setEditPhotoUrl(e.target.value);
+                    setEditImagePreview(e.target.value);
+                  }}
+                  style={{ ...mInputStyle, fontSize: '0.85rem', padding: '0.65rem 0.9rem' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label style={mLabelStyle}>Manifesto & Bio Snippet</label>
+            <textarea
+              rows={3}
+              placeholder="Brief campaign promise..."
+              value={editManifesto}
+              onChange={(e) => setEditManifesto(e.target.value)}
+              style={{ ...mInputStyle, resize: 'vertical' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #F1F5F9' }}>
+            <button type="button" onClick={() => setEditingCandidate(null)} style={{ padding: '0.75rem 1.4rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={editSubmitting} style={{ padding: '0.75rem 1.6rem', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.4)' }}>
+              {editSubmitting ? 'Updating Candidate...' : 'Update Candidate'}
             </button>
           </div>
         </form>

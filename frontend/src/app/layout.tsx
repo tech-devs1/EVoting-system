@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Poppins } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 
 // Import all theme styling sheets
@@ -12,19 +11,8 @@ import "@/styles/pages/landing.css";
 import "@/styles/pages/auth.css";
 import "@/styles/pages/voter.css";
 import "@/styles/pages/admin.css";
-import { Plus_Jakarta_Sans } from "next/font/google";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const poppins = Poppins({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
+const fontBodyClass = "font-sans";
 
 import LoadingScreen from "./LoadingScreen";
 import ServiceWorkerRegistrar from "./ServiceWorkerRegistrar";
@@ -50,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable}`} data-theme="light" suppressHydrationWarning>
+    <html lang="en" className={fontBodyClass} data-theme="light" suppressHydrationWarning>
       <body>
         <ServiceWorkerRegistrar />
         <AuthProvider>

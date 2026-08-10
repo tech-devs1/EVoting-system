@@ -182,11 +182,19 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
     );
   }
 
-  // Group candidates by position
+  // Group candidates by position and sort strictly by ballot number ascending
   const positionGroups: Record<string, Candidate[]> = {};
   candidates.forEach(c => {
     if (!positionGroups[c.position]) positionGroups[c.position] = [];
     positionGroups[c.position].push(c);
+  });
+  Object.keys(positionGroups).forEach(pos => {
+    positionGroups[pos].sort((a, b) => {
+      const numA = a.ballotNumber !== undefined && a.ballotNumber !== null && a.ballotNumber !== '' ? Number(a.ballotNumber) : 999;
+      const numB = b.ballotNumber !== undefined && b.ballotNumber !== null && b.ballotNumber !== '' ? Number(b.ballotNumber) : 999;
+      if (numA !== numB) return numA - numB;
+      return (a.name || '').localeCompare(b.name || '');
+    });
   });
   const positions = Object.keys(positionGroups);
   const totalPositionsCount = positions.length;
