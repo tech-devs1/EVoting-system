@@ -525,7 +525,7 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
                 <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>📱 Live Voter Ballot Preview</h3>
                 <p style={{ fontSize: '0.85rem', color: '#64748B', margin: 0 }}>This is how voters will experience the ballot</p>
               </div>
-              <button onClick={() => setIsPreviewOpen(false)} style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#F1F5F9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#64748B' }}>✕</button>
+              <button onClick={() => setIsPreviewOpen(false)} style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#F1F5F9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}>✕</button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
