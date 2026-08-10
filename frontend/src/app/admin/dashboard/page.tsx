@@ -83,6 +83,7 @@ export default function OrganizationElectionHub() {
   const [endDate, setEndDate] = useState('');
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<any[]>([]);
+  const [csvParsedMembers, setCsvParsedMembers] = useState<any[]>([]);
   const [csvStats, setCsvStats] = useState({ total: 0, valid: 0, duplicates: 0, invalid: 0 });
   const [isCreating, setIsCreating] = useState(false);
   const [wizardError, setWizardError] = useState('');
@@ -146,23 +147,34 @@ export default function OrganizationElectionHub() {
       const seen = new Set<string>();
       const parsedPreview: any[] = [];
 
+      const membersPayload: any[] = [];
       rows.forEach((row, idx) => {
         const cols = row.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
         if (cols.length >= 2) {
-          const indexNum = cols[0];
+          const indexNum = cols[0] || '';
           const name = cols[1] || '';
           const email = cols[2] || '';
           const phone = cols[3] || '';
+          const department = cols[4] || '';
 
           const isValidEmail = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
           if (!isValidEmail) {
             invalidCount++;
-          } else if (seen.has(indexNum.toLowerCase())) {
+          } else if (seen.has((indexNum || email).toLowerCase())) {
             duplicateCount++;
           } else {
-            seen.add(indexNum.toLowerCase());
+            seen.add((indexNum || email).toLowerCase());
             validCount++;
+            membersPayload.push({
+              indexNumber: indexNum,
+              studentId: indexNum,
+              name,
+              email,
+              phone,
+              phoneNumber: phone,
+              department
+            });
           }
 
           if (idx < 10) {
@@ -178,6 +190,7 @@ export default function OrganizationElectionHub() {
         invalid: invalidCount
       });
       setCsvPreview(parsedPreview);
+      setCsvParsedMembers(membersPayload);
     };
     reader.readAsText(file);
   };
@@ -212,14 +225,13 @@ export default function OrganizationElectionHub() {
       if (res.status === 'success' && res.data?.id) {
         const electionId = res.data.id;
 
-        // Upload CSV Roster if provided
-        if (csvFile) {
-          const formData = new FormData();
-          formData.append('file', csvFile);
-          await fetch(`/api/elections/${electionId}/upload-roster`, {
-            method: 'POST',
-            body: formData
-          });
+        // Upload CSV Roster parsed as JSON if provided
+        if (csvParsedMembers.length > 0) {
+          await apiRequest<{ status: string; message: string }>(
+            `/elections/${electionId}/voters/upload-csv`,
+            'POST',
+            { members: csvParsedMembers }
+          );
         }
 
         setIsWizardOpen(false);
@@ -242,6 +254,7 @@ export default function OrganizationElectionHub() {
     setEndDate('');
     setCsvFile(null);
     setCsvPreview([]);
+    setCsvParsedMembers([]);
     setWizardError('');
   };
 
