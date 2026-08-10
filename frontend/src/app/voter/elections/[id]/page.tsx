@@ -485,7 +485,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                         {cand.photoUrl ? (
                           <img src={cand.photoUrl} alt={cand.name} className="candidate-photo" />
                         ) : (
-                          <div className="candidate-photo" style={{ display: 'flex', alignItems: 'center', justifycontent: 'center', color: 'var(--text-tertiary)' }}>
+                          <div className="candidate-photo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
                             <User size={48} />
                           </div>
                         )}
