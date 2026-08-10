@@ -419,3 +419,57 @@
   }
 }
 
+/* ---- Admin Justadmin Responsive Helpers ---- */
+.dashboard-analytics-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+}
+
+.admin-desktop-sidebar {
+  display: flex;
+}
+
+.admin-mobile-menu-btn {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-analytics-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-desktop-sidebar {
+    display: none !important;
+  }
+
+  .admin-mobile-menu-btn {
+    display: flex !important;
+  }
+
+  .admin-layout-container {
+    padding: 0.75rem !important;
+    gap: 0.75rem !important;
+  }
+
+  .admin-main-content {
+    padding: 1.25rem !important;
+    border-radius: 18px !important;
+  }
+
+  .admin-profile-meta {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-layout-container {
+    padding: 0.5rem !important;
+  }
+
+  .admin-main-content {
+    padding: 1rem !important;
+    border-radius: 16px !important;
+  }
+}
+
+

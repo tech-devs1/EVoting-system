@@ -20,7 +20,9 @@ import {
   ChevronLeft,
   ChevronDown,
   ArrowLeft,
-  UserCheck
+  UserCheck,
+  Menu,
+  X
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   // Auth Guard
@@ -53,11 +56,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(nextTheme);
     document.documentElement.setAttribute('data-theme', nextTheme);
   };
+
+  // Check if main dashboard (No sidebar requested for /admin/dashboard)
+  const isDashboardPage = pathname === '/admin/dashboard';
 
   // Detect Per-Election Workspace Context
   const electionMatch = pathname.match(/\/admin\/elections\/([^/]+)/);
@@ -95,6 +106,146 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const currentTitle = activeNavLinks.find(link => pathname === link.href || pathname.startsWith(link.href))?.label || 'Dashboard';
   const adminName = user.name || 'Electoral Admin';
 
+  const renderNavigationContent = () => (
+    <>
+      <div>
+        {/* Logo Brand Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem', paddingLeft: '0.5rem' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            backgroundColor: '#2563EB',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#FFFFFF',
+            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+          }}>
+            <ShieldCheck size={24} />
+          </div>
+          <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em' }}>
+            HTU Elect <span style={{ color: '#2563EB' }}>✓</span>
+          </span>
+        </div>
+
+        {/* Context Back Button if in Per-Election Workspace */}
+        {isElectionWorkspace && (
+          <Link
+            href="/admin/dashboard"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: '#2563EB',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              padding: '0.6rem 0.85rem',
+              borderRadius: '12px',
+              backgroundColor: '#EFF6FF',
+              marginBottom: '1.25rem',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}
+          >
+            <ArrowLeft size={16} /> Back to All Elections
+          </Link>
+        )}
+
+        {/* Navigation Category: Menu */}
+        <div style={{ marginBottom: '1.75rem' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
+            {isElectionWorkspace ? 'Election Workspace' : 'Menu'}
+          </div>
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {activeNavLinks.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin/dashboard');
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.85rem',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '16px',
+                    fontSize: '0.9rem',
+                    fontWeight: isActive ? 700 : 500,
+                    textDecoration: 'none',
+                    backgroundColor: isActive ? '#2563EB' : 'transparent',
+                    color: isActive ? '#FFFFFF' : '#64748B',
+                    boxShadow: isActive ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Icon size={19} style={{ color: isActive ? '#FFFFFF' : '#64748B' }} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Navigation Category 2: Miscellaneous */}
+        <div>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
+            Miscellaneous
+          </div>
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <Link
+              href="/admin/settings"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.85rem',
+                padding: '0.85rem 1rem',
+                borderRadius: '16px',
+                fontSize: '0.9rem',
+                fontWeight: pathname === '/admin/settings' ? 700 : 500,
+                textDecoration: 'none',
+                backgroundColor: pathname === '/admin/settings' ? '#2563EB' : 'transparent',
+                color: pathname === '/admin/settings' ? '#FFFFFF' : '#64748B',
+                boxShadow: pathname === '/admin/settings' ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Settings size={19} style={{ color: pathname === '/admin/settings' ? '#FFFFFF' : '#64748B' }} />
+              <span>Settings</span>
+            </Link>
+          </nav>
+        </div>
+      </div>
+
+      {/* Sign Out Button */}
+      <button
+        onClick={logout}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.85rem',
+          padding: '0.85rem 1rem',
+          borderRadius: '16px',
+          fontSize: '0.9rem',
+          fontWeight: 600,
+          color: '#DC2626',
+          backgroundColor: '#FEF2F2',
+          border: 'none',
+          cursor: 'pointer',
+          marginTop: '1.5rem',
+          width: '100%',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        <LogOut size={19} />
+        <span>Log out</span>
+      </button>
+    </>
+  );
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -105,159 +256,67 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       padding: '1.25rem',
       gap: '1.25rem',
       boxSizing: 'border-box'
-    }}>
-      {/* Floating Justadmin Left Navigation Sidebar */}
-      <aside style={{
-        width: '260px',
-        flexShrink: 0,
-        backgroundColor: '#FFFFFF',
-        borderRadius: '24px',
-        border: '1px solid #E2E8F0',
-        padding: '1.5rem 1.25rem',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)'
-      }}>
-        <div>
-          {/* Logo Brand Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem', paddingLeft: '0.5rem' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-              backgroundColor: '#2563EB',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-            }}>
-              <ShieldCheck size={24} />
-            </div>
-            <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em' }}>
-              HTU Elect <span style={{ color: '#2563EB' }}>✓</span>
-            </span>
-          </div>
+    }} className="admin-layout-container">
+      
+      {/* Sidebar rendered ONLY on non-dashboard pages */}
+      {!isDashboardPage && (
+        <aside className="admin-desktop-sidebar" style={{
+          width: '260px',
+          flexShrink: 0,
+          backgroundColor: '#FFFFFF',
+          borderRadius: '24px',
+          border: '1px solid #E2E8F0',
+          padding: '1.5rem 1.25rem',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)'
+        }}>
+          {renderNavigationContent()}
+        </aside>
+      )}
 
-          {/* Context Back Button if in Per-Election Workspace */}
-          {isElectionWorkspace && (
-            <Link
-              href="/admin/dashboard"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                color: '#2563EB',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                textDecoration: 'none',
-                padding: '0.6rem 0.85rem',
-                borderRadius: '12px',
-                backgroundColor: '#EFF6FF',
-                marginBottom: '1.25rem',
-                width: '100%',
-                boxSizing: 'border-box'
-              }}
-            >
-              <ArrowLeft size={16} /> Back to All Elections
-            </Link>
-          )}
-
-          {/* Navigation Category: Menu */}
-          <div style={{ marginBottom: '1.75rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
-              {isElectionWorkspace ? 'Election Workspace' : 'Menu'}
-            </div>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {activeNavLinks.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin/dashboard');
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.85rem',
-                      padding: '0.85rem 1rem',
-                      borderRadius: '16px',
-                      fontSize: '0.9rem',
-                      fontWeight: isActive ? 700 : 500,
-                      textDecoration: 'none',
-                      backgroundColor: isActive ? '#2563EB' : 'transparent',
-                      color: isActive ? '#FFFFFF' : '#64748B',
-                      boxShadow: isActive ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <Icon size={19} style={{ color: isActive ? '#FFFFFF' : '#64748B' }} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Navigation Category 2: Miscellaneous */}
-          <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
-              Miscellaneous
-            </div>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <Link
-                href="/admin/settings"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.85rem',
-                  padding: '0.85rem 1rem',
-                  borderRadius: '16px',
-                  fontSize: '0.9rem',
-                  fontWeight: pathname === '/admin/settings' ? 700 : 500,
-                  textDecoration: 'none',
-                  backgroundColor: pathname === '/admin/settings' ? '#2563EB' : 'transparent',
-                  color: pathname === '/admin/settings' ? '#FFFFFF' : '#64748B',
-                  boxShadow: pathname === '/admin/settings' ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <Settings size={19} style={{ color: pathname === '/admin/settings' ? '#FFFFFF' : '#64748B' }} />
-                <span>Settings</span>
-              </Link>
-            </nav>
-          </div>
-        </div>
-
-        {/* Sign Out Button */}
-        <button
-          onClick={logout}
+      {/* Mobile Drawer Navigation overlay (when toggled via hamburger menu) */}
+      {isMobileMenuOpen && (
+        <div 
+          onClick={() => setIsMobileMenuOpen(false)} 
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.85rem',
-            padding: '0.85rem 1rem',
-            borderRadius: '16px',
-            fontSize: '0.9rem',
-            fontWeight: 600,
-            color: '#DC2626',
-            backgroundColor: '#FEF2F2',
-            border: 'none',
-            cursor: 'pointer',
-            marginTop: '1.5rem',
-            width: '100%',
-            transition: 'all 0.2s ease'
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex'
           }}
         >
-          <LogOut size={19} />
-          <span>Log out</span>
-        </button>
-      </aside>
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            style={{
+              width: '280px',
+              height: '100%',
+              backgroundColor: '#FFFFFF',
+              padding: '1.5rem 1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              overflowY: 'auto'
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+                <button onClick={() => setIsMobileMenuOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
+                  <X size={24} />
+                </button>
+              </div>
+              {renderNavigationContent()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0, width: '100%' }}>
         {/* Top Navigation Bar */}
         <header style={{
           backgroundColor: '#FFFFFF',
@@ -267,34 +326,82 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)'
+          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
         }}>
-          {/* Left Title & Back Button */}
+          {/* Left Title & Mobile Hamburger Button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <button
-              onClick={() => router.back()}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                backgroundColor: '#2563EB',
-                color: '#FFFFFF',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A' }}>
-              {currentTitle}
-            </span>
+            {!isDashboardPage && (
+              <button
+                className="admin-mobile-menu-btn"
+                onClick={() => setIsMobileMenuOpen(true)}
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '12px',
+                  backgroundColor: '#F1F5F9',
+                  color: '#0F172A',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <Menu size={20} />
+              </button>
+            )}
+
+            {/* Brand Logo on Dashboard Page */}
+            {isDashboardPage && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '12px',
+                  backgroundColor: '#2563EB',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF'
+                }}>
+                  <ShieldCheck size={22} />
+                </div>
+                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A' }}>
+                  HTU Elect <span style={{ color: '#2563EB' }}>✓</span>
+                </span>
+              </div>
+            )}
+
+            {!isDashboardPage && (
+              <>
+                <button
+                  onClick={() => router.back()}
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    backgroundColor: '#2563EB',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A' }}>
+                  {currentTitle}
+                </span>
+              </>
+            )}
           </div>
 
           {/* Right Action Icons & User Profile Badge with Interactive Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {/* Theme Toggle Pill */}
             <div style={{
               display: 'flex',
@@ -365,7 +472,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
-                  gap: '0.75rem', 
+                  gap: '0.65rem', 
                   cursor: 'pointer',
                   padding: '0.25rem 0.5rem',
                   borderRadius: '16px',
@@ -383,11 +490,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 800,
-                  fontSize: '0.95rem'
+                  fontSize: '0.95rem',
+                  flexShrink: 0
                 }}>
                   {adminName.substring(0, 2).toUpperCase()}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                <div className="admin-profile-meta" style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
                   <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>{adminName}</span>
                   <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Admin</span>
                 </div>
@@ -406,8 +514,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   border: '1px solid #E2E8F0',
                   boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.15)',
                   padding: '1.25rem',
-                  zIndex: 1000,
-                  animation: 'fadeIn 0.2s ease'
+                  zIndex: 1000
                 }}>
                   {/* Account Summary */}
                   <div style={{ paddingBottom: '0.85rem', marginBottom: '0.85rem', borderBottom: '1px solid #F1F5F9' }}>
@@ -494,7 +601,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Content Container Frame */}
-        <main style={{
+        <main className="admin-main-content" style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '24px',
           border: '1px solid #E2E8F0',

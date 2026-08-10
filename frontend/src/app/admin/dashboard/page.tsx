@@ -435,7 +435,7 @@ export default function OrganizationElectionHub() {
       </div>
 
       {/* Analytics Visual Grid Row (Bar Chart + Doughnut Breakdown) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>
+      <div className="dashboard-analytics-grid" style={{ gap: '1.25rem' }}>
         
         {/* Voting Activity Bar Chart Card */}
         <div style={{
@@ -1043,11 +1043,11 @@ export default function OrganizationElectionHub() {
                 <div style={{ backgroundColor: '#F8FAFC', padding: '1.25rem', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
                   <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 0.75rem 0', color: '#0F172A' }}>Election Summary</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem' }}>
-                    <div><strong>Title:</strong> {wizardData.title || 'Untitled'}</div>
-                    <div><strong>Scope:</strong> {wizardData.category || 'General'}</div>
-                    <div><strong>Start:</strong> {wizardData.startDate ? new Date(wizardData.startDate).toLocaleString() : 'Not Set'}</div>
-                    <div><strong>End:</strong> {wizardData.endDate ? new Date(wizardData.endDate).toLocaleString() : 'Not Set'}</div>
-                    <div><strong>Positions:</strong> {wizardData.positions.filter(p => p.title.trim()).length} configured</div>
+                    <div><strong>Title:</strong> {title || 'Untitled'}</div>
+                    <div><strong>Scope:</strong> {category || 'General'}</div>
+                    <div><strong>Start:</strong> {startDate ? new Date(startDate).toLocaleString() : 'Not Set'}</div>
+                    <div><strong>End:</strong> {endDate ? new Date(endDate).toLocaleString() : 'Not Set'}</div>
+                    <div><strong>Roster:</strong> {csvStats.valid} eligible voters uploaded</div>
                   </div>
                 </div>
               </div>
