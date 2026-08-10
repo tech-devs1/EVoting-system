@@ -88,6 +88,101 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get elections eligible for current logged in voter based on email matching in uploaded CSV rosters
+router.get('/eligible', verifyAuth, async (req, res) => {
+  try {
+    const voterEmail = (req.user.email || '').toLowerCase().trim();
+    const voterIndex = (req.user.indexNumber || req.user.uid || '').toLowerCase().trim();
+
+    if (!voterEmail && !voterIndex) {
+      return res.status(200).json({ status: 'success', data: [] });
+    }
+
+    const now = Date.now();
+    const dbUpdates = [];
+
+    // Query active and draft elections across tenant organizations
+    const snapshot = await db.collectionGroup('elections').get();
+    const eligibleElections = [];
+
+    for (const doc of snapshot.docs) {
+      const electionData = doc.data();
+      const electionId = doc.id;
+      const tenantRef = doc.ref.parent.parent;
+      const tenantId = tenantRef ? tenantRef.id : DEFAULT_TENANT_ID;
+
+      // Restrict elections to ONLY show those belonging to the voter's tenant/department
+      if (req.user.tenantId && req.user.tenantId !== 'global' && tenantId !== req.user.tenantId) {
+        continue;
+      }
+
+      // Check if election has a per-election CSV roster
+      const rosterSnapshot = await doc.ref.collection('eligible_voters').get();
+
+      let isEligible = false;
+
+      if (rosterSnapshot.empty) {
+        // If no CSV uploaded yet for this election, allow general tenant access
+        isEligible = true;
+      } else {
+        // Check if voter's email or index matches any entry in this election's CSV roster
+        rosterSnapshot.forEach(voterDoc => {
+          const vData = voterDoc.data();
+          const csvEmail = (vData.email || '').toLowerCase().trim();
+          const csvIndex = (vData.indexNumber || vData.studentId || '').toLowerCase().trim();
+          if ((voterEmail && csvEmail === voterEmail) || (voterIndex && csvIndex === voterIndex)) {
+            isEligible = true;
+          }
+        });
+      }
+
+      if (isEligible) {
+        // Automatically perform real-time status transitions for voters so they see live/accurate states
+        let updatedStatus = electionData.status;
+        const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
+        const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
+
+        if (electionData.status === 'active' && electionData.endDate && endTime < now) {
+          updatedStatus = 'completed';
+          dbUpdates.push(doc.ref.update({ status: 'completed' }));
+        } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
+          updatedStatus = 'active';
+          dbUpdates.push(doc.ref.update({ status: 'active' }));
+        }
+
+        // Check if voter has unlocked or voted
+        const votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters')
+          .where('voterId', '==', req.user.uid)
+          .where('electionId', '==', electionId)
+          .get();
+
+        eligibleElections.push({
+          id: electionId,
+          tenantId,
+          ...electionData,
+          status: updatedStatus,
+          hasVoted: !votedSnap.empty,
+          votedPositionsCount: votedSnap.size
+        });
+      }
+    }
+
+    // Execute status updates in background if any occurred
+    if (dbUpdates.length > 0) {
+      Promise.all(dbUpdates)
+        .then(() => {
+          cache.invalidatePrefix('elections:');
+        })
+        .catch(err => console.error('Error updating election status in background in eligible:', err));
+    }
+
+    res.status(200).json({ status: 'success', data: eligibleElections });
+  } catch (error) {
+    console.error('Error fetching eligible elections:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch eligible elections' });
+  }
+});
+
 // Get specific election details - CACHED & WRITE OPTIMIZED
 router.get('/:id', async (req, res) => {
   try {
@@ -793,101 +888,6 @@ async function sendOtpViaBMS(phoneNumber, otp) {
     throw err;
   }
 }
-
-// Get elections eligible for current logged in voter based on email matching in uploaded CSV rosters
-router.get('/eligible', verifyAuth, async (req, res) => {
-  try {
-    const voterEmail = (req.user.email || '').toLowerCase().trim();
-    const voterIndex = (req.user.indexNumber || req.user.uid || '').toLowerCase().trim();
-
-    if (!voterEmail && !voterIndex) {
-      return res.status(200).json({ status: 'success', data: [] });
-    }
-
-    const now = Date.now();
-    const dbUpdates = [];
-
-    // Query active and draft elections across tenant organizations
-    const snapshot = await db.collectionGroup('elections').get();
-    const eligibleElections = [];
-
-    for (const doc of snapshot.docs) {
-      const electionData = doc.data();
-      const electionId = doc.id;
-      const tenantRef = doc.ref.parent.parent;
-      const tenantId = tenantRef ? tenantRef.id : DEFAULT_TENANT_ID;
-
-      // Restrict elections to ONLY show those belonging to the voter's tenant/department
-      if (req.user.tenantId && req.user.tenantId !== 'global' && tenantId !== req.user.tenantId) {
-        continue;
-      }
-
-      // Check if election has a per-election CSV roster
-      const rosterSnapshot = await doc.ref.collection('eligible_voters').get();
-
-      let isEligible = false;
-
-      if (rosterSnapshot.empty) {
-        // If no CSV uploaded yet for this election, allow general tenant access
-        isEligible = true;
-      } else {
-        // Check if voter's email or index matches any entry in this election's CSV roster
-        rosterSnapshot.forEach(voterDoc => {
-          const vData = voterDoc.data();
-          const csvEmail = (vData.email || '').toLowerCase().trim();
-          const csvIndex = (vData.indexNumber || vData.studentId || '').toLowerCase().trim();
-          if ((voterEmail && csvEmail === voterEmail) || (voterIndex && csvIndex === voterIndex)) {
-            isEligible = true;
-          }
-        });
-      }
-
-      if (isEligible) {
-        // Automatically perform real-time status transitions for voters so they see live/accurate states
-        let updatedStatus = electionData.status;
-        const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
-        const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
-
-        if (electionData.status === 'active' && electionData.endDate && endTime < now) {
-          updatedStatus = 'completed';
-          dbUpdates.push(doc.ref.update({ status: 'completed' }));
-        } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
-          updatedStatus = 'active';
-          dbUpdates.push(doc.ref.update({ status: 'active' }));
-        }
-
-        // Check if voter has unlocked or voted
-        const votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters')
-          .where('voterId', '==', req.user.uid)
-          .where('electionId', '==', electionId)
-          .get();
-
-        eligibleElections.push({
-          id: electionId,
-          tenantId,
-          ...electionData,
-          status: updatedStatus,
-          hasVoted: !votedSnap.empty,
-          votedPositionsCount: votedSnap.size
-        });
-      }
-    }
-
-    // Execute status updates in background if any occurred
-    if (dbUpdates.length > 0) {
-      Promise.all(dbUpdates)
-        .then(() => {
-          cache.invalidatePrefix('elections:');
-        })
-        .catch(err => console.error('Error updating election status in background in eligible:', err));
-    }
-
-    res.status(200).json({ status: 'success', data: eligibleElections });
-  } catch (error) {
-    console.error('Error fetching eligible elections:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to fetch eligible elections' });
-  }
-});
 
 // Upload CSV roster of eligible voting members for a specific election (Admin only)
 router.post('/:id/voters/upload-csv', verifyAuth, requireAdmin, async (req, res) => {
