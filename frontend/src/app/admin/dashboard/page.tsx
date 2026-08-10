@@ -1031,11 +1031,9 @@ export default function OrganizationElectionHub() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
                   </div>
                 )}
               </div>
-            )}
 
       {/* 4-Step Election Creation Wizard Modal */}
       <Modal
