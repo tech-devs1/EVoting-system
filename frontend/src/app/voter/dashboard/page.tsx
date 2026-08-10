@@ -19,7 +19,7 @@ interface Election {
   description: string;
   startDate: string;
   endDate: string;
-  status: 'draft' | 'active' | 'completed';
+  status: 'draft' | 'scheduled' | 'active' | 'completed';
   createdBy?: string;
   showResults?: boolean;
 }
@@ -116,11 +116,11 @@ export default function VoterDashboard() {
 
         const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
         let newElections: Election[] = [], newUpcoming: Election[] = [], newPublished: Election[] = [];
-        if (res.status === 'success') {
-          const adminElections = res.data.filter(el => el.createdBy === 'admin');
-          newElections = adminElections.filter(el => el.status === 'active');
-          newUpcoming = adminElections.filter(el => el.status === 'draft');
-          newPublished = adminElections.filter(el => el.showResults === true);
+        if (res.status === 'success' && Array.isArray(res.data)) {
+          const allElections = res.data;
+          newElections = allElections.filter(el => el.status === 'active');
+          newUpcoming = allElections.filter(el => el.status === 'draft' || el.status === 'scheduled');
+          newPublished = allElections.filter(el => el.showResults === true);
           
           setElections(newElections);
           setUpcomingElections(newUpcoming);

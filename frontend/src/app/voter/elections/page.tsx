@@ -76,11 +76,9 @@ export default function VoterElectionsPage() {
     async function fetchElections() {
       try {
         const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
-        if (res.status === 'success') {
-          // Only show elections created by admin
-          const adminElections = res.data.filter(el => el.createdBy === 'admin');
-          setElections(adminElections);
-          setFilteredList(adminElections);
+        if (res.status === 'success' && Array.isArray(res.data)) {
+          setElections(res.data);
+          setFilteredList(res.data);
         }
 
         // Fetch user voted elections
