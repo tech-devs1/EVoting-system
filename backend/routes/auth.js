@@ -8,6 +8,18 @@ const getTenantId = (req) => req.headers['x-tenant-id'] || req.query.tenantId ||
 const { verifyAuth } = require('../middleware/auth');
 const { logFraudAlert } = require('../services/fraud');
 const { logActivity } = require('../services/activityLog');
+const rateLimit = require('express-rate-limit');
+
+// Targeted login rate limiter — only applied to login/register POST endpoints
+// Uses real client IP (trust proxy is set in server.js)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 login attempts per IP per 15 min window
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
+  message: { status: 'error', message: 'Too many login attempts from this IP. Please try again after 15 minutes.' }
+});
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
 const BMS_API_KEY = process.env.BMS_API_KEY || process.env.MNOTIFY_API_KEY || '';
@@ -264,7 +276,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     
@@ -450,7 +462,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Admin Login
-router.post('/login-admin', async (req, res) => {
+router.post('/login-admin', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {

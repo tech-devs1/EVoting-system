@@ -10,6 +10,9 @@ migrateDefaultTenant().catch(err => console.warn('[Migration Warning]:', err?.me
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust Railway/Vercel reverse proxy so rate limiters use real client IPs
+app.set('trust proxy', 1);
+
 const { authLimiter, voteLimiter } = require('./middleware/rateLimiter');
 
 // Middleware
@@ -17,7 +20,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 // Routes
-app.use('/api/auth', authLimiter, require('./routes/auth'));
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/elections', require('./routes/elections'));
 app.use('/api/candidates', require('./routes/candidates'));
 app.use('/api/votes', voteLimiter, require('./routes/votes'));
