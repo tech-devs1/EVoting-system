@@ -1,0 +1,682 @@
+{
+  "audit_logs": {
+    "t47jiww04pq": {
+      "electionId": "ogh22gofcf8",
+      "timestamp": 1786353376927,
+      "previousHash": "GENESIS_HASH",
+      "currentHash": "55c2d82970969d24b9f64d2c74c15f5ec966940566c66a871ffdadfb368763d7",
+      "candidateName": "Jane Smith",
+      "position": "President",
+      "dataPayload": "{\"electionId\":\"ogh22gofcf8\",\"candidateId\":\"dyl553up81k\",\"candidateName\":\"Jane Smith\",\"position\":\"President\",\"timestamp\":1786353376927}",
+      "id": "t47jiww04pq"
+    },
+    "jfakbnl8yv": {
+      "electionId": "ogh22gofcf8",
+      "timestamp": 1786353376961,
+      "previousHash": "55c2d82970969d24b9f64d2c74c15f5ec966940566c66a871ffdadfb368763d7",
+      "currentHash": "5b4b3c72a8fbf05a6783f0e9045a4096100f78908b1db7257f2b8da8030da451",
+      "candidateName": "Abena Osei",
+      "position": "General Secretary",
+      "dataPayload": "{\"electionId\":\"ogh22gofcf8\",\"candidateId\":\"8e5etzk9vr9\",\"candidateName\":\"Abena Osei\",\"position\":\"General Secretary\",\"timestamp\":1786353376961}",
+      "id": "jfakbnl8yv"
+    },
+    "rhjfnfaj41j": {
+      "electionId": "ogh22gofcf8",
+      "timestamp": 1786353380141,
+      "previousHash": "5b4b3c72a8fbf05a6783f0e9045a4096100f78908b1db7257f2b8da8030da451",
+      "currentHash": "bb4e739c35ad917322e86c9e8d750d14f59acab8e21585ae64bd14aec3e4d2a2",
+      "candidateName": "Jane Smith",
+      "position": "President",
+      "dataPayload": "{\"electionId\":\"ogh22gofcf8\",\"candidateId\":\"dyl553up81k\",\"candidateName\":\"Jane Smith\",\"position\":\"President\",\"timestamp\":1786353380141}",
+      "id": "rhjfnfaj41j"
+    },
+    "hn2ve8gi0gm": {
+      "electionId": "ogh22gofcf8",
+      "timestamp": 1786353380168,
+      "previousHash": "bb4e739c35ad917322e86c9e8d750d14f59acab8e21585ae64bd14aec3e4d2a2",
+      "currentHash": "df9968e4b9cb1c01953731288e91ba5ba20cac2c1f0a389c31d9bc160943766f",
+      "candidateName": "Abena Osei",
+      "position": "General Secretary",
+      "dataPayload": "{\"electionId\":\"ogh22gofcf8\",\"candidateId\":\"8e5etzk9vr9\",\"candidateName\":\"Abena Osei\",\"position\":\"General Secretary\",\"timestamp\":1786353380168}",
+      "id": "hn2ve8gi0gm"
+    },
+    "szhvx09poph": {
+      "electionId": "ogh22gofcf8",
+      "timestamp": 1786353383255,
+      "previousHash": "df9968e4b9cb1c01953731288e91ba5ba20cac2c1f0a389c31d9bc160943766f",
+      "currentHash": "7ce339125b56cb738c50d846533934bbcde71417ce281f0b1518d227791d98fa",
+      "candidateName": "John Doe",
+      "position": "President",
+      "dataPayload": "{\"electionId\":\"ogh22gofcf8\",\"candidateId\":\"ijdaz1si1h\",\"candidateName\":\"John Doe\",\"position\":\"President\",\"timestamp\":1786353383255}",
+      "id": "szhvx09poph"
+    },
+    "2looetsvbu3": {
+      "electionId": "ogh22gofcf8",
+      "timestamp": 1786353383288,
+      "previousHash": "7ce339125b56cb738c50d846533934bbcde71417ce281f0b1518d227791d98fa",
+      "currentHash": "c4aca119483793611f072f3f23ecd2227fd571d92eb99bc7948656bb2e72b2ce",
+      "candidateName": "Abena Osei",
+      "position": "General Secretary",
+      "dataPayload": "{\"electionId\":\"ogh22gofcf8\",\"candidateId\":\"8e5etzk9vr9\",\"candidateName\":\"Abena Osei\",\"position\":\"General Secretary\",\"timestamp\":1786353383288}",
+      "id": "2looetsvbu3"
+    },
+    "lzmqofsgg5": {
+      "electionId": "ogh22gofcf8",
+      "timestamp": 1786353383732,
+      "previousHash": "c4aca119483793611f072f3f23ecd2227fd571d92eb99bc7948656bb2e72b2ce",
+      "currentHash": "8208fb5957017e53effd4ba0f682101b512888a7ca05b6bf95afb676443cc6c3",
+      "candidateName": "Jane Smith",
+      "position": "President",
+      "dataPayload": "{\"electionId\":\"ogh22gofcf8\",\"candidateId\":\"dyl553up81k\",\"candidateName\":\"Jane Smith\",\"position\":\"President\",\"timestamp\":1786353383732}",
+      "id": "lzmqofsgg5"
+    }
+  },
+  "fraud_alerts": {
+    "i2mjb5rkof9": {
+      "type": "DUPLICATE_VOTE",
+      "message": "Voter tried to vote twice in the same category",
+      "metadata": {
+        "voterId": "voter_1786353371312_1",
+        "electionId": "ogh22gofcf8",
+        "candidateId": "dyl553up81k"
+      },
+      "tenantId": "compssa",
+      "timestamp": 1786353383735,
+      "status": "unresolved",
+      "id": "i2mjb5rkof9"
+    }
+  },
+  "organizations": {
+    "dept_org_1786353371312": {
+      "id": "dept_org_1786353371312",
+      "name": "Engineering & Technology Faculty (1312)",
+      "acronym": "ENG-1312",
+      "domain": "htu.edu.gh",
+      "adminEmail": "ec_admin_1786353371312@htu.edu.gh",
+      "adminPassword": "$2b$10$i4yJeY9wXyQwu65jiMtPf.nC5DsXa.fPpV3vOGHWP41UQN2O9ix7S",
+      "status": "active",
+      "createdAt": 1786353371831
+    }
+  },
+  "organizations/dept_org_1786353371312/voter_rolls": {
+    "voter_1786353371312_1": {
+      "uid": "voter_1786353371312_1",
+      "indexNumber": "012313121",
+      "name": "Kwame Nkrumah Jr",
+      "email": "voter1_1786353371312@htu.edu.gh",
+      "phone": "0241111111",
+      "department": "Computer Science",
+      "password": "$2b$10$QKD/I31EJ.wzrwdZXUb2ZuY2/wdGWs3QBWHHUrvRpOJLG3XpRAcKa",
+      "isRegistered": true,
+      "role": "voter",
+      "id": "voter_1786353371312_1",
+      "accessOtp": null,
+      "accessOtpExpiry": null
+    },
+    "voter_1786353371312_2": {
+      "uid": "voter_1786353371312_2",
+      "indexNumber": "012313122",
+      "name": "Ama Serwaa",
+      "email": "voter2_1786353371312@htu.edu.gh",
+      "phone": "0242222222",
+      "department": "Electrical Eng.",
+      "password": "$2b$10$QKD/I31EJ.wzrwdZXUb2ZuY2/wdGWs3QBWHHUrvRpOJLG3XpRAcKa",
+      "isRegistered": true,
+      "role": "voter",
+      "id": "voter_1786353371312_2",
+      "accessOtp": null,
+      "accessOtpExpiry": null
+    },
+    "voter_1786353371312_3": {
+      "uid": "voter_1786353371312_3",
+      "indexNumber": "012313123",
+      "name": "Kofi Mensah",
+      "email": "voter3_1786353371312@htu.edu.gh",
+      "phone": "0243333333",
+      "department": "Mechanical Eng.",
+      "password": "$2b$10$QKD/I31EJ.wzrwdZXUb2ZuY2/wdGWs3QBWHHUrvRpOJLG3XpRAcKa",
+      "isRegistered": true,
+      "role": "voter",
+      "id": "voter_1786353371312_3",
+      "accessOtp": null,
+      "accessOtpExpiry": null
+    }
+  },
+  "organizations/dept_org_1786353371312/activity_logs": {
+    "dhxcjjtnrew": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "Engineering & Technology Faculty (1312)",
+      "actorEmail": "ec_admin_1786353371312@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "Engineering & Technology Faculty (1312) Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786353373054,
+      "createdAt": "2026-08-10T09:16:13.054Z",
+      "id": "dhxcjjtnrew"
+    },
+    "1wnbvxif4oc": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter1_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter Kwame Nkrumah Jr logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786353373930,
+      "createdAt": "2026-08-10T09:16:13.930Z",
+      "id": "1wnbvxif4oc"
+    },
+    "kzkkx8usea": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter1_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353376936,
+      "createdAt": "2026-08-10T09:16:16.936Z",
+      "id": "kzkkx8usea"
+    },
+    "e9gcubfr5e4": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter1_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353376969,
+      "createdAt": "2026-08-10T09:16:16.969Z",
+      "id": "e9gcubfr5e4"
+    },
+    "414pnr1altb": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter2_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter Ama Serwaa logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786353377386,
+      "createdAt": "2026-08-10T09:16:17.386Z",
+      "id": "414pnr1altb"
+    },
+    "ak8wvevqa7g": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter2_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353380150,
+      "createdAt": "2026-08-10T09:16:20.150Z",
+      "id": "ak8wvevqa7g"
+    },
+    "jy5lpz7kpg": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter2_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353380175,
+      "createdAt": "2026-08-10T09:16:20.175Z",
+      "id": "jy5lpz7kpg"
+    },
+    "906hbytwv7r": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter3_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter Kofi Mensah logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786353380654,
+      "createdAt": "2026-08-10T09:16:20.654Z",
+      "id": "906hbytwv7r"
+    },
+    "ue5hljmyci": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter3_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353383263,
+      "createdAt": "2026-08-10T09:16:23.263Z",
+      "id": "ue5hljmyci"
+    },
+    "dn6ppibukih": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter3_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353383301,
+      "createdAt": "2026-08-10T09:16:23.301Z",
+      "id": "dn6ppibukih"
+    },
+    "hwb0300o84k": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter1_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter Kwame Nkrumah Jr logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786353383713,
+      "createdAt": "2026-08-10T09:16:23.713Z",
+      "id": "hwb0300o84k"
+    }
+  },
+  "global_activity_logs": {
+    "pbz3b84yza": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "Engineering & Technology Faculty (1312)",
+      "actorEmail": "ec_admin_1786353371312@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "Engineering & Technology Faculty (1312) Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786353373054,
+      "createdAt": "2026-08-10T09:16:13.054Z",
+      "id": "pbz3b84yza"
+    },
+    "v6z3gvcchpo": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter1_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter Kwame Nkrumah Jr logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786353373930,
+      "createdAt": "2026-08-10T09:16:13.930Z",
+      "id": "v6z3gvcchpo"
+    },
+    "n5l52v1t7xf": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter1_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353376936,
+      "createdAt": "2026-08-10T09:16:16.936Z",
+      "id": "n5l52v1t7xf"
+    },
+    "xm38t2469t": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter1_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353376969,
+      "createdAt": "2026-08-10T09:16:16.969Z",
+      "id": "xm38t2469t"
+    },
+    "080435mlfw0q": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter2_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter Ama Serwaa logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786353377386,
+      "createdAt": "2026-08-10T09:16:17.386Z",
+      "id": "080435mlfw0q"
+    },
+    "d9zxh1pgbgn": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter2_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353380150,
+      "createdAt": "2026-08-10T09:16:20.150Z",
+      "id": "d9zxh1pgbgn"
+    },
+    "l0n8nh7azai": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter2_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353380175,
+      "createdAt": "2026-08-10T09:16:20.175Z",
+      "id": "l0n8nh7azai"
+    },
+    "ivlyo4uitmm": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter3_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter Kofi Mensah logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786353380654,
+      "createdAt": "2026-08-10T09:16:20.654Z",
+      "id": "ivlyo4uitmm"
+    },
+    "kngf7klyjn8": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter3_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353383263,
+      "createdAt": "2026-08-10T09:16:23.263Z",
+      "id": "kngf7klyjn8"
+    },
+    "gele8pyued": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter3_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"Faculty & Departmental Leadership Elections 2026 (1312)\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "ogh22gofcf8",
+        "electionTitle": "Faculty & Departmental Leadership Elections 2026 (1312)"
+      },
+      "timestamp": 1786353383301,
+      "createdAt": "2026-08-10T09:16:23.301Z",
+      "id": "gele8pyued"
+    },
+    "a182o6jyrt5": {
+      "tenantId": "dept_org_1786353371312",
+      "tenantName": "dept_org_1786353371312",
+      "actorEmail": "voter1_1786353371312@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter Kwame Nkrumah Jr logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786353383713,
+      "createdAt": "2026-08-10T09:16:23.713Z",
+      "id": "a182o6jyrt5"
+    }
+  },
+  "organizations/dept_org_1786353371312/elections": {
+    "ogh22gofcf8": {
+      "title": "Faculty & Departmental Leadership Elections 2026 (1312)",
+      "description": "Official general election for Engineering & Technology Faculty (1312). All registered students are eligible to vote.",
+      "startDate": "2026-08-10T08:16:13.152Z",
+      "endDate": "2026-08-12T09:16:13.152Z",
+      "organizationId": "default",
+      "type": "src",
+      "department": "",
+      "status": "active",
+      "showResults": true,
+      "createdBy": "admin",
+      "createdAt": 1786353373322,
+      "id": "ogh22gofcf8"
+    }
+  },
+  "organizations/dept_org_1786353371312/candidates": {
+    "dyl553up81k": {
+      "name": "Jane Smith",
+      "manifesto": "Digital campus innovation, welfare funds, and transparent representation.",
+      "manifestoUrl": "",
+      "electionId": "ogh22gofcf8",
+      "position": "President",
+      "photoUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80&sig=1786353371312_1",
+      "votes": 2,
+      "noVotes": 0,
+      "isIndependent": false,
+      "ballotNumber": 1,
+      "createdAt": 1786353373363,
+      "id": "dyl553up81k"
+    },
+    "ijdaz1si1h": {
+      "name": "John Doe",
+      "manifesto": "Sports facilities upgrade, lab resources, and student career mentorship.",
+      "manifestoUrl": "",
+      "electionId": "ogh22gofcf8",
+      "position": "President",
+      "photoUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80&sig=1786353371312_2",
+      "votes": 1,
+      "noVotes": 0,
+      "isIndependent": false,
+      "ballotNumber": 2,
+      "createdAt": 1786353373388,
+      "id": "ijdaz1si1h"
+    },
+    "8e5etzk9vr9": {
+      "name": "Abena Osei",
+      "manifesto": "Prompt official communications, open meeting archives, and student portal integration.",
+      "manifestoUrl": "",
+      "electionId": "ogh22gofcf8",
+      "position": "General Secretary",
+      "photoUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80&sig=1786353371312_3",
+      "votes": 2,
+      "noVotes": 1,
+      "isIndependent": true,
+      "ballotNumber": 1,
+      "createdAt": 1786353373411,
+      "id": "8e5etzk9vr9"
+    }
+  },
+  "organizations/dept_org_1786353371312/unlocked_elections": {
+    "voter_1786353371312_1_ogh22gofcf8": {
+      "voterId": "voter_1786353371312_1",
+      "electionId": "ogh22gofcf8",
+      "verifiedAt": 1786353376886,
+      "id": "voter_1786353371312_1_ogh22gofcf8"
+    },
+    "voter_1786353371312_2_ogh22gofcf8": {
+      "voterId": "voter_1786353371312_2",
+      "electionId": "ogh22gofcf8",
+      "verifiedAt": 1786353380109,
+      "id": "voter_1786353371312_2_ogh22gofcf8"
+    },
+    "voter_1786353371312_3_ogh22gofcf8": {
+      "voterId": "voter_1786353371312_3",
+      "electionId": "ogh22gofcf8",
+      "verifiedAt": 1786353383222,
+      "id": "voter_1786353371312_3_ogh22gofcf8"
+    }
+  },
+  "organizations/dept_org_1786353371312/voted_voters": {
+    "ogh22gofcf8_voter_1786353371312_1_president": {
+      "voterId": "voter_1786353371312_1",
+      "electionId": "ogh22gofcf8",
+      "position": "President",
+      "timestamp": 1786353376933,
+      "auditTxId": "t47jiww04pq",
+      "id": "ogh22gofcf8_voter_1786353371312_1_president"
+    },
+    "ogh22gofcf8_voter_1786353371312_1_general_secretary": {
+      "voterId": "voter_1786353371312_1",
+      "electionId": "ogh22gofcf8",
+      "position": "General Secretary",
+      "timestamp": 1786353376967,
+      "auditTxId": "jfakbnl8yv",
+      "id": "ogh22gofcf8_voter_1786353371312_1_general_secretary"
+    },
+    "ogh22gofcf8_voter_1786353371312_2_president": {
+      "voterId": "voter_1786353371312_2",
+      "electionId": "ogh22gofcf8",
+      "position": "President",
+      "timestamp": 1786353380147,
+      "auditTxId": "rhjfnfaj41j",
+      "id": "ogh22gofcf8_voter_1786353371312_2_president"
+    },
+    "ogh22gofcf8_voter_1786353371312_2_general_secretary": {
+      "voterId": "voter_1786353371312_2",
+      "electionId": "ogh22gofcf8",
+      "position": "General Secretary",
+      "timestamp": 1786353380172,
+      "auditTxId": "hn2ve8gi0gm",
+      "id": "ogh22gofcf8_voter_1786353371312_2_general_secretary"
+    },
+    "ogh22gofcf8_voter_1786353371312_3_president": {
+      "voterId": "voter_1786353371312_3",
+      "electionId": "ogh22gofcf8",
+      "position": "President",
+      "timestamp": 1786353383260,
+      "auditTxId": "szhvx09poph",
+      "id": "ogh22gofcf8_voter_1786353371312_3_president"
+    },
+    "ogh22gofcf8_voter_1786353371312_3_general_secretary": {
+      "voterId": "voter_1786353371312_3",
+      "electionId": "ogh22gofcf8",
+      "position": "General Secretary",
+      "timestamp": 1786353383296,
+      "auditTxId": "2looetsvbu3",
+      "id": "ogh22gofcf8_voter_1786353371312_3_general_secretary"
+    }
+  },
+  "organizations/dept_org_1786353371312/votes": {
+    "6rv04bpdcwi": {
+      "electionId": "ogh22gofcf8",
+      "candidateId": "dyl553up81k",
+      "position": "President",
+      "timestamp": 1786353376925,
+      "id": "6rv04bpdcwi"
+    },
+    "dr2jiqu0i7u": {
+      "electionId": "ogh22gofcf8",
+      "candidateId": "8e5etzk9vr9",
+      "position": "General Secretary",
+      "timestamp": 1786353376961,
+      "id": "dr2jiqu0i7u"
+    },
+    "srqmisjazks": {
+      "electionId": "ogh22gofcf8",
+      "candidateId": "dyl553up81k",
+      "position": "President",
+      "timestamp": 1786353380141,
+      "id": "srqmisjazks"
+    },
+    "6d0oz3mlig3": {
+      "electionId": "ogh22gofcf8",
+      "candidateId": "8e5etzk9vr9",
+      "position": "General Secretary",
+      "timestamp": 1786353380168,
+      "id": "6d0oz3mlig3"
+    },
+    "6oa9rc9bc2x": {
+      "electionId": "ogh22gofcf8",
+      "candidateId": "ijdaz1si1h",
+      "position": "President",
+      "timestamp": 1786353383255,
+      "id": "6oa9rc9bc2x"
+    },
+    "tgjnw6inabm": {
+      "electionId": "ogh22gofcf8",
+      "candidateId": "8e5etzk9vr9",
+      "position": "General Secretary",
+      "timestamp": 1786353383287,
+      "id": "tgjnw6inabm"
+    }
+  },
+  "organizations/compssa/fraud_alerts": {
+    "s6p16b1e72s": {
+      "type": "DUPLICATE_VOTE",
+      "message": "Voter tried to vote twice in the same category",
+      "metadata": {
+        "voterId": "voter_1786353371312_1",
+        "electionId": "ogh22gofcf8",
+        "candidateId": "dyl553up81k"
+      },
+      "tenantId": "compssa",
+      "timestamp": 1786353383735,
+      "status": "unresolved",
+      "id": "s6p16b1e72s"
+    }
+  }
+}

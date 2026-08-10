@@ -64,6 +64,10 @@ function sanitizeMockUpdate(existing, update) {
   return result;
 }
 
+const fs = require('fs');
+const path = require('path');
+const MOCK_DATA_FILE = path.join(__dirname, '../.mock_firestore_data.json');
+
 class MockFirestore {
   constructor() {
     this.collections = {
@@ -76,6 +80,35 @@ class MockFirestore {
       fraud_alerts: new Map(),
       announcements: new Map()
     };
+    this.loadFromDisk();
+  }
+
+  loadFromDisk() {
+    try {
+      if (fs.existsSync(MOCK_DATA_FILE)) {
+        const raw = fs.readFileSync(MOCK_DATA_FILE, 'utf8');
+        const parsed = JSON.parse(raw);
+        for (const key in parsed) {
+          this.collections[key] = new Map(Object.entries(parsed[key]));
+        }
+      }
+    } catch (err) {
+      console.warn('[MockFirestore] Could not load persisted data:', err.message);
+    }
+  }
+
+  saveToDisk() {
+    try {
+      const exportData = {};
+      for (const key in this.collections) {
+        if (this.collections[key] && this.collections[key].size > 0) {
+          exportData[key] = Object.fromEntries(this.collections[key]);
+        }
+      }
+      fs.writeFileSync(MOCK_DATA_FILE, JSON.stringify(exportData, null, 2), 'utf8');
+    } catch (err) {
+      console.warn('[MockFirestore] Could not persist data to disk:', err.message);
+    }
   }
 
   async runTransaction(updateFunction) {
@@ -96,7 +129,9 @@ class MockFirestore {
         return transaction;
       }
     };
-    return updateFunction(transaction);
+    const res = await updateFunction(transaction);
+    this.saveToDisk();
+    return res;
   }
 
   batch() {
@@ -121,6 +156,7 @@ class MockFirestore {
             await op.ref.delete();
           }
         }
+        this.saveToDisk();
         return true;
       }
     };
@@ -141,7 +177,11 @@ class MockFirestore {
       return {
         id: docId,
         path: fullPath,
-        set: async (data) => { collectionMap.set(docId, { ...data, id: docId }); return data; },
+        set: async (data) => {
+          collectionMap.set(docId, { ...data, id: docId });
+          this.saveToDisk();
+          return data;
+        },
         get: async () => {
           const data = collectionMap.get(docId);
           return { exists: !!data, data: () => data, id: docId, ref: getDocRef(docId, parentPath) };
@@ -150,9 +190,14 @@ class MockFirestore {
           const existing = collectionMap.get(docId) || {};
           const sanitized = sanitizeMockUpdate(existing, data);
           collectionMap.set(docId, sanitized);
+          this.saveToDisk();
           return sanitized;
         },
-        delete: async () => { collectionMap.delete(docId); return true; },
+        delete: async () => {
+          collectionMap.delete(docId);
+          this.saveToDisk();
+          return true;
+        },
         collection: (subName) => this.collection(`${fullPath}/${subName}`)
       };
     };
@@ -165,6 +210,7 @@ class MockFirestore {
       add: async (data) => {
         const docId = Math.random().toString(36).substring(2);
         collectionMap.set(docId, { ...data, id: docId });
+        this.saveToDisk();
         return { id: docId, ref: getDocRef(docId) };
       },
       get: async () => {
