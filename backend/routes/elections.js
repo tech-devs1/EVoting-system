@@ -1023,13 +1023,39 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
     const voterId = req.user.uid;
     const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
 
-    // Fetch voter profile from voter_rolls to find contact details
-    const voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
-    const voterDoc = await voterRef.get();
-    if (!voterDoc.exists) {
-      return res.status(404).json({ status: 'error', message: 'Voter profile not found.' });
+    // Fetch voter profile from voter_rolls across tenants & organizations
+    let voterData = null;
+    let voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
+    let voterDoc = await voterRef.get();
+    if (voterDoc.exists) {
+      voterData = voterDoc.data();
+    } else {
+      voterRef = db.collection('organizations').doc(tenantId).collection('voter_rolls').doc(voterId);
+      voterDoc = await voterRef.get();
+      if (voterDoc.exists) {
+        voterData = voterDoc.data();
+      } else if (req.user && req.user.email) {
+        const snap = await db.collectionGroup('voter_rolls').where('email', '==', req.user.email).get();
+        if (!snap.empty) {
+          voterDoc = snap.docs[0];
+          voterRef = voterDoc.ref;
+          voterData = voterDoc.data();
+        }
+      }
     }
-    const voterData = voterDoc.data();
+
+    if (!voterData) {
+      if (req.user && req.user.email) {
+        voterData = {
+          email: req.user.email,
+          name: req.user.name || req.user.email.split('@')[0],
+          phone: req.user.phone || ''
+        };
+        voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
+      } else {
+        return res.status(404).json({ status: 'error', message: 'Voter profile not found.' });
+      }
+    }
 
     // Verify scheduled start date/time and end date/time
     const { doc: electionDoc, ref: electionRef } = await findElectionDoc(electionId, req);

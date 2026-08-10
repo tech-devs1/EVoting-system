@@ -6,6 +6,16 @@ import { auth } from './firebase';
 const API_BASE_URL = '/api';
 
 export async function getAuthHeaders(): Promise<HeadersInit> {
+  // Check local token stored by AuthContext login first
+  const localToken = typeof window !== 'undefined' ? localStorage.getItem('COMPSSA_token') : null;
+  if (localToken) {
+    console.log('[API] Using local token:', localToken.substring(0, 30) + '...');
+    return {
+      'Authorization': localToken.startsWith('Bearer ') ? localToken : `Bearer ${localToken}`,
+      'Content-Type': 'application/json',
+    };
+  }
+
   const user = auth.currentUser;
   if (user) {
     try {
@@ -18,16 +28,6 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
     } catch (e) {
       console.error('Failed to retrieve Firebase ID Token', e);
     }
-  }
-
-  // Fallback to local storage mock token if user is signed in but no Firebase auth token exists
-  const localToken = typeof window !== 'undefined' ? localStorage.getItem('COMPSSA_token') : null;
-  if (localToken) {
-    console.log('[API] Using local token:', localToken.substring(0, 30) + '...');
-    return {
-      'Authorization': localToken.startsWith('Bearer ') ? localToken : `Bearer ${localToken}`,
-      'Content-Type': 'application/json',
-    };
   }
 
   console.log('[API] No token found');
