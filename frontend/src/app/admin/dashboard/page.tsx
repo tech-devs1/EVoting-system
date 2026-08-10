@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import Modal from '@/components/Modal';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
@@ -1037,67 +1037,194 @@ export default function OrganizationElectionHub() {
               </div>
             )}
 
-            {/* STEP 4: Review & Launch */}
-            {wizardStep === 4 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ backgroundColor: '#F8FAFC', padding: '1.25rem', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 0.75rem 0', color: '#0F172A' }}>Election Summary</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem' }}>
-                    <div><strong>Title:</strong> {title || 'Untitled'}</div>
-                    <div><strong>Scope:</strong> {category || 'General'}</div>
-                    <div><strong>Start:</strong> {startDate ? new Date(startDate).toLocaleString() : 'Not Set'}</div>
-                    <div><strong>End:</strong> {endDate ? new Date(endDate).toLocaleString() : 'Not Set'}</div>
-                    <div><strong>Roster:</strong> {csvStats.valid} eligible voters uploaded</div>
-                  </div>
+      {/* 4-Step Election Creation Wizard Modal */}
+      <Modal
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        title="Create New Election"
+        subtitle={`Step ${wizardStep} of 4`}
+        maxWidth="640px"
+      >
+        {/* Step Progress Bar */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.75rem' }}>
+          {[1, 2, 3, 4].map(step => (
+            <div key={step} style={{ flex: 1, height: '4px', backgroundColor: step <= wizardStep ? '#2563EB' : '#E2E8F0', borderRadius: '999px' }} />
+          ))}
+        </div>
+
+        {wizardError && (
+          <div style={{ padding: '0.75rem 1rem', backgroundColor: '#fef2f2', color: '#dc2626', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1.25rem', border: '1px solid #fecaca' }}>
+            {wizardError}
+          </div>
+        )}
+
+        {/* STEP 1: Basic Info */}
+        {wizardStep === 1 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Election Title *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. 2026 HTU SRC General Elections"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Category / Faculty Scope</label>
+              <input
+                type="text"
+                placeholder="e.g. SRC, Executive, Faculty of Engineering"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Detailed Description</label>
+              <textarea
+                rows={3}
+                placeholder="Provide voter instructions or eligibility rules..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: Schedule */}
+        {wizardStep === 2 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Poll Opening Date & Time *</label>
+              <input
+                type="datetime-local"
+                required
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Poll Closing Date & Time *</label>
+              <input
+                type="datetime-local"
+                required
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              />
+            </div>
+
+            <div style={{ backgroundColor: 'var(--color-primary-50)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--color-primary-200)', color: 'var(--color-primary-700)', fontSize: '0.85rem' }}>
+              ℹ️ Once opened, polls operate automatically according to schedule. You can adjust times before launch.
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Upload Roster */}
+        {wizardStep === 3 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+              Upload an optional CSV roster of eligible voters (`IndexNumber, FullName, Email`):
+            </p>
+            
+            <div style={{ border: '2px dashed var(--border-color)', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', backgroundColor: 'var(--bg-input)' }}>
+              <input
+                type="file"
+                accept=".csv"
+                id="wizard-csv-input"
+                style={{ display: 'none' }}
+                onChange={handleCsvUpload}
+              />
+              <label htmlFor="wizard-csv-input" style={{ cursor: 'pointer', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <Upload size={32} style={{ color: 'var(--color-primary)' }} />
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {csvFile ? csvFile.name : 'Click to select CSV File'}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Format: IndexNumber, FullName, Email</span>
+              </label>
+            </div>
+
+            {csvStats.total > 0 && (
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, padding: '0.75rem', backgroundColor: '#ecfdf5', color: '#047857', borderRadius: '8px', fontSize: '0.8rem', textAlign: 'center' }}>
+                  <strong>{csvStats.valid}</strong> Valid Voters
+                </div>
+                <div style={{ flex: 1, padding: '0.75rem', backgroundColor: '#fef3c7', color: '#b45309', borderRadius: '8px', fontSize: '0.8rem', textAlign: 'center' }}>
+                  <strong>{csvStats.duplicates}</strong> Duplicates
+                </div>
+                <div style={{ flex: 1, padding: '0.75rem', backgroundColor: '#fef2f2', color: '#b91c1c', borderRadius: '8px', fontSize: '0.8rem', textAlign: 'center' }}>
+                  <strong>{csvStats.invalid}</strong> Invalid Rows
                 </div>
               </div>
             )}
+          </div>
+        )}
 
-            {/* Modal Controls */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid #F1F5F9' }}>
+        {/* STEP 4: Review & Launch */}
+        {wizardStep === 4 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ backgroundColor: '#F8FAFC', padding: '1.25rem', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+              <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 0.75rem 0', color: '#0F172A' }}>Election Summary</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem' }}>
+                <div><strong>Title:</strong> {title || 'Untitled'}</div>
+                <div><strong>Scope:</strong> {category || 'General'}</div>
+                <div><strong>Start:</strong> {startDate ? new Date(startDate).toLocaleString() : 'Not Set'}</div>
+                <div><strong>End:</strong> {endDate ? new Date(endDate).toLocaleString() : 'Not Set'}</div>
+                <div><strong>Roster:</strong> {csvStats.valid} eligible voters uploaded</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Controls */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid #F1F5F9' }}>
+          <button
+            type="button"
+            disabled={wizardStep === 1}
+            onClick={() => setWizardStep(prev => prev - 1)}
+            style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: wizardStep === 1 ? 'not-allowed' : 'pointer', opacity: wizardStep === 1 ? 0.5 : 1 }}
+          >
+            Back
+          </button>
+
+          {wizardStep < 4 ? (
+            <button
+              type="button"
+              onClick={() => setWizardStep(prev => prev + 1)}
+              style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}
+            >
+              Next Step ➔
+            </button>
+          ) : (
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button
                 type="button"
-                disabled={wizardStep === 1}
-                onClick={() => setWizardStep(prev => prev - 1)}
-                style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: wizardStep === 1 ? 'not-allowed' : 'pointer', opacity: wizardStep === 1 ? 0.5 : 1 }}
+                disabled={isCreating}
+                onClick={() => handleWizardSubmit(false)}
+                style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: 'pointer' }}
               >
-                Back
+                Save Draft
               </button>
-
-              {wizardStep < 4 ? (
-                <button
-                  type="button"
-                  onClick={() => setWizardStep(prev => prev + 1)}
-                  style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}
-                >
-                  Next Step ➔
-                </button>
-              ) : (
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button
-                    type="button"
-                    disabled={isCreating}
-                    onClick={() => handleWizardSubmit(false)}
-                    style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Save Draft
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isCreating}
-                    onClick={() => handleWizardSubmit(true)}
-                    style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}
-                  >
-                    {isCreating ? 'Creating Workspace...' : '🚀 Launch Workspace'}
-                  </button>
-                </div>
-              )}
+              <button
+                type="button"
+                disabled={isCreating}
+                onClick={() => handleWizardSubmit(true)}
+                style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}
+              >
+                {isCreating ? 'Creating Workspace...' : '🚀 Launch Workspace'}
+              </button>
             </div>
-
-          </div>
-        </div>,
-        document.body
-      ) : null}
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

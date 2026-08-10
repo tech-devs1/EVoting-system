@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import Modal from '@/components/Modal';
 import { apiRequest } from '@/lib/api';
 import { 
   Plus, 
@@ -392,167 +392,148 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
       )}
 
       {/* Add Position Modal */}
-      {mounted && isPosModalOpen && createPortal(
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsPosModalOpen(false); }}>
-          <div className="modal-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>Add Custom Position Type</h3>
-              <button onClick={() => setIsPosModalOpen(false)} style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#F1F5F9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}>✕</button>
-            </div>
-
-            <form onSubmit={handleCreatePosition} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Position Title *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Financial Secretary"
-                  value={posTitle}
-                  onChange={(e) => setPosTitle(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Max Candidate Choices Allowed</label>
-                <select
-                  value={posMaxChoices}
-                  onChange={(e) => setPosMaxChoices(Number(e.target.value))}
-                >
-                  <option value={1}>Select 1 (Single Winner / First-Past-The-Post)</option>
-                  <option value={2}>Select 2 (Top 2 Winners)</option>
-                  <option value={3}>Select 3 (Top 3 Winners)</option>
-                  <option value={4}>Select 4 (Top 4 Winners)</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <input
-                  type="checkbox"
-                  id="referendum-check"
-                  checked={posIsReferendum}
-                  onChange={(e) => setPosIsReferendum(e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <label htmlFor="referendum-check" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>
-                  Enable YES / NO Referendum Mode for Unopposed Candidates
-                </label>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="button" onClick={() => setIsPosModalOpen(false)} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" disabled={posSubmitting} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}>
-                  {posSubmitting ? 'Saving Position...' : 'Save Position'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={isPosModalOpen}
+        onClose={() => setIsPosModalOpen(false)}
+        title="Add Custom Position Type"
+      >
+        <form onSubmit={handleCreatePosition} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Position Title *</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Financial Secretary"
+              value={posTitle}
+              onChange={(e) => setPosTitle(e.target.value)}
+            />
           </div>
-        </div>,
-        document.body
-      )}
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Max Candidate Choices Allowed</label>
+            <select
+              value={posMaxChoices}
+              onChange={(e) => setPosMaxChoices(Number(e.target.value))}
+            >
+              <option value={1}>Select 1 (Single Winner / First-Past-The-Post)</option>
+              <option value={2}>Select 2 (Top 2 Winners)</option>
+              <option value={3}>Select 3 (Top 3 Winners)</option>
+              <option value={4}>Select 4 (Top 4 Winners)</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <input
+              type="checkbox"
+              id="referendum-check"
+              checked={posIsReferendum}
+              onChange={(e) => setPosIsReferendum(e.target.checked)}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <label htmlFor="referendum-check" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>
+              Enable YES / NO Referendum Mode for Unopposed Candidates
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <button type="button" onClick={() => setIsPosModalOpen(false)} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={posSubmitting} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}>
+              {posSubmitting ? 'Saving Position...' : 'Save Position'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Add Candidate Modal */}
-      {mounted && isCandModalOpen && createPortal(
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsCandModalOpen(false); }}>
-          <div className="modal-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>Register Candidate</h3>
-              <button onClick={() => setIsCandModalOpen(false)} style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#F1F5F9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}>✕</button>
-            </div>
-
-            <form onSubmit={handleCreateCandidate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Full Candidate Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Kwame Mensah"
-                  value={candName}
-                  onChange={(e) => setCandName(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Position Category *</label>
-                <select
-                  required
-                  value={candPosition}
-                  onChange={(e) => setCandPosition(e.target.value)}
-                >
-                  {positions.map(p => (
-                    <option key={p.id} value={p.title}>{p.title}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Candidate Photo URL</label>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={candPhotoUrl}
-                  onChange={(e) => setCandPhotoUrl(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Manifesto & Bio Snippet</label>
-                <textarea
-                  rows={3}
-                  placeholder="Brief campaign promise..."
-                  value={candManifesto}
-                  onChange={(e) => setCandManifesto(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="button" onClick={() => setIsCandModalOpen(false)} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" disabled={candSubmitting} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}>
-                  {candSubmitting ? 'Registering Candidate...' : 'Register Candidate'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={isCandModalOpen}
+        onClose={() => setIsCandModalOpen(false)}
+        title="Register Candidate"
+      >
+        <form onSubmit={handleCreateCandidate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Full Candidate Name *</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Kwame Mensah"
+              value={candName}
+              onChange={(e) => setCandName(e.target.value)}
+            />
           </div>
-        </div>,
-        document.body
-      )}
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Position Category *</label>
+            <select
+              required
+              value={candPosition}
+              onChange={(e) => setCandPosition(e.target.value)}
+            >
+              {positions.map(p => (
+                <option key={p.id} value={p.title}>{p.title}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Candidate Photo URL</label>
+            <input
+              type="url"
+              placeholder="https://..."
+              value={candPhotoUrl}
+              onChange={(e) => setCandPhotoUrl(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: '#0F172A' }}>Manifesto & Bio Snippet</label>
+            <textarea
+              rows={3}
+              placeholder="Brief campaign promise..."
+              value={candManifesto}
+              onChange={(e) => setCandManifesto(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <button type="button" onClick={() => setIsCandModalOpen(false)} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={candSubmitting} style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}>
+              {candSubmitting ? 'Registering Candidate...' : 'Register Candidate'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Live Ballot Preview Modal */}
-      {mounted && isPreviewOpen && createPortal(
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsPreviewOpen(false); }}>
-          <div className="modal-card" style={{ maxWidth: '640px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>📱 Live Voter Ballot Preview</h3>
-                <p style={{ fontSize: '0.85rem', color: '#64748B', margin: 0 }}>This is how voters will experience the ballot</p>
-              </div>
-              <button onClick={() => setIsPreviewOpen(false)} style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#F1F5F9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}>✕</button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {Object.entries(candidatesByPosition).map(([posTitle, candList]) => (
-                <div key={posTitle} style={{ backgroundColor: '#F8FAFC', padding: '1.25rem', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.85rem 0', color: '#2563EB' }}>{posTitle}</h4>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {candList.map(cand => (
-                      <div key={cand.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#DBEAFE', color: '#1D4ED8', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
-                            {cand.name.substring(0, 2).toUpperCase()}
-                          </div>
-                          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A' }}>{cand.name}</span>
-                        </div>
-                        <input type="radio" name={posTitle} disabled style={{ width: '18px', height: '18px' }} />
+      <Modal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        title="📱 Live Voter Ballot Preview"
+        subtitle="This is how voters will experience the ballot"
+        maxWidth="640px"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {Object.entries(candidatesByPosition).map(([posTitle, candList]) => (
+            <div key={posTitle} style={{ backgroundColor: '#F8FAFC', padding: '1.25rem', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.85rem 0', color: '#2563EB' }}>{posTitle}</h4>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {candList.map(cand => (
+                  <div key={cand.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#DBEAFE', color: '#1D4ED8', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                        {cand.name.substring(0, 2).toUpperCase()}
                       </div>
-                    ))}
+                      <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A' }}>{cand.name}</span>
+                    </div>
+                    <input type="radio" name={posTitle} disabled style={{ width: '18px', height: '18px' }} />
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }
