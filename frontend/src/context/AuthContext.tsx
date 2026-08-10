@@ -77,20 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password?: string, role: 'voter' | 'admin' | 'superadmin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }> => {
     setLoading(true);
     try {
-      if (role === 'superadmin') {
-        if (email !== 'supertech@admin.com' || password !== 'udiosuper') {
-          throw new Error('Invalid super administrator credentials.');
-        }
-        const uid = `superadmin_${email}`;
-        const mockToken = `MOCK_${uid}`;
-        localStorage.setItem('COMPSSA_token', `Bearer ${mockToken}`);
-        const userData = { uid, email, name: 'Super Administrator', role: 'superadmin' as const, status: 'active' };
-        localStorage.setItem('COMPSSA_user', JSON.stringify(userData));
-        setUser(userData);
-        router.push('/superadmin/dashboard');
-        return {};
-      } else {
-      const res = await apiRequest<{ status: string; data?: UserProfile; token?: string; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>('/auth/login', 'POST', { email, password });
+      const res = await apiRequest<{ status: string; data?: UserProfile; token?: string; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>('/auth/login', 'POST', { email, password, role });
       if (res.status === 'otp_required') {
         return { otpRequired: true, email: res.email, phone: res.phone, fallbackOtp: res.fallbackOtp, smsFailed: res.smsFailed };
       }
@@ -112,7 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return {};
       }
       throw new Error('Unexpected response from server.');
-      }
     } catch (error: any) {
       console.error('Login error:', error);
       throw error;
