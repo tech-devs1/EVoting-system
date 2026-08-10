@@ -96,6 +96,39 @@ async function sendEmailNotification(to, subject, text, html) {
     }
   }
 
+  // Attempt 4: Send via Resend REST API if configured (bypasses blocked cloud SMTP ports)
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (resendApiKey) {
+    try {
+      console.log('[Resend API] Attempting to dispatch email to', to);
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${resendApiKey}`
+        },
+        body: JSON.stringify({
+          from: 'HTU Elect <onboarding@resend.dev>',
+          to,
+          subject,
+          text,
+          html: html || `<div style="font-family: sans-serif; padding: 20px;"><h2>${subject}</h2><p>${text}</p></div>`
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('[Resend API] Email dispatched successfully to', to, 'ID:', data.id);
+        return data;
+      } else {
+        const errText = await res.text();
+        console.error('[Resend API Error]:', errText);
+      }
+    } catch (resendErr) {
+      console.error('[Resend API Exception]:', resendErr.message || resendErr);
+    }
+  }
+
   return null;
 }
 
