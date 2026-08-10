@@ -1,613 +1,140 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
-import { apiRequest } from '@/lib/api';
-import { 
-  ShieldCheck, 
-  Hash, 
-  ArrowRight, 
-  User, 
-  Mail, 
-  Lock, 
-  MailCheck, 
-  Check,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  ArrowLeft,
-  Phone
-} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function RegisterPage() {
-  const { register } = useAuth();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [studentId, setStudentId] = useState('');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [infoMessage, setInfoMessage] = useState('');
-  const [otpEmail, setOtpEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [resendMsg, setResendMsg] = useState('');
-  const [hasPhone, setHasPhone] = useState(false);
-  const [fallbackOtp, setFallbackOtp] = useState('');
-
-  // Countdown effect for resend button
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (resendCooldown > 0) {
-      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [resendCooldown]);
-
-
-
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  const handleStep1Submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!studentId) {
-      setError('Student ID is required');
-      return;
-    }
-    
-    // Auto-prefix with 0 if it's purely numeric and doesn't start with 0
-    let formattedId = studentId.trim();
-    if (!formattedId.startsWith('0') && /^\d+$/.test(formattedId)) {
-      formattedId = '0' + formattedId;
-      setStudentId(formattedId); // Update the state so the user sees it too
-    }
-    
-    // Validate student ID - only allow alphanumeric and basic characters
-    const studentIdRegex = /^[a-zA-Z0-9-]+$/;
-    if (!studentIdRegex.test(formattedId)) {
-      setError('Student ID contains invalid characters. Only letters, numbers, and hyphens are allowed.');
-      return;
-    }
-    
-    setError('');
-    setInfoMessage('');
-    setLoading(true);
-    try {
-      const res = await apiRequest<{ status: string; data: { name: string; email: string; hasPhone?: boolean }; fallbackOtp?: string; message?: string }>('/auth/verify-student', 'POST', { studentId: formattedId });
-      if (res.status === 'success') {
-        setName(res.data.name);
-        setEmail(res.data.email);
-        setHasPhone(!!res.data.hasPhone);
-        setCurrentStep(2);
-      } else if (res.status === 'incomplete_registration') {
-        // User has incomplete registration - redirect to OTP verification
-        setName(res.data.name);
-        setEmail(res.data.email);
-        setOtpEmail(res.data.email);
-        if (res.fallbackOtp) {
-          setFallbackOtp(res.fallbackOtp);
-        }
-        setInfoMessage(res.message || 'You have an incomplete registration. Please complete the verification process.');
-        setCurrentStep(4); // Skip to OTP verification step
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to verify student ID.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStep2Submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !email) {
-      setError('Name and Email are required');
-      return;
-    }
-    // Validate phone number (Ghana format)
-    const phoneClean = phone.replace(/\s+/g, '');
-    if (!phoneClean || !/^(\+233|0)\d{9}$/.test(phoneClean)) {
-      setError('Please enter a valid Ghana phone number (e.g. 0241234567 or +233241234567)');
-      return;
-    }
-    setError('');
-    setCurrentStep(3);
-  };
-
-  const handleStep3Submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    
-    // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
-    if (!passwordRegex.test(password)) {
-      setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    
-    setError('');
-    setLoading(true);
-    try {
-      const result = await register(studentId, email, name, password, phone, '');
-      if (result?.otpRequired && result.email) {
-        setOtpEmail(result.email);
-        setCurrentStep(4); // Skip to OTP verification step
-      } else {
-        setCurrentStep(5); // Success step
-      }
-    } catch (err: any) {
-      setError(err.message || 'Registration failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-    if (value && index < 5) otpRefs.current[index + 1]?.focus();
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus();
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const newOtp = [...otp];
-    pasted.split('').forEach((char, i) => { newOtp[i] = char; });
-    setOtp(newOtp);
-    otpRefs.current[Math.min(pasted.length, 5)]?.focus();
-  };
-
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const otpCode = otp.join('');
-    if (otpCode.length !== 6) { setError('Please enter the full 6-digit code.'); return; }
-    setError('');
-    setInfoMessage('');
-    setLoading(true);
-    try {
-      const res = await apiRequest<{ status: string; token: string; data: any }>('/auth/verify-otp', 'POST', { email: otpEmail, otp: otpCode });
-      if (res.status === 'success') {
-        setCurrentStep(5); // success screen
-      }
-    } catch (err: any) {
-      setError(err.message || 'Invalid OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    setResendMsg('');
-    try {
-      const res = await apiRequest<{ status: string; fallbackOtp?: string; message?: string }>('/auth/resend-otp', 'POST', { email: otpEmail });
-      if (res.fallbackOtp) {
-        setFallbackOtp(res.fallbackOtp);
-      }
-      setResendMsg(res.fallbackOtp ? 'OTP generation fallback activated.' : 'A new code has been sent to your email/SMS.');
-      setOtp(['', '', '', '', '', '']);
-      otpRefs.current[0]?.focus();
-      // start 60‑second cooldown
-      setResendCooldown(60);
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend.');
-    }
-  };
-
-  const renderStepNumber = (step: number) => {
-    if (currentStep > step) {
-      return (
-        <div className="reg-step completed" key={step}>
-          <Check size={14} />
-        </div>
-      );
-    }
-    return (
-      <div className={`reg-step ${currentStep === step ? 'active' : ''}`} key={step}>
-        {step}
-      </div>
-    );
-  };
+  const router = useRouter();
 
   return (
-    <div className="auth-container animate-page-enter">
-      <div className="auth-mesh"></div>
-      
-      <div className="glass-card-strong auth-card" style={{ maxWidth: '450px', width: '100%', margin: '0 auto' }}>
-        <div className="auth-header">
-          <div style={{ marginBottom: 'var(--space-4)' }}>
-            <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
-              <ArrowLeft size={14} /> Back to Home
-            </Link>
-          </div>
-          <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: 600, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
-              HTU Elect <span style={{ color: 'var(--color-primary)' }}>✓</span>
-            </span>
-          </div>
-          <h2 className="auth-title" style={{ marginTop: 'var(--space-4)' }}>Voter Registration</h2>
-          <p className="auth-subtitle">Verify your student profile to claim voter verification certificates.</p>
+    <div style={{
+      display: 'flex',
+      minHeight: '100vh',
+      width: '100vw',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'var(--bg-primary, #F8FAFC)',
+      fontFamily: 'var(--font-body, system-ui, sans-serif)',
+      padding: '1.5rem',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Decorative gradient mesh background */}
+      <div style={{
+        position: 'absolute',
+        width: '600px',
+        height: '600px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%)',
+        top: '-10%',
+        left: '-10%',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute',
+        width: '500px',
+        height: '500px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%)',
+        bottom: '-10%',
+        right: '-10%',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }} />
+
+      <div style={{
+        width: '100%',
+        maxWidth: '480px',
+        backgroundColor: 'var(--bg-secondary, #ffffff)',
+        borderRadius: 'var(--radius-xl, 12px)',
+        border: '1px solid var(--border-color, #E2E8F0)',
+        padding: '3rem 2.25rem',
+        boxShadow: 'var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.05))',
+        textAlign: 'center',
+        position: 'relative',
+        zIndex: 1
+      }}>
+        
+        {/* Header Icon */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          backgroundColor: 'var(--color-primary-50, #EFF6FF)',
+          color: 'var(--color-primary, #2563EB)',
+          marginBottom: '1.5rem'
+        }}>
+          <ShieldCheck size={36} />
         </div>
 
-        <div className="reg-progress" style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', marginBottom: 'var(--space-6)', alignItems: 'center' }}>
-          <div 
-            className="reg-progress-bar" 
-            style={{ 
-              width: `${((currentStep - 1) / 4) * 100}%`,
-              height: '2px',
-              background: 'var(--color-primary)',
-              position: 'absolute',
-              top: '50%',
-              left: 0,
-              zIndex: 1,
-              transition: 'width var(--transition-base)'
-            }}
-          ></div>
-          {renderStepNumber(1)}
-          {renderStepNumber(2)}
-          {renderStepNumber(3)}
-          {renderStepNumber(4)}
-          {renderStepNumber(5)}
+        {/* Title */}
+        <h2 style={{
+          fontSize: '1.75rem',
+          fontWeight: 800,
+          color: 'var(--text-primary, #0F172A)',
+          margin: '0 0 0.75rem 0',
+          letterSpacing: '-0.025em'
+        }}>
+          Registration Streamlined
+        </h2>
+
+        {/* Message */}
+        <p style={{
+          fontSize: 'var(--text-sm, 0.875rem)',
+          color: 'var(--text-secondary, #475569)',
+          lineHeight: 1.6,
+          margin: '0 0 2rem 0'
+        }}>
+          Voter registration is no longer required. HTU Elect has transitioned exclusively to secure **Google Single Sign-On**. 
+          <br /><br />
+          You can log in directly using your official university or personal Google account.
+        </p>
+
+        {/* Action Button */}
+        <button
+          onClick={() => router.push('/login')}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            padding: '0.9rem 1.25rem',
+            backgroundColor: 'var(--color-primary, #2563EB)',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: 'var(--radius-lg, 10px)',
+            fontSize: 'var(--text-sm, 0.875rem)',
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.15)',
+            transition: 'transform var(--transition-fast, 100ms)'
+          }}
+        >
+          <span>Proceed to Sign In</span>
+          <ArrowRight size={16} />
+        </button>
+
+        {/* Footer info decoration */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          marginTop: '1.75rem',
+          color: 'var(--text-muted, #64748B)',
+          fontSize: 'var(--text-xs, 0.75rem)'
+        }}>
+          <Sparkles size={12} style={{ color: 'var(--color-warning, #D97706)' }} />
+          <span>No password configuration needed.</span>
         </div>
 
-        {error && (
-          <div className="alert alert-danger" style={{ 
-            padding: 'var(--space-3) var(--space-4)', 
-            borderRadius: 'var(--radius-md)', 
-            marginBottom: 'var(--space-4)',
-            fontSize: 'var(--text-sm)',
-            background: 'var(--color-danger-bg)',
-            color: 'var(--color-danger)',
-            border: '1px solid rgba(239, 68, 68, 0.2)'
-          }}>
-            {error}
-          </div>
-        )}
-
-        {infoMessage && (
-          <div className="alert alert-info" style={{ 
-            padding: 'var(--space-3) var(--space-4)', 
-            borderRadius: 'var(--radius-md)', 
-            marginBottom: 'var(--space-4)',
-            fontSize: 'var(--text-sm)',
-            background: 'var(--color-primary-100)',
-            color: 'var(--color-primary)',
-            border: '1px solid rgba(59, 130, 246, 0.2)'
-          }}>
-            {infoMessage}
-          </div>
-        )}
-
-        <div id="register-card-body">
-          {currentStep === 1 && (
-            <form onSubmit={handleStep1Submit}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="reg-id">Student Index Number</label>
-                <div className="form-input-container">
-                  <Hash size={18} className="form-input-icon" />
-                  <input 
-                    type="text" 
-                    id="reg-id" 
-                    className="form-input form-input-with-icon" 
-                    placeholder="e.g. 0324080516" 
-                    required 
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                  />
-                </div>
-                <p style={{ 
-                  marginTop: 'var(--space-2)', 
-                  fontSize: 'var(--text-xs)', 
-                  color: 'var(--text-tertiary)',
-                  lineHeight: '1.4' 
-                }}>
-                  * Please ensure your index number is prefixed with a 0 (e.g. 0324080516). We will automatically add it for you if missing.
-                </p>
-              </div>
-              <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading} style={{ marginTop: 'var(--space-4)' }}>
-                {loading ? 'Verifying...' : 'Verify Student Record'} <ArrowRight size={18} style={{ marginLeft: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
-              </button>
-            </form>
-          )}
-
-          {currentStep === 2 && (
-            <form onSubmit={handleStep2Submit}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="reg-name">Full Name (Matches ID)</label>
-                <div className="form-input-container">
-                  <User size={18} className="form-input-icon" />
-                  <input 
-                    type="text" 
-                    id="reg-name" 
-                    className="form-input form-input-with-icon" 
-                    placeholder="Alex Mercer" 
-                    required 
-                    readOnly
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="reg-email">Institution Email Address</label>
-                <div className="form-input-container">
-                  <Mail size={18} className="form-input-icon" />
-                  <input 
-                    type="email" 
-                    id="reg-email" 
-                    className="form-input form-input-with-icon" 
-                    placeholder="id@htu.edu.gh" 
-                    required 
-                    readOnly
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="reg-phone">Phone Number (for OTP verification)</label>
-                <div className="form-input-container">
-                  <Phone size={18} className="form-input-icon" />
-                  <input 
-                    type="tel" 
-                    id="reg-phone" 
-                    className="form-input form-input-with-icon" 
-                    placeholder="e.g. 0241234567" 
-                    required 
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </div>
-                <p style={{ 
-                  marginTop: 'var(--space-2)', 
-                  fontSize: 'var(--text-xs)', 
-                  color: hasPhone ? 'var(--color-warning, #d97706)' : 'var(--text-tertiary)',
-                  lineHeight: '1.4' 
-                }}>
-                  {hasPhone
-                    ? '⚠ Your school record has a phone number on file. You must enter that exact number to proceed.'
-                    : '* Enter your Ghana phone number. OTP verification codes will be sent here via SMS.'}
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
-                <button type="button" className="btn btn-secondary btn-full" onClick={() => setCurrentStep(1)}>Back</button>
-                <button type="submit" className="btn btn-primary btn-full">Continue</button>
-              </div>
-            </form>
-          )}
-
-          {currentStep === 3 && (
-            <form onSubmit={handleStep3Submit}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="reg-password">Password</label>
-                <div className="form-input-container" style={{ position: 'relative' }}>
-                  <Lock size={18} className="form-input-icon" />
-                  <input 
-                    type={showPassword ? "text" : "password"} 
-                    id="reg-password" 
-                    className="form-input form-input-with-icon" 
-                    placeholder="••••••••••••" 
-                    required 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)'
-                    }}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                
-                {/* Real-time password requirement indicator */}
-                <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                  <p style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>Password Requirements:</p>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {[
-                      { label: 'Minimum 8 characters', test: (p: string) => p.length >= 8 },
-                      { label: 'At least one uppercase letter (A-Z)', test: (p: string) => /[A-Z]/.test(p) },
-                      { label: 'At least one lowercase letter (a-z)', test: (p: string) => /[a-z]/.test(p) },
-                      { label: 'At least one special character (e.g. !@#$...)', test: (p: string) => /[^A-Za-z0-9]/.test(p) },
-                    ].map((req, index) => {
-                      const isFulfilled = req.test(password);
-                      return (
-                        <li key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: isFulfilled ? 'var(--color-success)' : 'var(--text-tertiary)' }}>
-                          <span style={{ 
-                            display: 'inline-flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
-                            width: '14px', 
-                            height: '14px', 
-                            borderRadius: '50%', 
-                            border: `1px solid ${isFulfilled ? 'var(--color-success)' : 'var(--text-tertiary)'}`,
-                            background: isFulfilled ? 'rgba(34,197,94,0.1)' : 'transparent',
-                            fontSize: '9px',
-                            fontWeight: 'bold',
-                            color: isFulfilled ? 'var(--color-success)' : 'inherit'
-                          }}>
-                            {isFulfilled ? '✓' : ''}
-                          </span>
-                          {req.label}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="reg-confirm">Confirm Password</label>
-                <div className="form-input-container" style={{ position: 'relative' }}>
-                  <Lock size={18} className="form-input-icon" />
-                  <input 
-                    type={showConfirmPassword ? "text" : "password"} 
-                    id="reg-confirm" 
-                    className="form-input form-input-with-icon" 
-                    placeholder="••••••••••••" 
-                    required 
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={{
-                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)'
-                    }}
-                  >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
-                <button type="button" className="btn btn-secondary btn-full" onClick={() => setCurrentStep(2)} disabled={loading}>Back</button>
-                <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-                  {loading ? 'Registering...' : 'Register'}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {currentStep === 4 && (
-            <form onSubmit={handleOtpSubmit}>
-              <div style={{ textAlign: 'center', marginBottom: 'var(--space-5)' }}>
-                <div style={{
-                  width: '60px', height: '60px', borderRadius: '50%',
-                  background: 'var(--color-primary-100)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto var(--space-3) auto'
-                }}>
-                  <CheckCircle2 size={30} style={{ color: 'var(--color-primary)' }} />
-                </div>
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                  A 6-digit verification code was sent to your email.<br />Enter it below to verify your account.
-                </p>
-              </div>
-
-              {fallbackOtp && (
-                <div style={{
-                  padding: 'var(--space-3)',
-                  backgroundColor: 'var(--color-warning-bg, #fef3c7)',
-                  color: 'var(--color-warning, #d97706)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--text-sm)',
-                  marginBottom: 'var(--space-4)',
-                  fontWeight: 600,
-                  textAlign: 'center'
-                }}>
-                  🔑 Demo Code: {fallbackOtp}
-                </div>
-              )}
-
-              {resendMsg && (
-                <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)', fontSize: 'var(--text-sm)', background: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
-                  {resendMsg}
-                </div>
-              )}
-
-              {/* 6-digit OTP boxes */}
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: 'var(--space-6)' }}>
-                {otp.map((digit, i) => (
-                  <input
-                    key={i}
-                    ref={el => { otpRefs.current[i] = el; }}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={e => handleOtpChange(i, e.target.value)}
-                    onKeyDown={e => handleOtpKeyDown(i, e)}
-                    onPaste={i === 0 ? handleOtpPaste : undefined}
-                    style={{
-                      width: '48px', height: '54px',
-                      textAlign: 'center',
-                      fontSize: '1.4rem',
-                      fontWeight: 700,
-                      border: `2px solid ${digit ? 'var(--color-primary)' : 'var(--border-color)'}`,
-                      borderRadius: 'var(--radius-md)',
-                      background: 'var(--bg-input)',
-                      color: 'var(--text-primary)',
-                      outline: 'none',
-                      transition: 'border-color 0.2s',
-                    }}
-                    disabled={loading}
-                  />
-                ))}
-              </div>
-
-              <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading}>
-                <ShieldCheck size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
-                {loading ? 'Verifying...' : 'Verify & Complete Registration'}
-              </button>
-
-              <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Didn't get the code? </span>
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={loading || resendCooldown > 0}
-                  style={{
-                    fontSize: 'var(--text-sm)',
-                    color: resendCooldown > 0 ? 'var(--text-muted)' : 'var(--color-primary)',
-                    fontWeight: 'bold',
-                    background: 'none',
-                    border: 'none',
-                    cursor: resendCooldown > 0 ? 'default' : 'pointer'
-                  }}
-                >
-                  {resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : 'Resend Code'}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {currentStep === 5 && (
-            <div className="success-screen" style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
-              <div className="success-icon-wrapper" style={{ 
-                width: '64px', height: '64px', borderRadius: '50%', 
-                background: 'var(--color-success-bg)', color: 'var(--color-success)', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                margin: '0 auto var(--space-4) auto' 
-              }}>
-                <MailCheck size={32} />
-              </div>
-              <h3 className="auth-title">Account Verified & Created!</h3>
-              <p className="auth-subtitle" style={{ marginBottom: 'var(--space-6)' }}>
-                Your identity has been confirmed. Please proceed to the login terminal to authenticate with your new password.
-              </p>
-              <Link href="/login" className="btn btn-primary btn-full hover-lift">Proceed to Login Terminal</Link>
-            </div>
-          )}
-        </div>
-
-        <div className="auth-security-badge" style={{ marginTop: 'var(--space-6)' }}>
-          <ShieldCheck size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} /> 
-          Protected by TECHDEVSSTUDIO  ✓
-        </div>
       </div>
     </div>
   );

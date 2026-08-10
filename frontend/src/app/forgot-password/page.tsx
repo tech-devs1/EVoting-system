@@ -1,285 +1,139 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { ShieldCheck, Mail, KeyRound, ArrowLeft, Lock, Eye, EyeOff } from 'lucide-react';
-import { apiRequest } from '@/lib/api';
+import React from 'react';
 import { useRouter } from 'next/navigation';
+import { ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [fallbackCode, setFallbackCode] = useState('');
-
-  const handleRequestCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    
-    // Validate email - only allow alphanumeric, @, ., -, _
-    const emailRegex = /^[a-zA-Z0-9@._-]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Email contains invalid characters. Only letters, numbers, @, ., -, and _ are allowed.');
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const res = await apiRequest<{ status: string; fallbackCode?: string; message: string }>('/auth/forgot-password', 'POST', { email });
-      if (res.status === 'success') {
-        setStep(2);
-        if (res.fallbackCode) {
-          setFallbackCode(res.fallbackCode);
-        }
-        setSuccess(res.message);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to request reset code.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    
-    // Validate reset code - only allow digits
-    const codeRegex = /^\d+$/;
-    if (!codeRegex.test(code)) {
-      setError('Reset code must contain only numbers.');
-      return;
-    }
-    
-    // Validate new password - only allow alphanumeric and basic special characters (no emojis)
-    const passwordCharRegex = /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~ ]+$/;
-    if (!passwordCharRegex.test(newPassword)) {
-      setError('Password contains invalid characters. Only letters, numbers, and basic special characters are allowed.');
-      return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await apiRequest<{ status: string; message: string }>('/auth/reset-password', 'POST', { 
-        email, 
-        code, 
-        newPassword 
-      });
-      if (res.status === 'success') {
-        setStep(3);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to reset password. Please check your code.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
-    <div className="auth-container animate-page-enter">
-      <div className="auth-mesh"></div>
-      
-      <div className="glass-card-strong auth-card" style={{ maxWidth: '450px', width: '100%', margin: '0 auto' }}>
-        <div className="auth-header">
-          <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
-            <span style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold' }}>HTU Elect ✓</span>
-          </div>
-          <h2 className="auth-title">Password Recovery</h2>
-          <p className="auth-subtitle">Securely reset your terminal access key.</p>
+    <div style={{
+      display: 'flex',
+      minHeight: '100vh',
+      width: '100vw',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'var(--bg-primary, #F8FAFC)',
+      fontFamily: 'var(--font-body, system-ui, sans-serif)',
+      padding: '1.5rem',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Decorative gradient mesh background */}
+      <div style={{
+        position: 'absolute',
+        width: '600px',
+        height: '600px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%)',
+        top: '-10%',
+        left: '-10%',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute',
+        width: '500px',
+        height: '500px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%)',
+        bottom: '-10%',
+        right: '-10%',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }} />
+
+      <div style={{
+        width: '100%',
+        maxWidth: '480px',
+        backgroundColor: 'var(--bg-secondary, #ffffff)',
+        borderRadius: 'var(--radius-xl, 12px)',
+        border: '1px solid var(--border-color, #E2E8F0)',
+        padding: '3rem 2.25rem',
+        boxShadow: 'var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.05))',
+        textAlign: 'center',
+        position: 'relative',
+        zIndex: 1
+      }}>
+        
+        {/* Header Icon */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          backgroundColor: 'var(--color-primary-50, #EFF6FF)',
+          color: 'var(--color-primary, #2563EB)',
+          marginBottom: '1.5rem'
+        }}>
+          <ShieldCheck size={36} />
         </div>
 
-        {error && <div className="auth-error">{error}</div>}
-        {success && step === 2 && <div className="auth-error" style={{ background: 'rgba(34,197,94,0.1)', color: 'var(--color-success)', border: '1px solid rgba(34,197,94,0.3)' }}>{success}</div>}
+        {/* Title */}
+        <h2 style={{
+          fontSize: '1.75rem',
+          fontWeight: 800,
+          color: 'var(--text-primary, #0F172A)',
+          margin: '0 0 0.75rem 0',
+          letterSpacing: '-0.025em'
+        }}>
+          Password Recovery Deprecated
+        </h2>
 
-        {step === 1 && (
-          <form onSubmit={handleRequestCode}>
-            <div className="form-group">
-              <label className="form-label" htmlFor="reset-email">University Email</label>
-              <div className="form-input-container">
-                <Mail size={18} className="form-input-icon" />
-                <input 
-                  type="email" 
-                  id="reset-email" 
-                  className="form-input form-input-with-icon" 
-                  placeholder="student@htu.edu.gh" 
-                  required 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
+        {/* Message */}
+        <p style={{
+          fontSize: 'var(--text-sm, 0.875rem)',
+          color: 'var(--text-secondary, #475569)',
+          lineHeight: 1.6,
+          margin: '0 0 2rem 0'
+        }}>
+          Password recovery is no longer required. HTU Elect has transitioned exclusively to secure **Google Single Sign-On**.
+          <br /><br />
+          Since you log in directly using your Google account, you do not need to configure or recover passwords here.
+        </p>
 
-            <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading} style={{ marginTop: 'var(--space-4)' }}>
-              {loading ? 'Requesting...' : 'Send Reset Code'}
-            </button>
-          </form>
-        )}
+        {/* Action Button */}
+        <button
+          onClick={() => router.push('/login')}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            padding: '0.9rem 1.25rem',
+            backgroundColor: 'var(--color-primary, #2563EB)',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: 'var(--radius-lg, 10px)',
+            fontSize: 'var(--text-sm, 0.875rem)',
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.15)',
+            transition: 'transform var(--transition-fast, 100ms)'
+          }}
+        >
+          <span>Return to Sign In</span>
+          <ArrowRight size={16} />
+        </button>
 
-        {step === 2 && (
-          <form onSubmit={handleResetPassword}>
-            {fallbackCode && (
-              <div style={{
-                padding: 'var(--space-3)',
-                backgroundColor: 'rgba(217, 119, 6, 0.15)',
-                color: 'var(--color-warning, #d97706)',
-                borderRadius: 'var(--radius-md, 8px)',
-                fontSize: 'var(--text-sm, 14px)',
-                marginBottom: 'var(--space-4)',
-                fontWeight: 600,
-                textAlign: 'center',
-                border: '1px solid rgba(217, 119, 6, 0.3)'
-              }}>
-                🔑 Demo Code: {fallbackCode}
-              </div>
-            )}
+        {/* Footer info decoration */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          marginTop: '1.75rem',
+          color: 'var(--text-muted, #64748B)',
+          fontSize: 'var(--text-xs, 0.75rem)'
+        }}>
+          <Sparkles size={12} style={{ color: 'var(--color-warning, #D97706)' }} />
+          <span>Login authorization managed by Google security.</span>
+        </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="reset-code">6-Digit Reset Code</label>
-              <div className="form-input-container">
-                <KeyRound size={18} className="form-input-icon" />
-                <input 
-                  type="text" 
-                  id="reset-code" 
-                  className="form-input form-input-with-icon" 
-                  placeholder="123456" 
-                  required 
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-              <label className="form-label" htmlFor="new-pass">New Password</label>
-              <div className="form-input-container" style={{ position: 'relative' }}>
-                <Lock size={18} className="form-input-icon" />
-                <input 
-                  type={showPassword ? "text" : "password"} 
-                  id="new-pass" 
-                  className="form-input form-input-with-icon" 
-                  placeholder="••••••••••••" 
-                  required 
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)'
-                  }}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              
-              {/* Real-time password requirement indicator */}
-              <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                <p style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>Password Requirements:</p>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {[
-                    { label: 'Minimum 8 characters', test: (p: string) => p.length >= 8 },
-                    { label: 'At least one uppercase letter (A-Z)', test: (p: string) => /[A-Z]/.test(p) },
-                    { label: 'At least one lowercase letter (a-z)', test: (p: string) => /[a-z]/.test(p) },
-                    { label: 'At least one special character (e.g. !@#$...)', test: (p: string) => /[^A-Za-z0-9]/.test(p) },
-                  ].map((req, index) => {
-                    const isFulfilled = req.test(newPassword);
-                    return (
-                      <li key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: isFulfilled ? 'var(--color-success)' : 'var(--text-tertiary)' }}>
-                        <span style={{ 
-                          display: 'inline-flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center', 
-                          width: '14px', 
-                          height: '14px', 
-                          borderRadius: '50%', 
-                          border: `1px solid ${isFulfilled ? 'var(--color-success)' : 'var(--text-tertiary)'}`,
-                          background: isFulfilled ? 'rgba(34,197,94,0.1)' : 'transparent',
-                          fontSize: '9px',
-                          fontWeight: 'bold',
-                          color: isFulfilled ? 'var(--color-success)' : 'inherit'
-                        }}>
-                          {isFulfilled ? '✓' : ''}
-                        </span>
-                        {req.label}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </div>
-
-            <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-              <label className="form-label" htmlFor="confirm-pass">Confirm Password</label>
-              <div className="form-input-container" style={{ position: 'relative' }}>
-                <Lock size={18} className="form-input-icon" />
-                <input 
-                  type={showConfirmPassword ? "text" : "password"} 
-                  id="confirm-pass" 
-                  className="form-input form-input-with-icon" 
-                  placeholder="••••••••••••" 
-                  required 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{
-                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)'
-                  }}
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-full hover-lift" disabled={loading} style={{ marginTop: 'var(--space-4)' }}>
-              {loading ? 'Verifying...' : 'Reset Password'}
-            </button>
-          </form>
-        )}
-
-        {step === 3 && (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(34,197,94,0.1)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--space-4) auto' }}>
-              <ShieldCheck size={32} />
-            </div>
-            <h3 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-2)' }}>Password Reset Successful</h3>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-6)', fontSize: 'var(--text-sm)' }}>Your terminal access key has been securely updated.</p>
-            <Link href="/login" className="btn btn-primary btn-full hover-lift">
-              Return to Login
-            </Link>
-          </div>
-        )}
-
-        {step !== 3 && (
-          <div style={{ marginTop: 'var(--space-6)', textAlign: 'center' }}>
-            <Link href="/login" style={{ fontSize: 'var(--text-sm)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <ArrowLeft size={14} /> Back to Login
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );
