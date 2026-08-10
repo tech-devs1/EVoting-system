@@ -18,6 +18,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [fallbackCode, setFallbackCode] = useState('');
 
   const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,9 +33,12 @@ export default function ForgotPasswordPage() {
     
     setLoading(true);
     try {
-      const res = await apiRequest<{ status: string; message: string }>('/auth/forgot-password', 'POST', { email });
+      const res = await apiRequest<{ status: string; fallbackCode?: string; message: string }>('/auth/forgot-password', 'POST', { email });
       if (res.status === 'success') {
         setStep(2);
+        if (res.fallbackCode) {
+          setFallbackCode(res.fallbackCode);
+        }
         setSuccess(res.message);
       }
     } catch (err: any) {
@@ -128,6 +132,22 @@ export default function ForgotPasswordPage() {
 
         {step === 2 && (
           <form onSubmit={handleResetPassword}>
+            {fallbackCode && (
+              <div style={{
+                padding: 'var(--space-3)',
+                backgroundColor: 'rgba(217, 119, 6, 0.15)',
+                color: 'var(--color-warning, #d97706)',
+                borderRadius: 'var(--radius-md, 8px)',
+                fontSize: 'var(--text-sm, 14px)',
+                marginBottom: 'var(--space-4)',
+                fontWeight: 600,
+                textAlign: 'center',
+                border: '1px solid rgba(217, 119, 6, 0.3)'
+              }}>
+                🔑 Demo Code: {fallbackCode}
+              </div>
+            )}
+
             <div className="form-group">
               <label className="form-label" htmlFor="reset-code">6-Digit Reset Code</label>
               <div className="form-input-container">

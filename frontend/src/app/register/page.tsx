@@ -39,6 +39,7 @@ export default function RegisterPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendMsg, setResendMsg] = useState('');
   const [hasPhone, setHasPhone] = useState(false);
+  const [fallbackOtp, setFallbackOtp] = useState('');
 
   // Countdown effect for resend button
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function RegisterPage() {
     setInfoMessage('');
     setLoading(true);
     try {
-      const res = await apiRequest<{ status: string; data: { name: string; email: string; hasPhone?: boolean }; message?: string }>('/auth/verify-student', 'POST', { studentId: formattedId });
+      const res = await apiRequest<{ status: string; data: { name: string; email: string; hasPhone?: boolean }; fallbackOtp?: string; message?: string }>('/auth/verify-student', 'POST', { studentId: formattedId });
       if (res.status === 'success') {
         setName(res.data.name);
         setEmail(res.data.email);
@@ -89,6 +90,9 @@ export default function RegisterPage() {
         setName(res.data.name);
         setEmail(res.data.email);
         setOtpEmail(res.data.email);
+        if (res.fallbackOtp) {
+          setFallbackOtp(res.fallbackOtp);
+        }
         setInfoMessage(res.message || 'You have an incomplete registration. Please complete the verification process.');
         setCurrentStep(4); // Skip to OTP verification step
       }
@@ -193,8 +197,11 @@ export default function RegisterPage() {
   const handleResend = async () => {
     setResendMsg('');
     try {
-      await apiRequest('/auth/resend-otp', 'POST', { email: otpEmail });
-      setResendMsg('A new code has been sent to your phone via SMS.');
+      const res = await apiRequest<{ status: string; fallbackOtp?: string; message?: string }>('/auth/resend-otp', 'POST', { email: otpEmail });
+      if (res.fallbackOtp) {
+        setFallbackOtp(res.fallbackOtp);
+      }
+      setResendMsg(res.fallbackOtp ? 'OTP generation fallback activated.' : 'A new code has been sent to your email/SMS.');
       setOtp(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
       // start 60‑second cooldown
@@ -500,6 +507,21 @@ export default function RegisterPage() {
                   A 6-digit verification code was sent to your email.<br />Enter it below to verify your account.
                 </p>
               </div>
+
+              {fallbackOtp && (
+                <div style={{
+                  padding: 'var(--space-3)',
+                  backgroundColor: 'var(--color-warning-bg, #fef3c7)',
+                  color: 'var(--color-warning, #d97706)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--text-sm)',
+                  marginBottom: 'var(--space-4)',
+                  fontWeight: 600,
+                  textAlign: 'center'
+                }}>
+                  🔑 Demo Code: {fallbackOtp}
+                </div>
+              )}
 
               {resendMsg && (
                 <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)', fontSize: 'var(--text-sm)', background: 'var(--color-success-bg)', color: 'var(--color-success)' }}>

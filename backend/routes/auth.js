@@ -111,8 +111,10 @@ async function generateAndSendOtp(userDocRef, email, name, phoneNumber = null) {
   // 1. Send via EmailJS
   try {
     if (email) {
-      await sendOtpViaEmailJS(email, name, otp);
-      emailSent = true;
+      const emailResult = await sendOtpViaEmailJS(email, name, otp);
+      if (emailResult) {
+        emailSent = true;
+      }
     }
   } catch (emailErr) {
     console.error('[OTP] Email delivery failed:', emailErr.message || emailErr);
@@ -130,6 +132,30 @@ async function generateAndSendOtp(userDocRef, email, name, phoneNumber = null) {
 
   return { otp, emailSent, smsSent };
 }
+
+// Test Email Debug endpoint
+router.post('/test-email-debug', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ status: 'error', message: 'Email is required.' });
+
+    console.log('[DEBUG EMAIL] Request received to test email dispatch to:', email);
+    const result = await sendOtpViaEmailJS(email, 'Debug User', '123456');
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Debug process completed.',
+      result: result ? 'Success (email sent)' : 'Failed (returned null/false)',
+      config: {
+        GMAIL_USER: process.env.GMAIL_USER || 'issakasaddick14@gmail.com',
+        GMAIL_APP_PASSWORD_length: (process.env.GMAIL_APP_PASSWORD || '').length
+      }
+    });
+  } catch (error) {
+    console.error('[DEBUG EMAIL Error]:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+});
 
 // Verify student ID and fetch details before registration
 router.post('/verify-student', async (req, res) => {
@@ -161,12 +187,14 @@ router.post('/verify-student', async (req, res) => {
 
     // Case 2: Partial registration (has password but hasn't verified OTP yet)
     if (studentData.password) {
+      let otpResult = null;
       // Try to send a new OTP so they can complete verification
       try {
-        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name, studentData.phone || null);
+        otpResult = await generateAndSendOtp(studentDocRef, studentData.email, studentData.name, studentData.phone || null);
       } catch (otpErr) {
         console.error('OTP delivery failed for incomplete registration (user can resend):', otpErr.message || otpErr);
       }
+      const dispatchSuccess = otpResult?.emailSent || otpResult?.smsSent;
       return res.status(200).json({
         status: 'incomplete_registration',
         data: {
@@ -174,6 +202,7 @@ router.post('/verify-student', async (req, res) => {
           email: studentData.email,
           phone: studentData.phone || ''
         },
+        fallbackOtp: dispatchSuccess ? undefined : otpResult?.otp,
         message: 'You have an incomplete registration. A verification code has been sent to your email.'
       });
     }
@@ -1003,9 +1032,13 @@ router.post('/forgot-password', async (req, res) => {
       resetCodeExpiry: expiry
     });
 
+    let emailSent = false;
+    let smsSent = false;
+
     // Dual-channel send: EmailJS + BMS Africa SMS
     try {
-      await sendOtpViaEmailJS(email, userData.name || 'Student', resetCode);
+      const emailResult = await sendOtpViaEmailJS(email, userData.name || 'Student', resetCode);
+      if (emailResult) emailSent = true;
     } catch (emailErr) {
       console.error('EmailJS Error in forgot-password:', emailErr.message || emailErr);
     }
@@ -1013,10 +1046,13 @@ router.post('/forgot-password', async (req, res) => {
     if (userData.phone) {
       try {
         await sendOtpViaBMS(userData.phone, resetCode);
+        smsSent = true;
       } catch (smsErr) {
         console.error('BMS SMS Error in forgot-password:', smsErr.message || smsErr);
       }
     }
+
+    const dispatchSuccess = emailSent || smsSent;
 
     // Audit log
     try {
@@ -1031,7 +1067,13 @@ router.post('/forgot-password', async (req, res) => {
       });
     } catch (_) {}
 
-    res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent to your email/phone.' });
+    res.status(200).json({
+      status: 'success',
+      fallbackCode: dispatchSuccess ? undefined : resetCode,
+      message: dispatchSuccess
+        ? 'If the email exists, a reset code was sent to your email/phone.'
+        : `A reset code was generated: ${resetCode}`
+    });
   } catch (error) {
     console.error('Error in forgot-password:', error);
     res.status(500).json({ status: 'error', message: 'Server error' });
