@@ -1023,41 +1023,7 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
     const voterId = req.user.uid;
     const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
 
-    // Fetch voter profile from voter_rolls across tenants & organizations
-    let voterData = null;
-    let voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
-    let voterDoc = await voterRef.get();
-    if (voterDoc.exists) {
-      voterData = voterDoc.data();
-    } else {
-      voterRef = db.collection('organizations').doc(tenantId).collection('voter_rolls').doc(voterId);
-      voterDoc = await voterRef.get();
-      if (voterDoc.exists) {
-        voterData = voterDoc.data();
-      } else if (req.user && req.user.email) {
-        const snap = await db.collectionGroup('voter_rolls').where('email', '==', req.user.email).get();
-        if (!snap.empty) {
-          voterDoc = snap.docs[0];
-          voterRef = voterDoc.ref;
-          voterData = voterDoc.data();
-        }
-      }
-    }
-
-    if (!voterData) {
-      if (req.user && req.user.email) {
-        voterData = {
-          email: req.user.email,
-          name: req.user.name || req.user.email.split('@')[0],
-          phone: req.user.phone || ''
-        };
-        voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
-      } else {
-        return res.status(404).json({ status: 'error', message: 'Voter profile not found.' });
-      }
-    }
-
-    // Verify scheduled start date/time and end date/time
+    // 1. Verify election exists and check active time window
     const { doc: electionDoc, ref: electionRef } = await findElectionDoc(electionId, req);
     if (!electionDoc || !electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found.' });
@@ -1083,29 +1049,59 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
       });
     }
 
-    // Verify voter email is present in the election's CSV roster if a roster was uploaded
-    const rosterSnap = await electionRef.collection('eligible_voters').get();
+    // 2. Look into all voter roster entries (voter_roster & eligible_voters) for THIS PARTICULAR ELECTION
+    const voterRosterSnap = await electionRef.collection('voter_roster').get();
+    const eligibleVotersSnap = await electionRef.collection('eligible_voters').get();
 
-    if (!rosterSnap.empty) {
-      const voterEmail = (voterData.email || req.user.email || '').toLowerCase().trim();
-      const voterIndex = (voterData.indexNumber || voterData.studentId || req.user.indexNumber || req.user.uid || '').toLowerCase().trim();
+    const hasElectionRoster = !voterRosterSnap.empty || !eligibleVotersSnap.empty;
+    const voterEmail = (req.user.email || '').toLowerCase().trim();
+    const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
 
-      let isAllowed = false;
-      rosterSnap.forEach(doc => {
-        const entry = doc.data();
-        if ((voterEmail && (entry.email || '').toLowerCase().trim() === voterEmail) ||
-            (voterIndex && (entry.indexNumber || '').toLowerCase().trim() === voterIndex) ||
-            (voterIndex && (entry.studentId || '').toLowerCase().trim() === voterIndex)) {
-          isAllowed = true;
+    let matchedRosterEntry = null;
+
+    if (hasElectionRoster) {
+      const allRosterDocs = [...voterRosterSnap.docs, ...eligibleVotersSnap.docs];
+      for (const rDoc of allRosterDocs) {
+        const entry = rDoc.data();
+        const entryEmail = (entry.email || '').toLowerCase().trim();
+        const entryIndex = (entry.indexNumber || entry.studentId || rDoc.id || '').toLowerCase().trim();
+
+        if ((voterEmail && entryEmail === voterEmail) || (voterIndex && entryIndex === voterIndex)) {
+          matchedRosterEntry = entry;
+          break;
         }
-      });
+      }
 
-      if (!isAllowed) {
+      if (!matchedRosterEntry) {
         return res.status(403).json({
           status: 'error',
-          message: 'Your account is not listed on the official voting members roster for this election.'
+          message: 'Your account or student ID is not listed on the official voter roster for this election.'
         });
       }
+    }
+
+    // 3. Resolve voter profile details (from election roster match, voter_rolls, or token payload)
+    let voterData = null;
+    let voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
+    let voterDoc = await voterRef.get();
+
+    if (voterDoc.exists) {
+      voterData = voterDoc.data();
+    } else {
+      voterRef = db.collection('organizations').doc(tenantId).collection('voter_rolls').doc(voterId);
+      voterDoc = await voterRef.get();
+      if (voterDoc.exists) {
+        voterData = voterDoc.data();
+      }
+    }
+
+    if (!voterData) {
+      voterData = {
+        email: matchedRosterEntry?.email || req.user.email,
+        name: matchedRosterEntry?.name || req.user.name || (req.user.email ? req.user.email.split('@')[0] : 'Voter'),
+        phone: matchedRosterEntry?.phone || req.user.phone || ''
+      };
+      voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
     }
 
     // Generate 6-digit OTP
