@@ -28,8 +28,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
-      {children}
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
+      <div className="page-container" style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '2rem 2.5rem 4rem 2.5rem', flex: 1 }}>
+        {children}
+      </div>
     </div>
   );
 }

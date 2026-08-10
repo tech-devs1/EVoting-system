@@ -387,7 +387,6 @@
   
   .content-area {
     padding: var(--space-4);
-    /* On mobile the bottom nav is hidden, so no extra padding needed */
     padding-bottom: var(--space-4);
   }
 }
@@ -404,3 +403,19 @@
     font-size: 10px;
   }
 }
+
+/* Global Centered Page Container */
+.page-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2.5rem 2.5rem 4rem 2.5rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 1.25rem 1rem 3rem 1rem;
+  }
+}
+

@@ -335,7 +335,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Main Content Area */}
-        <main className="content-area" style={{ flexGrow: 1 }}>
+        <main className="content-area" style={{ flexGrow: 1, padding: '2rem 2.5rem 4rem 2.5rem', maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
           {children}
         </main>
       </div>
