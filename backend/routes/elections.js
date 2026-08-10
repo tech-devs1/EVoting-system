@@ -209,6 +209,46 @@ router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) 
   }
 });
 
+// Full General Edit Election Details (Admin only)
+router.patch('/:id', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const { title, description, category, startDate, endDate, status, showResults, otpRequired } = req.body;
+
+    const electionRef = getElectionsRef(req).doc(electionId);
+    const electionDoc = await electionRef.get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+
+    const updateFields = { updatedAt: Date.now() };
+    if (title !== undefined) updateFields.title = title.trim();
+    if (description !== undefined) updateFields.description = description.trim();
+    if (category !== undefined) updateFields.category = category.trim();
+    if (startDate !== undefined) updateFields.startDate = startDate;
+    if (endDate !== undefined) updateFields.endDate = endDate;
+    if (status !== undefined) updateFields.status = status;
+    if (showResults !== undefined) updateFields.showResults = Boolean(showResults);
+    if (otpRequired !== undefined) updateFields.otpRequired = Boolean(otpRequired);
+
+    await electionRef.update(updateFields);
+
+    // Invalidate caches
+    cache.invalidatePrefix('elections:');
+    cache.invalidatePrefix('admin:');
+    cache.invalidatePrefix('candidates:');
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Election metadata updated successfully.',
+      data: { id: electionId, ...updateFields }
+    });
+  } catch (error) {
+    console.error('Error updating election details:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update election details.' });
+  }
+});
+
 // Update election time window (Admin only)
 router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
   try {

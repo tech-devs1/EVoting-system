@@ -21,6 +21,7 @@ import {
   Settings,
   Zap,
   TrendingUp,
+  Edit,
   LogOut
 } from 'lucide-react';
 
@@ -678,27 +679,49 @@ export default function OrganizationElectionHub() {
                   </div>
                 </div>
 
-                <Link
-                  href={`/admin/elections/${election.id}/dashboard`}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.85rem',
-                    borderRadius: '14px',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    backgroundColor: '#2563EB',
-                    color: '#FFFFFF',
-                    textDecoration: 'none',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-                  }}
-                >
-                  <Zap size={16} />
-                  <span>Open Workspace</span>
-                </Link>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <Link
+                    href={`/admin/elections/${election.id}/dashboard`}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem',
+                      borderRadius: '12px',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      backgroundColor: '#2563EB',
+                      color: '#FFFFFF',
+                      textDecoration: 'none',
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+                    }}
+                  >
+                    <Zap size={15} />
+                    <span>Open Workspace</span>
+                  </Link>
+
+                  <Link
+                    href={`/admin/elections/${election.id}/dashboard`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0.75rem 0.85rem',
+                      borderRadius: '12px',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      backgroundColor: '#F1F5F9',
+                      color: '#475569',
+                      textDecoration: 'none',
+                      border: '1px solid #E2E8F0'
+                    }}
+                    title="Edit Election Parameters"
+                  >
+                    <Edit size={16} />
+                  </Link>
+                </div>
               </div>
             );
           })}

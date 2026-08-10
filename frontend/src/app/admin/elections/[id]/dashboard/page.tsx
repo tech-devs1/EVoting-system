@@ -18,8 +18,12 @@ import {
   Clock, 
   BarChart3, 
   Calendar,
-  CheckCircle2
+  CheckCircle2,
+  Edit,
+  Eye,
+  EyeOff
 } from 'lucide-react';
+import Modal from '@/components/Modal';
 
 interface Election {
   id: string;
@@ -29,6 +33,7 @@ interface Election {
   status: 'draft' | 'scheduled' | 'active' | 'ended';
   startDate: string;
   endDate: string;
+  showResults?: boolean;
   totalVoters?: number;
   totalVotesCast?: number;
   candidateCount?: number;
@@ -44,12 +49,30 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Edit Modal States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editCategory, setEditCategory] = useState('Executive');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [editStatus, setEditStatus] = useState<string>('active');
+  const [editShowResults, setEditShowResults] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   async function fetchElectionData() {
     try {
       setLoading(true);
       const res = await apiRequest<{ status: string; data: Election }>(`/elections/${electionId}`);
       if (res.status === 'success' && res.data) {
         setElection(res.data);
+        setEditTitle(res.data.title || '');
+        setEditDescription(res.data.description || '');
+        setEditCategory(res.data.category || 'Executive');
+        setEditStartDate(res.data.startDate ? new Date(res.data.startDate).toISOString().slice(0, 16) : '');
+        setEditEndDate(res.data.endDate ? new Date(res.data.endDate).toISOString().slice(0, 16) : '');
+        setEditStatus(res.data.status || 'active');
+        setEditShowResults(Boolean(res.data.showResults));
       }
     } catch (err: any) {
       console.error('Error loading election:', err);
@@ -57,6 +80,71 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
       setLoading(false);
     }
   }
+
+  // Handle Save Edit Election Metadata
+  const handleSaveElectionEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingEdit(true);
+    setMessage(null);
+
+    try {
+      const res = await apiRequest<{ status: string; message: string }>(
+        `/elections/${electionId}`,
+        'PATCH',
+        {
+          title: editTitle,
+          description: editDescription,
+          category: editCategory,
+          startDate: editStartDate,
+          endDate: editEndDate,
+          status: editStatus,
+          showResults: editShowResults
+        }
+      );
+
+      if (res.status === 'success') {
+        setMessage({ type: 'success', text: 'Election parameters updated successfully!' });
+        setIsEditModalOpen(false);
+        fetchElectionData();
+      } else {
+        throw new Error(res.message || 'Failed to update election');
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Failed to update election parameters.' });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  // Toggle Results Publication Directly
+  const handleTogglePublishResults = async () => {
+    if (!election) return;
+    const nextShow = !election.showResults;
+    setActionLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await apiRequest<{ status: string; message: string }>(
+        `/elections/${electionId}/toggle-results`,
+        'PATCH',
+        { showResults: nextShow }
+      );
+
+      if (res.status === 'success') {
+        setMessage({
+          type: 'success',
+          text: nextShow
+            ? 'Official Results are now PUBLISHED and live for voters to view!'
+            : 'Official Results are now HIDDEN from voters.'
+        });
+        fetchElectionData();
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Failed to toggle results publication.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (electionId) fetchElectionData();
@@ -183,6 +271,9 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
 
           {/* Quick Action Toolbar */}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button onClick={() => setIsEditModalOpen(true)} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700 }}>
+              <Edit size={14} /> Edit Election Details
+            </button>
             {election.status !== 'active' && (
               <button disabled={actionLoading} onClick={() => handleStatusChange('active')} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
                 <Play size={14} /> Start Election
@@ -220,6 +311,33 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
           {message.text}
         </div>
       )}
+
+      {/* Official Results Visibility & Public Access Card */}
+      <div className="card" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderLeft: `4px solid ${election.showResults ? '#166534' : '#F59E0B'}` }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: election.showResults ? '#166534' : '#B45309', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              {election.showResults ? <Eye size={16} /> : <EyeOff size={16} />}
+              {election.showResults ? 'Official Results PUBLISHED to Voters' : 'Official Results HIDDEN from Voters'}
+            </span>
+          </div>
+          <p style={{ fontSize: '0.85rem', color: '#64748B', margin: 0 }}>
+            {election.showResults
+              ? 'Roster voters can view live charts, percentages, winner declarations, and audit logs.'
+              : 'Public charts are locked. Only EC administrators can view live tally statistics until published.'}
+          </p>
+        </div>
+
+        <button
+          onClick={handleTogglePublishResults}
+          disabled={actionLoading}
+          className={election.showResults ? "btn btn-outline" : "btn btn-primary"}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, backgroundColor: election.showResults ? 'transparent' : '#2563eb' }}
+        >
+          {election.showResults ? <EyeOff size={16} /> : <Eye size={16} />}
+          {election.showResults ? 'Unpublish / Hide Results' : '📢 Publish Official Results to All Voters'}
+        </button>
+      </div>
 
       {/* Election Workspace KPI Cards */}
       <div className="admin-grid-top" style={{ marginBottom: '1.5rem' }}>
@@ -277,6 +395,111 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
           </div>
         </div>
       </div>
+
+      {/* Edit Election Parameters Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Election Parameters"
+        subtitle="Update title, description, time window, status, or results visibility"
+        maxWidth="580px"
+      >
+        <form onSubmit={handleSaveElectionEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Election Title</label>
+            <input
+              type="text"
+              required
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Description & Purpose</label>
+            <textarea
+              rows={3}
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Category / Department</label>
+              <select
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+              >
+                <option value="Executive">SRC Executive Elections</option>
+                <option value="Departmental">Departmental Elections</option>
+                <option value="Hall">Hall of Residence Elections</option>
+                <option value="Association">Faculty Association</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Election Status</label>
+              <select
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+              >
+                <option value="draft">Draft (Setup Phase)</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="active">Active (Voting Open)</option>
+                <option value="ended">Ended (Voting Closed)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Voting Start Date & Time</label>
+              <input
+                type="datetime-local"
+                required
+                value={editStartDate}
+                onChange={(e) => setEditStartDate(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Voting End Date & Time</label>
+              <input
+                type="datetime-local"
+                required
+                value={editEndDate}
+                onChange={(e) => setEditEndDate(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ padding: '0.85rem', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', marginTop: '0.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>
+              <input
+                type="checkbox"
+                checked={editShowResults}
+                onChange={(e) => setEditShowResults(e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: '#2563eb' }}
+              />
+              Publish Official Results Publicly to Roster Voters
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+            <button type="button" onClick={() => setIsEditModalOpen(false)} className="btn btn-outline">Cancel</button>
+            <button type="submit" disabled={savingEdit} className="btn btn-primary" style={{ backgroundColor: '#2563eb', fontWeight: 700 }}>
+              {savingEdit ? 'Saving Changes...' : 'Save Election Parameters'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
