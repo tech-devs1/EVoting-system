@@ -42,10 +42,12 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
   const [loading, setLoading] = useState(true);
   const [broadcastLoading, setBroadcastLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(0); // 0 means off
 
-  async function fetchResultsData() {
+  async function fetchResultsData(showLoader = true) {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       const res = await apiRequest<{
         status: string;
         data: {
@@ -62,13 +64,31 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
     } catch (err) {
       console.error('Error fetching results:', err);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   }
+
+  // Handle manual sync
+  const handleManualSync = async () => {
+    setSyncing(true);
+    await fetchResultsData(false);
+    setSyncing(false);
+  };
 
   useEffect(() => {
     if (electionId) fetchResultsData();
   }, [electionId]);
+
+  // Set up auto-refresh polling
+  useEffect(() => {
+    if (!electionId || autoRefreshInterval <= 0) return;
+
+    const interval = setInterval(() => {
+      fetchResultsData(false);
+    }, autoRefreshInterval * 1000);
+
+    return () => clearInterval(interval);
+  }, [electionId, autoRefreshInterval]);
 
   // Broadcast Results Action
   const handleBroadcastResults = async () => {
@@ -116,7 +136,38 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Auto-Refresh:</span>
+            <select
+              value={autoRefreshInterval}
+              onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
+              style={{
+                padding: '0.4rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-primary)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                marginRight: '0.5rem'
+              }}
+            >
+              <option value={0}>Off</option>
+              <option value={15}>15s</option>
+              <option value={30}>30s</option>
+              <option value={60}>60s</option>
+            </select>
+
+            <button
+              onClick={handleManualSync}
+              disabled={syncing}
+              className="btn btn-outline"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700 }}
+            >
+              <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
+              {syncing ? 'Syncing...' : 'Sync Live Tally'}
+            </button>
+
             <button
               onClick={handleBroadcastResults}
               disabled={broadcastLoading}
