@@ -325,8 +325,8 @@ router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) 
   }
 });
 
-// Full General Edit Election Details (Admin only)
-router.patch('/:id', verifyAuth, requireAdmin, async (req, res) => {
+// Full General Edit/Status Update Details (Admin/PUT/PATCH supported)
+const updateElectionHandler = async (req, res) => {
   try {
     const electionId = req.params.id;
     const { title, description, category, startDate, endDate, status, showResults, otpRequired } = req.body;
@@ -363,7 +363,10 @@ router.patch('/:id', verifyAuth, requireAdmin, async (req, res) => {
     console.error('Error updating election details:', error);
     res.status(500).json({ status: 'error', message: 'Failed to update election details.' });
   }
-});
+};
+
+router.patch('/:id', verifyAuth, requireAdmin, updateElectionHandler);
+router.put('/:id', verifyAuth, requireAdmin, updateElectionHandler);
 
 // Update election time window (Admin only)
 router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
