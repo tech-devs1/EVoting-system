@@ -36,6 +36,43 @@ interface Candidate {
   ballotNumber?: string | number;
 }
 
+const compressImageFile = (file: File, maxWidth = 300, maxHeight = 300, quality = 0.8): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve((reader.result as string) || '');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve((reader.result as string) || '');
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function PerElectionCandidatesPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params);
   const electionId = resolvedParams.id;
@@ -111,7 +148,7 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
       
       const [posRes, candRes] = await Promise.all([
         apiRequest<{ status: string; data: Position[] }>(`/elections/${electionId}/positions`),
-        apiRequest<{ status: string; data: Candidate[] }>(`/elections/${electionId}/candidates`)
+        apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${electionId}`)
       ]);
 
       if (posRes.status === 'success' && Array.isArray(posRes.data)) {
@@ -187,15 +224,17 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
         position: candPosition,
         manifesto: candManifesto.trim(),
         photoUrl: candPhotoUrl.trim(),
-        isIndependent: candIsIndependent
+        isIndependent: candIsIndependent,
+        electionId
       };
 
-      const res = await apiRequest<{ status: string; data: Candidate }>(`/elections/${electionId}/candidates`, 'POST', payload);
+      const res = await apiRequest<{ status: string; data: Candidate }>(`/candidates`, 'POST', payload);
       if (res.status === 'success' && res.data) {
         setCandidates(prev => [...prev, res.data]);
         setCandName('');
         setCandManifesto('');
         setCandPhotoUrl('');
+        setCandImagePreview('');
         setCandIsIndependent(false);
         setIsCandModalOpen(false);
       }
@@ -210,7 +249,7 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
   const handleDeleteCandidate = async (candId: string) => {
     if (!confirm('Are you sure you want to remove this candidate?')) return;
     try {
-      await apiRequest(`/elections/${electionId}/candidates/${candId}`, 'DELETE');
+      await apiRequest(`/candidates/${candId}`, 'DELETE');
       setCandidates(prev => prev.filter(c => c.id !== candId));
     } catch (err: any) {
       alert(err.message || 'Failed to remove candidate.');
@@ -564,16 +603,16 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
                   type="file"
                   accept="image/*"
                   style={{ display: 'none' }}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        const result = reader.result as string;
-                        setCandImagePreview(result);
-                        setCandPhotoUrl(result);
-                      };
-                      reader.readAsDataURL(file);
+                      try {
+                        const compressedBase64 = await compressImageFile(file, 300, 300, 0.8);
+                        setCandImagePreview(compressedBase64);
+                        setCandPhotoUrl(compressedBase64);
+                      } catch (err) {
+                        console.error('Failed to compress image file:', err);
+                      }
                     }
                   }}
                 />

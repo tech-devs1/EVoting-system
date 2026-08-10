@@ -117,8 +117,8 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Cannot add candidates to an ongoing election' });
     }
 
-    // Check if the image/photoUrl is already used in the same election
-    if (photoUrl && photoUrl.trim() !== '') {
+    // Check if the image/photoUrl is already used in the same election (only for normal web URLs, not base64 images)
+    if (photoUrl && photoUrl.trim() !== '' && !photoUrl.startsWith('data:image')) {
       const duplicatePhotoSnap = await getCandidatesRef(req)
         .where('electionId', '==', electionId)
         .where('photoUrl', '==', photoUrl.trim())
@@ -201,7 +201,7 @@ router.patch('/:candidateId', verifyAuth, requireAdmin, async (req, res) => {
     }
     const electionId = candDoc.data().electionId;
 
-    if (updates.photoUrl && updates.photoUrl.trim() !== '') {
+    if (updates.photoUrl && updates.photoUrl.trim() !== '' && !updates.photoUrl.startsWith('data:image')) {
       const duplicatePhotoSnap = await getCandidatesRef(req)
         .where('electionId', '==', electionId)
         .where('photoUrl', '==', updates.photoUrl.trim())
