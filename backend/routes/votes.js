@@ -9,11 +9,12 @@ const getTenantId = (req) => {
   const bodyTenant = req.body ? req.body.tenantId : null;
   return headersTenant || queryTenant || bodyTenant || DEFAULT_TENANT_ID;
 };
-const getElectionsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('elections');
-const getCandidatesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('candidates');
-const getVotedVotersRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('voted_voters');
-const getVotesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('votes');
-const getAuditLogsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('audit_logs');
+const getTenantCollection = (req) => req.tenantCollection || (req.user ? req.user.tenantCollection : null) || 'tenants';
+const getElectionsRef = (req) => db.collection(getTenantCollection(req)).doc(getTenantId(req)).collection('elections');
+const getCandidatesRef = (req) => db.collection(getTenantCollection(req)).doc(getTenantId(req)).collection('candidates');
+const getVotedVotersRef = (req) => db.collection(getTenantCollection(req)).doc(getTenantId(req)).collection('voted_voters');
+const getVotesRef = (req) => db.collection(getTenantCollection(req)).doc(getTenantId(req)).collection('votes');
+const getAuditLogsRef = (req) => db.collection(getTenantCollection(req)).doc(getTenantId(req)).collection('audit_logs');
 const { FieldValue } = require('firebase-admin/firestore');
 const { verifyAuth } = require('../middleware/auth');
 const { recordVoteAudit } = require('../services/audit');

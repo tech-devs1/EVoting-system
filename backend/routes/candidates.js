@@ -9,8 +9,9 @@ const getTenantId = (req) => {
   const bodyTenant = req.body ? req.body.tenantId : null;
   return headersTenant || queryTenant || bodyTenant || DEFAULT_TENANT_ID;
 };
-const getElectionsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('elections');
-const getCandidatesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('candidates');
+const getTenantCollection = (req) => req.tenantCollection || (req.user ? req.user.tenantCollection : null) || 'tenants';
+const getElectionsRef = (req) => db.collection(getTenantCollection(req)).doc(getTenantId(req)).collection('elections');
+const getCandidatesRef = (req) => db.collection(getTenantCollection(req)).doc(getTenantId(req)).collection('candidates');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const cache = require('../services/cache');
 

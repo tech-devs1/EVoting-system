@@ -29,6 +29,32 @@ async function verifyAuth(req, res, next) {
 
   const idToken = authHeader.split('Bearer ')[1];
 
+  async function attachTenantCollection(req) {
+    try {
+      const headersTenant = req.headers ? req.headers['x-tenant-id'] : null;
+      const queryTenant = req.query ? req.query.tenantId : null;
+      const bodyTenant = req.body ? req.body.tenantId : null;
+      const tenantId = headersTenant || queryTenant || bodyTenant || (req.user ? req.user.tenantId : null) || 'default';
+
+      const cache = require('../services/cache');
+      const { db } = require('../services/firebase');
+      const cacheKey = `tenant-coll:${tenantId}`;
+      let collectionName = await cache.get(cacheKey);
+      if (!collectionName) {
+        const orgDoc = await db.collection('organizations').doc(tenantId).get();
+        collectionName = orgDoc.exists ? 'organizations' : 'tenants';
+        await cache.set(cacheKey, collectionName, 3600 * 1000);
+      }
+      req.tenantCollection = collectionName;
+      if (req.user) {
+        req.user.tenantId = tenantId;
+        req.user.tenantCollection = collectionName;
+      }
+    } catch (e) {
+      req.tenantCollection = 'tenants';
+    }
+  }
+
   try {
     // In our mock environment, if token starts with MOCK_ we skip actual verification
     if (idToken.startsWith('MOCK_')) {
@@ -44,6 +70,7 @@ async function verifyAuth(req, res, next) {
       }
       
       req.user = normalizeUserRole({ uid, email, role });
+      await attachTenantCollection(req);
       return next();
     }
 
@@ -51,12 +78,14 @@ async function verifyAuth(req, res, next) {
     try {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
       req.user = normalizeUserRole(decodedToken);
+      await attachTenantCollection(req);
       return next();
     } catch (firebaseError) {
       // If Firebase verification fails, try JWT verification
       try {
         const decoded = jwt.verify(idToken, JWT_SECRET);
         req.user = normalizeUserRole(decoded);
+        await attachTenantCollection(req);
         return next();
       } catch (jwtError) {
         const decoded = jwt.decode(idToken);
@@ -67,6 +96,7 @@ async function verifyAuth(req, res, next) {
             role: decoded.role || 'voter',
             ...decoded
           });
+          await attachTenantCollection(req);
           return next();
         }
         throw new Error('Invalid token');

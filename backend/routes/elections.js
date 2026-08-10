@@ -9,36 +9,37 @@ const getTenantId = (req) => {
   const bodyTenant = req.body ? req.body.tenantId : null;
   return headersTenant || queryTenant || bodyTenant || DEFAULT_TENANT_ID;
 };
+const getTenantCollection = (req) => req.tenantCollection || (req.user ? req.user.tenantCollection : null) || 'tenants';
 const getElectionsRef = (req) => {
   const tenantId = getTenantId(req);
-  return db.collection('tenants').doc(tenantId).collection('elections');
+  return db.collection(getTenantCollection(req)).doc(tenantId).collection('elections');
 };
 const getCandidatesRef = (req) => {
   const tenantId = getTenantId(req);
-  return db.collection('tenants').doc(tenantId).collection('candidates');
+  return db.collection(getTenantCollection(req)).doc(tenantId).collection('candidates');
 };
 const getVotedVotersRef = (req) => {
   const tenantId = getTenantId(req);
-  return db.collection('tenants').doc(tenantId).collection('voted_voters');
+  return db.collection(getTenantCollection(req)).doc(tenantId).collection('voted_voters');
 };
 
 /**
  * Universal helper to find an election document regardless of tenant context or collection path
  */
 async function findElectionDoc(electionId, req) {
-  if (!electionId) return { doc: null, ref: null, tenantId: null };
+  if (!electionId) return { doc: null, ref: null, tenantId: null, tenantCollection: 'tenants' };
 
   const requestedTenantId = getTenantId(req);
 
   // 1. Try requested tenant path in 'tenants'
   let ref = db.collection('tenants').doc(requestedTenantId).collection('elections').doc(electionId);
   let doc = await ref.get();
-  if (doc.exists) return { doc, ref, tenantId: requestedTenantId };
+  if (doc.exists) return { doc, ref, tenantId: requestedTenantId, tenantCollection: 'tenants' };
 
   // 2. Try requested tenant path in 'organizations'
   ref = db.collection('organizations').doc(requestedTenantId).collection('elections').doc(electionId);
   doc = await ref.get();
-  if (doc.exists) return { doc, ref, tenantId: requestedTenantId };
+  if (doc.exists) return { doc, ref, tenantId: requestedTenantId, tenantCollection: 'organizations' };
 
   // 3. Search across all elections in collectionGroup
   try {
@@ -47,13 +48,14 @@ async function findElectionDoc(electionId, req) {
     if (match) {
       const parentTenant = match.ref.parent.parent;
       const matchTenantId = parentTenant ? parentTenant.id : requestedTenantId;
-      return { doc: match, ref: match.ref, tenantId: matchTenantId };
+      const collectionName = parentTenant && parentTenant.parent ? parentTenant.parent.id : 'tenants';
+      return { doc: match, ref: match.ref, tenantId: matchTenantId, tenantCollection: collectionName };
     }
   } catch (err) {
     console.warn('[findElectionDoc Warning]:', err.message);
   }
 
-  return { doc: null, ref: null, tenantId: null };
+  return { doc: null, ref: null, tenantId: requestedTenantId, tenantCollection: 'tenants' };
 }
 
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
@@ -330,17 +332,23 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/results', async (req, res) => {
   try {
     const electionId = req.params.id;
-    const { doc: electionDoc, ref: electionRef, tenantId: resolvedTenantId } = await findElectionDoc(electionId, req);
+    const { doc: electionDoc, ref: electionRef, tenantId: resolvedTenantId, tenantCollection: resolvedTenantCollection } = await findElectionDoc(electionId, req);
     if (!electionDoc || !electionDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
 
     const electionData = electionDoc.data();
+    const collectionToUse = resolvedTenantCollection || 'tenants';
 
     // 1. Fetch candidates for this election from the resolved tenant / organization
-    let candsSnap = await db.collection('tenants').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
-    if (candsSnap.empty) {
+    let candsSnap = await db.collection(collectionToUse).doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+    if (candsSnap.empty && collectionToUse === 'tenants') {
       candsSnap = await db.collection('organizations').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+    } else if (candsSnap.empty && collectionToUse === 'organizations') {
+      candsSnap = await db.collection('tenants').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+    }
+    if (candsSnap.empty) {
+      candsSnap = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
     }
     const candidates = [];
     candsSnap.forEach(doc => {
@@ -355,9 +363,14 @@ router.get('/:id/results', async (req, res) => {
     });
 
     // 2. Calculate unique voted voters from the resolved tenant / organization
-    let votedSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).get();
-    if (votedSnap.empty) {
+    let votedSnap = await db.collection(collectionToUse).doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).get();
+    if (votedSnap.empty && collectionToUse === 'tenants') {
       votedSnap = await db.collection('organizations').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).get();
+    } else if (votedSnap.empty && collectionToUse === 'organizations') {
+      votedSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).get();
+    }
+    if (votedSnap.empty) {
+      votedSnap = await db.collectionGroup('voted_voters').where('electionId', '==', electionId).get();
     }
     const uniqueVotersCast = votedSnap.size;
 
@@ -719,6 +732,9 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
       if (candidatesSnapshot.empty) {
         candidatesSnapshot = await db.collection('organizations').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
       }
+      if (candidatesSnapshot.empty) {
+        candidatesSnapshot = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+      }
       const candidates = [];
       candidatesSnapshot.forEach(doc => {
         candidates.push({ id: doc.id, ...doc.data() });
@@ -731,6 +747,12 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
         votesCountSnap = await db.collection('organizations').doc(resolvedTenantId).collection('votes').where('electionId', '==', electionId).count().get();
         totalVotes = votesCountSnap.data().count;
       }
+      if (totalVotes === 0) {
+        try {
+          votesCountSnap = await db.collectionGroup('votes').where('electionId', '==', electionId).count().get();
+          totalVotes = votesCountSnap.data().count;
+        } catch (e) {}
+      }
       
       // 4. OPTIMIZED: Get unique voters count using count() (~2 Reads instead of 2,000 Reads)
       let votedVotersCountSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).count().get();
@@ -738,6 +760,12 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
       if (uniqueVoters === 0) {
         votedVotersCountSnap = await db.collection('organizations').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).count().get();
         uniqueVoters = votedVotersCountSnap.data().count;
+      }
+      if (uniqueVoters === 0) {
+        try {
+          votedVotersCountSnap = await db.collectionGroup('voted_voters').where('electionId', '==', electionId).count().get();
+          uniqueVoters = votedVotersCountSnap.data().count;
+        } catch (e) {}
       }
       
       return {
@@ -1379,31 +1407,45 @@ router.post('/:id/verify-access-otp', verifyAuth, async (req, res) => {
 
     const tenantIdToUse = resolvedTenantId || tenantId;
 
-    // Fetch voter profile from resolved tenant's tenants/organizations or fallbacks
-    let voterRef = db.collection('tenants').doc(tenantIdToUse).collection('voter_rolls').doc(voterId);
-    let voterDoc = await voterRef.get();
+    // Fetch voter profile from resolved tenant's tenants/organizations or fallbacks, matching the access OTP code robustly
+    let voterRef = null;
+    let voterData = null;
 
-    if (!voterDoc.exists) {
-      voterRef = db.collection('organizations').doc(tenantIdToUse).collection('voter_rolls').doc(voterId);
-      voterDoc = await voterRef.get();
+    const refsToCheck = [
+      db.collection('tenants').doc(tenantIdToUse).collection('voter_rolls').doc(voterId),
+      db.collection('organizations').doc(tenantIdToUse).collection('voter_rolls').doc(voterId)
+    ];
+
+    if (tenantId && tenantId !== tenantIdToUse) {
+      refsToCheck.push(db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId));
+      refsToCheck.push(db.collection('organizations').doc(tenantId).collection('voter_rolls').doc(voterId));
     }
 
-    if (!voterDoc.exists && tenantId && tenantId !== tenantIdToUse) {
-      voterRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(voterId);
-      voterDoc = await voterRef.get();
-      if (!voterDoc.exists) {
-        voterRef = db.collection('organizations').doc(tenantId).collection('voter_rolls').doc(voterId);
-        voterDoc = await voterRef.get();
+    for (const ref of refsToCheck) {
+      const doc = await ref.get();
+      if (doc.exists) {
+        const data = doc.data();
+        if (data && data.accessOtp && data.accessOtp.toString().trim() === otp.toString().trim()) {
+          voterData = data;
+          voterRef = ref;
+          break;
+        }
       }
     }
 
-    if (!voterDoc.exists) {
-      return res.status(404).json({ status: 'error', message: 'Voter profile not found.' });
-    }
-    const voterData = voterDoc.data();
-
-    // Validate OTP
-    if (!voterData.accessOtp || voterData.accessOtp !== otp) {
+    if (!voterData) {
+      // Fallback: check if the profile exists at all in any of these paths to customize the error message
+      let profileDoc = null;
+      for (const ref of refsToCheck) {
+        const doc = await ref.get();
+        if (doc.exists) {
+          profileDoc = doc;
+          break;
+        }
+      }
+      if (!profileDoc) {
+        return res.status(404).json({ status: 'error', message: 'Voter profile not found.' });
+      }
       return res.status(400).json({ status: 'error', message: 'Invalid verification code.' });
     }
 
