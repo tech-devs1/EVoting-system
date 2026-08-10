@@ -48,6 +48,11 @@ interface KPIStats {
 export default function OrganizationElectionHub() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [elections, setElections] = useState<Election[]>([]);
   const [stats, setStats] = useState<KPIStats>({
