@@ -127,10 +127,14 @@ class MockFirestore {
   }
 
   collection(name) {
-    if (!this.collections[name]) {
-      this.collections[name] = new Map();
+    const canonicalName = (name && (name === 'tenants' || name.startsWith('tenants/')))
+      ? name.replace(/^tenants/, 'organizations')
+      : name;
+
+    if (!this.collections[canonicalName]) {
+      this.collections[canonicalName] = new Map();
     }
-    const collectionMap = this.collections[name];
+    const collectionMap = this.collections[canonicalName];
 
     const getDocRef = (docId, parentPath = name) => {
       const fullPath = `${parentPath}/${docId}`;

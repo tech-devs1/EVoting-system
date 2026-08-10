@@ -28,8 +28,10 @@ router.post('/departments', async (req, res) => {
 
     const hashedAdminPassword = adminPassword ? await bcrypt.hash(adminPassword, 10) : null;
     const tenantId = `dept_${Date.now()}`;
-    const newTenant = {
+    const unifiedOrganization = {
+      id: tenantId,
       name: name.trim(),
+      acronym: name.trim().substring(0, 6).toUpperCase(),
       domain: domain || '',
       adminEmail: normalizedAdminEmail,
       adminPassword: hashedAdminPassword,
@@ -37,14 +39,7 @@ router.post('/departments', async (req, res) => {
       createdAt: Date.now()
     };
 
-    await db.collection('tenants').doc(tenantId).set(newTenant);
-    await db.collection('organizations').doc(tenantId).set({
-      name: newTenant.name,
-      acronym: newTenant.name.substring(0, 6).toUpperCase(),
-      domain: newTenant.domain || '',
-      status: 'active',
-      createdAt: Date.now()
-    });
+    await db.collection('organizations').doc(tenantId).set(unifiedOrganization);
 
     res.status(201).json({ 
       status: 'success', 

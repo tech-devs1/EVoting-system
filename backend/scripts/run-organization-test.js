@@ -46,18 +46,13 @@ async function runOrganizationTest() {
     const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
     const tenantRef = db.collection('tenants').doc(tenantId);
     
-    await tenantRef.set({
+    await db.collection('organizations').doc(tenantId).set({
+      id: tenantId,
       name: orgName,
+      acronym: `ENG-${shortTs}`,
       domain: 'htu.edu.gh',
       adminEmail,
       adminPassword: hashedAdminPassword,
-      status: 'active',
-      createdAt: Date.now()
-    });
-
-    await db.collection('organizations').doc(tenantId).set({
-      name: orgName,
-      acronym: `ENG-${shortTs}`,
       status: 'active',
       createdAt: Date.now()
     });
