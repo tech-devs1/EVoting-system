@@ -41,12 +41,8 @@ async function runOrganizationTest() {
     // --- PHASE 1: CREATE BRAND NEW ORGANIZATION / TENANT ---
     console.log(`\n--- PHASE 1: CREATING NEW TENANT (ID: ${tenantId}) ---`);
     console.log(`Organization Name: ${orgName}`);
-    console.log(`EC Admin Email: ${adminEmail}`);
-
     const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
-    const tenantRef = db.collection('tenants').doc(tenantId);
-    
-    await db.collection('organizations').doc(tenantId).set({
+    const orgData = {
       id: tenantId,
       name: orgName,
       acronym: `ENG-${shortTs}`,
@@ -55,7 +51,13 @@ async function runOrganizationTest() {
       adminPassword: hashedAdminPassword,
       status: 'active',
       createdAt: Date.now()
-    });
+    };
+
+    await db.collection('organizations').doc(tenantId).set(orgData);
+    await db.collection('tenants').doc(tenantId).set(orgData);
+
+    const tenantRef = db.collection('tenants').doc(tenantId);
+    const orgRef = db.collection('organizations').doc(tenantId);
 
     console.log(`✅ Organization document successfully created in Firestore (tenants/${tenantId}).`);
 

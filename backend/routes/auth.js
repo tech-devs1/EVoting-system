@@ -408,13 +408,19 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    // 3. Iterate through all tenants to find the voter
-    const allTenantsSnapshot = await db.collection('tenants').get();
+    // 3. Iterate through all tenants and organizations to find the voter
+    const tenantsSnap = await db.collection('tenants').get();
+    const orgsSnap = await db.collection('organizations').get();
+    const allTenantDocs = [...tenantsSnap.docs, ...orgsSnap.docs];
+
     let foundVoterDoc = null;
     let foundTenantId = null;
 
-    for (const tenantDoc of allTenantsSnapshot.docs) {
-      const usersSnapshot = await db.collection('tenants').doc(tenantDoc.id).collection('voter_rolls').where('email', '==', email).get();
+    for (const tenantDoc of allTenantDocs) {
+      let usersSnapshot = await db.collection('tenants').doc(tenantDoc.id).collection('voter_rolls').where('email', '==', email).get();
+      if (usersSnapshot.empty) {
+        usersSnapshot = await db.collection('organizations').doc(tenantDoc.id).collection('voter_rolls').where('email', '==', email).get();
+      }
       if (!usersSnapshot.empty) {
         foundVoterDoc = usersSnapshot.docs[0];
         foundTenantId = tenantDoc.id;
