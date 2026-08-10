@@ -636,6 +636,8 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
             </button>
           </div>
         </form>
+      </Modal>
+
       {/* SEND INVITATIONS MODAL */}
       <Modal isOpen={isInviteModalOpen} onClose={() => setIsInviteModalOpen(false)} title="Dispatch Voting Invitations">
         <form onSubmit={handleSendInvitations} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0.5rem 0' }}>
