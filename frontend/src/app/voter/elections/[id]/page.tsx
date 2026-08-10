@@ -749,33 +749,41 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
                             style={{
                               opacity: isPosVoted && !isSelected ? 0.5 : 1,
                               cursor: isPosVoted ? 'default' : 'pointer',
+                              position: 'relative'
                             }}
                           >
-                            <div className="candidate-select-indicator">
+                            <div className="candidate-select-indicator" style={{ top: '12px', right: '12px' }}>
                               {isSelected && <Check size={14} />}
                             </div>
 
-                            {cand.photoUrl ? (
-                              <img src={cand.photoUrl} alt={cand.name} className="candidate-photo" />
-                            ) : (
-                              <div className="candidate-photo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
-                                <User size={48} />
-                              </div>
-                            )}
-
-                            <div className="candidate-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              {cand.ballotNumber && (
-                                <span style={{ fontSize: '10px', backgroundColor: 'var(--color-primary)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                                  #{cand.ballotNumber}
-                                </span>
+                            <div className="candidate-photo-wrap" style={{ flex: '0 0 120px', width: '120px', minHeight: '140px', position: 'relative', overflow: 'hidden' }}>
+                              {cand.photoUrl ? (
+                                <img src={cand.photoUrl} alt={cand.name} className="candidate-photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <div className="candidate-photo" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>
+                                  <User size={36} />
+                                </div>
                               )}
-                              <span style={{ fontSize: 'var(--text-base)', fontWeight: 'bold' }}>{cand.name}</span>
                             </div>
 
-                            <div className="candidate-manifesto" style={{ marginTop: 'var(--space-2)' }}>
-                              <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                {cand.manifesto || 'No manifesto provided.'}
-                              </p>
+                            <div className="candidate-content" style={{ flex: 1, padding: '12px 36px 12px 12px', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                              <div className="candidate-info" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div className="candidate-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  {cand.ballotNumber && (
+                                    <span style={{ fontSize: '9px', fontWeight: 700, backgroundColor: 'var(--color-primary, #2563EB)', color: '#FFFFFF', padding: '1px 5px', borderRadius: '3px' }}>
+                                      #{cand.ballotNumber}
+                                    </span>
+                                  )}
+                                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {cand.name}
+                                  </span>
+                                </div>
+                                <div className="candidate-manifesto">
+                                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.3' }}>
+                                    {cand.manifesto || 'No manifesto provided.'}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         );
