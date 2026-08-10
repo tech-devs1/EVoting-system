@@ -25,7 +25,8 @@ const { logActivity } = require('../services/activityLog');
 // Get Dashboard Analytics - OPTIMIZED WITH AGGREGATIONS + CACHE
 router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const dashboardData = await cache.getOrSet('admin:dashboard', async () => {
+    const tenantId = getTenantId(req);
+    const dashboardData = await cache.getOrSet(`admin:${tenantId}:dashboard`, async () => {
       // 1. Get active elections
       const activeElectionsSnapForQuery = await getElectionsRef(req).where('status', '==', 'active').get();
       const activeElectionIds = [];
@@ -130,12 +131,13 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
 // Replaces 3+ separate API calls with a single round-trip
 router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     const skipCache = req.query.nocache === 'true';
     if (skipCache) {
-      cache.invalidate('admin:dashboard-full');
+      cache.invalidate(`admin:${tenantId}:dashboard-full`);
     }
 
-    const fullData = await cache.getOrSet('admin:dashboard-full', async () => {
+    const fullData = await cache.getOrSet(`admin:${tenantId}:dashboard-full`, async () => {
       // --- KPIs ---
       let activeElectionIds = [];
       try {
@@ -333,14 +335,13 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
 // Get Comprehensive Voter & Election Activity Report
 router.get('/report', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    // Support ?nocache=true to bypass the in-memory cache
-    // (critical on serverless where upload and report may hit different instances)
+    const tenantId = getTenantId(req);
     const skipCache = req.query.nocache === 'true';
     if (skipCache) {
-      cache.invalidate('admin:report');
+      cache.invalidate(`admin:${tenantId}:report`);
     }
 
-    const reportData = await cache.getOrSet('admin:report', async () => {
+    const reportData = await cache.getOrSet(`admin:${tenantId}:report`, async () => {
       // 0. Find current active election(s) or fallback to completed/all elections
       const activeElectionsSnap = await getElectionsRef(req).where('status', '==', 'active').get();
       const activeElectionIds = [];
@@ -621,7 +622,8 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
 // Get voter upload history
 router.get('/voters/uploads', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const uploads = await cache.getOrSet('admin:uploads', async () => {
+    const tenantId = getTenantId(req);
+    const uploads = await cache.getOrSet(`admin:${tenantId}:uploads`, async () => {
       const snapshot = await getUploadsRef(req).orderBy('timestamp', 'desc').get();
       const results = [];
       snapshot.forEach(doc => {
@@ -697,7 +699,8 @@ router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req,
 // Get Fraud Alerts - OPTIMIZED: Use Firestore .where() filter instead of reading ALL docs
 router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const alerts = await cache.getOrSet('admin:fraud-alerts', async () => {
+    const tenantId = getTenantId(req);
+    const alerts = await cache.getOrSet(`admin:${tenantId}:fraud-alerts`, async () => {
       let alertsDoc = await getFraudAlertsRef(req)
         .where('type', '==', 'DUPLICATE_VOTE')
         .orderBy('timestamp', 'desc')
@@ -731,7 +734,8 @@ router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
 // Get Flagged Users - OPTIMIZED: Use Firestore .where() filter instead of reading ALL docs
 router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const flagged = await cache.getOrSet('admin:flagged-users', async () => {
+    const tenantId = getTenantId(req);
+    const flagged = await cache.getOrSet(`admin:${tenantId}:flagged-users`, async () => {
       let alertsDoc = await getFraudAlertsRef(req)
         .where('type', '==', 'UNRECOGNIZED_STUDENT')
         .orderBy('timestamp', 'desc')
@@ -774,7 +778,8 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
 // Get Analytics Data
 router.get('/analytics', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const analyticsData = await cache.getOrSet('admin:analytics', async () => {
+    const tenantId = getTenantId(req);
+    const analyticsData = await cache.getOrSet(`admin:${tenantId}:analytics`, async () => {
       // 1. Fetch total users
       const usersSnap = await getUsersRef(req).get();
       let totalVoters = 0;
@@ -884,7 +889,8 @@ router.get('/export/:format', verifyAuth, requireAdmin, async (req, res) => {
 // Live votes count endpoint - OPTIMIZED WITH AGGREGATIONS + CACHE
 router.get('/live-votes', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const liveData = await cache.getOrSet('admin:live-votes', async () => {
+    const tenantId = getTenantId(req);
+    const liveData = await cache.getOrSet(`admin:${tenantId}:live-votes`, async () => {
       // 1. Fast count aggregation (~1 Read instead of reading every vote doc)
       const votesCountSnap = await getVotesRef(req).count().get();
       const liveVotesCount = votesCountSnap.data().count;

@@ -283,14 +283,28 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     async function fetchData() {
       try {
-        const elRes = await apiRequest<{ status: string; data: Election }>(`/elections/${electionId}`);
-        if (elRes.status === 'success') {
-          setElection(elRes.data);
-        }
+        const res = await apiRequest<{
+          status: string;
+          data: {
+            election: Election;
+            candidates: Candidate[];
+            totalVotes: number;
+          };
+        }>(`/elections/${electionId}/results`);
 
-        const candRes = await apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${electionId}`);
-        if (candRes.status === 'success') {
-          setCandidates(candRes.data);
+        if (res.status === 'success' && res.data) {
+          setElection(res.data.election);
+          setCandidates(res.data.candidates);
+        } else {
+          // Fallback to direct election doc fetch if needed
+          const elRes = await apiRequest<{ status: string; data: Election }>(`/elections/${electionId}`);
+          if (elRes.status === 'success') {
+            setElection(elRes.data);
+          }
+          const candRes = await apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${electionId}`);
+          if (candRes.status === 'success') {
+            setCandidates(candRes.data);
+          }
         }
       } catch (err) {
         console.error('Error fetching results:', err);

@@ -180,12 +180,10 @@ router.post('/cast', verifyAuth, async (req, res) => {
 
     // --- INVALIDATE ALL RELATED CACHES FOR REAL-TIME ACCURACY ---
     cache.invalidate(`votes:voted-elections:${voterId}`);
-    cache.invalidate(`elections:report:${electionId}`);
-    cache.invalidate(`elections:report:pdf:${electionId}`);
-    cache.invalidate(`admin:dashboard`);
-    cache.invalidate(`admin:dashboard-full`);
-    cache.invalidate(`admin:live-votes`);
-    cache.invalidatePrefix(`candidates:election:${electionId}`);
+    cache.invalidatePrefix(`admin:${tenantId}:`);
+    cache.invalidatePrefix(`candidates:`);
+    cache.invalidatePrefix(`elections:`);
+    cache.invalidatePrefix(`reports:`);
 
     // Log vote cast activity (anonymous – no candidate name stored)
     await logActivity({
