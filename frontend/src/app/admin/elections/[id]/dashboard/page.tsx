@@ -402,37 +402,73 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
         onClose={() => setIsEditModalOpen(false)}
         title="Edit Election Parameters"
         subtitle="Update title, description, time window, status, or results visibility"
-        maxWidth="580px"
+        maxWidth="640px"
       >
-        <form onSubmit={handleSaveElectionEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleSaveElectionEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Election Title</label>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+              Election Title *
+            </label>
             <input
               type="text"
               required
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+              placeholder="e.g. 2026 HTU SRC General Elections"
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                borderRadius: '10px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-primary)',
+                fontSize: '0.9rem',
+                boxSizing: 'border-box'
+              }}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Description & Purpose</label>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+              Detailed Description
+            </label>
             <textarea
               rows={3}
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              placeholder="Provide voter instructions or eligibility rules..."
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                borderRadius: '10px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-primary)',
+                fontSize: '0.9rem',
+                boxSizing: 'border-box',
+                fontFamily: 'inherit'
+              }}
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Category / Department</label>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                Category / Faculty Scope
+              </label>
               <select
                 value={editCategory}
                 onChange={(e) => setEditCategory(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box'
+                }}
               >
                 <option value="Executive">SRC Executive Elections</option>
                 <option value="Departmental">Departmental Elections</option>
@@ -442,11 +478,22 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Election Status</label>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                Election Status
+              </label>
               <select
                 value={editStatus}
                 onChange={(e) => setEditStatus(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box'
+                }}
               >
                 <option value="draft">Draft (Setup Phase)</option>
                 <option value="scheduled">Scheduled</option>
@@ -456,45 +503,94 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Voting Start Date & Time</label>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                Poll Opening Date & Time *
+              </label>
               <input
                 type="datetime-local"
                 required
                 value={editStartDate}
                 onChange={(e) => setEditStartDate(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box'
+                }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>Voting End Date & Time</label>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                Poll Closing Date & Time *
+              </label>
               <input
                 type="datetime-local"
                 required
                 value={editEndDate}
                 onChange={(e) => setEditEndDate(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box'
+                }}
               />
             </div>
           </div>
 
-          <div style={{ padding: '0.85rem', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', marginTop: '0.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>
+          <div style={{ padding: '1rem', backgroundColor: 'var(--bg-input)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
               <input
                 type="checkbox"
                 checked={editShowResults}
                 onChange={(e) => setEditShowResults(e.target.checked)}
                 style={{ width: '18px', height: '18px', accentColor: '#2563eb' }}
               />
-              Publish Official Results Publicly to Roster Voters
+              <span>Publish Official Results Publicly to Roster Voters</span>
             </label>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
-            <button type="button" onClick={() => setIsEditModalOpen(false)} className="btn btn-outline">Cancel</button>
-            <button type="submit" disabled={savingEdit} className="btn btn-primary" style={{ backgroundColor: '#2563eb', fontWeight: 700 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)' }}>
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              style={{
+                padding: '0.7rem 1.25rem',
+                borderRadius: '14px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={savingEdit}
+              style={{
+                padding: '0.7rem 1.4rem',
+                borderRadius: '14px',
+                border: 'none',
+                backgroundColor: '#2563EB',
+                color: '#FFFFFF',
+                fontWeight: 700,
+                cursor: savingEdit ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)'
+              }}
+            >
               {savingEdit ? 'Saving Changes...' : 'Save Election Parameters'}
             </button>
           </div>
