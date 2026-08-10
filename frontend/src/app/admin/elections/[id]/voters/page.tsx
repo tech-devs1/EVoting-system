@@ -296,9 +296,18 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
       {/* Eligible Voter Directory Table */}
       <div className="card" style={{ padding: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Eligible Voters Directory</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Total Roster: {voters.length} voters</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Eligible Voters Directory</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Total Roster: {voters.length} voters</p>
+            </div>
+            <Link
+              href={`/admin/elections/${electionId}/messages`}
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 700, backgroundColor: '#2563eb', padding: '0.4rem 0.85rem' }}
+            >
+              <Mail size={14} /> Compose SMS/Email Broadcast
+            </Link>
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>

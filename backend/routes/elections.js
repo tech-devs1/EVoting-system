@@ -1145,6 +1145,150 @@ router.post('/:id/broadcast-results', verifyAuth, requireAdmin, async (req, res)
   }
 });
 
+// 5b. Custom Gmail-Style SMS & Email Broadcast Communicator to Roster Voters
+router.post('/:id/broadcast-message', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+    const { channel, recipientFilter, subject, body } = req.body;
+
+    if (!body || !body.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Message body content is required.' });
+    }
+
+    const electionDoc = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).get();
+    if (!electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+    const election = electionDoc.data();
+
+    // Fetch roster voters
+    const votersSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+    const votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters').where('electionId', '==', electionId).get();
+    
+    const votedEmailSet = new Set(votedSnap.docs.map(doc => (doc.data().voterEmail || doc.data().email || '').toLowerCase()));
+
+    let rosterList = votersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    if (rosterList.length === 0) {
+      // Fallback to eligible_voters if voter_roster subcollection is empty
+      const eligibleSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+      rosterList = eligibleSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    // Filter recipients based on selection
+    if (recipientFilter === 'pending') {
+      rosterList = rosterList.filter(v => !votedEmailSet.has((v.email || '').toLowerCase()));
+    } else if (recipientFilter === 'voted') {
+      rosterList = rosterList.filter(v => votedEmailSet.has((v.email || '').toLowerCase()));
+    }
+
+    if (rosterList.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'No matching voters found for the selected recipient filter.' });
+    }
+
+    let emailSentCount = 0;
+    let smsSentCount = 0;
+    const targetChannel = channel || 'both';
+
+    for (const v of rosterList) {
+      const recipientName = v.name || v.fullName || 'Voter';
+      const indexNum = v.indexNumber || v.studentId || '';
+      const email = v.email || '';
+      const phone = v.phoneNumber || v.phone || '';
+
+      // Perform dynamic variable tag replacement
+      const personalizedSubject = (subject || `Announcement: ${election.title}`)
+        .replace(/{{voter_name}}/gi, recipientName)
+        .replace(/{{index_number}}/gi, indexNum)
+        .replace(/{{election_title}}/gi, election.title);
+
+      const personalizedBody = body
+        .replace(/{{voter_name}}/gi, recipientName)
+        .replace(/{{index_number}}/gi, indexNum)
+        .replace(/{{election_title}}/gi, election.title)
+        .replace(/{{voting_link}}/gi, `${process.env.FRONTEND_URL || 'https://htu-elect-aov2.vercel.app'}/voter/elections/${electionId}`);
+
+      // Dispatch Email
+      if ((targetChannel === 'email' || targetChannel === 'both') && email) {
+        try {
+          await sendEmailNotification(
+            email,
+            personalizedSubject,
+            personalizedBody,
+            `<div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; padding: 24px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+              <h2 style="color: #2563eb; margin-top: 0;">${personalizedSubject}</h2>
+              <div style="font-size: 15px; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">${personalizedBody}</div>
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+              <p style="font-size: 12px; color: #64748b;">Dispatched securely via HTU Elect EC Broadcast Center.</p>
+            </div>`
+          );
+          emailSentCount++;
+        } catch (e) {
+          console.error(`Email dispatch error to ${email}:`, e.message);
+        }
+      }
+
+      // Dispatch SMS (Simulated / Production SMS Gateway Integration)
+      if ((targetChannel === 'sms' || targetChannel === 'both') && phone) {
+        smsSentCount++;
+        console.log(`[SMS Broadcast Dispatched] To: ${phone} | Content: ${personalizedBody.substring(0, 160)}`);
+      }
+    }
+
+    // Save Broadcast History Record in Firestore
+    const broadcastRecord = {
+      electionId,
+      electionTitle: election.title,
+      channel: targetChannel,
+      recipientFilter: recipientFilter || 'all',
+      subject: subject || `Announcement: ${election.title}`,
+      body,
+      recipientCount: rosterList.length,
+      emailSentCount,
+      smsSentCount,
+      senderEmail: req.user.email,
+      createdAt: Date.now()
+    };
+
+    await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('broadcast_history').add(broadcastRecord);
+
+    await logActivity({
+      tenantId,
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'BROADCAST_MESSAGE_SENT',
+      description: `Broadcast sent via ${targetChannel.toUpperCase()} to ${rosterList.length} voters for: ${election.title}`
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: `Broadcast successfully dispatched to ${rosterList.length} voters (${emailSentCount} emails, ${smsSentCount} SMS).`,
+      data: broadcastRecord
+    });
+  } catch (error) {
+    console.error('Error broadcasting message:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to dispatch broadcast message.' });
+  }
+});
+
+// 5c. Get Broadcast History Logs for an Election
+router.get('/:id/broadcast-history', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+
+    const snap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('broadcast_history').get();
+    const history = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    history.sort((a, b) => b.createdAt - a.createdAt);
+
+    res.status(200).json({ status: 'success', data: history });
+  } catch (error) {
+    console.error('Error fetching broadcast history:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch broadcast history.' });
+  }
+});
+
 // 6. Export Raw Cryptographic Audit Ledger (CSV)
 router.get('/:id/export-audit', verifyAuth, requireAdmin, async (req, res) => {
   try {

@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   UserCheck,
   Menu,
+  Send,
   X
 } from 'lucide-react';
 
@@ -79,6 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Positions & Candidates', href: '/admin/elections', icon: Layers },
     { label: 'Voters Roster', href: '/admin/voters', icon: Users },
+    { label: 'Broadcast Center', href: '/admin/messages', icon: Send },
     { label: 'Live Results', href: '/admin/results', icon: BarChart3 },
     { label: 'Audit Ledger', href: '/admin/audit', icon: FileText },
     { label: 'Access Security', href: '/admin/fraud', icon: ShieldAlert },
@@ -88,6 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Overview', href: `/admin/elections/${electionId}/dashboard`, icon: LayoutDashboard },
     { label: 'Positions & Candidates', href: `/admin/elections/${electionId}/candidates`, icon: Layers },
     { label: 'Roster & CSV Upload', href: `/admin/elections/${electionId}/voters`, icon: Users },
+    { label: 'Broadcast Messages', href: `/admin/elections/${electionId}/messages`, icon: Send },
     { label: 'Live Results', href: `/admin/elections/${electionId}/results`, icon: BarChart3 },
     { label: '360° Audit Ledger', href: `/admin/elections/${electionId}/audit`, icon: FileText },
     { label: 'Access Security', href: `/admin/elections/${electionId}/fraud`, icon: ShieldAlert },
