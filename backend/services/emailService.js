@@ -4,18 +4,8 @@ const gmailUser = process.env.GMAIL_USER || 'issakasaddick14@gmail.com';
 const envPass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
 const gmailPass = envPass || 'gvdpedxakuwihtuq';
 
-// Primary Transporter (Standard Gmail Service)
+// Primary Transporter (Port 587 STARTTLS - fast and reliable on Railway cloud)
 const gmailTransporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: gmailUser,
-    pass: gmailPass
-  },
-  tls: { rejectUnauthorized: false }
-});
-
-// Secondary Fallback Transporter (Port 587 STARTTLS)
-const fallbackTransporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
   secure: false,
@@ -23,7 +13,23 @@ const fallbackTransporter = nodemailer.createTransport({
     user: gmailUser,
     pass: gmailPass
   },
-  tls: { rejectUnauthorized: false }
+  tls: { rejectUnauthorized: false },
+  connectionTimeout: 5000,
+  greetingTimeout: 5000,
+  socketTimeout: 5000
+});
+
+// Secondary Fallback Transporter (Standard Gmail Service)
+const fallbackTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: gmailUser,
+    pass: gmailPass
+  },
+  tls: { rejectUnauthorized: false },
+  connectionTimeout: 5000,
+  greetingTimeout: 5000,
+  socketTimeout: 5000
 });
 
 /**

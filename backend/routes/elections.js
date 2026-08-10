@@ -1144,18 +1144,32 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
 
     console.log('[Access OTP] Prepared dispatch details:', { targetEmail, targetName, targetPhone, voterId, electionId });
 
-    // Dispatch via email
+    // Dispatch via email with 3.5s non-blocking race timeout
     if (targetEmail) {
       try {
-        const emailResult = await sendOtpViaEmailJS(targetEmail, targetName, otp);
-        if (emailResult) {
+        const emailPromise = sendOtpViaEmailJS(targetEmail, targetName, otp)
+          .then(result => {
+            if (result) {
+              console.log(`[Access OTP] ✅ Access OTP email successfully sent to ${targetEmail}`);
+              return true;
+            }
+            return false;
+          })
+          .catch(err => {
+            console.error('[Access OTP] Email delivery error:', err.message);
+            return false;
+          });
+
+        const timeoutPromise = new Promise(resolve => setTimeout(() => resolve('timeout'), 3500));
+        const raceResult = await Promise.race([emailPromise, timeoutPromise]);
+
+        if (raceResult === true) {
           emailSent = true;
-          console.log(`[Access OTP] ✅ Access OTP email successfully sent to ${targetEmail}`);
-        } else {
-          console.warn(`[Access OTP] ⚠️ Email dispatch returned empty result for ${targetEmail}`);
+        } else if (raceResult === 'timeout') {
+          console.warn(`[Access OTP] ⏳ Email dispatch backgrounded after 3.5s timeout for ${targetEmail}`);
         }
       } catch (err) {
-        console.error('[Access OTP] Email delivery error:', err.message);
+        console.error('[Access OTP] Email dispatch wrapper error:', err.message);
       }
     } else {
       console.warn('[Access OTP] No target email found for voter', voterId);
