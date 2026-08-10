@@ -3,6 +3,18 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiRequest } from '@/lib/api';
+import { 
+  Plus, 
+  Trash2, 
+  Users, 
+  Layers, 
+  Eye, 
+  Upload, 
+  Check, 
+  Award,
+  ChevronUp,
+  ChevronDown
+} from 'lucide-react';
 
 interface Position {
   id: string;
