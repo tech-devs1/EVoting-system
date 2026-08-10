@@ -127,90 +127,107 @@ router.get('/', async (req, res) => {
 router.get('/eligible', verifyAuth, async (req, res) => {
   try {
     const voterEmail = (req.user.email || '').toLowerCase().trim();
-    const voterIndex = (req.user.indexNumber || req.user.uid || '').toLowerCase().trim();
-
-    if (!voterEmail && !voterIndex) {
-      return res.status(200).json({ status: 'success', data: [] });
-    }
+    const voterIndex = (req.user.indexNumber || req.user.studentId || req.user.uid || '').toLowerCase().trim();
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
 
     const now = Date.now();
     const dbUpdates = [];
 
-    // Query active and draft elections across tenant organizations
-    const snapshot = await db.collectionGroup('elections').get();
+    // Fetch all elections across root, tenants, organizations, and collectionGroup
+    const electionsMap = new Map();
+
+    try {
+      const snapGroup = await db.collectionGroup('elections').get();
+      snapGroup.forEach(d => electionsMap.set(d.id, { doc: d, ref: d.ref }));
+    } catch (e) {}
+
+    try {
+      const snapRoot = await db.collection('elections').get();
+      snapRoot.forEach(d => electionsMap.set(d.id, { doc: d, ref: d.ref }));
+    } catch (e) {}
+
     const eligibleElections = [];
 
-    for (const doc of snapshot.docs) {
+    for (const [electionId, { doc, ref }] of electionsMap.entries()) {
       const electionData = doc.data();
-      const electionId = doc.id;
-      const tenantRef = doc.ref.parent.parent;
-      const tenantId = tenantRef ? tenantRef.id : DEFAULT_TENANT_ID;
+      if (!electionData) continue;
 
-      // Restrict elections to ONLY show those belonging to the voter's tenant/department
-      if (req.user.tenantId && req.user.tenantId !== 'global' && tenantId !== req.user.tenantId) {
-        continue;
-      }
+      const parentDoc = ref.parent ? ref.parent.parent : null;
+      const tenantId = parentDoc ? parentDoc.id : DEFAULT_TENANT_ID;
 
-      // Check if election has a per-election CSV roster in voter_roster or eligible_voters
-      const voterRosterSnap = await doc.ref.collection('voter_roster').get().catch(() => ({ empty: true, docs: [] }));
-      const eligibleVotersSnap = await doc.ref.collection('eligible_voters').get().catch(() => ({ empty: true, docs: [] }));
+      // Admins & Superadmins always see all elections
+      let isEligible = isAdmin;
 
-      let isEligible = false;
+      if (!isEligible) {
+        // If election is public or allows all voters, allow access
+        if (electionData.isPublic === true || electionData.allowAllVoters === true || electionData.otpRequired === false) {
+          isEligible = true;
+        }
 
-      if ((!voterRosterSnap.docs || voterRosterSnap.docs.length === 0) && (!eligibleVotersSnap.docs || eligibleVotersSnap.docs.length === 0)) {
-        // If no CSV uploaded yet for this election, allow general access
-        isEligible = true;
-      } else {
-        // Check if voter's email or index matches any entry in this election's CSV roster
-        const allRosterDocs = [...(voterRosterSnap.docs || []), ...(eligibleVotersSnap.docs || [])];
-        allRosterDocs.forEach(voterDoc => {
-          const vData = voterDoc.data();
-          const csvEmail = (vData.email || '').toLowerCase().trim();
-          const csvIndex = (vData.indexNumber || vData.studentId || voterDoc.id || '').toLowerCase().trim();
-          if ((voterEmail && csvEmail === voterEmail) || (voterIndex && csvIndex === voterIndex)) {
-            isEligible = true;
+        // Check CSV voter rosters under this election (voter_roster & eligible_voters)
+        const voterRosterSnap = await ref.collection('voter_roster').get().catch(() => ({ empty: true, docs: [] }));
+        const eligibleVotersSnap = await ref.collection('eligible_voters').get().catch(() => ({ empty: true, docs: [] }));
+
+        const hasRoster = (voterRosterSnap.docs && voterRosterSnap.docs.length > 0) ||
+                          (eligibleVotersSnap.docs && eligibleVotersSnap.docs.length > 0);
+
+        if (!hasRoster) {
+          // If no roster uploaded, allow general access
+          isEligible = true;
+        } else {
+          // Roster exists: check if voter's email, index, studentId, or UID matches any roster document
+          const allRosterDocs = [...(voterRosterSnap.docs || []), ...(eligibleVotersSnap.docs || [])];
+          for (const rDoc of allRosterDocs) {
+            const rData = rDoc.data() || {};
+            const rEmail = (rData.email || '').toLowerCase().trim();
+            const rIndex = (rData.indexNumber || rData.studentId || rDoc.id || '').toLowerCase().trim();
+
+            if ((voterEmail && rEmail === voterEmail) ||
+                (voterIndex && rIndex === voterIndex) ||
+                (voterEmail && rIndex === voterEmail) ||
+                (voterIndex && rEmail === voterIndex)) {
+              isEligible = true;
+              break;
+            }
           }
-        });
+        }
       }
 
       if (isEligible) {
-        // Automatically perform real-time status transitions for voters so they see live/accurate states
-        let updatedStatus = electionData.status;
+        let updatedStatus = electionData.status || 'active';
         const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
         const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
 
         if (electionData.status === 'active' && electionData.endDate && endTime < now) {
           updatedStatus = 'completed';
-          dbUpdates.push(doc.ref.update({ status: 'completed' }));
+          dbUpdates.push(ref.update({ status: 'completed' }).catch(() => {}));
         } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
           updatedStatus = 'active';
-          dbUpdates.push(doc.ref.update({ status: 'active' }));
+          dbUpdates.push(ref.update({ status: 'active' }).catch(() => {}));
         }
 
-        // Check if voter has unlocked or voted
-        const votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters')
-          .where('voterId', '==', req.user.uid)
-          .where('electionId', '==', electionId)
-          .get();
+        // Check if voter has cast a vote in this election
+        let hasVoted = false;
+        try {
+          const votedSnap = await db.collectionGroup('voted_voters')
+            .where('voterId', '==', req.user.uid)
+            .where('electionId', '==', electionId)
+            .get();
+          hasVoted = !votedSnap.empty;
+        } catch (vErr) {}
 
         eligibleElections.push({
           id: electionId,
           tenantId,
           ...electionData,
           status: updatedStatus,
-          hasVoted: !votedSnap.empty,
-          votedPositionsCount: votedSnap.size
+          hasVoted
         });
       }
     }
 
-    // Execute status updates in background if any occurred
     if (dbUpdates.length > 0) {
-      Promise.all(dbUpdates)
-        .then(() => {
-          cache.invalidatePrefix('elections:');
-        })
-        .catch(err => console.error('Error updating election status in background in eligible:', err));
+      Promise.all(dbUpdates).catch(() => {});
     }
 
     res.status(200).json({ status: 'success', data: eligibleElections });
