@@ -334,8 +334,11 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check tenants for department admin directly from Firestore
-    const tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', email).get();
+    // Check tenants or organizations for department admin directly from Firestore
+    let tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', email).get();
+    if (tenantsSnapshot.empty) {
+      tenantsSnapshot = await db.collection('organizations').where('adminEmail', '==', email).get();
+    }
     if (!tenantsSnapshot.empty) {
       const tenantDoc = tenantsSnapshot.docs[0];
       const tenantData = tenantDoc.data();

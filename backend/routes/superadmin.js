@@ -21,7 +21,10 @@ router.post('/departments', async (req, res) => {
     const normalizedAdminEmail = adminEmail.toLowerCase().trim();
 
     // Check if a department with this email already exists
-    const existingAdmins = await db.collection('tenants').where('adminEmail', '==', normalizedAdminEmail).get();
+    let existingAdmins = await db.collection('tenants').where('adminEmail', '==', normalizedAdminEmail).get();
+    if (existingAdmins.empty) {
+      existingAdmins = await db.collection('organizations').where('adminEmail', '==', normalizedAdminEmail).get();
+    }
     if (!existingAdmins.empty) {
       return res.status(400).json({ status: 'error', message: 'An organization with this EC admin email already exists' });
     }
@@ -40,16 +43,16 @@ router.post('/departments', async (req, res) => {
     };
 
     await db.collection('organizations').doc(tenantId).set(unifiedOrganization);
+    await db.collection('tenants').doc(tenantId).set(unifiedOrganization);
 
     res.status(201).json({ 
       status: 'success', 
       message: 'Department created successfully',
       data: {
         id: tenantId,
-        name: newTenant.name,
-        domain: newTenant.domain,
-        adminEmail: newTenant.adminEmail,
-        status: newTenant.status
+        name: unifiedOrganization.name,
+        domain: unifiedOrganization.domain,
+        adminEmail: unifiedOrganization.adminEmail
       }
     });
   } catch (error) {

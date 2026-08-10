@@ -4,8 +4,10 @@ const {
   cert,
 } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
+const fs = require('fs');
+const path = require('path');
 const dotenv = require('dotenv');
-
+dotenv.config({ path: path.join(__dirname, '../.env') });
 dotenv.config();
 
 let firestoreDb = null;
@@ -64,8 +66,6 @@ function sanitizeMockUpdate(existing, update) {
   return result;
 }
 
-const fs = require('fs');
-const path = require('path');
 const MOCK_DATA_FILE = path.join(__dirname, '../.mock_firestore_data.json');
 
 class MockFirestore {
