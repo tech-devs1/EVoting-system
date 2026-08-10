@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, apiRequestCached } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Search, FolderOpen, Clock, Lock, ArrowLeft } from 'lucide-react';
 
@@ -13,17 +13,18 @@ interface Election {
   startDate: string;
   endDate: string;
   status: 'draft' | 'active' | 'completed';
-  createdBy?: string;
+  category?: string;
+  hasVoted?: boolean;
   showResults?: boolean;
 }
 
 function CountdownTimer({ endsAt, status }: { endsAt: string; status: string }) {
-  const [timeLeft, setTimeLeft] = useState('');
-  const [endingSoon, setEndingSoon] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [endingSoon, setEndingSoon] = useState<boolean>(false);
 
   useEffect(() => {
-    if (status === 'completed') {
-      setTimeLeft('Ended');
+    if (status !== 'active') {
+      setTimeLeft(status === 'completed' ? 'Ended' : 'Not started');
       return;
     }
 
@@ -75,18 +76,25 @@ export default function VoterElectionsPage() {
   useEffect(() => {
     async function fetchElections() {
       try {
-        const res = await apiRequest<{ status: string; data: any[] }>('/elections/eligible');
+        const res = await apiRequestCached<{ status: string; data: any[] }>('/elections/eligible', (updatedRes) => {
+          if (updatedRes.status === 'success' && Array.isArray(updatedRes.data)) {
+            setElections(updatedRes.data);
+            setFilteredList(updatedRes.data);
+          }
+        });
+
         let initialVotedIds: string[] = [];
         if (res.status === 'success' && Array.isArray(res.data)) {
           setElections(res.data);
           setFilteredList(res.data);
           initialVotedIds = res.data.filter(el => el.hasVoted).map(el => el.id);
           setVotedElectionIds(initialVotedIds);
+          setLoading(false);
         }
 
         // Fetch user voted elections for ultimate consistency
         try {
-          const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
+          const votedRes = await apiRequestCached<{ status: string; data: string[] }>('/votes/voted-elections');
           if (votedRes.status === 'success') {
             const combinedVotedIds = Array.from(new Set([...initialVotedIds, ...votedRes.data]));
             setVotedElectionIds(combinedVotedIds);

@@ -103,10 +103,52 @@ export async function apiRequest<T>(
   }
   
   const data = await response.json();
-
   if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong');
+    throw new Error(data.message || 'An error occurred while communicating with the server.');
   }
 
-  return data;
+  return data as T;
+}
+
+// In-Memory Client Cache for instant menu switching (Stale-While-Revalidate pattern)
+const clientCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL_MS = 30000; // 30 seconds fresh TTL
+
+export function clearClientCache(endpointPrefix?: string) {
+  if (!endpointPrefix) {
+    clientCache.clear();
+    return;
+  }
+  for (const key of clientCache.keys()) {
+    if (key.startsWith(endpointPrefix)) {
+      clientCache.delete(key);
+    }
+  }
+}
+
+export async function apiRequestCached<T>(
+  endpoint: string,
+  onBackgroundUpdate?: (data: T) => void,
+  forceRefresh = false
+): Promise<T> {
+  const now = Date.now();
+  const cached = clientCache.get(endpoint);
+
+  // Return cached data immediately if available
+  if (cached && !forceRefresh) {
+    if (now - cached.timestamp > CACHE_TTL_MS) {
+      // Revalidate in background if stale
+      apiRequest<T>(endpoint, 'GET')
+        .then(freshData => {
+          clientCache.set(endpoint, { data: freshData, timestamp: Date.now() });
+          if (onBackgroundUpdate) onBackgroundUpdate(freshData);
+        })
+        .catch(err => console.warn('[API Cache] Silent revalidation failed:', err));
+    }
+    return cached.data as T;
+  }
+
+  const freshData = await apiRequest<T>(endpoint, 'GET');
+  clientCache.set(endpoint, { data: freshData, timestamp: Date.now() });
+  return freshData;
 }
