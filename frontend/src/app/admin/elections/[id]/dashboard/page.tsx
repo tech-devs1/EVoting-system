@@ -382,7 +382,9 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
       <div className="card" style={{ padding: '1.5rem' }}>
         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1rem 0' }}>Live Election Status & Guidelines</h3>
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 1.25rem 0' }}>
-          {election.description || 'No additional guidelines provided for this election.'}
+          {election.description && !election.description.includes('Student Representative Council (SRC) election')
+            ? election.description
+            : `This is the ${election.title || 'election'} scheduled for ${election.startDate ? new Date(election.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'the active voting window'}. Eligible voters are invited to vote for their preferred candidates across all positions.`}
         </p>
 
         <div style={{ backgroundColor: 'var(--bg-input)', padding: '1rem', borderRadius: '10px' }}>

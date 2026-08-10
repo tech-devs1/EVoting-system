@@ -259,13 +259,11 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
     const deptLabel = (department || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const dateLabel = startDate
       ? new Date(startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-      : new Date().toLocaleDateString();
+      : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const autoDesc = electionType === 'src'
-      ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
-      : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
+    const autoDesc = `This is the ${title} scheduled for ${dateLabel}. Eligible voters are invited to vote for their preferred candidates across all positions.`;
 
-    const finalDescription = (description && !description.startsWith('Automated')) ? description : autoDesc;
+    const finalDescription = (description && description.trim() && !description.includes('Student Representative Council (SRC) election')) ? description.trim() : autoDesc;
 
     const newElection = {
       title,
@@ -302,17 +300,14 @@ router.post('/migrate-descriptions', verifyAuth, requireAdmin, async (req, res) 
 
     snapshot.forEach(doc => {
       const data = doc.data();
-      if (!data.description || data.description.startsWith('Automated')) {
-        const electionType = data.type || 'src';
-        const deptLabel = (data.department || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const currentDesc = data.description || '';
+      if (!currentDesc || currentDesc.includes('Student Representative Council (SRC) election') || currentDesc.startsWith('Automated')) {
+        const title = data.title || 'Election';
         const dateLabel = data.startDate
           ? new Date(data.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-          : 'a scheduled date';
+          : 'the scheduled window';
 
-        const newDesc = electionType === 'src'
-          ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
-          : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
-
+        const newDesc = `This is the ${title} scheduled for ${dateLabel}. Eligible voters are invited to vote for their preferred candidates across all positions.`;
         updates.push(getElectionsRef(req).doc(doc.id).update({ description: newDesc }));
       }
     });
