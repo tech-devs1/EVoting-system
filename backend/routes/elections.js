@@ -324,7 +324,19 @@ router.get('/:id', async (req, res) => {
           votedSnap = await db.collection(altCollection).doc(tenantIdToUse).collection('voted_voters').where('electionId', '==', electionId).get();
         }
         if (votedSnap.empty) {
-          votedSnap = await db.collectionGroup('voted_voters').where('electionId', '==', electionId).get();
+          try {
+            votedSnap = await db.collectionGroup('voted_voters').where('electionId', '==', electionId).get();
+          } catch (e) {
+            console.warn('[CollectionGroup voted_voters Fallback /:id]:', e.message);
+            const fullSnap = await db.collectionGroup('voted_voters').get();
+            const filteredDocs = fullSnap.docs.filter(d => d.data().electionId === electionId);
+            votedSnap = {
+              size: filteredDocs.length,
+              empty: filteredDocs.length === 0,
+              forEach: (cb) => filteredDocs.forEach(cb),
+              docs: filteredDocs
+            };
+          }
         }
         totalVotesCast = Math.max(totalVotesCast, votedSnap.size);
       } catch (e) {
@@ -339,7 +351,19 @@ router.get('/:id', async (req, res) => {
           candsSnap = await db.collection(altCollection).doc(tenantIdToUse).collection('candidates').where('electionId', '==', electionId).get();
         }
         if (candsSnap.empty) {
-          candsSnap = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+          try {
+            candsSnap = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+          } catch (e) {
+            console.warn('[CollectionGroup candidates Fallback /:id]:', e.message);
+            const fullSnap = await db.collectionGroup('candidates').get();
+            const filteredDocs = fullSnap.docs.filter(d => d.data().electionId === electionId);
+            candsSnap = {
+              size: filteredDocs.length,
+              empty: filteredDocs.length === 0,
+              forEach: (cb) => filteredDocs.forEach(cb),
+              docs: filteredDocs
+            };
+          }
         }
         candidateCount = candsSnap.size;
         const positions = new Set();
@@ -393,7 +417,19 @@ router.get('/:id/results', async (req, res) => {
       candsSnap = await db.collection('tenants').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
     }
     if (candsSnap.empty) {
-      candsSnap = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+      try {
+        candsSnap = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+      } catch (e) {
+        console.warn('[CollectionGroup candidates Fallback /results]:', e.message);
+        const fullSnap = await db.collectionGroup('candidates').get();
+        const filteredDocs = fullSnap.docs.filter(d => d.data().electionId === electionId);
+        candsSnap = {
+          size: filteredDocs.length,
+          empty: filteredDocs.length === 0,
+          forEach: (cb) => filteredDocs.forEach(cb),
+          docs: filteredDocs
+        };
+      }
     }
     const candidates = [];
     candsSnap.forEach(doc => {
@@ -415,7 +451,19 @@ router.get('/:id/results', async (req, res) => {
       votedSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).get();
     }
     if (votedSnap.empty) {
-      votedSnap = await db.collectionGroup('voted_voters').where('electionId', '==', electionId).get();
+      try {
+        votedSnap = await db.collectionGroup('voted_voters').where('electionId', '==', electionId).get();
+      } catch (e) {
+        console.warn('[CollectionGroup voted_voters Fallback /results]:', e.message);
+        const fullSnap = await db.collectionGroup('voted_voters').get();
+        const filteredDocs = fullSnap.docs.filter(d => d.data().electionId === electionId);
+        votedSnap = {
+          size: filteredDocs.length,
+          empty: filteredDocs.length === 0,
+          forEach: (cb) => filteredDocs.forEach(cb),
+          docs: filteredDocs
+        };
+      }
     }
     const uniqueVotersCast = votedSnap.size;
 
@@ -798,7 +846,7 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
 
     const report = await cache.getOrSet(cacheKey, async () => {
       // 1. Get election details (1 Read)
-      const { doc: electionDoc, tenantId: resolvedTenantId } = await findElectionDoc(electionId, req);
+      const { doc: electionDoc, tenantId: resolvedTenantId, ref: electionRef } = await findElectionDoc(electionId, req);
       if (!electionDoc || !electionDoc.exists) {
         throw new Error('NOT_FOUND');
       }
@@ -810,7 +858,16 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
         candidatesSnapshot = await db.collection('organizations').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
       }
       if (candidatesSnapshot.empty) {
-        candidatesSnapshot = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+        try {
+          candidatesSnapshot = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+        } catch (e) {
+          console.warn('[CollectionGroup candidates Fallback /report]:', e.message);
+          const fullSnap = await db.collectionGroup('candidates').get();
+          const filteredDocs = fullSnap.docs.filter(d => d.data().electionId === electionId);
+          candidatesSnapshot = {
+            forEach: (cb) => filteredDocs.forEach(cb)
+          };
+        }
       }
       const candidates = [];
       candidatesSnapshot.forEach(doc => {
@@ -828,7 +885,16 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
         try {
           votesCountSnap = await db.collectionGroup('votes').where('electionId', '==', electionId).count().get();
           totalVotes = votesCountSnap.data().count;
-        } catch (e) {}
+        } catch (e) {
+          console.warn('[CollectionGroup votes count Fallback /report]:', e.message);
+          try {
+            const fullSnap = await db.collectionGroup('votes').get();
+            const filteredDocs = fullSnap.docs.filter(d => d.data().electionId === electionId);
+            totalVotes = filteredDocs.length;
+          } catch (err) {
+            console.error('Failed fallback for votes count:', err);
+          }
+        }
       }
       
       // 4. OPTIMIZED: Get unique voters count using count() (~2 Reads instead of 2,000 Reads)
@@ -842,7 +908,16 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
         try {
           votedVotersCountSnap = await db.collectionGroup('voted_voters').where('electionId', '==', electionId).count().get();
           uniqueVoters = votedVotersCountSnap.data().count;
-        } catch (e) {}
+        } catch (e) {
+          console.warn('[CollectionGroup voted_voters count Fallback /report]:', e.message);
+          try {
+            const fullSnap = await db.collectionGroup('voted_voters').get();
+            const filteredDocs = fullSnap.docs.filter(d => d.data().electionId === electionId);
+            uniqueVoters = filteredDocs.length;
+          } catch (err) {
+            console.error('Failed fallback for voted_voters count:', err);
+          }
+        }
       }
       
       // Calculate position-wise total votes
@@ -856,15 +931,17 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
       // Get total roster voters
       let totalVotersCount = 0;
       try {
-        const rosterSnap = await ref.collection('voter_roster').get();
-        const eligibleSnap = await ref.collection('eligible_voters').get();
-        const subcolCount = Math.max(rosterSnap.size, eligibleSnap.size);
-        if (subcolCount > 0) {
-          totalVotersCount = subcolCount;
-        } else {
-          const tenantRollSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voter_rolls').get();
-          const orgRollSnap = await db.collection('organizations').doc(resolvedTenantId).collection('voter_rolls').get();
-          totalVotersCount = Math.max(tenantRollSnap.size, orgRollSnap.size);
+        if (electionRef) {
+          const rosterSnap = await electionRef.collection('voter_roster').get();
+          const eligibleSnap = await electionRef.collection('eligible_voters').get();
+          const subcolCount = Math.max(rosterSnap.size, eligibleSnap.size);
+          if (subcolCount > 0) {
+            totalVotersCount = subcolCount;
+          } else {
+            const tenantRollSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voter_rolls').get();
+            const orgRollSnap = await db.collection('organizations').doc(resolvedTenantId).collection('voter_rolls').get();
+            totalVotersCount = Math.max(tenantRollSnap.size, orgRollSnap.size);
+          }
         }
       } catch (e) {}
       
