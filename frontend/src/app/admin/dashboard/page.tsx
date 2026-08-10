@@ -818,16 +818,20 @@ export default function OrganizationElectionHub() {
 
             <div>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Category / Faculty Scope</label>
-              <select
+              <input
+                type="text"
+                list="category-suggestions"
+                placeholder="e.g. Executive, Departmental, Faculty of Engineering"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
-              >
+              />
+              <datalist id="category-suggestions">
                 <option value="Executive">SRC Executive Elections</option>
                 <option value="Departmental">Departmental Elections</option>
                 <option value="Hall">Hall of Residence Elections</option>
                 <option value="Association">Faculty Association</option>
-              </select>
+              </datalist>
             </div>
 
             <div>

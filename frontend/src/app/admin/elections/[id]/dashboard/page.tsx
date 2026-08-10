@@ -456,9 +456,12 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                 Category / Faculty Scope
               </label>
-              <select
+              <input
+                type="text"
+                list="edit-category-suggestions"
                 value={editCategory}
                 onChange={(e) => setEditCategory(e.target.value)}
+                placeholder="e.g. Executive, Departmental, Faculty of Engineering"
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
@@ -469,12 +472,13 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
                   fontSize: '0.9rem',
                   boxSizing: 'border-box'
                 }}
-              >
+              />
+              <datalist id="edit-category-suggestions">
                 <option value="Executive">SRC Executive Elections</option>
                 <option value="Departmental">Departmental Elections</option>
                 <option value="Hall">Hall of Residence Elections</option>
                 <option value="Association">Faculty Association</option>
-              </select>
+              </datalist>
             </div>
 
             <div>
