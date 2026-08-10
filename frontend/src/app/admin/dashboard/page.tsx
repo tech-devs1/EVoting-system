@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
@@ -1052,20 +1053,36 @@ export default function OrganizationElectionHub() {
                     <div><strong>End Window:</strong> {endDate ? new Date(endDate).toLocaleString() : 'Not Set'}</div>
                     <div><strong>Uploaded Roster:</strong> {csvStats.valid} eligible voters</div>
                   </div>
+                <div style={{ backgroundColor: '#F8FAFC', padding: '1.25rem', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 0.75rem 0', color: '#0F172A' }}>Election Summary</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem' }}>
+                    <div><strong>Title:</strong> {wizardData.title || 'Untitled'}</div>
+                    <div><strong>Scope:</strong> {wizardData.category || 'General'}</div>
+                    <div><strong>Start:</strong> {wizardData.startDate ? new Date(wizardData.startDate).toLocaleString() : 'Not Set'}</div>
+                    <div><strong>End:</strong> {wizardData.endDate ? new Date(wizardData.endDate).toLocaleString() : 'Not Set'}</div>
+                    <div><strong>Positions:</strong> {wizardData.positions.filter(p => p.title.trim()).length} configured</div>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Wizard Navigation Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-              {wizardStep > 1 ? (
-                <button type="button" onClick={() => setWizardStep(wizardStep - 1)} className="btn btn-outline">
-                  Back
-                </button>
-              ) : <div />}
+            {/* Modal Controls */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid #F1F5F9' }}>
+              <button
+                type="button"
+                disabled={wizardStep === 1}
+                onClick={() => setWizardStep(prev => prev - 1)}
+                style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: wizardStep === 1 ? 'not-allowed' : 'pointer', opacity: wizardStep === 1 ? 0.5 : 1 }}
+              >
+                Back
+              </button>
 
               {wizardStep < 4 ? (
-                <button type="button" onClick={() => setWizardStep(wizardStep + 1)} className="btn btn-primary" style={{ backgroundColor: '#2563eb' }}>
+                <button
+                  type="button"
+                  onClick={() => setWizardStep(prev => prev + 1)}
+                  style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}
+                >
                   Next Step ➔
                 </button>
               ) : (
@@ -1074,25 +1091,25 @@ export default function OrganizationElectionHub() {
                     type="button"
                     disabled={isCreating}
                     onClick={() => handleWizardSubmit(false)}
-                    className="btn btn-outline"
+                    style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, cursor: 'pointer' }}
                   >
-                    Save as Draft
+                    Save Draft
                   </button>
                   <button
                     type="button"
                     disabled={isCreating}
                     onClick={() => handleWizardSubmit(true)}
-                    className="btn btn-primary"
-                    style={{ fontWeight: 700, backgroundColor: '#2563eb' }}
+                    style={{ padding: '0.7rem 1.25rem', borderRadius: '14px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)' }}
                   >
-                    {isCreating ? 'Creating Workspace...' : '🚀 Launch Election Workspace'}
+                    {isCreating ? 'Creating Workspace...' : '🚀 Launch Workspace'}
                   </button>
                 </div>
               )}
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
