@@ -389,33 +389,11 @@ export default function AdminReportsPage() {
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
-                      Executive Summary / Introduction
-                    </label>
-                    <textarea
-                      value={executiveSummary}
-                      onChange={(e) => setExecutiveSummary(e.target.value)}
-                      rows={4}
-                      style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
-                      placeholder="Add an official introductory summary..."
-                    />
+                  <div style={{ padding: '0.75rem 1rem', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.2)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    ℹ️ <strong>Certified Reporting:</strong> The official executive summary, statistical tallies, and commission remarks are auto-generated based on the live election ledger audit trail to prevent manual tampering.
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
-                      EC Special Notes / Addendum
-                    </label>
-                    <textarea
-                      value={customNotes}
-                      onChange={(e) => setCustomNotes(e.target.value)}
-                      rows={3}
-                      style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
-                      placeholder="Add special notes or closing certification statements..."
-                    />
-                  </div>
-
-                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                  <div style={{ paddingTop: '0.5rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '1rem' }}>
                       <input
                         type="checkbox"

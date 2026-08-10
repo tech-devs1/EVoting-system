@@ -99,15 +99,21 @@ router.post('/cast', verifyAuth, async (req, res) => {
       return res.status(403).json({ status: 'error', message: 'You must verify your identity via OTP before casting your ballot.' });
     }
 
-    if (election.status !== 'active') {
-      return res.status(400).json({ status: 'error', message: 'Election is not active' });
+    const now = Date.now();
+    const startTime = election.startDate ? new Date(election.startDate).getTime() : 0;
+    const endTime = election.endDate ? new Date(election.endDate).getTime() : Infinity;
+
+    if (election.status === 'draft') {
+      return res.status(400).json({ status: 'error', message: 'Election is still in draft.' });
+    }
+    if (election.status === 'ended' || election.status === 'completed') {
+      return res.status(400).json({ status: 'error', message: 'Election has already ended.' });
     }
 
-    const now = Date.now();
-    if (election.startDate && now < new Date(election.startDate).getTime()) {
+    if (now < startTime) {
       return res.status(400).json({ status: 'error', message: 'Voting for this election has not started yet.' });
     }
-    if (election.endDate && now > new Date(election.endDate).getTime()) {
+    if (now > endTime) {
       return res.status(400).json({ status: 'error', message: 'Voting duration for this election has expired.' });
     }
 

@@ -182,16 +182,27 @@ router.get('/eligible', verifyAuth, async (req, res) => {
       }
 
       if (isEligible) {
-        let updatedStatus = electionData.status || 'active';
+        let updatedStatus = electionData.status || 'draft';
         const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
         const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
 
-        if (electionData.status === 'active' && electionData.endDate && endTime < now) {
-          updatedStatus = 'completed';
-          dbUpdates.push(ref.update({ status: 'completed' }).catch(() => {}));
-        } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
-          updatedStatus = 'active';
-          dbUpdates.push(ref.update({ status: 'active' }).catch(() => {}));
+        if (electionData.status && electionData.status !== 'draft') {
+          if (now >= startTime && now <= endTime) {
+            if (electionData.status !== 'active') {
+              updatedStatus = 'active';
+              dbUpdates.push(ref.update({ status: 'active' }).catch(() => {}));
+            }
+          } else if (now < startTime) {
+            if (electionData.status !== 'scheduled') {
+              updatedStatus = 'scheduled';
+              dbUpdates.push(ref.update({ status: 'scheduled' }).catch(() => {}));
+            }
+          } else if (now > endTime) {
+            if (electionData.status !== 'completed' && electionData.status !== 'ended') {
+              updatedStatus = 'completed';
+              dbUpdates.push(ref.update({ status: 'completed' }).catch(() => {}));
+            }
+          }
         }
 
         // Check if voter has cast a vote in this election
@@ -245,21 +256,34 @@ router.get('/:id', async (req, res) => {
       
       let electionData = doc.data();
       const now = Date.now();
-      let updatedStatus = electionData.status;
+      let updatedStatus = electionData.status || 'draft';
       
       const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
       const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
 
-      if (electionData.status === 'active' && electionData.endDate && endTime < now) {
-        updatedStatus = 'completed';
-        await ref.update({ status: 'completed' });
-        cache.invalidatePrefix('elections:');
-        cache.invalidatePrefix('admin:');
-      } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
-        updatedStatus = 'active';
-        await ref.update({ status: 'active' });
-        cache.invalidatePrefix('elections:');
-        cache.invalidatePrefix('admin:');
+      if (electionData.status && electionData.status !== 'draft') {
+        if (now >= startTime && now <= endTime) {
+          if (electionData.status !== 'active') {
+            updatedStatus = 'active';
+            await ref.update({ status: 'active' });
+            cache.invalidatePrefix('elections:');
+            cache.invalidatePrefix('admin:');
+          }
+        } else if (now < startTime) {
+          if (electionData.status !== 'scheduled') {
+            updatedStatus = 'scheduled';
+            await ref.update({ status: 'scheduled' });
+            cache.invalidatePrefix('elections:');
+            cache.invalidatePrefix('admin:');
+          }
+        } else if (now > endTime) {
+          if (electionData.status !== 'completed' && electionData.status !== 'ended') {
+            updatedStatus = 'completed';
+            await ref.update({ status: 'completed' });
+            cache.invalidatePrefix('elections:');
+            cache.invalidatePrefix('admin:');
+          }
+        }
       }
 
       // Calculate dynamic real-time stats
@@ -532,6 +556,38 @@ const updateElectionHandler = async (req, res) => {
     if (showResults !== undefined) updateFields.showResults = Boolean(showResults);
     if (otpRequired !== undefined) updateFields.otpRequired = Boolean(otpRequired);
     if (previewImageUrl !== undefined) updateFields.previewImageUrl = previewImageUrl.trim();
+
+    const now = Date.now();
+    // 1. If explicit status === 'active', ensure dates allow immediate voting
+    if (status === 'active') {
+      const currentStart = startDate !== undefined ? startDate : electionDoc.data().startDate;
+      const currentEnd = endDate !== undefined ? endDate : electionDoc.data().endDate;
+      
+      if (!currentStart || new Date(currentStart).getTime() > now) {
+        updateFields.startDate = new Date(now - 1000).toISOString(); // 1 second in the past
+      }
+      if (!currentEnd || new Date(currentEnd).getTime() <= now) {
+        updateFields.endDate = new Date(now + 2 * 60 * 60 * 1000).toISOString(); // 2 hours in the future
+      }
+    }
+
+    // 2. If dates are updated, auto-calculate the target status
+    const targetStatus = updateFields.status !== undefined ? updateFields.status : electionDoc.data().status;
+    const targetStart = updateFields.startDate !== undefined ? updateFields.startDate : electionDoc.data().startDate;
+    const targetEnd = updateFields.endDate !== undefined ? updateFields.endDate : electionDoc.data().endDate;
+    
+    if (targetStatus && targetStatus !== 'draft') {
+      const startMs = targetStart ? new Date(targetStart).getTime() : 0;
+      const endMs = targetEnd ? new Date(targetEnd).getTime() : Infinity;
+      
+      if (now >= startMs && now <= endMs) {
+        updateFields.status = 'active';
+      } else if (now < startMs) {
+        updateFields.status = 'scheduled';
+      } else {
+        updateFields.status = 'completed';
+      }
+    }
 
     await electionRef.update(updateFields);
 
