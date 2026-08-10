@@ -109,19 +109,70 @@ router.get('/:id', async (req, res) => {
       if (electionData.status === 'active' && electionData.endDate && endTime < now) {
         updatedStatus = 'completed';
         await getElectionsRef(req).doc(doc.id).update({ status: 'completed' });
-        // Invalidate caches
         cache.invalidatePrefix('elections:');
         cache.invalidatePrefix('admin:');
       } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
         updatedStatus = 'active';
         await getElectionsRef(req).doc(doc.id).update({ status: 'active' });
-        // Invalidate caches
         cache.invalidatePrefix('elections:');
         cache.invalidatePrefix('admin:');
       }
 
-      return { id: doc.id, ...electionData, status: updatedStatus };
-    }, 10000); // Cache for 10 seconds
+      // Calculate dynamic real-time stats
+      let totalVoters = electionData.totalVoters || electionData.voterCount || 0;
+      let totalVotesCast = electionData.totalVotesCast || 0;
+      let candidateCount = electionData.candidateCount || 0;
+      let positionCount = electionData.positionCount || 0;
+
+      // 1. Compute total voters from subcollections if missing/zero
+      try {
+        const rosterSnap = await getElectionsRef(req).doc(electionId).collection('voter_roster').get();
+        const eligibleSnap = await getElectionsRef(req).doc(electionId).collection('eligible_voters').get();
+        const subcolCount = Math.max(rosterSnap.size, eligibleSnap.size);
+        if (subcolCount > 0) {
+          totalVoters = Math.max(totalVoters, subcolCount);
+        } else if (!totalVoters) {
+          const tenantId = req.user?.tenantId || req.user?.departmentId || DEFAULT_TENANT_ID;
+          const tenantRollSnap = await db.collection('tenants').doc(tenantId).collection('voter_rolls').get();
+          const orgRollSnap = await db.collection('organizations').doc(tenantId).collection('voter_rolls').get();
+          totalVoters = Math.max(tenantRollSnap.size, orgRollSnap.size);
+        }
+      } catch (e) {
+        console.warn('Could not fetch voter roster count:', e.message);
+      }
+
+      // 2. Compute total votes cast from voted_voters if missing
+      try {
+        const votedSnap = await getVotedVotersRef(req).where('electionId', '==', electionId).get();
+        totalVotesCast = Math.max(totalVotesCast, votedSnap.size);
+      } catch (e) {
+        console.warn('Could not fetch voted voters count:', e.message);
+      }
+
+      // 3. Compute candidate and position counts
+      try {
+        const candsSnap = await getCandidatesRef(req).where('electionId', '==', electionId).get();
+        candidateCount = candsSnap.size;
+        const positions = new Set();
+        candsSnap.forEach(cDoc => {
+          const cData = cDoc.data();
+          if (cData.position) positions.add(cData.position.trim());
+        });
+        positionCount = positions.size;
+      } catch (e) {
+        console.warn('Could not fetch candidate count:', e.message);
+      }
+
+      return {
+        id: doc.id,
+        ...electionData,
+        status: updatedStatus,
+        totalVoters,
+        totalVotesCast,
+        candidateCount,
+        positionCount
+      };
+    }, 5000); // 5 second cache
 
     res.status(200).json({ status: 'success', data: election });
   } catch (error) {
@@ -952,6 +1003,7 @@ router.post('/:id/voters/upload-csv', verifyAuth, requireAdmin, async (req, res)
 
     // Update total CSV voter count on election document
     await electionRef.update({
+      totalVoters: addedCount,
       voterCount: addedCount,
       hasCsvRoster: true
     });
