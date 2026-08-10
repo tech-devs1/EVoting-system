@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, getAuthHeaders } from '@/lib/api';
 import { 
   ArrowLeft, 
   Play, 
