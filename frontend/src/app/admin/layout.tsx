@@ -18,7 +18,8 @@ import {
   Moon, 
   Bell, 
   ChevronLeft,
-  ChevronDown
+  ChevronDown,
+  ArrowLeft
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -44,7 +45,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     document.documentElement.setAttribute('data-theme', nextTheme);
   };
 
-  const navLinks = [
+  // Detect Per-Election Workspace Context
+  const electionMatch = pathname.match(/\/admin\/elections\/([^/]+)/);
+  const isElectionWorkspace = Boolean(electionMatch);
+  const electionId = electionMatch ? electionMatch[1] : null;
+
+  const defaultNavLinks = [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Positions & Candidates', href: '/admin/elections', icon: Layers },
     { label: 'Voters Roster', href: '/admin/voters', icon: Users },
@@ -52,6 +58,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Audit Ledger', href: '/admin/audit', icon: FileText },
     { label: 'Access Security', href: '/admin/fraud', icon: ShieldAlert },
   ];
+
+  const electionNavLinks = electionId ? [
+    { label: 'Overview', href: `/admin/elections/${electionId}/dashboard`, icon: LayoutDashboard },
+    { label: 'Positions & Candidates', href: `/admin/elections/${electionId}/candidates`, icon: Layers },
+    { label: 'Roster & CSV Upload', href: `/admin/elections/${electionId}/voters`, icon: Users },
+    { label: 'Live Results', href: `/admin/elections/${electionId}/results`, icon: BarChart3 },
+    { label: '360° Audit Ledger', href: `/admin/elections/${electionId}/audit`, icon: FileText },
+    { label: 'Access Security', href: `/admin/elections/${electionId}/fraud`, icon: ShieldAlert },
+  ] : defaultNavLinks;
+
+  const activeNavLinks = isElectionWorkspace ? electionNavLinks : defaultNavLinks;
 
   if (loading || !user) {
     return (
@@ -61,9 +78,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  const currentTitle = navLinks.find(link => pathname === link.href || (pathname.startsWith(link.href) && link.href !== '/admin/dashboard'))?.label || 'Dashboard';
+  const currentTitle = activeNavLinks.find(link => pathname === link.href || pathname.startsWith(link.href))?.label || 'Workspace';
   const adminName = user.name || 'Electoral Admin';
-  const adminEmail = user.email || 'admin@htu.edu.gh';
 
   return (
     <div style={{
@@ -91,7 +107,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }}>
         <div>
           {/* Logo Brand Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem', paddingLeft: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem', paddingLeft: '0.5rem' }}>
             <div style={{
               width: '40px',
               height: '40px',
@@ -110,15 +126,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </span>
           </div>
 
-          {/* Navigation Category 1: Menu */}
+          {/* Context Back Button if in Per-Election Workspace */}
+          {isElectionWorkspace && (
+            <Link
+              href="/admin/dashboard"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                color: '#2563EB',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                textDecoration: 'none',
+                padding: '0.6rem 0.85rem',
+                borderRadius: '12px',
+                backgroundColor: '#EFF6FF',
+                marginBottom: '1.25rem',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}
+            >
+              <ArrowLeft size={16} /> Back to All Elections
+            </Link>
+          )}
+
+          {/* Navigation Category: Menu */}
           <div style={{ marginBottom: '1.75rem' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
-              Menu
+              {isElectionWorkspace ? 'Election Workspace' : 'Menu'}
             </div>
             <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {navLinks.map((item) => {
+              {activeNavLinks.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin/dashboard');
+                const isActive = pathname === item.href;
 
                 return (
                   <Link
