@@ -902,6 +902,7 @@ router.get('/eligible', verifyAuth, async (req, res) => {
 router.post('/:id/voters/upload-csv', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
+    const tenantId = req.user?.tenantId || req.user?.departmentId || DEFAULT_TENANT_ID;
     const { members } = req.body; // Array of { email, indexNumber, name, department }
 
     if (!Array.isArray(members) || members.length === 0) {
