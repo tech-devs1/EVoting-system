@@ -813,15 +813,20 @@ router.post('/:id/voters/upload-csv', verifyAuth, requireAdmin, async (req, res)
       const batch = db.batch();
 
       chunk.forEach(member => {
-        const docId = (member.email || member.indexNumber || Math.random().toString(36)).toLowerCase().replace(/[^a-z0-9]/g, '_');
-        const memberRef = eligibleRef.doc(docId);
-        batch.set(memberRef, {
+        const docId = (member.email || member.indexNumber || member.studentId || Math.random().toString(36)).toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const memberData = {
           email: (member.email || '').toLowerCase().trim(),
-          indexNumber: (member.indexNumber || '').trim(),
-          name: member.name || 'Student',
+          indexNumber: (member.indexNumber || member.studentId || '').trim(),
+          studentId: (member.indexNumber || member.studentId || '').trim(),
+          name: member.name || member.fullName || 'Student',
           department: member.department || '',
+          phone: (member.phone || member.phoneNumber || member.phoneNo || '').trim(),
+          phoneNumber: (member.phone || member.phoneNumber || member.phoneNo || '').trim(),
           uploadedAt: Date.now()
-        });
+        };
+
+        batch.set(electionRef.collection('eligible_voters').doc(docId), memberData);
+        batch.set(electionRef.collection('voter_roster').doc(docId), memberData);
         addedCount++;
       });
 

@@ -39,9 +39,27 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
   // CSV Upload State
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<any[]>([]);
+  const [csvParsedMembers, setCsvParsedMembers] = useState<any[]>([]);
   const [csvStats, setCsvStats] = useState({ total: 0, valid: 0, duplicates: 0, invalid: 0 });
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Download Official Voter CSV Template
+  const handleDownloadSampleCsv = () => {
+    const csvContent = `IndexNumber,FullName,EmailAddress,PhoneNumber,Department
+0123456789,Kwame Mensah,kwame.mensah@htu.edu.gh,+233240001122,Computer Science
+0123456790,Abena Osei,abena.osei@htu.edu.gh,+233501112233,Electrical Engineering
+0123456791,Kofi Annan,kofi.annan@htu.edu.gh,+233273334455,Business Administration`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'htu_elect_voter_roster_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   async function fetchRosterVoters() {
     try {
@@ -81,24 +99,35 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
       let invalidCount = 0;
       const seen = new Set<string>();
       const parsedPreview: any[] = [];
+      const membersPayload: any[] = [];
 
       rows.forEach((row, idx) => {
         const cols = row.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
         if (cols.length >= 2) {
-          const indexNum = cols[0];
+          const indexNum = cols[0] || '';
           const name = cols[1] || '';
           const email = cols[2] || '';
           const phone = cols[3] || '';
+          const department = cols[4] || '';
 
           const isValidEmail = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
           if (!isValidEmail) {
             invalidCount++;
-          } else if (seen.has(indexNum.toLowerCase())) {
+          } else if (seen.has((indexNum || email).toLowerCase())) {
             duplicateCount++;
           } else {
-            seen.add(indexNum.toLowerCase());
+            seen.add((indexNum || email).toLowerCase());
             validCount++;
+            membersPayload.push({
+              indexNumber: indexNum,
+              studentId: indexNum,
+              name,
+              email,
+              phone,
+              phoneNumber: phone,
+              department
+            });
           }
 
           if (idx < 10) {
@@ -114,37 +143,36 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
         invalid: invalidCount
       });
       setCsvPreview(parsedPreview);
+      setCsvParsedMembers(membersPayload);
     };
     reader.readAsText(file);
   };
 
   // Submit CSV Roster to Server
   const handleUploadRoster = async () => {
-    if (!csvFile) return;
+    if (!csvParsedMembers || csvParsedMembers.length === 0) return;
     setUploading(true);
     setUploadMessage(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', csvFile);
+      const res = await apiRequest<{ status: string; message: string; data?: any }>(
+        `/elections/${electionId}/voters/upload-csv`,
+        'POST',
+        { members: csvParsedMembers }
+      );
 
-      const res = await fetch(`/api/elections/${electionId}/upload-roster`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData
-      });
-
-      const data = await res.json();
-      if (res.ok && data.status === 'success') {
-        setUploadMessage({ type: 'success', text: `Roster saved! Added ${data.insertedCount || csvStats.valid} eligible voters to this election.` });
+      if (res.status === 'success') {
+        setUploadMessage({
+          type: 'success',
+          text: res.message || `Roster saved! Added ${csvParsedMembers.length} eligible voters with phone numbers to this election.`
+        });
         setCsvFile(null);
         setCsvPreview([]);
+        setCsvParsedMembers([]);
         setCsvStats({ total: 0, valid: 0, duplicates: 0, invalid: 0 });
         fetchRosterVoters();
       } else {
-        throw new Error(data.message || 'Failed to upload roster.');
+        throw new Error(res.message || 'Failed to upload roster.');
       }
     } catch (err: any) {
       setUploadMessage({ type: 'error', text: err.message || 'Failed to process CSV file.' });
@@ -180,13 +208,26 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
 
       {/* CSV Roster Upload Section */}
       <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Upload size={18} style={{ color: 'var(--color-primary)' }} />
-          Upload Election Voter Roster (CSV)
-        </h3>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem 0' }}>
-          Upload a CSV file containing eligible voters for this election. Required columns: <strong>IndexNumber, FullName, EmailAddress, Phone</strong>.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Upload size={18} style={{ color: '#2563eb' }} />
+              Upload Election Voter Roster (CSV)
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#64748B', margin: 0 }}>
+              Upload a CSV roster of eligible voters. Required columns: <strong>IndexNumber, FullName, EmailAddress, PhoneNumber, Department</strong>.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleDownloadSampleCsv}
+            className="btn btn-outline"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700, color: '#2563eb', borderColor: '#BFDBFE', backgroundColor: '#EFF6FF' }}
+          >
+            <FileText size={16} /> Download Sample Voter CSV Template
+          </button>
+        </div>
 
         {uploadMessage && (
           <div style={{
