@@ -503,6 +503,31 @@ export default function AdminReportsPage() {
                     </div>
                   </div>
 
+                  {/* Certified stats grid */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.25rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      Certified Election Audit Statistics
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', fontSize: '0.8rem', textAlign: 'center' }}>
+                      <div style={{ padding: '0.5rem', border: '1px solid #E2E8F0', borderRadius: '6px' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Eligible Voters</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{stats?.field1_totalVoters?.count || 'N/A'}</div>
+                      </div>
+                      <div style={{ padding: '0.5rem', border: '1px solid #E2E8F0', borderRadius: '6px' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Ballots Cast</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{stats?.field3_successfullyVoted?.count || '0'}</div>
+                      </div>
+                      <div style={{ padding: '0.5rem', border: '1px solid #E2E8F0', borderRadius: '6px' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Voter Turnout</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+                          {stats?.field1_totalVoters?.count > 0 
+                            ? ((stats.field3_successfullyVoted.count / stats.field1_totalVoters.count) * 100).toFixed(2) 
+                            : '0.00'}%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Executive Summary */}
                   {executiveSummary && (
                     <div style={{ marginBottom: '1.5rem' }}>
