@@ -114,8 +114,9 @@ export default function VoterDashboard() {
           console.warn('IndexedDB cache read failed', e);
         }
 
-        const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
+        const res = await apiRequest<{ status: string; data: any[] }>('/elections/eligible');
         let newElections: Election[] = [], newUpcoming: Election[] = [], newPublished: Election[] = [];
+        let newVotedIds: string[] = [];
         if (res.status === 'success' && Array.isArray(res.data)) {
           const allElections = res.data;
           newElections = allElections.filter(el => el.status === 'active');
@@ -125,13 +126,17 @@ export default function VoterDashboard() {
           setElections(newElections);
           setUpcomingElections(newUpcoming);
           setPublishedResultsElections(newPublished);
+
+          newVotedIds = allElections.filter(el => el.hasVoted).map(el => el.id);
+          setVotedElectionIds(newVotedIds);
         }
 
-        let newVotedIds: string[] = [];
         try {
           const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
           if (votedRes.status === 'success') {
-            newVotedIds = votedRes.data;
+            // Combine both sources of voted election IDs for ultimate consistency
+            const combinedVotedIds = Array.from(new Set([...newVotedIds, ...votedRes.data]));
+            newVotedIds = combinedVotedIds;
             setVotedElectionIds(newVotedIds);
           }
         } catch (votedErr) {
@@ -195,71 +200,37 @@ export default function VoterDashboard() {
 
   return (
     <div style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr',
-      gap: 'var(--space-6, 1.5rem)',
-      fontFamily: 'var(--font-body, system-ui, sans-serif)'
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 'var(--space-6, 1.5rem)'
     }} suppressHydrationWarning>
 
       {/* Top Welcome Card */}
-      <div style={{
-        backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-        borderRadius: 'var(--radius-xl, 12px)',
-        border: '1px solid var(--border-color, #E2E8F0)',
-        padding: '2rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.25rem'
-      }}>
-        <div>
-          <h2 style={{
-            fontSize: 'var(--text-xl, 1.25rem)',
-            fontWeight: 'var(--weight-bold, 700)',
-            color: 'var(--text-primary, #0F172A)',
-            margin: '0 0 0.35rem 0'
-          }}>
-            Welcome back, {userName}!
-          </h2>
-          <p style={{
-            fontSize: 'var(--text-sm, 0.875rem)',
-            color: 'var(--text-secondary, #475569)',
-            margin: 0,
-            maxWidth: '640px',
-            lineHeight: '1.5'
-          }}>
-            Your student voter account is cryptographically verified and ready. Review the running e-ballots below to securely cast your vote.
-          </p>
+      <div className="welcome-card">
+        <h2>Welcome back, {userName}!</h2>
+        <p>
+          Your student voter account is cryptographically verified and ready. Review the running e-ballots below to securely cast your vote.
+        </p>
+      </div>
+
+      {/* Stats Widgets */}
+      <div className="quick-stats-grid" style={{ marginTop: 0 }}>
+        <div className="stat-widget">
+          <span className="stat-widget-label">Active Ballots</span>
+          <span className="stat-widget-val">{elections.length}</span>
         </div>
-        
-        {/* Flat Minimalist Stats Row */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: '1rem',
-          borderTop: '1px solid var(--border-color, #E2E8F0)',
-          paddingTop: '1.25rem'
-        }}>
-          <div>
-            <div style={{ fontSize: 'var(--text-xs, 12px)', color: 'var(--text-tertiary, #94A3B8)', textTransform: 'uppercase', fontWeight: 600 }}>Active Ballots</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', marginTop: '2px' }}>{elections.length}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 'var(--text-xs, 12px)', color: 'var(--text-tertiary, #94A3B8)', textTransform: 'uppercase', fontWeight: 600 }}>Upcoming</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', marginTop: '2px' }}>{upcomingElections.length}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 'var(--text-xs, 12px)', color: 'var(--text-tertiary, #94A3B8)', textTransform: 'uppercase', fontWeight: 600 }}>Total Votes</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', marginTop: '2px' }}>{totalVotes}</div>
-          </div>
+        <div className="stat-widget">
+          <span className="stat-widget-label">Upcoming Elections</span>
+          <span className="stat-widget-val">{upcomingElections.length}</span>
+        </div>
+        <div className="stat-widget">
+          <span className="stat-widget-label">Total Votes Cast</span>
+          <span className="stat-widget-val">{totalVotes}</span>
         </div>
       </div>
 
       {/* Main Grid: Left Main Area, Right Sidebar */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
-        gap: 'var(--space-6, 1.5rem)'
-      }} className="responsive-dashboard-split">
+      <div className="dashboard-grid">
 
         {/* Left Column — Active Elections */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -507,13 +478,6 @@ export default function VoterDashboard() {
 
       </div>
 
-      <style jsx global>{`
-        @media (max-width: 768px) {
-          .responsive-dashboard-split {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

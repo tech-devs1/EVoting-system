@@ -24,6 +24,7 @@ const getVotedVotersRef = (req) => {
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
 const cache = require('../services/cache');
+const { logActivity } = require('../services/activityLog');
 
 // Get elections (optional status filter) - CACHED & WRITE OPTIMIZED
 router.get('/', async (req, res) => {
@@ -797,11 +798,14 @@ async function sendOtpViaBMS(phoneNumber, otp) {
 router.get('/eligible', verifyAuth, async (req, res) => {
   try {
     const voterEmail = (req.user.email || '').toLowerCase().trim();
-    const voterIndex = (req.user.indexNumber || '').toLowerCase().trim();
+    const voterIndex = (req.user.indexNumber || req.user.uid || '').toLowerCase().trim();
 
     if (!voterEmail && !voterIndex) {
       return res.status(200).json({ status: 'success', data: [] });
     }
+
+    const now = Date.now();
+    const dbUpdates = [];
 
     // Query active and draft elections across tenant organizations
     const snapshot = await db.collectionGroup('elections').get();
@@ -812,6 +816,11 @@ router.get('/eligible', verifyAuth, async (req, res) => {
       const electionId = doc.id;
       const tenantRef = doc.ref.parent.parent;
       const tenantId = tenantRef ? tenantRef.id : DEFAULT_TENANT_ID;
+
+      // Restrict elections to ONLY show those belonging to the voter's tenant/department
+      if (req.user.tenantId && req.user.tenantId !== 'global' && tenantId !== req.user.tenantId) {
+        continue;
+      }
 
       // Check if election has a per-election CSV roster
       const rosterSnapshot = await doc.ref.collection('eligible_voters').get();
@@ -826,7 +835,7 @@ router.get('/eligible', verifyAuth, async (req, res) => {
         rosterSnapshot.forEach(voterDoc => {
           const vData = voterDoc.data();
           const csvEmail = (vData.email || '').toLowerCase().trim();
-          const csvIndex = (vData.indexNumber || '').toLowerCase().trim();
+          const csvIndex = (vData.indexNumber || vData.studentId || '').toLowerCase().trim();
           if ((voterEmail && csvEmail === voterEmail) || (voterIndex && csvIndex === voterIndex)) {
             isEligible = true;
           }
@@ -834,6 +843,19 @@ router.get('/eligible', verifyAuth, async (req, res) => {
       }
 
       if (isEligible) {
+        // Automatically perform real-time status transitions for voters so they see live/accurate states
+        let updatedStatus = electionData.status;
+        const endTime = electionData.endDate ? new Date(electionData.endDate).getTime() : Infinity;
+        const startTime = electionData.startDate ? new Date(electionData.startDate).getTime() : 0;
+
+        if (electionData.status === 'active' && electionData.endDate && endTime < now) {
+          updatedStatus = 'completed';
+          dbUpdates.push(doc.ref.update({ status: 'completed' }));
+        } else if (electionData.status === 'draft' && electionData.startDate && startTime <= now) {
+          updatedStatus = 'active';
+          dbUpdates.push(doc.ref.update({ status: 'active' }));
+        }
+
         // Check if voter has unlocked or voted
         const votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters')
           .where('voterId', '==', req.user.uid)
@@ -844,10 +866,20 @@ router.get('/eligible', verifyAuth, async (req, res) => {
           id: electionId,
           tenantId,
           ...electionData,
+          status: updatedStatus,
           hasVoted: !votedSnap.empty,
           votedPositionsCount: votedSnap.size
         });
       }
+    }
+
+    // Execute status updates in background if any occurred
+    if (dbUpdates.length > 0) {
+      Promise.all(dbUpdates)
+        .then(() => {
+          cache.invalidatePrefix('elections:');
+        })
+        .catch(err => console.error('Error updating election status in background in eligible:', err));
     }
 
     res.status(200).json({ status: 'success', data: eligibleElections });
@@ -997,13 +1029,14 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
 
     if (!rosterSnap.empty) {
       const voterEmail = (voterData.email || req.user.email || '').toLowerCase().trim();
-      const voterIndex = (voterData.indexNumber || req.user.indexNumber || '').toLowerCase().trim();
+      const voterIndex = (voterData.indexNumber || voterData.studentId || req.user.indexNumber || req.user.uid || '').toLowerCase().trim();
 
       let isAllowed = false;
       rosterSnap.forEach(doc => {
         const entry = doc.data();
         if ((voterEmail && (entry.email || '').toLowerCase().trim() === voterEmail) ||
-            (voterIndex && (entry.indexNumber || '').toLowerCase().trim() === voterIndex)) {
+            (voterIndex && (entry.indexNumber || '').toLowerCase().trim() === voterIndex) ||
+            (voterIndex && (entry.studentId || '').toLowerCase().trim() === voterIndex)) {
           isAllowed = true;
         }
       });

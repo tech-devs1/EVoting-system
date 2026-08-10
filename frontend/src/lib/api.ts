@@ -50,6 +50,7 @@ export async function apiRequest<T>(
   const options: RequestInit = {
     method,
     headers,
+    cache: 'no-store', // Disable aggressive Next.js dynamic fetch caching
   };
 
   if (body) {

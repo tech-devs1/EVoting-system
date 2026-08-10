@@ -465,75 +465,45 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                 </div>
 
                 {/* Candidate Grid */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                  gap: '1rem',
-                  marginBottom: '1.25rem'
-                }}>
+                <div className="candidate-grid" style={{ marginBottom: '1.5rem' }}>
                   {posCandidates.map((cand) => {
                     const isSelected = selectedCandId === cand.id;
                     return (
                       <div
                         key={cand.id}
                         onClick={() => handleCardClick(pos, cand.id)}
+                        className={`card candidate-card ${isSelected ? 'selected' : ''}`}
                         style={{
-                          backgroundColor: isSelected ? 'var(--bg-active, #EFF6FF)' : 'var(--bg-secondary, #FFFFFF)',
-                          border: isSelected ? '1.5px solid var(--color-primary, #2563EB)' : '1px solid var(--border-color, #E2E8F0)',
-                          borderRadius: 'var(--radius-lg, 10px)',
-                          padding: '1rem',
+                          opacity: isPosVoted && !isSelected ? 0.5 : 1,
                           cursor: isPosVoted ? 'default' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                          opacity: isPosVoted && !isSelected ? 0.65 : 1,
-                          transition: 'all var(--transition-fast)'
                         }}
                       >
-                        <div style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
-                          overflow: 'hidden',
-                          backgroundColor: 'var(--bg-tertiary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0
-                        }}>
-                          {cand.photoUrl ? (
-                            <img src={cand.photoUrl} alt={cand.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <User size={18} style={{ color: 'var(--text-tertiary)' }} />
-                          )}
+                        <div className="candidate-select-indicator">
+                          {isSelected && <Check size={14} />}
                         </div>
 
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        {cand.photoUrl ? (
+                          <img src={cand.photoUrl} alt={cand.name} className="candidate-photo" />
+                        ) : (
+                          <div className="candidate-photo" style={{ display: 'flex', alignItems: 'center', justifycontent: 'center', color: 'var(--text-tertiary)' }}>
+                            <User size={48} />
+                          </div>
+                        )}
+
+                        <div className="candidate-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {cand.ballotNumber && (
-                            <span style={{ fontSize: '9px', backgroundColor: 'var(--color-primary)', color: '#ffffff', padding: '1px 4px', borderRadius: '3px', fontWeight: 700 }}>
+                            <span style={{ fontSize: '10px', backgroundColor: 'var(--color-primary)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
                               #{cand.ballotNumber}
                             </span>
                           )}
-                          <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {cand.name}
-                          </h4>
+                          <span style={{ fontSize: 'var(--text-base)', fontWeight: 'bold' }}>{cand.name}</span>
                         </div>
 
-                        {isSelected && (
-                          <div style={{
-                            width: '18px',
-                            height: '18px',
-                            borderRadius: '50%',
-                            backgroundColor: 'var(--color-primary, #2563EB)',
-                            color: '#ffffff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0
-                          }}>
-                            <Check size={11} />
-                          </div>
-                        )}
+                        <div className="candidate-manifesto" style={{ marginTop: 'var(--space-2)' }}>
+                          <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {cand.manifesto || 'No manifesto provided.'}
+                          </p>
+                        </div>
                       </div>
                     );
                   })}
