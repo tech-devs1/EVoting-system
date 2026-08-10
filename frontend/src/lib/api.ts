@@ -6,34 +6,60 @@ import { auth } from './firebase';
 const API_BASE_URL = '/api';
 
 export async function getAuthHeaders(): Promise<HeadersInit> {
-  // Check local token stored by AuthContext login first
-  const localToken = typeof window !== 'undefined' ? localStorage.getItem('COMPSSA_token') : null;
-  if (localToken) {
-    console.log('[API] Using local token:', localToken.substring(0, 30) + '...');
-    return {
-      'Authorization': localToken.startsWith('Bearer ') ? localToken : `Bearer ${localToken}`,
-      'Content-Type': 'application/json',
-    };
+  if (typeof window === 'undefined') {
+    return { 'Content-Type': 'application/json' };
   }
 
-  const user = auth.currentUser;
-  if (user) {
-    try {
-      const token = await user.getIdToken();
-      console.log('[API] Using Firebase token');
-      return {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      };
-    } catch (e) {
-      console.error('Failed to retrieve Firebase ID Token', e);
+  const path = window.location.pathname;
+  let token: string | null = null;
+  let tenantId: string | null = null;
+
+  if (path.startsWith('/admin') || path.startsWith('/superadmin')) {
+    token = sessionStorage.getItem('COMPSSA_admin_token') ||
+            localStorage.getItem('COMPSSA_admin_token') ||
+            localStorage.getItem('COMPSSA_token');
+    tenantId = sessionStorage.getItem('COMPSSA_admin_tenantId') ||
+              localStorage.getItem('COMPSSA_admin_tenantId') ||
+              localStorage.getItem('COMPSSA_tenantId');
+  } else if (path.startsWith('/voter')) {
+    token = sessionStorage.getItem('COMPSSA_voter_token') ||
+            localStorage.getItem('COMPSSA_voter_token') ||
+            localStorage.getItem('COMPSSA_token');
+    tenantId = sessionStorage.getItem('COMPSSA_voter_tenantId') ||
+              localStorage.getItem('COMPSSA_voter_tenantId') ||
+              localStorage.getItem('COMPSSA_tenantId');
+  } else {
+    token = sessionStorage.getItem('COMPSSA_admin_token') ||
+            localStorage.getItem('COMPSSA_admin_token') ||
+            sessionStorage.getItem('COMPSSA_voter_token') ||
+            localStorage.getItem('COMPSSA_voter_token') ||
+            localStorage.getItem('COMPSSA_token');
+    tenantId = localStorage.getItem('COMPSSA_admin_tenantId') ||
+              localStorage.getItem('COMPSSA_voter_tenantId') ||
+              localStorage.getItem('COMPSSA_tenantId');
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+  } else {
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const fbToken = await user.getIdToken();
+        headers['Authorization'] = `Bearer ${fbToken}`;
+      } catch (e) {}
     }
   }
 
-  console.log('[API] No token found');
-  return {
-    'Content-Type': 'application/json',
-  };
+  if (tenantId) {
+    headers['x-tenant-id'] = tenantId;
+  }
+
+  return headers;
 }
 
 export async function apiRequest<T>(
@@ -42,10 +68,6 @@ export async function apiRequest<T>(
   body?: any
 ): Promise<T> {
   const headers = await getAuthHeaders();
-  
-  // Inject default tenant ID for multi-tenant VaaS transition
-  const tenantId = typeof window !== 'undefined' ? localStorage.getItem('COMPSSA_tenantId') || 'default_tenant' : 'default_tenant';
-  (headers as any)['x-tenant-id'] = tenantId;
 
   const options: RequestInit = {
     method,

@@ -238,10 +238,9 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
   // Export Audit CSV Action
   const handleExportAudit = async () => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/elections/${electionId}/export-audit`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        headers
       });
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);

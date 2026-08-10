@@ -179,10 +179,9 @@ export default function AdminReportsPage() {
   const handleDownloadPDF = async () => {
     if (!selectedElectionId) return;
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/elections/${selectedElectionId}/report/pdf`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        headers
       });
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
