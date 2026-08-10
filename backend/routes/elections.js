@@ -238,7 +238,7 @@ router.get('/:id', async (req, res) => {
     const cacheKey = `elections:detail:${electionId}`;
 
     const election = await cache.getOrSet(cacheKey, async () => {
-      const { doc, ref } = await findElectionDoc(electionId, req);
+      const { doc, ref, tenantId: resolvedTenantId, tenantCollection: resolvedTenantCollection } = await findElectionDoc(electionId, req);
       if (!doc || !doc.exists) {
         throw new Error('NOT_FOUND');
       }
@@ -263,6 +263,9 @@ router.get('/:id', async (req, res) => {
       }
 
       // Calculate dynamic real-time stats
+      const collectionToUse = resolvedTenantCollection || 'tenants';
+      const tenantIdToUse = resolvedTenantId || getTenantId(req);
+
       let totalVoters = electionData.totalVoters || electionData.voterCount || 0;
       let totalVotesCast = electionData.totalVotesCast || 0;
       let candidateCount = electionData.candidateCount || 0;
@@ -276,10 +279,14 @@ router.get('/:id', async (req, res) => {
         if (subcolCount > 0) {
           totalVoters = Math.max(totalVoters, subcolCount);
         } else if (!totalVoters) {
-          const tenantId = req.user?.tenantId || req.user?.departmentId || DEFAULT_TENANT_ID;
-          const tenantRollSnap = await db.collection('tenants').doc(tenantId).collection('voter_rolls').get();
-          const orgRollSnap = await db.collection('organizations').doc(tenantId).collection('voter_rolls').get();
-          totalVoters = Math.max(tenantRollSnap.size, orgRollSnap.size);
+          const tenantRollSnap = await db.collection(collectionToUse).doc(tenantIdToUse).collection('voter_rolls').get();
+          let fallbackCount = tenantRollSnap.size;
+          if (fallbackCount === 0) {
+            const altCollection = collectionToUse === 'tenants' ? 'organizations' : 'tenants';
+            const altRollSnap = await db.collection(altCollection).doc(tenantIdToUse).collection('voter_rolls').get();
+            fallbackCount = altRollSnap.size;
+          }
+          totalVoters = fallbackCount;
         }
       } catch (e) {
         console.warn('Could not fetch voter roster count:', e.message);
@@ -287,7 +294,14 @@ router.get('/:id', async (req, res) => {
 
       // 2. Compute total votes cast from voted_voters if missing
       try {
-        const votedSnap = await getVotedVotersRef(req).where('electionId', '==', electionId).get();
+        let votedSnap = await db.collection(collectionToUse).doc(tenantIdToUse).collection('voted_voters').where('electionId', '==', electionId).get();
+        if (votedSnap.empty) {
+          const altCollection = collectionToUse === 'tenants' ? 'organizations' : 'tenants';
+          votedSnap = await db.collection(altCollection).doc(tenantIdToUse).collection('voted_voters').where('electionId', '==', electionId).get();
+        }
+        if (votedSnap.empty) {
+          votedSnap = await db.collectionGroup('voted_voters').where('electionId', '==', electionId).get();
+        }
         totalVotesCast = Math.max(totalVotesCast, votedSnap.size);
       } catch (e) {
         console.warn('Could not fetch voted voters count:', e.message);
@@ -295,7 +309,14 @@ router.get('/:id', async (req, res) => {
 
       // 3. Compute candidate and position counts
       try {
-        const candsSnap = await getCandidatesRef(req).where('electionId', '==', electionId).get();
+        let candsSnap = await db.collection(collectionToUse).doc(tenantIdToUse).collection('candidates').where('electionId', '==', electionId).get();
+        if (candsSnap.empty) {
+          const altCollection = collectionToUse === 'tenants' ? 'organizations' : 'tenants';
+          candsSnap = await db.collection(altCollection).doc(tenantIdToUse).collection('candidates').where('electionId', '==', electionId).get();
+        }
+        if (candsSnap.empty) {
+          candsSnap = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+        }
         candidateCount = candsSnap.size;
         const positions = new Set();
         candsSnap.forEach(cDoc => {
@@ -874,9 +895,8 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
         uniqueVoters,
         verificationIds
       };
-    }, 30000); // Cache pdf data for 30s
-
-    const { election, candidates, totalVotes, uniqueVoters, verificationIds } = reportData;
+    }, 30000); // Cache pdf data for 30s    const { election, candidates, totalVotes, uniqueVoters, verificationIds } = reportData;
+    const { executiveSummary, customNotes, ecName, ecTitle, showSignature, signatureText } = req.query;
     
     // Generate PDF Document
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
@@ -899,6 +919,14 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     doc.text(`Type: ${election.type || 'N/A'}`);
     doc.text(`Department: ${election.department || 'N/A'}`);
     doc.moveDown();
+
+    // Custom Executive Summary
+    if (executiveSummary) {
+      doc.fontSize(16).font('Helvetica-Bold').text('Executive Summary', { underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(11).font('Helvetica').text(executiveSummary.toString());
+      doc.moveDown();
+    }
     
     // Statistics section
     doc.fontSize(16).font('Helvetica-Bold').text('Statistics', { underline: true });
@@ -925,7 +953,7 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
       doc.moveDown();
     });
 
-    if (doc.y > 650) doc.addPage();
+    if (doc.y > 600) doc.addPage();
     doc.fontSize(16).font('Helvetica-Bold').text('Cryptographic Voter Verification Ledger (Recent 50)', { underline: true });
     doc.moveDown();
     doc.fontSize(10).font('Helvetica').text('Cryptographic audit hashes generated for verified ballots:');
@@ -938,7 +966,42 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
       });
     }
     doc.moveDown();
+
+    // Custom Notes / Addendum
+    if (customNotes) {
+      doc.moveDown();
+      if (doc.y > 600) doc.addPage();
+      doc.fontSize(14).font('Helvetica-Bold').text('EC Special Notes / Addendum', { underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(11).font('Helvetica').text(customNotes.toString());
+      doc.moveDown();
+    }
+
+    // EC Official Sign-Off Section
+    if (showSignature === 'true') {
+      doc.moveDown(2);
+      if (doc.y > 620) doc.addPage();
+      
+      const signY = doc.y;
+      
+      // Draw signature line
+      doc.moveTo(50, signY + 35).lineTo(250, signY + 35).stroke();
+      
+      // Draw the digital signature text above line
+      const sigTxt = signatureText || ecName || 'HTU EC';
+      doc.fontSize(16).font('Courier-Oblique').text(sigTxt.toString(), 55, signY + 15);
+      
+      // Draw Commissioner name and title below line
+      doc.fontSize(10).font('Helvetica-Bold').text(ecName ? ecName.toString() : 'Electoral Commissioner', 50, signY + 40);
+      doc.fontSize(9).font('Helvetica').text(ecTitle ? ecTitle.toString() : 'Electoral Commission', 50, signY + 52);
+      
+      // Draw Official Seal
+      doc.fontSize(10).font('Helvetica-Bold').text('OFFICIAL SEAL / STAMP', 350, signY + 15, { align: 'right', width: 200 });
+      doc.fontSize(8).font('Helvetica').text('APPROVED & CERTIFIED', 350, signY + 30, { align: 'right', width: 200 });
+      doc.fontSize(8).font('Helvetica').text(new Date().toLocaleDateString(), 350, signY + 42, { align: 'right', width: 200 });
+    }
     
+    doc.moveDown();
     doc.fontSize(10).font('Helvetica').text('Generated by COMPSSA ELECTIONS SYSTEM', { align: 'center' });
     doc.end();
 

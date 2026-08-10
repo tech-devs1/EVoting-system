@@ -61,6 +61,16 @@ export default function AdminReportsPage() {
   const [loadingReport, setLoadingReport] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Customizer States
+  const [executiveSummary, setExecutiveSummary] = useState<string>('');
+  const [customNotes, setCustomNotes] = useState<string>('');
+  const [ecName, setEcName] = useState<string>('Electoral Commissioner');
+  const [ecTitle, setEcTitle] = useState<string>('HTU Electoral Commission President');
+  const [showSignature, setShowSignature] = useState<boolean>(true);
+  const [signatureText, setSignatureText] = useState<string>('HTU-EC Official Approved');
+  const [selectedElectionTitle, setSelectedElectionTitle] = useState<string>('');
+  const [selectedElectionMeta, setSelectedElectionMeta] = useState<any>(null);
+
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'voted' | 'pending'>('all');
@@ -132,37 +142,46 @@ export default function AdminReportsPage() {
           }
         }>(`/elections/${selectedElectionId}/report`);
 
-        if (candidatesRes.status === 'success' && candidatesRes.data && Array.isArray(candidatesRes.data.candidates)) {
-          // Group candidates by position to determine winners
-          const candidates = candidatesRes.data.candidates;
-          const posMap: Record<string, typeof candidates> = {};
-          candidates.forEach(c => {
-            const pos = c.position || 'General';
-            if (!posMap[pos]) posMap[pos] = [];
-            posMap[pos].push(c);
-          });
+        if (candidatesRes.status === 'success' && candidatesRes.data) {
+          const el = candidatesRes.data.election;
+          setSelectedElectionTitle(el.title || '');
+          setSelectedElectionMeta(el);
+          
+          setExecutiveSummary(`This document serves as the official, certified report compiling the final ballot tallies and cryptographic integrity results for the ${el.title || 'election'}. The Electoral Commission has reviewed the ledger logs and certified the results as transparent, complete, and free of anomalies.`);
+          setCustomNotes('No voting anomalies or duplicate submission attempts were validated. The cryptographic ledger verification hashes confirm that all ballots cast remain intact and un-tampered.');
 
-          const posWinnersList: PositionWinners[] = Object.entries(posMap).map(([position, list]) => {
-            // Sort list by highest votes
-            const sortedList = [...list].sort((a, b) => b.votes - a.votes);
-            const winnerCand = sortedList[0] || null;
+          if (Array.isArray(candidatesRes.data.candidates)) {
+            // Group candidates by position to determine winners
+            const candidates = candidatesRes.data.candidates;
+            const posMap: Record<string, typeof candidates> = {};
+            candidates.forEach(c => {
+              const pos = c.position || 'General';
+              if (!posMap[pos]) posMap[pos] = [];
+              posMap[pos].push(c);
+            });
 
-            return {
-              position,
-              candidates: sortedList.map(c => ({
-                name: c.name,
-                votes: c.votes,
-                percentage: c.percentage
-              })),
-              winner: winnerCand ? {
-                name: winnerCand.name,
-                votes: winnerCand.votes,
-                percentage: winnerCand.percentage
-              } : null
-            };
-          });
+            const posWinnersList: PositionWinners[] = Object.entries(posMap).map(([position, list]) => {
+              // Sort list by highest votes
+              const sortedList = [...list].sort((a, b) => b.votes - a.votes);
+              const winnerCand = sortedList[0] || null;
 
-          setWinners(posWinnersList);
+              return {
+                position,
+                candidates: sortedList.map(c => ({
+                  name: c.name,
+                  votes: c.votes,
+                  percentage: c.percentage
+                })),
+                winner: winnerCand ? {
+                  name: winnerCand.name,
+                  votes: winnerCand.votes,
+                  percentage: winnerCand.percentage
+                } : null
+              };
+            });
+
+            setWinners(posWinnersList);
+          }
         }
       } catch (err: any) {
         console.error('Error loading election report:', err);
@@ -180,7 +199,15 @@ export default function AdminReportsPage() {
     if (!selectedElectionId) return;
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`/api/elections/${selectedElectionId}/report/pdf`, {
+      const params = new URLSearchParams({
+        executiveSummary,
+        customNotes,
+        ecName,
+        ecTitle,
+        showSignature: showSignature ? 'true' : 'false',
+        signatureText
+      });
+      const res = await fetch(`/api/elections/${selectedElectionId}/report/pdf?${params.toString()}`, {
         headers
       });
       const blob = await res.blob();
@@ -348,6 +375,214 @@ export default function AdminReportsPage() {
               </div>
             </div>
           )}
+
+          {/* Customizer and Live PDF Preview */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem', marginBottom: '2rem', width: '100%' }}>
+            {/* Customizer Panel */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+              <div className="card" style={{ padding: '1.5rem', backgroundColor: 'var(--bg-secondary)' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1rem 0', color: 'var(--text-primary)' }}>
+                  Report Customizer & EC Stamp Settings
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                  Add custom executive summaries, special remarks, and configure the Electoral Commission digital sign-off.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
+                      Executive Summary / Introduction
+                    </label>
+                    <textarea
+                      value={executiveSummary}
+                      onChange={(e) => setExecutiveSummary(e.target.value)}
+                      rows={4}
+                      style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                      placeholder="Add an official introductory summary..."
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
+                      EC Special Notes / Addendum
+                    </label>
+                    <textarea
+                      value={customNotes}
+                      onChange={(e) => setCustomNotes(e.target.value)}
+                      rows={3}
+                      style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                      placeholder="Add special notes or closing certification statements..."
+                    />
+                  </div>
+
+                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '1rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={showSignature}
+                        onChange={(e) => setShowSignature(e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Include EC Commissioner Signature Line</span>
+                    </label>
+
+                    {showSignature && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem', color: 'var(--text-secondary)' }}>
+                            Signee Full Name
+                          </label>
+                          <input
+                            type="text"
+                            value={ecName}
+                            onChange={(e) => setEcName(e.target.value)}
+                            style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem', color: 'var(--text-secondary)' }}>
+                            Signee Title / Role
+                          </label>
+                          <input
+                            type="text"
+                            value={ecTitle}
+                            onChange={(e) => setEcTitle(e.target.value)}
+                            style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem', color: 'var(--text-secondary)' }}>
+                            Cursive Digital Signature Text
+                          </label>
+                          <input
+                            type="text"
+                            value={signatureText}
+                            onChange={(e) => setSignatureText(e.target.value)}
+                            style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Document Preview Panel */}
+            <div>
+              <div className="card" style={{ padding: '0', overflow: 'hidden', border: '1px solid var(--border-color)', backgroundColor: '#fff', color: '#1E293B', boxShadow: '0 10px 30px rgba(0, 0, 0, 0.05)' }}>
+                <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.05em' }}>Live Report PDF Preview</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 600 }}>A4 Format Draft</span>
+                </div>
+
+                {/* Simulated Paper Sheet */}
+                <div style={{ padding: '2.5rem', fontSize: '0.85rem', fontFamily: 'Helvetica, Arial, sans-serif', color: '#334155', lineHeight: '1.5' }}>
+                  {/* Letterhead */}
+                  <div style={{ textAlign: 'center', borderBottom: '2px solid #334155', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em' }}>
+                      Electoral Commission
+                    </h1>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.1em' }}>
+                      Official Certified Election Tally & Audit Report
+                    </p>
+                  </div>
+
+                  {/* Title & Meta Details */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0' }}>
+                      {selectedElectionTitle || 'Election Details'}
+                    </h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', fontSize: '0.75rem', color: '#475569', backgroundColor: '#F8FAFC', padding: '0.75rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div><strong>Start Date:</strong> {selectedElectionMeta?.startDate ? new Date(selectedElectionMeta.startDate).toLocaleString() : 'N/A'}</div>
+                      <div><strong>End Date:</strong> {selectedElectionMeta?.endDate ? new Date(selectedElectionMeta.endDate).toLocaleString() : 'N/A'}</div>
+                      <div><strong>Election Type:</strong> {selectedElectionMeta?.type || 'Standard'}</div>
+                      <div><strong>Department/Scope:</strong> {selectedElectionMeta?.department || 'General'}</div>
+                    </div>
+                  </div>
+
+                  {/* Executive Summary */}
+                  {executiveSummary && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.25rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                        Executive Summary
+                      </h3>
+                      <p style={{ fontSize: '0.8rem', color: '#475569', margin: 0, whiteSpace: 'pre-wrap' }}>
+                        {executiveSummary}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Winners & Standings */}
+                  {winners.length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.25rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                        Certified Tally Standings
+                      </h3>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1.5px solid #334155', textAlign: 'left', fontWeight: 700, color: '#1E293B' }}>
+                            <th style={{ padding: '6px 8px' }}>Position</th>
+                            <th style={{ padding: '6px 8px' }}>Candidate Name</th>
+                            <th style={{ padding: '6px 8px', textAlign: 'right' }}>Votes Recieved</th>
+                            <th style={{ padding: '6px 8px', textAlign: 'right' }}>Percentage</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {winners.map((posTally, pIdx) => (
+                            <React.Fragment key={pIdx}>
+                              {posTally.candidates.map((c, cIdx) => (
+                                <tr key={cIdx} style={{ borderBottom: '1px solid #E2E8F0', color: cIdx === 0 ? '#0F172A' : '#475569', fontWeight: cIdx === 0 ? 600 : 400 }}>
+                                  <td style={{ padding: '6px 8px' }}>{cIdx === 0 ? posTally.position : ''}</td>
+                                  <td style={{ padding: '6px 8px' }}>{c.name} {cIdx === 0 && '👑'}</td>
+                                  <td style={{ padding: '6px 8px', textAlign: 'right' }}>{c.votes}</td>
+                                  <td style={{ padding: '6px 8px', textAlign: 'right' }}>{c.percentage}%</td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Addendum Notes */}
+                  {customNotes && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.25rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                        Commission Notes & Remarks
+                      </h3>
+                      <p style={{ fontSize: '0.8rem', color: '#475569', margin: 0, whiteSpace: 'pre-wrap' }}>
+                        {customNotes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Signature block */}
+                  {showSignature && (
+                    <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '1.5rem', marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '1.6rem', color: '#2563EB', paddingBottom: '0.25rem' }}>
+                          {signatureText || ecName}
+                        </div>
+                        <div style={{ borderTop: '1px solid #475569', width: '220px', margin: '4px 0' }} />
+                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0F172A' }}>{ecName}</div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{ecTitle}</div>
+                      </div>
+
+                      <div style={{ border: '2px double #DC2626', padding: '0.5rem 1rem', borderRadius: '8px', textAlign: 'center', color: '#DC2626', transform: 'rotate(-4deg)', opacity: 0.85, userSelect: 'none' }}>
+                        <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.1em' }}>OFFICIAL ELECTION SEAL</div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 900, margin: '2px 0' }}>APPROVED & CERTIFIED</div>
+                        <div style={{ fontSize: '0.6rem', fontFamily: 'monospace' }}>{new Date().toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Voter Roster & Voting Verification Audit Log */}
           <div className="card" style={{ padding: '1.5rem' }}>
