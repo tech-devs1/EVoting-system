@@ -24,6 +24,7 @@ const getVotedVotersRef = (req) => {
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
 const cache = require('../services/cache');
+const { logActivity } = require('../services/activityLog');
 
 // Get elections (optional status filter) - CACHED & WRITE OPTIMIZED
 router.get('/', async (req, res) => {
