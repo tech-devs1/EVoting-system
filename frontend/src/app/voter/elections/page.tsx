@@ -75,17 +75,21 @@ export default function VoterElectionsPage() {
   useEffect(() => {
     async function fetchElections() {
       try {
-        const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
+        const res = await apiRequest<{ status: string; data: any[] }>('/elections/eligible');
+        let initialVotedIds: string[] = [];
         if (res.status === 'success' && Array.isArray(res.data)) {
           setElections(res.data);
           setFilteredList(res.data);
+          initialVotedIds = res.data.filter(el => el.hasVoted).map(el => el.id);
+          setVotedElectionIds(initialVotedIds);
         }
 
-        // Fetch user voted elections
+        // Fetch user voted elections for ultimate consistency
         try {
           const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
           if (votedRes.status === 'success') {
-            setVotedElectionIds(votedRes.data);
+            const combinedVotedIds = Array.from(new Set([...initialVotedIds, ...votedRes.data]));
+            setVotedElectionIds(combinedVotedIds);
           }
         } catch (_) {}
       } catch (err) {

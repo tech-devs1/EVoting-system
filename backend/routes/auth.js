@@ -408,7 +408,14 @@ router.post('/login', async (req, res) => {
 
     // BYPASS OTP: Instantly issue JWT token and log user in
     const token = jwt.sign(
-      { uid: foundVoterDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name, tenantId: foundTenantId },
+      {
+        uid: foundVoterDoc.id,
+        email: userData.email,
+        role: userData.role || 'voter',
+        name: userData.name,
+        tenantId: foundTenantId,
+        indexNumber: userData.indexNumber || userData.studentId || foundVoterDoc.id
+      },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -731,7 +738,14 @@ router.post('/google-login', async (req, res) => {
 
     // Issue JWT token
     const token = jwt.sign(
-      { uid: finalUid, email: finalUserData.email || email, role: finalUserData.role || 'voter', name: finalUserData.name || name, tenantId: targetTenantId },
+      {
+        uid: finalUid,
+        email: finalUserData.email || email,
+        role: finalUserData.role || 'voter',
+        name: finalUserData.name || name,
+        tenantId: targetTenantId,
+        indexNumber: finalUserData.indexNumber || finalUserData.studentId || finalUid
+      },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -793,7 +807,13 @@ router.post('/verify-otp', async (req, res) => {
     await userRef.update({ otp: null, otpExpiry: null, isRegistered: true });
 
     const token = jwt.sign(
-      { uid: userDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name },
+      {
+        uid: userDoc.id,
+        email: userData.email,
+        role: userData.role || 'voter',
+        name: userData.name,
+        indexNumber: userData.indexNumber || userData.studentId || userDoc.id
+      },
       JWT_SECRET,
       { expiresIn: '24h' }
     );

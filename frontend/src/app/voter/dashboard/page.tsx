@@ -114,8 +114,9 @@ export default function VoterDashboard() {
           console.warn('IndexedDB cache read failed', e);
         }
 
-        const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
+        const res = await apiRequest<{ status: string; data: any[] }>('/elections/eligible');
         let newElections: Election[] = [], newUpcoming: Election[] = [], newPublished: Election[] = [];
+        let newVotedIds: string[] = [];
         if (res.status === 'success' && Array.isArray(res.data)) {
           const allElections = res.data;
           newElections = allElections.filter(el => el.status === 'active');
@@ -125,13 +126,17 @@ export default function VoterDashboard() {
           setElections(newElections);
           setUpcomingElections(newUpcoming);
           setPublishedResultsElections(newPublished);
+
+          newVotedIds = allElections.filter(el => el.hasVoted).map(el => el.id);
+          setVotedElectionIds(newVotedIds);
         }
 
-        let newVotedIds: string[] = [];
         try {
           const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
           if (votedRes.status === 'success') {
-            newVotedIds = votedRes.data;
+            // Combine both sources of voted election IDs for ultimate consistency
+            const combinedVotedIds = Array.from(new Set([...newVotedIds, ...votedRes.data]));
+            newVotedIds = combinedVotedIds;
             setVotedElectionIds(newVotedIds);
           }
         } catch (votedErr) {
