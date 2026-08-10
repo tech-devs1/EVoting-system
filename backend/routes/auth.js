@@ -146,6 +146,7 @@ router.post('/test-email-debug', async (req, res) => {
       status: 'success',
       message: 'Debug process completed.',
       result: result ? 'Success (email sent)' : 'Failed (returned null/false)',
+      envKeys: Object.keys(process.env).filter(k => k.includes('MAIL') || k.includes('SEND') || k.includes('EMAIL') || k.includes('KEY') || k.includes('PASS') || k.includes('PORT') || k.includes('BMS')),
       config: {
         GMAIL_USER: process.env.GMAIL_USER || 'issakasaddick14@gmail.com',
         GMAIL_APP_PASSWORD_length: (process.env.GMAIL_APP_PASSWORD || '').length
