@@ -1210,40 +1210,27 @@ router.post('/:id/send-invitations', verifyAuth, requireAdmin, async (req, res) 
       voterList = votersSnapshot.docs.map(doc => doc.data()).filter(v => v.email);
     }
 
-    // Respond immediately to client to prevent HTTP timeouts
-    res.status(200).json({
-      status: 'success',
-      message: `Successfully initiated voting invitations to ${voterList.length} recipients.`,
-      data: { totalVoters: voterList.length, invitationsSent: voterList.length }
-    });
-
-    // Background email dispatch
-    (async () => {
-      let sentCount = 0;
-      for (const v of voterList) {
-        try {
-          await sendEmailNotification(
-            v.email,
-            `Voting Open: ${election.title}`,
-            `Hello ${v.name || 'Voter'},\n\nVoting for "${election.title}" is now open!\n\nStart Time: ${new Date(election.startDate).toLocaleString()}\nEnd Time: ${new Date(election.endDate).toLocaleString()}\n\nPlease log in to cast your ballot.\n\nThank you,\nHTU Elect EC`,
-            `
-              <div style="font-family: Arial, sans-serif; padding: 24px; background-color: #f4f6f9; border-radius: 8px;">
-                <h2 style="color: #2563eb;">Voting Invitation: ${election.title}</h2>
-                <p>Hello <strong>${v.name || 'Voter'}</strong>,</p>
-                <p>You are an eligible voter for <strong>${election.title}</strong>.</p>
-                <div style="background: #ffffff; border: 1px solid #e5e7eb; padding: 16px; border-radius: 6px; margin: 16px 0;">
-                  <p style="margin: 4px 0;"><strong>Start Time:</strong> ${new Date(election.startDate).toLocaleString()}</p>
-                  <p style="margin: 4px 0;"><strong>End Time:</strong> ${new Date(election.endDate).toLocaleString()}</p>
-                </div>
-                <p>Log in to cast your ballot at the portal link below:</p>
-                <a href="${process.env.FRONTEND_URL || 'https://htu-elect-aov2.vercel.app'}/login" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold;">Access Voting Portal</a>
+    // Process email dispatches in parallel using Promise.allSettled to guarantee dispatches in serverless environments
+    const dispatchPromises = voterList.map(async (v) => {
+      try {
+        const info = await sendEmailNotification(
+          v.email,
+          `Voting Invitation: ${election.title}`,
+          `Hello ${v.name || 'Voter'},\n\nVoting for "${election.title}" is now open!\n\nStart Time: ${new Date(election.startDate).toLocaleString()}\nEnd Time: ${new Date(election.endDate).toLocaleString()}\n\nPlease log in to cast your ballot.\n\nThank you,\nHTU Elect EC`,
+          `
+            <div style="font-family: Arial, sans-serif; padding: 24px; background-color: #f4f6f9; border-radius: 8px;">
+              <h2 style="color: #2563eb;">Voting Invitation: ${election.title}</h2>
+              <p>Hello <strong>${v.name || 'Voter'}</strong>,</p>
+              <p>You are an eligible voter for <strong>${election.title}</strong>.</p>
+              <div style="background: #ffffff; border: 1px solid #e5e7eb; padding: 16px; border-radius: 6px; margin: 16px 0;">
+                <p style="margin: 4px 0;"><strong>Start Time:</strong> ${new Date(election.startDate).toLocaleString()}</p>
+                <p style="margin: 4px 0;"><strong>End Time:</strong> ${new Date(election.endDate).toLocaleString()}</p>
               </div>
-            `
-          );
-          sentCount++;
-        } catch (err) {
-          console.error(`Failed to send invitation to ${v.email}:`, err.message);
-        }
+              <p>Log in to cast your ballot at the portal link below:</p>
+              <a href="${process.env.FRONTEND_URL || 'https://htu-elect-aov2.vercel.app'}/login" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold;">Access Voting Portal</a>
+            </div>
+          `
+        );
 
         await logActivity({
           tenantId,
@@ -1252,9 +1239,22 @@ router.post('/:id/send-invitations', verifyAuth, requireAdmin, async (req, res) 
           action: 'ELECTION_INVITATION_SENT',
           description: `Invitation sent to ${v.email} for election: ${election.title}`
         }).catch(() => {});
+
+        return { email: v.email, success: !!info };
+      } catch (err) {
+        console.error(`Failed to send invitation to ${v.email}:`, err.message);
+        return { email: v.email, success: false, error: err.message };
       }
-      console.log(`[Invitations Dispatch] Completed background dispatch for ${sentCount}/${voterList.length} voters.`);
-    })().catch(err => console.error('Error in background invitation dispatch:', err));
+    });
+
+    const results = await Promise.allSettled(dispatchPromises);
+    const sentCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+
+    res.status(200).json({
+      status: 'success',
+      message: `Successfully dispatched voting invitations to ${sentCount} of ${voterList.length} roster recipients.`,
+      data: { totalVoters: voterList.length, invitationsSent: sentCount }
+    });
   } catch (error) {
     console.error('Error sending invitations:', error);
     res.status(500).json({ status: 'error', message: 'Failed to send voting invitations.' });
@@ -1372,79 +1372,88 @@ router.post('/:id/broadcast-message', verifyAuth, requireAdmin, async (req, res)
     }
        const targetChannel = channel || 'both';
 
-    // Respond immediately to client to prevent HTTP timeouts
-    res.status(200).json({
-      status: 'success',
-      message: `Broadcast message dispatch initiated for ${rosterList.length} matching roster members.`,
-      data: { recipientCount: rosterList.length, channel: targetChannel }
-    });
+    let emailSentCount = 0;
+    let smsSentCount = 0;
 
-    // Background processing
-    (async () => {
-      let emailSentCount = 0;
-      let smsSentCount = 0;
+    // Process dispatches in parallel using Promise.allSettled
+    const broadcastPromises = rosterList.map(async (v) => {
+      const recipientName = v.name || v.fullName || 'Voter';
+      const indexNum = v.indexNumber || v.studentId || '';
+      const email = v.email || '';
+      const phone = v.phoneNumber || v.phone || '';
 
-      for (const v of rosterList) {
-        const recipientName = v.name || v.fullName || 'Voter';
-        const indexNum = v.indexNumber || v.studentId || '';
-        const email = v.email || '';
-        const phone = v.phoneNumber || v.phone || '';
+      const personalizedSubject = (subject || `Announcement: ${election.title}`)
+        .replace(/{{voter_name}}/gi, recipientName)
+        .replace(/{{index_number}}/gi, indexNum)
+        .replace(/{{election_title}}/gi, election.title);
 
-        const personalizedSubject = (subject || `Announcement: ${election.title}`)
-          .replace(/{{voter_name}}/gi, recipientName)
-          .replace(/{{index_number}}/gi, indexNum)
-          .replace(/{{election_title}}/gi, election.title);
+      const personalizedBody = body
+        .replace(/{{voter_name}}/gi, recipientName)
+        .replace(/{{index_number}}/gi, indexNum)
+        .replace(/{{election_title}}/gi, election.title)
+        .replace(/{{voting_link}}/gi, `${process.env.FRONTEND_URL || 'https://htu-elect-aov2.vercel.app'}/voter/elections/${electionId}`);
 
-        const personalizedBody = body
-          .replace(/{{voter_name}}/gi, recipientName)
-          .replace(/{{index_number}}/gi, indexNum)
-          .replace(/{{election_title}}/gi, election.title)
-          .replace(/{{voting_link}}/gi, `${process.env.FRONTEND_URL || 'https://htu-elect-aov2.vercel.app'}/voter/elections/${electionId}`);
+      let emailDispatched = false;
+      let smsDispatched = false;
 
-        if ((targetChannel === 'email' || targetChannel === 'both') && email) {
-          try {
-            await sendEmailNotification(
-              email,
-              personalizedSubject,
-              personalizedBody,
-              `<div style="font-family: Arial, sans-serif; padding: 24px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
-                <h2 style="color: #2563eb; margin-top: 0;">${personalizedSubject}</h2>
-                <div style="font-size: 15px; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">${personalizedBody}</div>
-                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-                <p style="font-size: 12px; color: #64748b;">Dispatched securely via HTU Elect EC Broadcast Center.</p>
-              </div>`
-            );
-            emailSentCount++;
-          } catch (e) {
-            console.error(`Email dispatch error to ${email}:`, e.message);
-          }
-        }
-
-        if ((targetChannel === 'sms' || targetChannel === 'both') && phone) {
-          smsSentCount++;
-          console.log(`[SMS Broadcast Dispatched] To: ${phone} | Content: ${personalizedBody.substring(0, 160)}`);
+      if ((targetChannel === 'email' || targetChannel === 'both') && email) {
+        try {
+          const info = await sendEmailNotification(
+            email,
+            personalizedSubject,
+            personalizedBody,
+            `<div style="font-family: Arial, sans-serif; padding: 24px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+              <h2 style="color: #2563eb; margin-top: 0;">${personalizedSubject}</h2>
+              <div style="font-size: 15px; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">${personalizedBody}</div>
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+              <p style="font-size: 12px; color: #64748b;">Dispatched securely via HTU Elect EC Broadcast Center.</p>
+            </div>`
+          );
+          if (info) emailDispatched = true;
+        } catch (e) {
+          console.error(`Email dispatch error to ${email}:`, e.message);
         }
       }
 
-      // Save Broadcast History Record in Firestore
-      const broadcastRecord = {
-        electionId,
-        electionTitle: election.title,
-        channel: targetChannel,
-        recipientFilter: recipientFilter || 'all',
-        subject: subject || `Announcement: ${election.title}`,
-        body,
-        recipientCount: rosterList.length,
-        emailSentCount,
-        smsSentCount,
-        senderEmail: req.user.email,
-        createdAt: Date.now()
-      };
+      if ((targetChannel === 'sms' || targetChannel === 'both') && phone) {
+        smsDispatched = true;
+        console.log(`[SMS Broadcast Dispatched] To: ${phone} | Content: ${personalizedBody.substring(0, 160)}`);
+      }
 
-      await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('broadcast_history').add(broadcastRecord).catch(() => {});
-      await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('broadcast_history').add(broadcastRecord).catch(() => {});
-      console.log(`[Broadcast Dispatch] Completed background broadcast to ${rosterList.length} recipients.`);
-    })().catch(err => console.error('Error in background broadcast dispatch:', err));
+      return { email, phone, emailDispatched, smsDispatched };
+    });
+
+    const results = await Promise.allSettled(broadcastPromises);
+    results.forEach(r => {
+      if (r.status === 'fulfilled') {
+        if (r.value.emailDispatched) emailSentCount++;
+        if (r.value.smsDispatched) smsSentCount++;
+      }
+    });
+
+    // Save Broadcast History Record in Firestore
+    const broadcastRecord = {
+      electionId,
+      electionTitle: election.title,
+      channel: targetChannel,
+      recipientFilter: recipientFilter || 'all',
+      subject: subject || `Announcement: ${election.title}`,
+      body,
+      recipientCount: rosterList.length,
+      emailSentCount,
+      smsSentCount,
+      senderEmail: req.user.email,
+      createdAt: Date.now()
+    };
+
+    await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('broadcast_history').add(broadcastRecord).catch(() => {});
+    await db.collection('organizations').doc(tenantId).collection('elections').doc(electionId).collection('broadcast_history').add(broadcastRecord).catch(() => {});
+
+    res.status(200).json({
+      status: 'success',
+      message: `Broadcast message dispatched successfully to ${rosterList.length} roster members (${emailSentCount} emails, ${smsSentCount} SMS).`,
+      data: { recipientCount: rosterList.length, channel: targetChannel, emailSentCount, smsSentCount }
+    });
   } catch (error) {
     console.error('Error broadcasting message:', error);
     res.status(500).json({ status: 'error', message: 'Failed to dispatch broadcast message.' });

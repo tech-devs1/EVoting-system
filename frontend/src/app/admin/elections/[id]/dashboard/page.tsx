@@ -639,10 +639,10 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
       </Modal>
 
       {/* SEND INVITATIONS MODAL */}
-      <Modal isOpen={isInviteModalOpen} onClose={() => setIsInviteModalOpen(false)} title="Dispatch Voting Invitations">
+      <Modal isOpen={isInviteModalOpen} onClose={() => setIsInviteModalOpen(false)} title="📢 Dispatch Voting Invitations">
         <form onSubmit={handleSendInvitations} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0.5rem 0' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
               Target Recipient Selection Mode
             </label>
             <select
@@ -650,14 +650,15 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
               onChange={(e: any) => setInviteMode(e.target.value)}
               style={{
                 width: '100%',
-                padding: '0.75rem 1rem',
-                borderRadius: '10px',
-                border: '1px solid var(--border-color)',
+                padding: '0.85rem 1rem',
+                borderRadius: '14px',
+                border: '1.5px solid var(--border-color)',
                 backgroundColor: 'var(--bg-input)',
                 color: 'var(--text-primary)',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                boxSizing: 'border-box'
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                boxSizing: 'border-box',
+                outline: 'none'
               }}
             >
               <option value="all">👥 Batch: All Roster Members (Entire Election Directory)</option>
@@ -669,20 +670,20 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
           {/* INDIVIDUAL VOTER SELECTION WIDGET */}
           {inviteMode === 'individual' && (
             <div style={{
-              padding: '1rem',
-              borderRadius: '12px',
-              border: '1px solid var(--border-color)',
+              padding: '1.25rem',
+              borderRadius: '16px',
+              border: '1.5px solid var(--border-color)',
               backgroundColor: 'var(--bg-input)'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2563EB' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#2563EB' }}>
                   Selected ({selectedEmails.length} / {rosterVoters.length} Voters)
                 </span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.65rem' }}>
                   <button
                     type="button"
                     onClick={() => setSelectedEmails(rosterVoters.map(v => v.email.toLowerCase()))}
-                    style={{ border: 'none', background: 'none', color: '#2563EB', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                    style={{ border: 'none', background: 'none', color: '#2563EB', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
                   >
                     Select All
                   </button>
@@ -690,7 +691,7 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
                   <button
                     type="button"
                     onClick={() => setSelectedEmails([])}
-                    style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                    style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
                   >
                     Clear
                   </button>
@@ -704,18 +705,19 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
                 onChange={(e) => setVoterSearch(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '0.5rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--border-color)',
                   backgroundColor: 'var(--bg-card)',
                   color: 'var(--text-primary)',
-                  fontSize: '0.8rem',
-                  marginBottom: '0.65rem',
-                  boxSizing: 'border-box'
+                  fontSize: '0.85rem',
+                  marginBottom: '0.75rem',
+                  boxSizing: 'border-box',
+                  outline: 'none'
                 }}
               />
 
-              <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingRight: '4px' }}>
                 {rosterVoters
                   .filter(v => 
                     (v.name || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
@@ -730,13 +732,14 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.4rem 0.65rem',
-                          borderRadius: '6px',
+                          gap: '0.65rem',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '10px',
                           backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.1)' : 'var(--bg-card)',
-                          border: isSelected ? '1px solid #2563EB' : '1px solid var(--border-color)',
-                          fontSize: '0.8rem',
-                          cursor: 'pointer'
+                          border: isSelected ? '1.5px solid #2563EB' : '1.5px solid var(--border-color)',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
                         }}
                       >
                         <input
@@ -746,13 +749,13 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
                             const emailLower = v.email.toLowerCase();
                             setSelectedEmails(prev => prev.includes(emailLower) ? prev.filter(e => e !== emailLower) : [...prev, emailLower]);
                           }}
-                          style={{ accentColor: '#2563EB' }}
+                          style={{ accentColor: '#2563EB', width: '16px', height: '16px' }}
                         />
                         <div style={{ flex: 1, overflow: 'hidden' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {v.name} ({v.studentId})
                           </div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {v.email}
                           </div>
                         </div>
@@ -766,7 +769,7 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
           {/* CUSTOM EMAIL INPUT WIDGET */}
           {inviteMode === 'custom' && (
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
                 Enter Custom Email Address(es) (separated by commas or newlines)
               </label>
               <textarea
@@ -776,14 +779,16 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
                 placeholder="e.g. voter1@htu.edu.gh, voter2@htu.edu.gh, observer@htu.edu.gh"
                 style={{
                   width: '100%',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-color)',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '14px',
+                  border: '1.5px solid var(--border-color)',
                   backgroundColor: 'var(--bg-input)',
                   color: 'var(--text-primary)',
-                  fontSize: '0.875rem',
+                  fontSize: '0.9rem',
                   fontFamily: 'inherit',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  lineHeight: '1.5'
                 }}
               />
             </div>

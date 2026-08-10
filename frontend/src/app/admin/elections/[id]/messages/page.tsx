@@ -15,9 +15,12 @@ import {
   AlertCircle, 
   FileText, 
   Sparkles,
-  HelpCircle,
   BarChart3,
-  Eye
+  Eye,
+  Search,
+  Check,
+  ChevronRight,
+  Info
 } from 'lucide-react';
 
 interface Election {
@@ -62,7 +65,7 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
   const [voterSearch, setVoterSearch] = useState('');
 
   // Composer Form States
-  const [channel, setChannel] = useState<'both' | 'email' | 'sms'>('both');
+  const [channel, setChannel] = useState<'both' | 'email' | 'sms'>('email');
   const [recipientFilter, setRecipientFilter] = useState<'all' | 'pending' | 'voted' | 'individual' | 'custom'>('pending');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -180,7 +183,13 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
 
       if (res.status === 'success') {
         setFeedback({ type: 'success', text: res.message });
-        if (res.data) setHistory(prev => [res.data!, ...prev]);
+
+        // Refresh History Log list after a successful dispatch
+        const histRes = await apiRequest<{ status: string; data: BroadcastLog[] }>(`/elections/${electionId}/broadcast-history`);
+        if (histRes.status === 'success' && Array.isArray(histRes.data)) {
+          setHistory(histRes.data);
+        }
+
         setActiveTab('history');
       } else {
         throw new Error(res.message || 'Failed to dispatch broadcast message.');
@@ -197,73 +206,94 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
 
   if (loading || !election) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        Loading Broadcast Communicator...
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', color: '#64748B' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner" style={{ marginBottom: '1rem', border: '3px solid #E2E8F0', borderTop: '3px solid #2563EB', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite' }}></div>
+          <p style={{ fontWeight: 600 }}>Loading Broadcast Communicator...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="animate-page-enter">
-      {/* Top Banner */}
-      <div style={{ marginBottom: '1.5rem' }}>
+    <div className="animate-page-enter" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+
+      {/* Top Header & Workspace Route Navigator */}
+      <div style={{ marginBottom: '2rem' }}>
         <Link 
           href={`/admin/elections/${electionId}/dashboard`} 
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#2563eb', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', marginBottom: '0.75rem' }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            color: '#2563eb',
+            fontSize: '0.875rem',
+            fontWeight: 700,
+            textDecoration: 'none',
+            marginBottom: '1rem',
+            padding: '0.4rem 0.8rem',
+            backgroundColor: '#EFF6FF',
+            borderRadius: '10px',
+            transition: 'all 0.2s'
+          }}
+          className="hover-bg-blue"
         >
           <ArrowLeft size={16} /> Back to Election Command Center
         </Link>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
           <div>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <Mail size={28} style={{ color: '#2563eb' }} /> Broadcast Communicator
+            <h2 style={{ fontSize: '2.2rem', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Mail size={36} style={{ color: '#2563eb' }} /> Broadcast Communicator
             </h2>
-            <p style={{ color: '#64748B', margin: '4px 0 0 0', fontSize: '0.875rem' }}>
-              Dispatch Gmail-style Email and SMS broadcast messages directly to election roster voters
+            <p style={{ color: '#64748B', margin: '6px 0 0 0', fontSize: '1rem', fontWeight: 500 }}>
+              Design, preview, and securely dispatch dual Email & SMS broadcast announcements to your roster voters.
             </p>
           </div>
 
-          {/* Navigation Tabs */}
-          <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#F1F5F9', padding: '0.25rem', borderRadius: '12px' }}>
+          {/* Premium Selector Tabs */}
+          <div style={{ display: 'flex', gap: '0.4rem', backgroundColor: '#F1F5F9', padding: '0.35rem', borderRadius: '14px' }}>
             <button
               type="button"
               onClick={() => setActiveTab('compose')}
               style={{
-                padding: '0.45rem 1rem',
-                borderRadius: '8px',
+                padding: '0.6rem 1.25rem',
+                borderRadius: '10px',
                 border: 'none',
-                fontSize: '0.85rem',
+                fontSize: '0.875rem',
                 fontWeight: 700,
                 cursor: 'pointer',
                 backgroundColor: activeTab === 'compose' ? '#FFFFFF' : 'transparent',
                 color: activeTab === 'compose' ? '#2563eb' : '#64748B',
-                boxShadow: activeTab === 'compose' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                boxShadow: activeTab === 'compose' ? '0 4px 12px rgba(15, 23, 42, 0.05)' : 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.35rem'
+                gap: '0.4rem',
+                transition: 'all 0.2s ease'
               }}
             >
-              <Send size={15} /> Compose Broadcast
+              <Send size={16} /> Compose Broadcast
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('history')}
               style={{
-                padding: '0.45rem 1rem',
-                borderRadius: '8px',
+                padding: '0.6rem 1.25rem',
+                borderRadius: '10px',
                 border: 'none',
-                fontSize: '0.85rem',
+                fontSize: '0.875rem',
                 fontWeight: 700,
                 cursor: 'pointer',
                 backgroundColor: activeTab === 'history' ? '#FFFFFF' : 'transparent',
                 color: activeTab === 'history' ? '#2563eb' : '#64748B',
-                boxShadow: activeTab === 'history' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                boxShadow: activeTab === 'history' ? '0 4px 12px rgba(15, 23, 42, 0.05)' : 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.35rem'
+                gap: '0.4rem',
+                transition: 'all 0.2s ease'
               }}
             >
-              <FileText size={15} /> Transmission Logs ({history.length})
+              <FileText size={16} /> Transmission Logs ({history.length})
             </button>
           </div>
         </div>
@@ -271,423 +301,501 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
 
       {feedback && (
         <div style={{
-          padding: '0.85rem 1.25rem',
-          borderRadius: '12px',
-          marginBottom: '1.5rem',
-          fontSize: '0.9rem',
+          padding: '1rem 1.5rem',
+          borderRadius: '16px',
+          marginBottom: '2rem',
+          fontSize: '0.95rem',
           fontWeight: 600,
-          backgroundColor: feedback.type === 'success' ? '#F0FDF4' : '#FEF2F2',
-          color: feedback.type === 'success' ? '#166534' : '#DC2626',
-          border: `1px solid ${feedback.type === 'success' ? '#BBF7D0' : '#FECACA'}`,
+          backgroundColor: feedback.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+          color: feedback.type === 'success' ? '#065F46' : '#991B1B',
+          border: `1px solid ${feedback.type === 'success' ? '#A7F3D0' : '#FCA5A5'}`,
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem'
+          gap: '0.75rem',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
         }}>
-          {feedback.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-          {feedback.text}
+          {feedback.type === 'success' ? <CheckCircle2 size={20} style={{ color: '#059669' }} /> : <AlertCircle size={20} style={{ color: '#DC2626' }} />}
+          <span>{feedback.text}</span>
         </div>
       )}
 
       {activeTab === 'compose' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', alignItems: 'start' }}>
           
-          {/* LEFT: Gmail-Style Composer Controls */}
-          <div className="card" style={{ padding: '1.75rem', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '20px' }}>
+          {/* LEFT COLUMN: Premium Email/SMS Composer Controls */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             
-            {/* Quick Preset Template Buttons */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.5rem' }}>
-                <Sparkles size={14} style={{ color: '#2563eb' }} /> 1-Click Message Presets
-              </label>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => handleApplyPreset('open')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <Send size={12} /> Voting Open
+            {/* Quick Presets Section */}
+            <div className="card" style={{ padding: '1.5rem', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '20px' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: '0 0 1rem 0' }}>
+                <Sparkles size={16} style={{ color: '#2563eb' }} /> 1-Click Message Presets & Templates
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('open')}
+                  style={{ padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '0.85rem', fontWeight: 700, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s' }}
+                  className="preset-btn"
+                >
+                  <Send size={14} style={{ color: '#10B981' }} /> Voting Officially Open
                 </button>
-                <button type="button" onClick={() => handleApplyPreset('reminder')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <Clock size={12} /> Pending Reminder
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('reminder')}
+                  style={{ padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '0.85rem', fontWeight: 700, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s' }}
+                  className="preset-btn"
+                >
+                  <Clock size={14} style={{ color: '#F59E0B' }} /> Pending Voter Reminder
                 </button>
-                <button type="button" onClick={() => handleApplyPreset('closing')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <AlertCircle size={12} /> 1 Hour Left
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('closing')}
+                  style={{ padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '0.85rem', fontWeight: 700, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s' }}
+                  className="preset-btn"
+                >
+                  <AlertCircle size={14} style={{ color: '#EF4444' }} /> Urgent: 1 Hour Left
                 </button>
-                <button type="button" onClick={() => handleApplyPreset('results')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <BarChart3 size={12} /> Final Results
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('results')}
+                  style={{ padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '0.85rem', fontWeight: 700, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#1E293B', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s' }}
+                  className="preset-btn"
+                >
+                  <BarChart3 size={14} style={{ color: '#3B82F6' }} /> Publish Final Results
                 </button>
               </div>
             </div>
 
-            <form onSubmit={handleSendBroadcast}>
-              
-              {/* Channel Selector */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
-                  Dispatch Channel
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setChannel('both')}
-                    style={{
-                      padding: '0.65rem 0.5rem',
-                      borderRadius: '10px',
-                      border: channel === 'both' ? '2px solid #2563eb' : '1px solid #E2E8F0',
-                      backgroundColor: channel === 'both' ? '#EFF6FF' : '#FFFFFF',
-                      color: channel === 'both' ? '#2563eb' : '#475569',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Zap size={15} /> Dual (Email+SMS)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChannel('email')}
-                    style={{
-                      padding: '0.65rem 0.5rem',
-                      borderRadius: '10px',
-                      border: channel === 'email' ? '2px solid #2563eb' : '1px solid #E2E8F0',
-                      backgroundColor: channel === 'email' ? '#EFF6FF' : '#FFFFFF',
-                      color: channel === 'email' ? '#2563eb' : '#475569',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Mail size={15} /> Email Only
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChannel('sms')}
-                    style={{
-                      padding: '0.65rem 0.5rem',
-                      borderRadius: '10px',
-                      border: channel === 'sms' ? '2px solid #2563eb' : '1px solid #E2E8F0',
-                      backgroundColor: channel === 'sms' ? '#EFF6FF' : '#FFFFFF',
-                      color: channel === 'sms' ? '#2563eb' : '#475569',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Smartphone size={15} /> SMS Only
-                  </button>
-                </div>
-              </div>
+            {/* Composer Box */}
+            <div className="card" style={{ padding: '2rem', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '24px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.02)' }}>
+              <form onSubmit={handleSendBroadcast} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-              {/* Target Recipient Audience */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
-                  Target Recipients
-                </label>
-                <select
-                  value={recipientFilter}
-                  onChange={(e: any) => setRecipientFilter(e.target.value)}
+                {/* Channel Selector */}
+                <div>
+                  <label style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1E293B', display: 'block', marginBottom: '0.5rem' }}>
+                    Select Dispatch Channel
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setChannel('email')}
+                      style={{
+                        padding: '1rem 0.5rem',
+                        borderRadius: '14px',
+                        border: channel === 'email' ? '2.5px solid #2563eb' : '1.5px solid #E2E8F0',
+                        backgroundColor: channel === 'email' ? '#EFF6FF' : '#FFFFFF',
+                        color: channel === 'email' ? '#2563eb' : '#475569',
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <Mail size={22} />
+                      <span>Email Only</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setChannel('sms')}
+                      style={{
+                        padding: '1rem 0.5rem',
+                        borderRadius: '14px',
+                        border: channel === 'sms' ? '2.5px solid #2563eb' : '1.5px solid #E2E8F0',
+                        backgroundColor: channel === 'sms' ? '#EFF6FF' : '#FFFFFF',
+                        color: channel === 'sms' ? '#2563eb' : '#475569',
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <Smartphone size={22} />
+                      <span>SMS Only</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setChannel('both')}
+                      style={{
+                        padding: '1rem 0.5rem',
+                        borderRadius: '14px',
+                        border: channel === 'both' ? '2.5px solid #2563eb' : '1.5px solid #E2E8F0',
+                        backgroundColor: channel === 'both' ? '#EFF6FF' : '#FFFFFF',
+                        color: channel === 'both' ? '#2563eb' : '#475569',
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <Zap size={22} />
+                      <span>Dual (Email+SMS)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Target Recipient Audience Selector */}
+                <div>
+                  <label style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1E293B', display: 'block', marginBottom: '0.5rem' }}>
+                    Target Audience
+                  </label>
+                  <select
+                    value={recipientFilter}
+                    onChange={(e: any) => setRecipientFilter(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem 1rem',
+                      borderRadius: '14px',
+                      border: '1.5px solid #CBD5E1',
+                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      backgroundColor: '#F8FAFC',
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      transition: 'border-color 0.2s'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                    onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+                  >
+                    <option value="pending">⚡ Batch: Pending Voters (Voters who have NOT cast their ballot yet)</option>
+                    <option value="all">👥 Batch: All Roster Voters (Entire Directory)</option>
+                    <option value="voted">✅ Batch: Verified Voted Members Only</option>
+                    <option value="individual">🎯 Individual: Select Specific Voter(s) from Roster List</option>
+                    <option value="custom">✍️ Custom: Input Specific Email Address(es)</option>
+                  </select>
+
+                  {/* INDIVIDUAL VOTER SELECTION WIDGET */}
+                  {recipientFilter === 'individual' && (
+                    <div style={{
+                      padding: '1.25rem',
+                      borderRadius: '16px',
+                      border: '1.5px solid #E2E8F0',
+                      backgroundColor: '#F8FAFC',
+                      marginTop: '0.75rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#2563EB' }}>
+                          Selected ({selectedEmails.length} / {rosterVoters.length} Voters)
+                        </span>
+                        <div style={{ display: 'flex', gap: '0.65rem' }}>
+                          <button
+                            type="button"
+                            onClick={handleSelectAllRoster}
+                            style={{ border: 'none', background: 'none', color: '#2563EB', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            Select All
+                          </button>
+                          <span style={{ color: '#94A3B8' }}>|</span>
+                          <button
+                            type="button"
+                            onClick={handleClearSelectedRoster}
+                            style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+                        <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                        <input
+                          type="text"
+                          placeholder="Search voter by name, email, or student ID..."
+                          value={voterSearch}
+                          onChange={(e) => setVoterSearch(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.65rem 0.75rem 0.65rem 2.25rem',
+                            borderRadius: '10px',
+                            border: '1.5px solid #CBD5E1',
+                            fontSize: '0.85rem',
+                            boxSizing: 'border-box',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingRight: '4px' }}>
+                        {rosterVoters
+                          .filter(v =>
+                            (v.name || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
+                            (v.email || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
+                            (v.studentId || '').toLowerCase().includes(voterSearch.toLowerCase())
+                          )
+                          .map(v => {
+                            const isSelected = selectedEmails.includes(v.email.toLowerCase());
+                            return (
+                              <label
+                                key={v.id || v.email}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.65rem',
+                                  padding: '0.5rem 0.75rem',
+                                  borderRadius: '10px',
+                                  backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                                  border: isSelected ? '1.5px solid #BFDBFE' : '1.5px solid #E2E8F0',
+                                  fontSize: '0.85rem',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s'
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleSelectEmail(v.email.toLowerCase())}
+                                  style={{ accentColor: '#2563EB', width: '16px', height: '16px' }}
+                                />
+                                <div style={{ flex: 1, overflow: 'hidden' }}>
+                                  <div style={{ fontWeight: 700, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {v.name} ({v.studentId})
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {v.email}
+                                  </div>
+                                </div>
+                              </label>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CUSTOM EMAIL INPUT WIDGET */}
+                  {recipientFilter === 'custom' && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.4rem' }}>
+                        Enter Custom Email Address(es) (separated by commas, semicolons, or newlines)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={customEmailsInput}
+                        onChange={(e) => setCustomEmailsInput(e.target.value)}
+                        placeholder="e.g. voter1@htu.edu.gh, voter2@htu.edu.gh, observer@gmail.com"
+                        style={{
+                          width: '100%',
+                          padding: '0.85rem 1rem',
+                          borderRadius: '14px',
+                          border: '1.5px solid #CBD5E1',
+                          fontSize: '0.9rem',
+                          fontFamily: 'inherit',
+                          backgroundColor: '#FFFFFF',
+                          color: '#0F172A',
+                          boxSizing: 'border-box',
+                          outline: 'none',
+                          lineHeight: '1.5'
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Subject Line (Only for Email or Dual) */}
+                {(channel === 'email' || channel === 'both') && (
+                  <div>
+                    <label style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1E293B', display: 'block', marginBottom: '0.5rem' }}>
+                      Email Subject Line
+                    </label>
+                    <input
+                      type="text"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="Enter email subject line..."
+                      style={{
+                        width: '100%',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '14px',
+                        border: '1.5px solid #CBD5E1',
+                        fontSize: '0.95rem',
+                        fontWeight: 600,
+                        backgroundColor: '#FFFFFF',
+                        color: '#0F172A',
+                        boxSizing: 'border-box',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Message Body Content */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1E293B' }}>
+                      Message Body Content
+                    </label>
+
+                    {channel !== 'email' && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', backgroundColor: smsChars > 160 ? '#FFE4E6' : '#F1F5F9', color: smsChars > 160 ? '#BE123C' : '#475569' }}>
+                        {smsChars} chars • {smsSegments} SMS {smsSegments > 1 ? 'segments' : 'segment'}
+                      </span>
+                    )}
+                  </div>
+
+                  <textarea
+                    rows={8}
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    placeholder="Type your official announcement content..."
+                    style={{
+                      width: '100%',
+                      padding: '1rem',
+                      borderRadius: '16px',
+                      border: '1.5px solid #CBD5E1',
+                      fontSize: '0.95rem',
+                      fontFamily: 'inherit',
+                      lineHeight: 1.6,
+                      backgroundColor: '#FFFFFF',
+                      color: '#0F172A',
+                      boxSizing: 'border-box',
+                      outline: 'none'
+                    }}
+                  />
+
+                  {/* Variable Tag Insertion Chips */}
+                  <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 700 }}>Insert Smart Tags:</span>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <button type="button" onClick={() => handleInsertTag('{{voter_name}}')} style={{ padding: '0.3rem 0.6rem', borderRadius: '8px', border: '1px solid #DBEAFE', backgroundColor: '#EFF6FF', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}>
+                        + Voter Name
+                      </button>
+                      <button type="button" onClick={() => handleInsertTag('{{index_number}}')} style={{ padding: '0.3rem 0.6rem', borderRadius: '8px', border: '1px solid #DBEAFE', backgroundColor: '#EFF6FF', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}>
+                        + Student ID
+                      </button>
+                      <button type="button" onClick={() => handleInsertTag('{{voting_link}}')} style={{ padding: '0.3rem 0.6rem', borderRadius: '8px', border: '1px solid #DBEAFE', backgroundColor: '#EFF6FF', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}>
+                        + Voting Ballot Link
+                      </button>
+                      <button type="button" onClick={() => handleInsertTag('{{election_title}}')} style={{ padding: '0.3rem 0.6rem', borderRadius: '8px', border: '1px solid #DBEAFE', backgroundColor: '#EFF6FF', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}>
+                        + Election Title
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Dispatch Button */}
+                <button
+                  type="submit"
+                  disabled={sending || !body.trim()}
                   style={{
                     width: '100%',
-                    padding: '0.75rem 1rem',
-                    borderRadius: '12px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.9rem',
-                    fontWeight: 600,
-                    backgroundColor: '#F8FAFC',
-                    color: '#0F172A',
-                    boxSizing: 'border-box',
-                    marginBottom: '0.75rem'
-                  }}
-                >
-                  <option value="pending">⚡ Batch: Pending Voters (Voters who have NOT cast their ballot yet)</option>
-                  <option value="all">👥 Batch: All Roster Voters (Entire Directory)</option>
-                  <option value="voted">✅ Batch: Verified Voted Members Only</option>
-                  <option value="individual">🎯 Individual: Select Specific Voter(s) from Roster List</option>
-                  <option value="custom">✍️ Custom: Input Specific Email Address(es)</option>
-                </select>
-
-                {/* INDIVIDUAL VOTER SELECTION WIDGET */}
-                {recipientFilter === 'individual' && (
-                  <div style={{
                     padding: '1rem',
-                    borderRadius: '12px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: '#F8FAFC',
-                    marginTop: '0.5rem'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2563EB' }}>
-                        Selected ({selectedEmails.length} / {rosterVoters.length} Voters)
-                      </span>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          type="button"
-                          onClick={handleSelectAllRoster}
-                          style={{ border: 'none', background: 'none', color: '#2563EB', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-                        >
-                          Select All
-                        </button>
-                        <span style={{ color: '#94A3B8' }}>|</span>
-                        <button
-                          type="button"
-                          onClick={handleClearSelectedRoster}
-                          style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-                        >
-                          Clear
-                        </button>
+                    borderRadius: '16px',
+                    border: 'none',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    color: '#FFFFFF',
+                    backgroundColor: '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    cursor: (sending || !body.trim()) ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 6px 20px rgba(37, 99, 235, 0.25)',
+                    transition: 'all 0.2s'
+                  }}
+                  className="dispatch-btn"
+                >
+                  <Send size={18} />
+                  {sending ? 'Dispatching Broadcast Live...' : `Securely Dispatch ${channel.toUpperCase()} Broadcast`}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: High-Fidelity Live Preview Container */}
+          <div style={{ position: 'sticky', top: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="card" style={{ padding: '2rem', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '24px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.02)' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1E293B' }}>
+                <Eye size={20} style={{ color: '#2563eb' }} /> High-Fidelity Live Preview Simulation
+              </h3>
+
+              {/* simulated email view */}
+              {(channel === 'email' || channel === 'both') && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Mail size={14} /> GMAIL / OUTLOOK SIMULATOR
+                  </div>
+
+                  <div style={{ border: '1.5px solid #E2E8F0', borderRadius: '16px', overflow: 'hidden', backgroundColor: '#FFFFFF', boxShadow: '0 4px 15px rgba(0,0,0,0.02)' }}>
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '1rem 1.25rem', borderBottom: '1.5px solid #E2E8F0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#64748B', marginBottom: '0.4rem' }}>
+                        <span><strong>From:</strong> HTU Electoral Commission &lt;elections@htu.edu.gh&gt;</span>
+                        <span style={{ fontSize: '0.7rem', padding: '2px 6px', backgroundColor: '#E2E8F0', borderRadius: '4px', fontWeight: 700, color: '#475569' }}>SECURE</span>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                        <strong>To:</strong> Kwame Mensah &lt;kwame.mensah@htu.edu.gh&gt;
                       </div>
                     </div>
 
-                    <input
-                      type="text"
-                      placeholder="Search voter by name, email, or student ID..."
-                      value={voterSearch}
-                      onChange={(e) => setVoterSearch(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #CBD5E1',
-                        fontSize: '0.8rem',
-                        marginBottom: '0.65rem',
-                        boxSizing: 'border-box'
-                      }}
-                    />
+                    <div style={{ padding: '1.5rem', backgroundColor: '#FFFFFF' }}>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', marginBottom: '1rem', borderBottom: '1px solid #F1F5F9', paddingBottom: '0.75rem' }}>
+                        {subject || `Important Announcement: ${election.title}`}
+                      </div>
 
-                    <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      {rosterVoters
-                        .filter(v => 
-                          (v.name || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
-                          (v.email || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
-                          (v.studentId || '').toLowerCase().includes(voterSearch.toLowerCase())
-                        )
-                        .map(v => {
-                          const isSelected = selectedEmails.includes(v.email.toLowerCase());
-                          return (
-                            <label
-                              key={v.id || v.email}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.4rem 0.65rem',
-                                borderRadius: '6px',
-                                backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
-                                border: isSelected ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
-                                fontSize: '0.8rem',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => toggleSelectEmail(v.email.toLowerCase())}
-                                style={{ accentColor: '#2563EB' }}
-                              />
-                              <div style={{ flex: 1, overflow: 'hidden' }}>
-                                <div style={{ fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {v.name} ({v.studentId})
-                                </div>
-                                <div style={{ fontSize: '0.72rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {v.email}
-                                </div>
-                              </div>
-                            </label>
-                          );
-                        })}
+                      <div style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-wrap', fontFamily: 'sans-serif' }}>
+                        {body
+                          .replace(/{{voter_name}}/gi, 'Kwame Mensah')
+                          .replace(/{{index_number}}/gi, '0123456789')
+                          .replace(/{{election_title}}/gi, election.title)
+                          .replace(/{{voting_link}}/gi, `https://htu-elect-aov2.vercel.app/voter/elections/${election.id}`)}
+                      </div>
+
+                      <div style={{ marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: '#94A3B8' }}>
+                        <Info size={14} />
+                        <span>Dispatched securely via HTU Elect EC Broadcast Center.</span>
+                      </div>
                     </div>
                   </div>
-                )}
-
-                {/* CUSTOM EMAIL INPUT WIDGET */}
-                {recipientFilter === 'custom' && (
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '0.35rem' }}>
-                      Enter Custom Email Address(es) (separated by commas or newlines)
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={customEmailsInput}
-                      onChange={(e) => setCustomEmailsInput(e.target.value)}
-                      placeholder="e.g. voter1@htu.edu.gh, voter2@htu.edu.gh, dean@htu.edu.gh"
-                      style={{
-                        width: '100%',
-                        padding: '0.65rem 0.85rem',
-                        borderRadius: '10px',
-                        border: '1px solid #CBD5E1',
-                        fontSize: '0.85rem',
-                        fontFamily: 'inherit',
-                        backgroundColor: '#FFFFFF',
-                        color: '#0F172A',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Subject Line (For Email & Dual) */}
-              {(channel === 'email' || channel === 'both') && (
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
-                    Email Subject
-                  </label>
-                  <input
-                    type="text"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="Enter email subject..."
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      borderRadius: '12px',
-                      border: '1px solid #CBD5E1',
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                      backgroundColor: '#F8FAFC',
-                      color: '#0F172A',
-                      boxSizing: 'border-box'
-                    }}
-                  />
                 </div>
               )}
 
-              {/* Message Body Content */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
-                    Message Content
-                  </label>
-
-                  {channel !== 'email' && (
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: smsChars > 160 ? '#E11D48' : '#64748B' }}>
-                      {smsChars} chars ({smsSegments} SMS {smsSegments > 1 ? 'segments' : 'segment'})
-                    </span>
-                  )}
-                </div>
-
-                <textarea
-                  rows={7}
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  placeholder="Type your message content..."
-                  style={{
-                    width: '100%',
-                    padding: '0.85rem 1rem',
-                    borderRadius: '12px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.9rem',
-                    fontFamily: 'inherit',
-                    lineHeight: 1.5,
-                    backgroundColor: '#F8FAFC',
-                    color: '#0F172A',
-                    boxSizing: 'border-box'
-                  }}
-                />
-
-                {/* Variable Tag Insertion Chips */}
-                <div style={{ marginTop: '0.65rem' }}>
-                  <span style={{ fontSize: '0.725rem', color: '#94A3B8', fontWeight: 700, marginRight: '0.4rem' }}>Insert Dynamic Variables:</span>
-                  <div style={{ display: 'inline-flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                    <button type="button" onClick={() => handleInsertTag('{{voter_name}}')} style={{ padding: '2px 8px', borderRadius: '6px', border: '1px solid #DBEAFE', backgroundColor: '#EFF6FF', color: '#2563eb', fontSize: '0.725rem', fontWeight: 700, cursor: 'pointer' }}>
-                      + Voter Name
-                    </button>
-                    <button type="button" onClick={() => handleInsertTag('{{index_number}}')} style={{ padding: '2px 8px', borderRadius: '6px', border: '1px solid #DBEAFE', backgroundColor: '#EFF6FF', color: '#2563eb', fontSize: '0.725rem', fontWeight: 700, cursor: 'pointer' }}>
-                      + Index Number
-                    </button>
-                    <button type="button" onClick={() => handleInsertTag('{{voting_link}}')} style={{ padding: '2px 8px', borderRadius: '6px', border: '1px solid #DBEAFE', backgroundColor: '#EFF6FF', color: '#2563eb', fontSize: '0.725rem', fontWeight: 700, cursor: 'pointer' }}>
-                      + Voting Link
-                    </button>
-                    <button type="button" onClick={() => handleInsertTag('{{election_title}}')} style={{ padding: '2px 8px', borderRadius: '6px', border: '1px solid #DBEAFE', backgroundColor: '#EFF6FF', color: '#2563eb', fontSize: '0.725rem', fontWeight: 700, cursor: 'pointer' }}>
-                      + Election Title
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Submit Dispatch Button */}
-              <button
-                type="submit"
-                disabled={sending || !body.trim()}
-                className="btn btn-primary"
-                style={{
-                  width: '100%',
-                  padding: '0.85rem',
-                  borderRadius: '12px',
-                  fontWeight: 800,
-                  fontSize: '0.95rem',
-                  backgroundColor: '#2563eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)'
-                }}
-              >
-                <Send size={18} /> {sending ? 'Dispatching Broadcast...' : `Dispatch ${channel.toUpperCase()} Broadcast Message`}
-              </button>
-            </form>
-          </div>
-
-          {/* RIGHT: Live Gmail-Style Message Preview Box */}
-          <div>
-            <div className="card" style={{ padding: '1.5rem', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '20px', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0F172A' }}>
-                <Eye size={18} style={{ color: '#2563eb' }} /> Live Gmail & SMS Preview
-              </h3>
-
-              {/* Gmail Inbox Simulation Box */}
-              <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#F8FAFC' }}>
-                {/* Header Toolbar */}
-                <div style={{ backgroundColor: '#2563eb', color: '#FFFFFF', padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Mail size={14} /> Official Email Notification</span>
-                  <span style={{ fontSize: '0.7rem', opacity: 0.85 }}>HTU Elect Mail Engine</span>
-                </div>
-
-                <div style={{ padding: '1.25rem', backgroundColor: '#FFFFFF' }}>
-                  <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '0.5rem' }}>
-                    <strong>From:</strong> HTU Electoral Commission &lt;elections@htu.edu.gh&gt;
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid #F1F5F9' }}>
-                    <strong>To:</strong> Kwame Mensah &lt;kwame.mensah@htu.edu.gh&gt; (+233240001122)
-                  </div>
-
-                  {(channel === 'email' || channel === 'both') && (
-                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', marginBottom: '1rem' }}>
-                      {subject || `Announcement: ${election.title}`}
-                    </div>
-                  )}
-
-                  <div style={{ fontSize: '0.875rem', color: '#1E293B', lineHeight: 1.6, whiteSpace: 'pre-wrap', fontFamily: 'sans-serif' }}>
-                    {body
-                      .replace(/{{voter_name}}/gi, 'Kwame Mensah')
-                      .replace(/{{index_number}}/gi, '0123456789')
-                      .replace(/{{election_title}}/gi, election.title)
-                      .replace(/{{voting_link}}/gi, `https://htu-elect-aov2.vercel.app/voter/elections/${election.id}`)}
-                  </div>
-                </div>
-              </div>
-
-              {/* SMS Bubble Preview */}
+              {/* simulated SMS view */}
               {(channel === 'sms' || channel === 'both') && (
-                <div style={{ marginTop: '1.25rem' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Smartphone size={14} /> Mobile Phone SMS View
+                <div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Smartphone size={14} /> SMARTPHONE SMS SIMULATOR
                   </div>
-                  <div style={{ backgroundColor: '#E2E8F0', padding: '0.85rem 1.1rem', borderRadius: '16px 16px 16px 4px', fontSize: '0.825rem', color: '#0F172A', lineHeight: 1.4, maxWidth: '90%' }}>
-                    {body
-                      .replace(/{{voter_name}}/gi, 'Kwame Mensah')
-                      .replace(/{{index_number}}/gi, '0123456789')
-                      .replace(/{{election_title}}/gi, election.title)
-                      .replace(/{{voting_link}}/gi, `https://htu-elect-aov2.vercel.app/voter/elections/${election.id}`)}
+
+                  <div style={{ maxWidth: '380px', border: '1.5px solid #CBD5E1', borderRadius: '24px', backgroundColor: '#000000', padding: '0.75rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
+                    <div style={{ backgroundColor: '#1E293B', borderRadius: '18px', padding: '1rem', color: '#FFFFFF', minHeight: '120px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600, borderBottom: '1px solid #334155', paddingBottom: '0.4rem' }}>
+                        HTU ELECT SENDER
+                      </div>
+
+                      <div style={{
+                        alignSelf: 'flex-start',
+                        backgroundColor: '#F1F5F9',
+                        color: '#0F172A',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '16px 16px 16px 4px',
+                        fontSize: '0.8rem',
+                        lineHeight: 1.4,
+                        whiteSpace: 'pre-wrap',
+                        maxWidth: '85%'
+                      }}>
+                        {body
+                          .replace(/{{voter_name}}/gi, 'Kwame Mensah')
+                          .replace(/{{index_number}}/gi, '0123456789')
+                          .replace(/{{election_title}}/gi, election.title)
+                          .replace(/{{voting_link}}/gi, `https://htu-elect-aov2.vercel.app/voter/elections/${election.id}`)}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -695,59 +803,85 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
           </div>
         </div>
       ) : (
-        /* TRANSMISSION LOGS TAB */
-        <div className="card" style={{ padding: '1.5rem', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '20px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1rem 0', color: '#0F172A' }}>
-            Broadcast Transmission Logs ({history.length})
-          </h3>
+        /* TRANSMISSION LOGS TAB: Highly detailed layout */
+        <div className="card" style={{ padding: '2rem', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '24px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Broadcast Transmission Logs
+              </h3>
+              <p style={{ color: '#64748B', fontSize: '0.875rem', margin: '4px 0 0 0' }}>
+                Complete immutable record of all dispatches sent to voters.
+              </p>
+            </div>
+
+            <div style={{ padding: '0.4rem 0.8rem', borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>
+              Total Logged Transmissions: {history.length}
+            </div>
+          </div>
 
           {history.length === 0 ? (
-            <p style={{ color: '#64748B', textAlign: 'center', padding: '2rem' }}>No broadcast messages sent yet for this election.</p>
+            <div style={{ padding: '4rem 1.5rem', textAlign: 'center', color: '#64748B' }}>
+              <FileText size={48} style={{ color: '#CBD5E1', marginBottom: '1rem' }} />
+              <h4 style={{ fontWeight: 800, color: '#475569', margin: '0 0 0.25rem 0' }}>No Dispatches Recorded</h4>
+              <p style={{ fontSize: '0.85rem' }}>No broadcast history was found for this election setup yet.</p>
+            </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#F8FAFC', textAlign: 'left' }}>
-                    <th style={{ padding: '10px 14px' }}>Timestamp</th>
-                    <th style={{ padding: '10px 14px' }}>Channel</th>
-                    <th style={{ padding: '10px 14px' }}>Recipients</th>
-                    <th style={{ padding: '10px 14px' }}>Subject / Content</th>
-                    <th style={{ padding: '10px 14px' }}>Dispatched By</th>
-                    <th style={{ padding: '10px 14px' }}>Status</th>
+                  <tr style={{ backgroundColor: '#F8FAFC', textAlign: 'left', borderBottom: '1.5px solid #E2E8F0' }}>
+                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Date & Time</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Channel</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Recipients Pool</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Content Snapshot</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Operator</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Transmission Health</th>
                   </tr>
                 </thead>
                 <tbody>
                   {history.map((log) => (
-                    <tr key={log.id} style={{ borderTop: '1px solid #E2E8F0' }}>
-                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748B' }}>
+                    <tr key={log.id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background-color 0.15s' }} className="hover-row">
+                      <td style={{ padding: '14px 16px', whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>
                         {new Date(log.createdAt).toLocaleString()}
                       </td>
-                      <td style={{ padding: '10px 14px' }}>
+                      <td style={{ padding: '14px 16px' }}>
                         <span style={{
-                          padding: '3px 8px',
-                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          borderRadius: '8px',
                           fontSize: '0.75rem',
-                          fontWeight: 700,
+                          fontWeight: 800,
                           textTransform: 'uppercase',
-                          backgroundColor: log.channel === 'both' ? '#EFF6FF' : log.channel === 'email' ? '#F0FDF4' : '#FFF7ED',
-                          color: log.channel === 'both' ? '#2563eb' : log.channel === 'email' ? '#166534' : '#C2410C'
+                          backgroundColor: log.channel === 'both' ? '#EFF6FF' : log.channel === 'email' ? '#ECFDF5' : '#FFF7ED',
+                          color: log.channel === 'both' ? '#2563eb' : log.channel === 'email' ? '#047857' : '#C2410C',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
                         }}>
+                          {log.channel === 'both' ? <Zap size={12} /> : log.channel === 'email' ? <Mail size={12} /> : <Smartphone size={12} />}
                           {log.channel}
                         </span>
                       </td>
-                      <td style={{ padding: '10px 14px', fontWeight: 700 }}>
-                        {log.recipientCount} voters ({log.recipientFilter})
+                      <td style={{ padding: '14px 16px', fontWeight: 800, color: '#1E293B' }}>
+                        {log.recipientCount} Voters
+                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748B', marginTop: '2px' }}>
+                          Filter: <span style={{ textTransform: 'capitalize' }}>{log.recipientFilter}</span>
+                        </div>
                       </td>
-                      <td style={{ padding: '10px 14px', maxWidth: '300px' }}>
-                        <div style={{ fontWeight: 700, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{log.subject}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{log.body}</div>
+                      <td style={{ padding: '14px 16px', maxWidth: '320px' }}>
+                        <div style={{ fontWeight: 800, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {log.subject || 'Announcement'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                          {log.body}
+                        </div>
                       </td>
-                      <td style={{ padding: '10px 14px', fontSize: '0.8rem', color: '#64748B' }}>
+                      <td style={{ padding: '14px 16px', fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>
                         {log.senderEmail}
                       </td>
-                      <td style={{ padding: '10px 14px' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: '#166534', fontWeight: 700 }}>
-                          <CheckCircle2 size={14} /> Dispatched ({log.emailSentCount} emails, {log.smsSentCount} SMS)
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#047857', fontWeight: 700, padding: '4px 10px', borderRadius: '8px', backgroundColor: '#ECFDF5' }}>
+                          <CheckCircle2 size={14} /> Dispatched ({log.emailSentCount} email, {log.smsSentCount} SMS)
                         </span>
                       </td>
                     </tr>
