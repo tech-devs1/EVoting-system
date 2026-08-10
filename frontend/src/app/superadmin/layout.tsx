@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +14,8 @@ import {
   Moon, 
   Bell, 
   ChevronLeft,
-  ChevronDown
+  ChevronDown,
+  UserCheck
 } from 'lucide-react';
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const pathname = usePathname();
   const router = useRouter();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   // Auth Guard
   useEffect(() => {
@@ -29,6 +32,17 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       router.push('/login');
     }
   }, [user, loading, router]);
+
+  // Profile Dropdown Outside Click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
@@ -57,7 +71,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       minHeight: '100vh',
       backgroundColor: '#F4F6F9',
       color: '#0F172A',
-      fontFamily: 'var(--font-body, system-ui, sans-serif)',
+      fontFamily: 'var(--font-body, "Plus Jakarta Sans", system-ui, sans-serif)',
       display: 'flex',
       padding: '1.25rem',
       gap: '1.25rem',
@@ -197,7 +211,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             </span>
           </div>
 
-          {/* Right Action Icons & User Profile Badge */}
+          {/* Right Action Icons & User Profile Badge with Interactive Dropdown */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {/* Theme Toggle Pill */}
             <div style={{
@@ -262,27 +276,115 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             {/* Divider */}
             <div style={{ width: '1px', height: '24px', backgroundColor: '#E2E8F0' }} />
 
-            {/* User Profile Badge */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                backgroundColor: '#EDE9FE',
-                color: '#7C3AED',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: '0.95rem'
-              }}>
-                SA
+            {/* User Profile Badge with Dropdown */}
+            <div style={{ position: 'relative' }} ref={profileRef}>
+              <div 
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.75rem', 
+                  cursor: 'pointer',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '16px',
+                  backgroundColor: isProfileOpen ? '#F1F5F9' : 'transparent',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  backgroundColor: '#EDE9FE',
+                  color: '#7C3AED',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '0.95rem'
+                }}>
+                  SA
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>{user.name}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Superadmin</span>
+                </div>
+                <ChevronDown size={16} style={{ color: '#94A3B8', transform: isProfileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>{user.name}</span>
-                <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Superadmin</span>
-              </div>
-              <ChevronDown size={16} style={{ color: '#94A3B8' }} />
+
+              {/* Profile Dropdown Menu */}
+              {isProfileOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 12px)',
+                  right: 0,
+                  width: '260px',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '20px',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.15)',
+                  padding: '1.25rem',
+                  zIndex: 1000
+                }}>
+                  <div style={{ paddingBottom: '0.85rem', marginBottom: '0.85rem', borderBottom: '1px solid #F1F5F9' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0F172A' }}>{user.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B', wordBreak: 'break-all' }}>{user.email}</div>
+                    <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', backgroundColor: '#EDE9FE', color: '#7C3AED', textTransform: 'uppercase' }}>
+                      <UserCheck size={12} /> Root Superadmin
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        toggleTheme();
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.65rem',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '12px',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: '#475569',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />} Switch Theme
+                    </button>
+
+                    <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
+
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        logout();
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.65rem',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '12px',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: '#DC2626',
+                        backgroundColor: '#FEF2F2',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <LogOut size={16} /> Log Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>

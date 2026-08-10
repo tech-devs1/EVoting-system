@@ -12,11 +12,12 @@ import "@/styles/pages/landing.css";
 import "@/styles/pages/auth.css";
 import "@/styles/pages/voter.css";
 import "@/styles/pages/admin.css";
+import { Plus_Jakarta_Sans } from "next/font/google";
 
-const inter = Inter({
+const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const poppins = Poppins({
@@ -49,7 +50,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${poppins.variable}`} data-theme="light" suppressHydrationWarning>
+    <html lang="en" className={`${plusJakartaSans.variable}`} data-theme="light" suppressHydrationWarning>
       <body>
         <ServiceWorkerRegistrar />
         <AuthProvider>
