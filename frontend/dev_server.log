@@ -5,7 +5,12 @@
 ▲ Next.js 16.2.9 (webpack)
 - Local:         http://localhost:3000
 - Network:       http://192.168.0.2:3000
-✓ Ready in 556ms
+✓ Ready in 548ms
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
  ✓ (pwa) Compiling for server...
  ✓ (pwa) Compiling for server...
  ✓ (pwa) Compiling for client (static)...
@@ -15,5 +20,10 @@
  ○ (pwa) Building in development mode, caching and precaching are disabled for the most part. This means that offline support is disabled, but you can continue developing other functions in service worker.
 
 ○ Compiling /login ...
- GET /login 200 in 17.6s (next.js: 16.7s, application-code: 886ms)
- GET /login 200 in 94ms (next.js: 10ms, application-code: 84ms)
+ GET /login 200 in 19.8s (next.js: 18.9s, application-code: 863ms)
+ GET /login 200 in 101ms (next.js: 8ms, application-code: 93ms)
+ GET /admin/dashboard 200 in 3.2s (next.js: 3.2s, application-code: 81ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+ GET /login 200 in 1353ms (next.js: 56ms, application-code: 1297ms)
+ GET /admin/dashboard 200 in 58ms (next.js: 6ms, application-code: 51ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior

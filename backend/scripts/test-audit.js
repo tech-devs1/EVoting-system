@@ -1,5 +1,5 @@
-const { recordVoteAudit, verifyElectionIntegrity, generateHash } = require('./services/audit');
-const { db } = require('./services/firebase');
+const { recordVoteAudit, verifyElectionIntegrity, generateHash } = require('../services/audit');
+const { db } = require('../services/firebase');
 
 async function runAuditTest() {
   console.log('--- Starting Audit Integrity Test ---');

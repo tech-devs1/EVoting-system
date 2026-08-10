@@ -9,20 +9,15 @@ import { useAuth } from '@/context/AuthContext';
 import { 
   Plus, 
   Clock, 
-  CheckCircle2, 
   Calendar, 
   Users, 
   Vote, 
-  ArrowRight, 
   Upload, 
-  Sparkles,
-  Search,
   Layers,
-  Settings,
+  Search,
   Zap,
-  TrendingUp,
   Edit,
-  LogOut
+  Trophy
 } from 'lucide-react';
 
 interface Election {
@@ -37,6 +32,7 @@ interface Election {
   totalVotesCast?: number;
   candidateCount?: number;
   positionCount?: number;
+  voterCount?: number;
 }
 
 interface KPIStats {
@@ -44,11 +40,19 @@ interface KPIStats {
   totalVoters: number;
   totalVotesCast: number;
   activeElectionsCount: number;
+  uniqueVotersCount?: number;
+  totalStudents?: number;
+  completedElectionsCount?: number;
+}
+
+interface TopCandidate {
+  name: string;
+  votes: number;
 }
 
 export default function OrganizationElectionHub() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -60,8 +64,11 @@ export default function OrganizationElectionHub() {
     totalElections: 0,
     totalVoters: 0,
     totalVotesCast: 0,
-    activeElectionsCount: 0
+    activeElectionsCount: 0,
+    uniqueVotersCount: 0,
+    totalStudents: 0
   });
+  const [topCandidates, setTopCandidates] = useState<TopCandidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,28 +90,32 @@ export default function OrganizationElectionHub() {
   async function fetchHubData() {
     try {
       setLoading(true);
-      const res = await apiRequest<{ status: string; data: Election[] }>('/elections');
-      if (res.status === 'success' && Array.isArray(res.data)) {
-        setElections(res.data);
-        
-        let voters = 0;
-        let votes = 0;
-        let active = 0;
-        res.data.forEach(e => {
-          voters += e.totalVoters || 0;
-          votes += e.totalVotesCast || 0;
-          if (e.status === 'active') active++;
-        });
+      const res = await apiRequest<{
+        status: string;
+        data: {
+          stats: KPIStats & { topCandidates?: TopCandidate[] };
+          electionResults: { election: Election; candidates: any[]; totalVotes: number }[];
+          flaggedUsers: any[];
+        }
+      }>('/admin/dashboard-full');
 
-        setStats({
-          totalElections: res.data.length,
-          totalVoters: voters,
-          totalVotesCast: votes,
-          activeElectionsCount: active
-        });
+      if (res.status === 'success' && res.data) {
+        // Map electionResults to elections list
+        const electionsList = res.data.electionResults.map(er => ({
+          ...er.election,
+          totalVotesCast: er.totalVotes,
+          candidateCount: er.candidates.length,
+          voterCount: er.election.voterCount || er.election.totalVoters
+        }));
+
+        setElections(electionsList);
+        setStats(res.data.stats);
+        if (res.data.stats.topCandidates) {
+          setTopCandidates(res.data.stats.topCandidates);
+        }
       }
     } catch (err) {
-      console.error('Error fetching hub data:', err);
+      console.error('Error fetching dynamic hub data:', err);
     } finally {
       setLoading(false);
     }
@@ -257,6 +268,25 @@ export default function OrganizationElectionHub() {
 
   const adminName = user?.name?.split(' ')[0] || 'Admin';
 
+  // Calculations for real-time dashboard analytics
+  const totalVotesCastCount = stats.totalVotesCast || 0;
+  const registeredVotersCount = stats.totalVoters || 0;
+  const uniqueVotersCast = stats.uniqueVotersCount || 0;
+
+  const overallParticipationRate = registeredVotersCount > 0
+    ? Math.min(100, Math.round((uniqueVotersCast / registeredVotersCount) * 100))
+    : 0;
+
+  // Max votes calculation for leaderboard bar chart
+  const maxVotes = topCandidates.length > 0 ? Math.max(...topCandidates.map(c => c.votes)) : 1;
+  const displayCandidates = topCandidates.length > 0
+    ? topCandidates.slice(0, 6)
+    : [
+        { name: 'No Live Votes Yet', votes: 0 }
+      ];
+
+  const strokeDasharray = `${overallParticipationRate}, 100`;
+
   return (
     <div className="animate-page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       
@@ -388,7 +418,7 @@ export default function OrganizationElectionHub() {
         }}>
           <div>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem' }}>Registered Voters</span>
-            <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.totalVoters.toLocaleString()}</span>
+            <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{registeredVotersCount.toLocaleString()}</span>
           </div>
           <div style={{
             width: '42px',
@@ -404,7 +434,7 @@ export default function OrganizationElectionHub() {
           </div>
         </div>
 
-        {/* Card 4: Turnout Rate */}
+        {/* Card 4: Total Votes Cast */}
         <div style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '20px',
@@ -417,7 +447,7 @@ export default function OrganizationElectionHub() {
         }}>
           <div>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem' }}>Total Votes Cast</span>
-            <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.totalVotesCast.toLocaleString()}</span>
+            <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{totalVotesCastCount.toLocaleString()}</span>
           </div>
           <div style={{
             width: '42px',
@@ -448,38 +478,46 @@ export default function OrganizationElectionHub() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <div>
-              <span style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 600 }}>Overall Voting Activity</span>
+              <span style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 600 }}>Top Contending Candidates</span>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                {stats.totalVotesCast.toLocaleString()} Votes
+                Live Standings
               </h3>
             </div>
             <div style={{ padding: '0.35rem 0.85rem', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Calendar size={14} /> Aug 08 - Aug 14
+              <Trophy size={14} style={{ color: '#F59E0B' }} /> Leaderboard
             </div>
           </div>
 
-          {/* Visual Bar Chart Height Indicators */}
+          {/* Dynamic Candidates standings bar chart */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '140px', paddingTop: '1rem', borderBottom: '1px solid #F1F5F9' }}>
-            {[
-              { day: 'Mon', height: '40%', active: false },
-              { day: 'Tue', height: '65%', active: false },
-              { day: 'Wed', height: '50%', active: false },
-              { day: 'Thu', height: '90%', active: true },
-              { day: 'Fri', height: '75%', active: false },
-              { day: 'Sat', height: '80%', active: false }
-            ].map((bar, idx) => (
-              <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-                <div style={{
-                  width: '36px',
-                  height: bar.height,
-                  backgroundColor: bar.active ? '#2563EB' : '#E2E8F0',
-                  borderRadius: '10px',
-                  transition: 'height 0.3s ease',
-                  boxShadow: bar.active ? '0 4px 12px rgba(37, 99, 235, 0.3)' : 'none'
-                }} />
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94A3B8' }}>{bar.day}</span>
-              </div>
-            ))}
+            {displayCandidates.map((cand, idx) => {
+              const pct = maxVotes > 0 ? (cand.votes / maxVotes) * 100 : 0;
+              const hStyle = maxVotes > 0 && cand.votes > 0 ? `${Math.max(12, pct)}%` : '10%';
+              const isLeader = idx === 0 && cand.votes > 0;
+
+              return (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                  <div
+                    title={`${cand.name}: ${cand.votes} votes`}
+                    style={{
+                      width: '36px',
+                      height: hStyle,
+                      backgroundColor: isLeader ? '#F59E0B' : '#2563EB',
+                      borderRadius: '10px',
+                      transition: 'height 0.3s ease',
+                      boxShadow: isLeader ? '0 4px 12px rgba(245, 158, 11, 0.3)' : 'none'
+                    }}
+                  />
+                  <span
+                    style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', maxWidth: '50px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    title={cand.name}
+                  >
+                    {cand.name.split(' ')[0]}
+                  </span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94A3B8' }}>{cand.votes}v</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -496,23 +534,23 @@ export default function OrganizationElectionHub() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>Voter Turnout</h4>
-            <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>Live Roster</span>
+            <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>Participation</span>
           </div>
 
-          {/* Donut Graphic */}
+          {/* Dynamic Turnout Donut Graphic */}
           <div style={{ position: 'relative', width: '130px', height: '130px', margin: '1rem auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="130" height="130" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
               <path stroke="#E2E8F0" strokeWidth="4" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              <path stroke="#2563EB" strokeWidth="4.5" strokeDasharray="85, 100" strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path stroke="#2563EB" strokeWidth="4.5" strokeDasharray={strokeDasharray} strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
             </svg>
             <div style={{ position: 'absolute', textAlign: 'center' }}>
-              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', display: 'block', lineHeight: 1 }}>88%</span>
-              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>Participation</span>
+              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', display: 'block', lineHeight: 1 }}>{overallParticipationRate}%</span>
+              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>Turnout</span>
             </div>
           </div>
 
           <div style={{ fontSize: '0.8rem', color: '#64748B', textAlign: 'center', fontWeight: 500 }}>
-            88% higher turnout than last session
+            {uniqueVotersCast} out of {registeredVotersCount} registered members voted
           </div>
         </div>
 
@@ -621,8 +659,9 @@ export default function OrganizationElectionHub() {
 
           {/* Active Election Cards */}
           {filteredElections.map(election => {
-            const turnout = (election.totalVoters && election.totalVoters > 0)
-              ? Math.min(100, Math.round(((election.totalVotesCast || 0) / election.totalVoters) * 100))
+            const limitVoters = election.voterCount || election.totalVoters || 0;
+            const turnout = (limitVoters > 0)
+              ? Math.min(100, Math.round(((election.totalVotesCast || 0) / limitVoters) * 100))
               : 0;
 
             return (
@@ -671,7 +710,7 @@ export default function OrganizationElectionHub() {
                   <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', padding: '0.85rem', marginBottom: '1.25rem', border: '1px solid #F1F5F9' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.4rem' }}>
                       <span style={{ color: '#64748B' }}>Voter Turnout</span>
-                      <span style={{ color: '#0F172A' }}>{turnout}% ({election.totalVotesCast || 0} / {election.totalVoters || 0})</span>
+                      <span style={{ color: '#0F172A' }}>{turnout}% ({election.totalVotesCast || 0} / {limitVoters})</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', backgroundColor: '#E2E8F0', borderRadius: '999px', overflow: 'hidden' }}>
                       <div style={{ width: `${turnout}%`, height: '100%', backgroundColor: '#2563EB', borderRadius: '999px', transition: 'width 0.4s ease' }} />
