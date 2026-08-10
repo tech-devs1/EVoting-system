@@ -1108,11 +1108,12 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    // Store in voter doc
-    await voterRef.update({
+    // Store in voter doc (using set with merge: true so it works even if document doesn't exist yet)
+    await voterRef.set({
       accessOtp: otp,
-      accessOtpExpiry: expiry
-    });
+      accessOtpExpiry: expiry,
+      updatedAt: Date.now()
+    }, { merge: true });
 
     let emailSent = false;
     let smsSent = false;

@@ -60,12 +60,20 @@ router.get('/election/:electionId', async (req, res) => {
       const electionData = electionDoc.data();
       const showResults = electionData.showResults === true;
 
-      let snapshot = await getCandidatesRef(req).where('electionId', '==', electionId).get();
-      if (snapshot.empty) {
-        snapshot = await db.collection('organizations').doc(tenantId).collection('candidates').where('electionId', '==', electionId).get();
+      let snapshot = await getCandidatesRef(req).where('electionId', '==', electionId).get().catch(() => ({ empty: true }));
+      if (!snapshot || snapshot.empty) {
+        snapshot = await db.collection('organizations').doc(tenantId).collection('candidates').where('electionId', '==', electionId).get().catch(() => ({ empty: true }));
       }
-      if (snapshot.empty) {
-        snapshot = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+      if (!snapshot || snapshot.empty) {
+        try {
+          snapshot = await db.collectionGroup('candidates').where('electionId', '==', electionId).get();
+        } catch (err) {
+          const allCands = await db.collectionGroup('candidates').get().catch(() => ({ docs: [] }));
+          const filtered = allCands.docs ? allCands.docs.filter(d => d.data()?.electionId === electionId) : [];
+          snapshot = {
+            forEach: (cb) => filtered.forEach(cb)
+          };
+        }
       }
       
       const list = [];
