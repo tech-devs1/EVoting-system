@@ -1137,23 +1137,37 @@ router.post('/:id/request-access-otp', verifyAuth, async (req, res) => {
     let emailSent = false;
     let smsSent = false;
 
+    // Resolve contact details across roster match, voter_rolls document, auth payload, or body
+    const targetEmail = (matchedRosterEntry?.email || voterData?.email || req.user.email || req.body?.email || '').toLowerCase().trim();
+    const targetName = matchedRosterEntry?.name || voterData?.name || req.user.name || (targetEmail ? targetEmail.split('@')[0] : 'Voter');
+    const targetPhone = matchedRosterEntry?.phone || voterData?.phone || req.user.phone || req.body?.phone || '';
+
+    console.log('[Access OTP] Prepared dispatch details:', { targetEmail, targetName, targetPhone, voterId, electionId });
+
     // Dispatch via email
-    if (voterData.email) {
+    if (targetEmail) {
       try {
-        await sendOtpViaEmailJS(voterData.email, voterData.name, otp);
-        emailSent = true;
+        const emailResult = await sendOtpViaEmailJS(targetEmail, targetName, otp);
+        if (emailResult) {
+          emailSent = true;
+          console.log(`[Access OTP] ✅ Access OTP email successfully sent to ${targetEmail}`);
+        } else {
+          console.warn(`[Access OTP] ⚠️ Email dispatch returned empty result for ${targetEmail}`);
+        }
       } catch (err) {
-        console.error('[Access OTP] Email delivery failed:', err.message);
+        console.error('[Access OTP] Email delivery error:', err.message);
       }
+    } else {
+      console.warn('[Access OTP] No target email found for voter', voterId);
     }
 
     // Dispatch via SMS
-    if (voterData.phone) {
+    if (targetPhone) {
       try {
-        await sendOtpViaBMS(voterData.phone, otp);
+        await sendOtpViaBMS(targetPhone, otp);
         smsSent = true;
       } catch (err) {
-        console.error('[Access OTP] SMS delivery failed:', err.message);
+        console.error('[Access OTP] SMS delivery error:', err.message);
       }
     }
 
