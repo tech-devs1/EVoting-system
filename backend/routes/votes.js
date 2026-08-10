@@ -71,19 +71,7 @@ router.post('/cast', verifyAuth, async (req, res) => {
 
     // Verify voter has unlocked access to this election via OTP verification
     const tenantId = getTenantId(req);
-    let isUnlocked = false;
-    let unlockedDoc = await db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
-    if (unlockedDoc.exists) {
-      isUnlocked = true;
-    } else {
-      unlockedDoc = await db.collection('organizations').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
-      if (unlockedDoc.exists) {
-        isUnlocked = true;
-      } else {
-        unlockedDoc = await db.collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
-        if (unlockedDoc.exists) isUnlocked = true;
-      }
-    }
+    let isUnlocked = true; // Google Auth only transition - bypass extra OTP verification
 
     // 1. Check if election is active and within valid time window
     const election = await cache.getOrSet(`elections:detail:${electionId}`, async () => {

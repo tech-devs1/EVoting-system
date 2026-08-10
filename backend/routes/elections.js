@@ -1015,18 +1015,56 @@ router.post('/:id/voters/upload-csv', verifyAuth, requireAdmin, async (req, res)
   }
 });
 
-// 1. Check if voter has already unlocked access to an election
+// 1. Check if voter is eligible and unlock access to an election (bypasses OTP lock under Google Auth only)
 router.get('/:id/access-status', verifyAuth, async (req, res) => {
   try {
     const electionId = req.params.id;
     const voterId = req.user.uid;
-    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
 
-    const doc = await db.collection('tenants').doc(tenantId).collection('unlocked_elections').doc(`${voterId}_${electionId}`).get();
+    const { doc: electionDoc, ref: electionRef } = await findElectionDoc(electionId, req);
+    if (!electionDoc || !electionDoc.exists) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+
+    // Check if the election has an active voter roster/eligibility lists
+    const voterRosterSnap = await electionRef.collection('voter_roster').get().catch(() => ({ empty: true, docs: [] }));
+    const eligibleVotersSnap = await electionRef.collection('eligible_voters').get().catch(() => ({ empty: true, docs: [] }));
+
+    const hasElectionRoster = !voterRosterSnap.empty || !eligibleVotersSnap.empty;
+    const voterEmail = (req.user.email || '').toLowerCase().trim();
+    const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
+
+    if (hasElectionRoster) {
+      let matchedRosterEntry = null;
+      const allRosterDocs = [...(voterRosterSnap.docs || []), ...(eligibleVotersSnap.docs || [])];
+      for (const rDoc of allRosterDocs) {
+        const entry = rDoc.data();
+        const entryEmail = (entry.email || '').toLowerCase().trim();
+        const entryIndex = (entry.indexNumber || entry.studentId || rDoc.id || '').toLowerCase().trim();
+
+        if ((voterEmail && entryEmail === voterEmail) || (voterIndex && entryIndex === voterIndex)) {
+          matchedRosterEntry = entry;
+          break;
+        }
+      }
+
+      if (!matchedRosterEntry) {
+        return res.status(200).json({
+          status: 'success',
+          data: {
+            unlocked: false,
+            reason: 'not_on_roster',
+            message: 'Your Google email account is not listed on the official voter roster for this election.'
+          }
+        });
+      }
+    }
+
+    // Google Auth logged in + eligible/no roster = fully unlocked and ready to vote!
     res.status(200).json({
       status: 'success',
       data: {
-        unlocked: doc.exists
+        unlocked: true
       }
     });
   } catch (error) {

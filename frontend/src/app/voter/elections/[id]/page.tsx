@@ -52,6 +52,7 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
   // Map of position -> auditTxId for positions already voted in this session
   const [votedPositions, setVotedPositions] = useState<Record<string, { candidateId: string; auditTxId: string }>>({});
   const [castingPosition, setCastingPosition] = useState<string | null>(null);
+  const [notOnRoster, setNotOnRoster] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -62,9 +63,13 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
         const candidatesRes = await apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${electionId}`);
         if (candidatesRes.status === 'success') setCandidates(candidatesRes.data);
 
-        const accessRes = await apiRequest<{ status: string; data: { unlocked: boolean } }>(`/elections/${electionId}/access-status`);
+        const accessRes = await apiRequest<{ status: string; data: { unlocked: boolean; reason?: string; message?: string } }>(`/elections/${electionId}/access-status`);
         if (accessRes.status === 'success') {
           setIsLocked(!accessRes.data.unlocked);
+          if (!accessRes.data.unlocked && accessRes.data.reason === 'not_on_roster') {
+            setNotOnRoster(true);
+            setOtpCodeError(accessRes.data.message || 'You are not listed on the official voter roster.');
+          }
         }
       } catch (err) {
         console.error('Error fetching candidate selection details:', err);
@@ -259,156 +264,72 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
           padding: '2.5rem 1.5rem',
           textAlign: 'center'
         }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--color-primary-50, #EFF6FF)',
-            color: 'var(--color-primary, #2563EB)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 1.25rem auto'
-          }}>
-            <Lock size={22} />
-          </div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem 0' }}>Access Verification Required</h3>
-          <p style={{
-            fontSize: '13px',
-            color: 'var(--text-secondary, #475569)',
-            maxWidth: '440px',
-            margin: '0 auto 1.5rem auto',
-            lineHeight: 1.5
-          }}>
-            Please request a verification code sent to your registered email/SMS to securely unlock the ballot for <strong>{election.title}</strong>.
-          </p>
-
-          {!otpRequestSent ? (
-            <div style={{ maxWidth: '360px', margin: '0 auto' }}>
-              <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary, #475569)', display: 'block', marginBottom: '4px' }}>
-                  Verification Email Address:
-                </label>
-                <input
-                  type="email"
-                  value={inputEmail}
-                  onChange={(e) => setInputEmail(e.target.value)}
-                  placeholder="Enter email to receive code (e.g. voter@gmail.com)"
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color, #cbd5e1)',
-                    fontSize: '13px',
-                    backgroundColor: 'var(--bg-input, #ffffff)',
-                    color: 'var(--text-primary, #0f172a)'
-                  }}
-                />
+          {notOnRoster ? (
+            <>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                color: 'var(--color-danger, #EF4444)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.25rem auto'
+              }}>
+                <AlertCircle size={22} />
               </div>
-
-              {otpError && (
-                <div style={{
-                  margin: '0 0 1rem 0',
-                  padding: '0.65rem',
-                  backgroundColor: 'var(--color-danger-bg)',
-                  color: 'var(--color-danger)',
-                  border: '1px solid var(--border-error)',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  textAlign: 'left'
-                }}>{otpError}</div>
-              )}
-              <button onClick={handleRequestOtp} disabled={requestLoading} style={{
-                width: '100%',
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem 0' }}>Access Restricted</h3>
+              <p style={{
+                fontSize: '13px',
+                color: 'var(--text-secondary, #475569)',
+                maxWidth: '440px',
+                margin: '0 auto 1.5rem auto',
+                lineHeight: 1.5
+              }}>
+                {otpError || 'Your Google email account is not listed on the official voter roster for this election.'}
+              </p>
+              <Link href="/voter/elections" style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 padding: '0.65rem 1.25rem',
                 borderRadius: '6px',
                 backgroundColor: 'var(--color-primary, #2563EB)',
                 color: '#ffffff',
                 fontWeight: 600,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '13px'
-              }}>
-                {requestLoading ? 'Sending Access Code...' : 'Request Access Code'}
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleVerifyAccessOtp} style={{ maxWidth: '320px', margin: '0 auto' }}>
-              {fallbackOtp && (
-                <div style={{
-                  padding: '0.65rem',
-                  backgroundColor: 'var(--color-warning-bg)',
-                  color: 'var(--color-warning)',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  marginBottom: '1rem',
-                  fontWeight: 600
-                }}>
-                  🔑 Demo Code: {fallbackOtp}
-                </div>
-              )}
-
-              {otpError && (
-                <div style={{
-                  padding: '0.65rem',
-                  backgroundColor: 'var(--color-danger-bg)',
-                  color: 'var(--color-danger)',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  marginBottom: '1rem'
-                }}>{otpError}</div>
-              )}
-
-              <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>Enter 6-Digit Code</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="000000"
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-input)',
-                    color: 'var(--text-primary)',
-                    textAlign: 'center',
-                    letterSpacing: '6px',
-                    fontSize: '1.25rem',
-                    fontWeight: 'bold'
-                  }}
-                  required
-                />
-              </div>
-
-              <button type="submit" disabled={requestLoading || otpCode.length !== 6} style={{
-                width: '100%',
-                padding: '0.65rem',
-                backgroundColor: 'var(--color-primary, #2563EB)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontWeight: 600,
                 fontSize: '13px',
-                cursor: 'pointer'
+                textDecoration: 'none'
               }}>
-                {requestLoading ? 'Verifying...' : 'Unlock Ballot'}
-              </button>
-
-              <button type="button" onClick={handleRequestOtp} disabled={requestLoading} style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-tertiary)',
-                fontSize: '11px',
-                fontWeight: 600,
-                marginTop: '0.75rem',
-                cursor: 'pointer'
+                Return to Elections
+              </Link>
+            </>
+          ) : (
+            <>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-primary-50, #EFF6FF)',
+                color: 'var(--color-primary, #2563EB)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.25rem auto'
               }}>
-                Resend Code
-              </button>
-            </form>
+                <Lock size={22} />
+              </div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem 0' }}>Checking Eligibility...</h3>
+              <p style={{
+                fontSize: '13px',
+                color: 'var(--text-secondary, #475569)',
+                maxWidth: '440px',
+                margin: '0 auto 1.5rem auto',
+                lineHeight: 1.5
+              }}>
+                Validating your voter credentials. Please wait.
+              </p>
+            </>
           )}
         </div>
       ) : (
