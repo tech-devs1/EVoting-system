@@ -93,14 +93,29 @@ async function requireAdmin(req, res, next) {
     return next();
   }
 
-  // Also check if user email is listed as primary EC admin on any tenant
+  // Also check if user email is listed as primary EC admin on any tenant or organization
   try {
     const { db } = require('../services/firebase');
-    const tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', cleanEmail).get();
+    let tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', cleanEmail).get();
+    if (tenantsSnapshot.empty) {
+      tenantsSnapshot = await db.collection('organizations').where('adminEmail', '==', cleanEmail).get();
+    }
     if (!tenantsSnapshot.empty) {
       req.user.role = 'admin';
       req.user.tenantId = tenantsSnapshot.docs[0].id;
       return next();
+    }
+
+    const adminUserSnap = await db.collectionGroup('users').where('email', '==', cleanEmail).get();
+    if (!adminUserSnap.empty) {
+      const match = adminUserSnap.docs.find(d => {
+        const r = d.data()?.role;
+        return r === 'admin' || r === 'superadmin';
+      });
+      if (match) {
+        req.user.role = match.data().role;
+        return next();
+      }
     }
   } catch (e) {}
 

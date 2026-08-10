@@ -17,43 +17,35 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
   if (path.startsWith('/superadmin')) {
     token = sessionStorage.getItem('COMPSSA_tab_token') ||
             sessionStorage.getItem('COMPSSA_superadmin_token') ||
-            localStorage.getItem('COMPSSA_superadmin_token') ||
-            localStorage.getItem('COMPSSA_token');
+            localStorage.getItem('COMPSSA_superadmin_token');
     tenantId = sessionStorage.getItem('COMPSSA_tab_tenantId') ||
               sessionStorage.getItem('COMPSSA_superadmin_tenantId') ||
-              localStorage.getItem('COMPSSA_superadmin_tenantId') ||
-              localStorage.getItem('COMPSSA_tenantId');
+              localStorage.getItem('COMPSSA_superadmin_tenantId');
   } else if (path.startsWith('/admin')) {
     token = sessionStorage.getItem('COMPSSA_tab_token') ||
             sessionStorage.getItem('COMPSSA_admin_token') ||
-            localStorage.getItem('COMPSSA_admin_token') ||
-            localStorage.getItem('COMPSSA_token');
+            localStorage.getItem('COMPSSA_admin_token');
     tenantId = sessionStorage.getItem('COMPSSA_tab_tenantId') ||
               sessionStorage.getItem('COMPSSA_admin_tenantId') ||
-              localStorage.getItem('COMPSSA_admin_tenantId') ||
-              localStorage.getItem('COMPSSA_tenantId');
+              localStorage.getItem('COMPSSA_admin_tenantId');
   } else if (path.startsWith('/voter')) {
     token = sessionStorage.getItem('COMPSSA_tab_token') ||
             sessionStorage.getItem('COMPSSA_voter_token') ||
-            localStorage.getItem('COMPSSA_voter_token') ||
-            localStorage.getItem('COMPSSA_token');
+            localStorage.getItem('COMPSSA_voter_token');
     tenantId = sessionStorage.getItem('COMPSSA_tab_tenantId') ||
               sessionStorage.getItem('COMPSSA_voter_tenantId') ||
-              localStorage.getItem('COMPSSA_voter_tenantId') ||
-              localStorage.getItem('COMPSSA_tenantId');
+              localStorage.getItem('COMPSSA_voter_tenantId');
   } else {
     token = sessionStorage.getItem('COMPSSA_tab_token') ||
-            sessionStorage.getItem('COMPSSA_superadmin_token') ||
             sessionStorage.getItem('COMPSSA_admin_token') ||
+            sessionStorage.getItem('COMPSSA_superadmin_token') ||
             sessionStorage.getItem('COMPSSA_voter_token') ||
-            localStorage.getItem('COMPSSA_superadmin_token') ||
             localStorage.getItem('COMPSSA_admin_token') ||
+            localStorage.getItem('COMPSSA_superadmin_token') ||
             localStorage.getItem('COMPSSA_voter_token') ||
             localStorage.getItem('COMPSSA_token');
     tenantId = sessionStorage.getItem('COMPSSA_tab_tenantId') ||
-              sessionStorage.getItem('COMPSSA_superadmin_tenantId') ||
-              sessionStorage.getItem('COMPSSA_admin_tenantId') ||
-              sessionStorage.getItem('COMPSSA_voter_tenantId') ||
+              localStorage.getItem('COMPSSA_admin_tenantId') ||
               localStorage.getItem('COMPSSA_tenantId');
   }
 
