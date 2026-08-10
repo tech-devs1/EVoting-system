@@ -701,19 +701,9 @@ export default function OrganizationElectionHub() {
       )}
 
       {/* 4-Step Election Creation Wizard Modal */}
-      {isWizardOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(6px)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-          padding: '1.5rem'
-        }}>
-          <div className="card" style={{ width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', borderRadius: '20px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+      {mounted && isWizardOpen ? createPortal(
+        <div className="modal-overlay" onClick={() => setIsWizardOpen(false)}>
+          <div className="modal-card" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
             
             {/* Modal Header & Step Indicator */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -1102,7 +1092,7 @@ export default function OrganizationElectionHub() {
           </div>
         </div>,
         document.body
-      )}
+      ) : null}
     </div>
   );
 }
