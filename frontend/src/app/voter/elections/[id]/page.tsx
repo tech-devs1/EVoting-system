@@ -71,11 +71,24 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
     fetchData();
   }, [electionId]);
 
+  const [inputEmail, setInputEmail] = useState('');
+
+  useEffect(() => {
+    if (user?.email) {
+      setInputEmail(user.email);
+    }
+  }, [user]);
+
   const handleRequestOtp = async () => {
     setRequestLoading(true);
     setOtpCodeError('');
     try {
-      const res = await apiRequest<{ status: string; fallbackOtp?: string; message: string }>(`/elections/${electionId}/request-access-otp`, 'POST');
+      const emailToSend = inputEmail || user?.email;
+      const res = await apiRequest<{ status: string; fallbackOtp?: string; message: string }>(
+        `/elections/${electionId}/request-access-otp`,
+        'POST',
+        { email: emailToSend }
+      );
       if (res.status === 'success') {
         setOtpRequestSent(true);
         if (res.fallbackOtp) {
@@ -267,11 +280,31 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
           </p>
 
           {!otpRequestSent ? (
-            <div>
+            <div style={{ maxWidth: '360px', margin: '0 auto' }}>
+              <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary, #475569)', display: 'block', marginBottom: '4px' }}>
+                  Verification Email Address:
+                </label>
+                <input
+                  type="email"
+                  value={inputEmail}
+                  onChange={(e) => setInputEmail(e.target.value)}
+                  placeholder="Enter email to receive code (e.g. voter@gmail.com)"
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color, #cbd5e1)',
+                    fontSize: '13px',
+                    backgroundColor: 'var(--bg-input, #ffffff)',
+                    color: 'var(--text-primary, #0f172a)'
+                  }}
+                />
+              </div>
+
               {otpError && (
                 <div style={{
-                  maxWidth: '360px',
-                  margin: '0 auto 1rem auto',
+                  margin: '0 0 1rem 0',
                   padding: '0.65rem',
                   backgroundColor: 'var(--color-danger-bg)',
                   color: 'var(--color-danger)',
@@ -282,6 +315,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                 }}>{otpError}</div>
               )}
               <button onClick={handleRequestOtp} disabled={requestLoading} style={{
+                width: '100%',
                 padding: '0.65rem 1.25rem',
                 borderRadius: '6px',
                 backgroundColor: 'var(--color-primary, #2563EB)',
@@ -291,7 +325,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                 cursor: 'pointer',
                 fontSize: '13px'
               }}>
-                {requestLoading ? 'Sending...' : 'Request Access Code'}
+                {requestLoading ? 'Sending Access Code...' : 'Request Access Code'}
               </button>
             </div>
           ) : (
