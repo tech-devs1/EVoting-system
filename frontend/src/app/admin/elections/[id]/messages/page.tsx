@@ -16,6 +16,7 @@ import {
   FileText, 
   Sparkles,
   HelpCircle,
+  BarChart3,
   Eye
 } from 'lucide-react';
 
@@ -185,10 +186,13 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
                 cursor: 'pointer',
                 backgroundColor: activeTab === 'compose' ? '#FFFFFF' : 'transparent',
                 color: activeTab === 'compose' ? '#2563eb' : '#64748B',
-                boxShadow: activeTab === 'compose' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+                boxShadow: activeTab === 'compose' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem'
               }}
             >
-              ✉️ Compose Broadcast
+              <Send size={15} /> Compose Broadcast
             </button>
             <button
               type="button"
@@ -202,10 +206,13 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
                 cursor: 'pointer',
                 backgroundColor: activeTab === 'history' ? '#FFFFFF' : 'transparent',
                 color: activeTab === 'history' ? '#2563eb' : '#64748B',
-                boxShadow: activeTab === 'history' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+                boxShadow: activeTab === 'history' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem'
               }}
             >
-              📜 Transmission Logs ({history.length})
+              <FileText size={15} /> Transmission Logs ({history.length})
             </button>
           </div>
         </div>
@@ -242,17 +249,17 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
                 <Sparkles size={14} style={{ color: '#2563eb' }} /> 1-Click Message Presets
               </label>
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => handleApplyPreset('open')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A' }}>
-                  🚀 Voting Open
+                <button type="button" onClick={() => handleApplyPreset('open')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <Send size={12} /> Voting Open
                 </button>
-                <button type="button" onClick={() => handleApplyPreset('reminder')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A' }}>
-                  ⏰ Pending Reminder
+                <button type="button" onClick={() => handleApplyPreset('reminder')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <Clock size={12} /> Pending Reminder
                 </button>
-                <button type="button" onClick={() => handleApplyPreset('closing')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A' }}>
-                  ⏳ 1 Hour Left
+                <button type="button" onClick={() => handleApplyPreset('closing')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <AlertCircle size={12} /> 1 Hour Left
                 </button>
-                <button type="button" onClick={() => handleApplyPreset('results')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A' }}>
-                  📊 Final Results
+                <button type="button" onClick={() => handleApplyPreset('results')} style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#F8FAFC', cursor: 'pointer', color: '#0F172A', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <BarChart3 size={12} /> Final Results
                 </button>
               </div>
             </div>
@@ -348,9 +355,9 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
                     boxSizing: 'border-box'
                   }}
                 >
-                  <option value="pending">⏳ Pending Voters (Voters who have NOT cast their ballot yet)</option>
-                  <option value="all">👥 All Roster Voters (Entire Election Directory)</option>
-                  <option value="voted">✅ Verified Voted Members (Ballot Receipt Acknowledgement)</option>
+                  <option value="pending">Pending Voters (Voters who have NOT cast their ballot yet)</option>
+                  <option value="all">All Roster Voters (Entire Election Directory)</option>
+                  <option value="voted">Verified Voted Members (Ballot Receipt Acknowledgement)</option>
                 </select>
               </div>
 
@@ -468,7 +475,7 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
               <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#F8FAFC' }}>
                 {/* Header Toolbar */}
                 <div style={{ backgroundColor: '#2563eb', color: '#FFFFFF', padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>📧 Official Email Notification</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Mail size={14} /> Official Email Notification</span>
                   <span style={{ fontSize: '0.7rem', opacity: 0.85 }}>HTU Elect Mail Engine</span>
                 </div>
 
@@ -499,8 +506,8 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
               {/* SMS Bubble Preview */}
               {(channel === 'sms' || channel === 'both') && (
                 <div style={{ marginTop: '1.25rem' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                    📱 Mobile Phone SMS View
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Smartphone size={14} /> Mobile Phone SMS View
                   </div>
                   <div style={{ backgroundColor: '#E2E8F0', padding: '0.85rem 1.1rem', borderRadius: '16px 16px 16px 4px', fontSize: '0.825rem', color: '#0F172A', lineHeight: 1.4, maxWidth: '90%' }}>
                     {body
