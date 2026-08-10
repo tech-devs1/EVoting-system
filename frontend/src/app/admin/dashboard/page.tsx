@@ -17,8 +17,46 @@ import {
   Search,
   Zap,
   Edit,
-  Trophy
+  Trophy,
+  Image as ImageIcon
 } from 'lucide-react';
+
+const compressImageFile = (file: File, maxWidth = 400, maxHeight = 300, quality = 0.8): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve((reader.result as string) || '');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve((reader.result as string) || '');
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+};
 
 interface Election {
   id: string;
@@ -81,6 +119,7 @@ export default function OrganizationElectionHub() {
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [previewImageUrl, setPreviewImageUrl] = useState('');
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<any[]>([]);
   const [csvParsedMembers, setCsvParsedMembers] = useState<any[]>([]);
@@ -217,7 +256,8 @@ export default function OrganizationElectionHub() {
         description: description.trim(),
         startDate,
         endDate,
-        status: publishNow ? 'active' : 'draft'
+        status: publishNow ? 'active' : 'draft',
+        previewImageUrl: previewImageUrl.trim()
       };
 
       const res = await apiRequest<{ status: string; data: { id: string } }>('/elections', 'POST', payload);
@@ -252,6 +292,7 @@ export default function OrganizationElectionHub() {
     setDescription('');
     setStartDate('');
     setEndDate('');
+    setPreviewImageUrl('');
     setCsvFile(null);
     setCsvPreview([]);
     setCsvParsedMembers([]);
@@ -843,6 +884,73 @@ export default function OrganizationElectionHub() {
                 onChange={(e) => setDescription(e.target.value)}
                 style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
               />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Election Preview / Card Image</label>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{
+                  width: '120px',
+                  height: '90px',
+                  borderRadius: '12px',
+                  border: '1.5px dashed var(--border-color)',
+                  backgroundColor: 'var(--bg-input)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  flexShrink: 0
+                }}>
+                  {previewImageUrl ? (
+                    <img src={previewImageUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <ImageIcon size={28} style={{ color: 'var(--text-tertiary)' }} />
+                  )}
+                </div>
+
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label htmlFor="election-preview-picker" style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    backgroundColor: '#EFF6FF',
+                    color: '#2563EB',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    width: 'fit-content',
+                    border: '1px solid #DBEAFE'
+                  }}>
+                    <Upload size={14} /> Choose Card Image File
+                  </label>
+                  <input
+                    id="election-preview-picker"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const base64 = await compressImageFile(file, 400, 300, 0.8);
+                          setPreviewImageUrl(base64);
+                        } catch (err) {
+                          console.error('Failed to compress image:', err);
+                        }
+                      }
+                    }}
+                  />
+                  <input
+                    type="url"
+                    placeholder="Or paste direct image URL (https://...)"
+                    value={previewImageUrl.startsWith('data:image/') ? '' : previewImageUrl}
+                    onChange={(e) => setPreviewImageUrl(e.target.value)}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '12px' }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}

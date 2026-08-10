@@ -82,6 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Voters Roster', href: '/admin/voters', icon: Users },
     { label: 'Broadcast Center', href: '/admin/messages', icon: Send },
     { label: 'Live Results', href: '/admin/results', icon: BarChart3 },
+    { label: 'Election Reports', href: '/admin/reports', icon: FileText },
     { label: 'Audit Ledger', href: '/admin/audit', icon: FileText },
     { label: 'Access Security', href: '/admin/fraud', icon: ShieldAlert },
   ];
@@ -92,6 +93,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Roster & CSV Upload', href: `/admin/elections/${electionId}/voters`, icon: Users },
     { label: 'Broadcast Messages', href: `/admin/elections/${electionId}/messages`, icon: Send },
     { label: 'Live Results', href: `/admin/elections/${electionId}/results`, icon: BarChart3 },
+    { label: 'Election Reports', href: '/admin/reports', icon: FileText },
     { label: '360° Audit Ledger', href: `/admin/elections/${electionId}/audit`, icon: FileText },
     { label: 'Access Security', href: `/admin/elections/${electionId}/fraud`, icon: ShieldAlert },
   ] : defaultNavLinks;

@@ -16,6 +16,7 @@ interface Election {
   category?: string;
   hasVoted?: boolean;
   showResults?: boolean;
+  previewImageUrl?: string;
 }
 
 function CountdownTimer({ endsAt, status }: { endsAt: string; status: string }) {
@@ -205,48 +206,63 @@ export default function VoterElectionsPage() {
 
             const hasVoted = votedElectionIds.includes(el.id);
             return (
-              <div className="card election-card card-hover" key={el.id}>
-                <div className="election-card-header">
-                  <h4 className="election-card-title">{el.title}</h4>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                    {hasVoted && el.status === 'active' && (
-                      <span className="badge" style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--color-success, #22c55e)', fontSize: '11px' }}>✓ Voted</span>
-                    )}
-                    <span className={`badge ${badgeClass}`}>{statusLabel}</span>
+              <div className="card election-card card-hover" key={el.id} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0 }}>
+                {el.previewImageUrl ? (
+                  <img
+                    src={el.previewImageUrl}
+                    alt={el.title}
+                    style={{ width: '100%', height: '140px', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div style={{ width: '100%', height: '140px', backgroundColor: 'var(--bg-tertiary, #EFF6FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary, #2563EB)' }}>
+                    <FolderOpen size={40} />
                   </div>
-                </div>
-                <p className="election-card-desc">{el.description}</p>
-                <div className="election-card-meta">
-                  <CountdownTimer endsAt={el.endDate} status={el.status} />
-                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                    {el.status === 'active' ? (
-                      hasVoted ? (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          disabled
-                          style={{ opacity: 0.5, cursor: 'not-allowed' }}
-                        >
-                          Already Voted
-                        </button>
-                      ) : (
-                        <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
-                          Vote Now
+                )}
+                <div style={{ padding: 'var(--space-4)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div className="election-card-header" style={{ marginBottom: 'var(--space-2)' }}>
+                      <h4 className="election-card-title" style={{ margin: 0 }}>{el.title}</h4>
+                      <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                        {hasVoted && el.status === 'active' && (
+                          <span className="badge" style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--color-success, #22c55e)', fontSize: '11px' }}>✓ Voted</span>
+                        )}
+                        <span className={`badge ${badgeClass}`}>{statusLabel}</span>
+                      </div>
+                    </div>
+                    <p className="election-card-desc" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '48px', marginBottom: 'var(--space-4)' }}>{el.description}</p>
+                  </div>
+                  <div className="election-card-meta" style={{ marginTop: 'auto', borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-3)' }}>
+                    <CountdownTimer endsAt={el.endDate} status={el.status} />
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                      {el.status === 'active' ? (
+                        hasVoted ? (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            disabled
+                            style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                          >
+                            Already Voted
+                          </button>
+                        ) : (
+                          <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
+                            Vote Now
+                          </Link>
+                        )
+                      ) : el.status === 'completed' ? (
+                        <Link href={`/voter/verify`} className="btn btn-outline btn-sm">
+                          Audit Records
                         </Link>
-                      )
-                    ) : el.status === 'completed' ? (
-                      <Link href={`/voter/verify`} className="btn btn-outline btn-sm">
-                        Audit Records
-                      </Link>
-                    ) : (
-                      <button className="btn btn-secondary btn-sm" disabled style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Lock size={12} /> Locked
-                      </button>
-                    )}
-                    {el.showResults && (
-                      <Link href={`/voter/elections/${el.id}/results`} className="btn btn-secondary btn-sm">
-                        View Results
-                      </Link>
-                    )}
+                      ) : (
+                        <button className="btn btn-secondary btn-sm" disabled style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Lock size={12} /> Locked
+                        </button>
+                      )}
+                      {el.showResults && (
+                        <Link href={`/voter/elections/${el.id}/results`} className="btn btn-secondary btn-sm">
+                          View Results
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
