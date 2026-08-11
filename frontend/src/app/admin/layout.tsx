@@ -112,8 +112,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const defaultNavLinks = [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Broadcast Center', href: '/admin/messages', icon: Send },
-    { label: 'Election Reports', href: '/admin/reports', icon: FileText },
-    { label: 'Audit Ledger', href: '/admin/audit', icon: History },
   ];
 
   const electionNavLinks = electionId ? [
@@ -122,9 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Roster & CSV Upload', href: `/admin/elections/${electionId}/voters`, icon: Users },
     { label: 'Broadcast Messages', href: `/admin/elections/${electionId}/messages`, icon: Send },
     { label: 'Live Results', href: `/admin/elections/${electionId}/results`, icon: BarChart3 },
-    { label: 'Election Reports', href: `/admin/reports?electionId=${electionId}`, icon: FileText },
-    { label: '360° Audit Ledger', href: `/admin/elections/${electionId}/audit`, icon: History },
-    { label: 'Access Security', href: `/admin/elections/${electionId}/fraud`, icon: ShieldAlert },
+    { label: 'Election System Audit', href: `/admin/elections/${electionId}/audit`, icon: History },
   ] : defaultNavLinks;
 
   const activeNavLinks = isElectionWorkspace ? electionNavLinks : defaultNavLinks;

@@ -545,6 +545,14 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
     cache.invalidatePrefix('elections:');
     cache.invalidatePrefix('admin:');
 
+    await logActivity({
+      tenantId: getTenantId(req),
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_CREATE',
+      description: `Created new election "${title}" (ID: ${docRef.id})`
+    }).catch(() => {});
+
     res.status(201).json({ status: 'success', data: { id: docRef.id, ...newElection } });
   } catch (error) {
     console.error('Error creating election:', error);
@@ -646,6 +654,14 @@ const updateElectionHandler = async (req, res) => {
     cache.invalidatePrefix('admin:');
     cache.invalidatePrefix('candidates:');
 
+    await logActivity({
+      tenantId: getTenantId(req),
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_UPDATE',
+      description: `Updated metadata/parameters for election "${title || electionDoc.data().title || 'Election'}" (ID: ${electionId})`
+    }).catch(() => {});
+
     res.status(200).json({
       status: 'success',
       message: 'Election metadata updated successfully.',
@@ -708,6 +724,14 @@ router.patch('/:id/time-window', verifyAuth, requireAdmin, async (req, res) => {
     cache.invalidatePrefix('elections:');
     cache.invalidatePrefix('admin:');
 
+    await logActivity({
+      tenantId: getTenantId(req),
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_TIME_WINDOW_UPDATE',
+      description: `Updated time window for election ID: ${req.params.id} (Start: ${startDate}, End: ${endDate})`
+    }).catch(() => {});
+
     res.status(200).json({ status: 'success', message: 'Election time window updated' });
   } catch (error) {
     console.error('Error updating election time window:', error);
@@ -751,6 +775,14 @@ router.patch('/:id/reactivate', verifyAuth, requireAdmin, async (req, res) => {
     cache.invalidatePrefix('admin:');
     cache.invalidatePrefix('candidates:');
 
+    await logActivity({
+      tenantId: getTenantId(req),
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_REACTIVATE',
+      description: `Reactivated completed election ID: ${req.params.id} with new end date: ${endDate}`
+    }).catch(() => {});
+
     res.status(200).json({ status: 'success', message: 'Election reactivated successfully with new time window' });
   } catch (error) {
     console.error('Error reactivating election:', error);
@@ -771,6 +803,14 @@ router.patch('/:id/status', verifyAuth, requireAdmin, async (req, res) => {
     // Invalidate caches
     cache.invalidatePrefix('elections:');
     cache.invalidatePrefix('admin:');
+
+    await logActivity({
+      tenantId: getTenantId(req),
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_STATUS_UPDATE',
+      description: `Manually updated status of election ID: ${req.params.id} to ${status.toUpperCase()}`
+    }).catch(() => {});
 
     res.status(200).json({ status: 'success', message: `Election status updated to ${status}` });
   } catch (error) {
@@ -793,6 +833,14 @@ router.patch('/:id/toggle-results', verifyAuth, requireAdmin, async (req, res) =
     cache.invalidatePrefix('elections:');
     cache.invalidatePrefix('admin:');
     cache.invalidatePrefix('candidates:'); // Voters fetch candidates check results visibility
+
+    await logActivity({
+      tenantId: getTenantId(req),
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_TOGGLE_RESULTS',
+      description: `${showResults ? 'Published' : 'Unpublished/Hidden'} results for election ID: ${req.params.id}`
+    }).catch(() => {});
 
     res.status(200).json({ status: 'success', message: `Voter results visibility updated to ${showResults}` });
   } catch (error) {
@@ -832,6 +880,14 @@ router.delete('/:id', verifyAuth, requireAdmin, async (req, res) => {
     cache.invalidatePrefix('elections:');
     cache.invalidatePrefix('admin:');
     cache.invalidatePrefix('candidates:');
+
+    await logActivity({
+      tenantId: getTenantId(req),
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_DELETE',
+      description: `Deleted election and all associated data (ID: ${electionId})`
+    }).catch(() => {});
 
     res.status(200).json({ status: 'success', message: 'Election and all associated data deleted successfully' });
   } catch (error) {
@@ -1124,7 +1180,6 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     const secondaryColor = '#B91C1C';
     const darkGray = '#334155';
     const lightGray = '#64748B';
-    const borderBgColor = '#F1F5F9';
 
     // Load logo
     const logoPath = path.join(__dirname, '../../assets/logo.png');
@@ -1189,20 +1244,22 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
 
     // Custom Executive Summary
     if (executiveSummary) {
-      doc.fontSize(16).font('Helvetica-Bold').text('Executive Summary', { underline: true });
-      doc.moveDown(0.5);
-      doc.fontSize(11).font('Helvetica').text(executiveSummary.toString());
+      doc.fontSize(14).font('Helvetica-Bold').fillColor(primaryColor).text('Executive Summary', { underline: true });
+      doc.moveDown(0.3);
+      doc.fontSize(10).font('Helvetica').fillColor(darkGray).text(executiveSummary.toString());
       doc.moveDown();
     }
-       // Statistics section
-    doc.fontSize(16).font('Helvetica-Bold').text('Statistics', { underline: true });
-    doc.moveDown();
-    doc.fontSize(12).font('Helvetica').text(`Total Valid Voters (Roster Size): ${totalEligibleVoters || 'N/A'}`);
+
+    // Statistics section
+    doc.fontSize(14).font('Helvetica-Bold').fillColor(primaryColor).text('General Statistics', { underline: true });
+    doc.moveDown(0.3);
+    doc.fontSize(10).font('Helvetica').fillColor(darkGray);
+    doc.text(`Total Valid Voters (Roster Size): ${totalEligibleVoters || 'N/A'}`);
     doc.text(`Total Votes Cast (Ballots cast): ${uniqueVoters}`);
     doc.text(`Voter Turnout Rate: ${totalEligibleVoters > 0 ? ((uniqueVoters / totalEligibleVoters) * 100).toFixed(2) : '0.00'}%`);
     doc.text(`Total Registered Candidates: ${candidates.length}`);
-    doc.text(`Cryptographic Ledger Integrity: VERIFIED & INTACT`);
-    doc.text(`Report Generated: ${new Date().toLocaleString()}`);
+    doc.text(`System Activity Integrity Log: SECURE & VERIFIED`);
+    doc.text(`Report Generated On: ${new Date().toLocaleString()}`);
     doc.moveDown();
 
     // Group candidates by position
@@ -1239,7 +1296,6 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
       doc.moveDown(0.2);
 
       const posTotal = positionTotals[position] || 0;
-      
       const sorted = [...list].sort((a, b) => (b.votes || 0) - (a.votes || 0));
       
       sorted.forEach((cand, idx) => {
@@ -1263,11 +1319,13 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
              .font('Helvetica')
              .text(`      YES: ${yesVotes} (${yesRatio}%)`, 50, doc.y);
           const yesBarY = doc.y + 1;
+          doc.save();
           doc.rect(180, yesBarY, 300, 8).fill('#E2E8F0');
           if (yesVotes > 0) {
             const fillWidth = 300 * (yesVotes / totalInd);
             doc.rect(180, yesBarY, fillWidth, 8).fill(secondaryColor);
           }
+          doc.restore();
           doc.y += 14;
 
           doc.fillColor(lightGray)
@@ -1275,11 +1333,13 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
              .font('Helvetica')
              .text(`      NO: ${noVotes} (${noRatio}%)`, 50, doc.y);
           const noBarY = doc.y + 1;
+          doc.save();
           doc.rect(180, noBarY, 300, 8).fill('#E2E8F0');
           if (noVotes > 0) {
             const fillWidth = 300 * (noVotes / totalInd);
             doc.rect(180, noBarY, fillWidth, 8).fill(lightGray);
           }
+          doc.restore();
           doc.y += 20;
         } else {
           const candVotes = cand.votes || 0;
@@ -1296,12 +1356,14 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
              .font('Helvetica')
              .text(`      Votes: ${candVotes} (${ratio}%)`, 50, doc.y);
           const barY = doc.y + 1;
+          doc.save();
           doc.rect(180, barY, 300, 8).fill('#E2E8F0');
           if (candVotes > 0) {
             const fillWidth = 300 * (candVotes / posTotal);
             const barColor = (idx === 0) ? primaryColor : lightGray;
             doc.rect(180, barY, fillWidth, 8).fill(barColor);
           }
+          doc.restore();
           doc.y += 20;
         }
       });
@@ -1334,15 +1396,16 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     });
 
     if (doc.y > 600) doc.addPage();
-    doc.fontSize(16).font('Helvetica-Bold').text('Cryptographic Voter Verification Ledger (Recent 50)', { underline: true });
-    doc.moveDown();
-    doc.fontSize(10).font('Helvetica').text('Cryptographic audit hashes generated for verified ballots:');
-    doc.moveDown();
+    doc.fontSize(14).font('Helvetica-Bold').fillColor(primaryColor).text('Voter System Audit & Activity Log (Recent 50)', { underline: true });
+    doc.moveDown(0.3);
+    doc.fontSize(9).font('Helvetica').fillColor(darkGray).text('Exact timestamps and actions recorded for the most recent ballot transactions:');
+    doc.moveDown(0.5);
     if (verificationIds.length === 0) {
-      doc.text('No verified ballot hashes recorded yet.');
+      doc.text('No voter activity recorded yet.');
     } else {
       verificationIds.forEach((v, index) => {
-        doc.fontSize(9).font('Courier').text(`${index + 1}. [HASH]: ${v.id} | [Pos]: ${v.position} | [Time]: ${v.timestamp}`);
+        if (doc.y > 700) doc.addPage();
+        doc.fontSize(8.5).font('Courier').fillColor(primaryColor).text(`${index + 1}. [TIMESTAMP]: ${v.timestamp} | [Activity]: casted vote | [Reference Hash]: ${v.id.substring(0, 24)}...`);
       });
     }
     doc.moveDown();
@@ -1351,9 +1414,9 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     if (customNotes) {
       doc.moveDown();
       if (doc.y > 600) doc.addPage();
-      doc.fontSize(14).font('Helvetica-Bold').text('EC Special Notes / Addendum', { underline: true });
-      doc.moveDown(0.5);
-      doc.fontSize(11).font('Helvetica').text(customNotes.toString());
+      doc.fontSize(14).font('Helvetica-Bold').fillColor(primaryColor).text('EC Special Notes & Certifications', { underline: true });
+      doc.moveDown(0.3);
+      doc.fontSize(10).font('Helvetica').fillColor(darkGray).text(customNotes.toString());
       doc.moveDown();
     }
 
@@ -1446,7 +1509,7 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
         doc.fillColor('#0F172A')
            .fontSize(8)
            .font('Helvetica-Bold')
-           .text('Electoral Commission - Official Election Report', 50, 30);
+           .text('Electoral Commission - Official Election Audit Report', 50, 30);
         doc.moveTo(50, 42)
            .lineTo(545, 42)
            .lineWidth(0.5)
@@ -1466,7 +1529,7 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
          .font('Helvetica')
          .text(`Page ${i + 1} of ${pages.count}`, 50, 796, { align: 'right', width: 495 });
 
-      doc.text('GENERATED BY COMPSSA SECURE ELECTIONS SYSTEM • HTU-ELECT', 50, 796, { align: 'left', width: 400 });
+      doc.text('GENERATED BY HTU-ELECT SECURE PASSWORDLESS SYSTEM • HO TECHNICAL UNIVERSITY', 50, 796, { align: 'left', width: 400 });
     }
     
     doc.end();
@@ -1658,13 +1721,11 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
       const sorted = [...list].sort((a, b) => (b.votes || 0) - (a.votes || 0));
 
       const cardWidth = 220;
-      const cardHeight = 220;
-      const rowsCount = Math.ceil(sorted.length / 2);
+      const cardHeight = 180; // Compact height to prevent overflow
       const headerH = 26;
       
-      const totalPositionHeight = headerH + 20 + (rowsCount * cardHeight) + ((rowsCount - 1) * 20) + 45;
-      
-      if (doc.y + totalPositionHeight > 760) {
+      // Page break check for position group header
+      if (doc.y + headerH + cardHeight + 40 > 760) {
         doc.addPage();
       }
 
@@ -1678,41 +1739,55 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
          .font('Helvetica-Bold')
          .text(position.toUpperCase(), headerX, currentY + 8, { width: headerW, align: 'center' });
       
-      const startCardsY = currentY + headerH + 20;
+      let startCardsY = currentY + headerH + 20;
       const posTotal = positionTotals[position] || 0;
 
       sorted.forEach((cand, idx) => {
         const row = Math.floor(idx / 2);
         const col = idx % 2;
         const cardX = 50 + col * (220 + 55);
-        const cardY = startCardsY + row * (cardHeight + 20);
+        let cardY = startCardsY + row * (cardHeight + 20);
 
+        // Individual row-by-row overflow check
+        if (cardY + cardHeight > 760) {
+          doc.addPage();
+          // Reset card offset for subsequent rows on the new page
+          startCardsY = 60 - row * (cardHeight + 20);
+          cardY = startCardsY + row * (cardHeight + 20);
+        }
+
+        doc.save();
         doc.roundedRect(cardX, cardY, 220, cardHeight, 10).lineWidth(1.5).strokeColor('#E2E8F0').stroke();
+        doc.restore();
 
-        const photoWidth = 90;
-        const photoHeight = 90;
-        const photoX = cardX + 65;
-        const photoY = cardY + 20;
+        const photoWidth = 64;
+        const photoHeight = 64;
+        const photoX = cardX + 15;
+        const photoY = cardY + 15;
 
+        // Candidate Photo inside circle
         if (imageBuffers[cand.id]) {
           doc.save();
-          doc.circle(photoX + 45, photoY + 45, 45).clip();
+          doc.circle(photoX + 32, photoY + 32, 32).clip();
           doc.image(imageBuffers[cand.id], photoX, photoY, { width: photoWidth, height: photoHeight });
           doc.restore();
         } else {
-          doc.circle(photoX + 45, photoY + 45, 45).fill('#F1F5F9');
+          doc.save();
+          doc.circle(photoX + 32, photoY + 32, 32).fill('#F1F5F9');
           const initials = cand.name ? cand.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
           doc.fillColor('#64748B')
-             .fontSize(24)
+             .fontSize(18)
              .font('Helvetica-Bold')
-             .text(initials, photoX, photoY + 30, { width: photoWidth, align: 'center' });
+             .text(initials, photoX, photoY + 22, { width: photoWidth, align: 'center' });
+          doc.restore();
         }
 
-        doc.rect(cardX + 15, cardY + 125, 190, 26).fill('#10B981');
-        doc.fillColor('#FFFFFF')
-           .fontSize(9)
+        // Candidate Name and Tally
+        const textLeft = cardX + 90;
+        doc.fillColor(primaryColor)
+           .fontSize(10)
            .font('Helvetica-Bold')
-           .text(cand.name.toUpperCase(), cardX + 15, cardY + 133, { width: 190, align: 'center' });
+           .text(cand.name, textLeft, cardY + 18, { width: 120, height: 32, overflow: 'ellipses' });
 
         if (cand.isIndependent) {
           const yesVotes = cand.votes || 0;
@@ -1721,33 +1796,32 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
           const yesRatio = totalInd > 0 ? ((yesVotes / totalInd) * 100).toFixed(0) : '0';
           const noRatio = totalInd > 0 ? ((noVotes / totalInd) * 100).toFixed(0) : '0';
 
-          doc.fillColor('#10B981').fontSize(13).font('Helvetica-Bold').text(yesRatio + '%', cardX + 15, cardY + 162, { width: 90, align: 'center' });
-          doc.fillColor('#64748B').fontSize(7).font('Helvetica').text(`YES (${yesVotes})`, cardX + 15, cardY + 178, { width: 90, align: 'center' });
-
-          doc.fillColor('#EF4444').fontSize(13).font('Helvetica-Bold').text(noRatio + '%', cardX + 115, cardY + 162, { width: 90, align: 'center' });
-          doc.fillColor('#64748B').fontSize(7).font('Helvetica').text(`NO (${noVotes})`, cardX + 115, cardY + 178, { width: 90, align: 'center' });
+          doc.fillColor('#10B981').fontSize(11).font('Helvetica-Bold').text(`YES: ${yesRatio}% (${yesVotes})`, textLeft, cardY + 54);
+          doc.fillColor('#EF4444').fontSize(11).font('Helvetica-Bold').text(`NO: ${noRatio}% (${noVotes})`, textLeft, cardY + 70);
 
           const approved = yesVotes > noVotes;
           doc.fillColor(approved ? '#10B981' : '#EF4444')
              .fontSize(8)
              .font('Helvetica-Bold')
-             .text(approved ? 'APPROVED WINNER' : 'REJECTED', cardX, cardY + 198, { width: 220, align: 'center' });
+             .text(approved ? 'APPROVED WINNER' : 'REJECTED', textLeft, cardY + 92);
         } else {
           const candVotes = cand.votes || 0;
           const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(0) : '0';
 
-          doc.fillColor('#0F172A').fontSize(18).font('Helvetica-Bold').text(ratio + '%', cardX, cardY + 162, { width: 220, align: 'center' });
-          doc.fillColor('#64748B').fontSize(8).font('Helvetica').text(`${candVotes} Votes`, cardX, cardY + 182, { width: 220, align: 'center' });
+          doc.fillColor(primaryColor).fontSize(14).font('Helvetica-Bold').text(`${ratio}%`, textLeft, cardY + 54);
+          doc.fillColor(lightGray).fontSize(8.5).font('Helvetica').text(`${candVotes} Votes`, textLeft, cardY + 72);
 
           const isWinner = idx === 0 && candVotes > 0;
           doc.fillColor(isWinner ? '#10B981' : '#64748B')
              .fontSize(8)
              .font('Helvetica-Bold')
-             .text(isWinner ? 'WINNER ELECT' : 'CANDIDATE', cardX, cardY + 198, { width: 220, align: 'center' });
+             .text(isWinner ? '🏆 WINNER ELECT' : 'CANDIDATE', textLeft, cardY + 92);
         }
       });
 
-      doc.y = startCardsY + rowsCount * (cardHeight + 20) + 15;
+      // Advance doc.y to bottom of last drawn rows
+      const rowsTotal = Math.ceil(sorted.length / 2);
+      doc.y = startCardsY + rowsTotal * (cardHeight + 20) + 15;
     });
 
     const pages = doc.bufferedPageRange();
@@ -1965,6 +2039,14 @@ router.post('/:id/voters/upload-csv', verifyAuth, requireAdmin, async (req, res)
 
     // Invalidate election list & detail caches
     cache.invalidatePrefix('elections:');
+
+    await logActivity({
+      tenantId: getTenantId(req),
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_CSV_UPLOAD',
+      description: `Uploaded voter roster with ${addedCount} eligible members for election ID: ${electionId}`
+    }).catch(() => {});
 
     res.status(200).json({
       status: 'success',
@@ -2412,6 +2494,14 @@ router.post('/:id/send-invitations', verifyAuth, requireAdmin, async (req, res) 
 
     const results = await Promise.allSettled(dispatchPromises);
     const sentCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+
+    await logActivity({
+      tenantId,
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_SEND_INVITATIONS_BATCH',
+      description: `Dispatched voting invitation batch to ${sentCount} roster recipients for election ID: ${electionId}`
+    }).catch(() => {});
 
     res.status(200).json({
       status: 'success',

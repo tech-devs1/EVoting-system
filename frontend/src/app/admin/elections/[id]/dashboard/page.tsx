@@ -69,7 +69,7 @@ interface Election {
   title: string;
   description?: string;
   category?: string;
-  status: 'draft' | 'scheduled' | 'active' | 'ended';
+  status: 'draft' | 'scheduled' | 'active' | 'ended' | 'completed';
   startDate: string;
   endDate: string;
   showResults?: boolean;
@@ -324,6 +324,12 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
     );
   }
 
+  const isElectionEnded = election ? (
+    election.status === 'ended' ||
+    election.status === 'completed' ||
+    new Date(election.endDate).getTime() <= Date.now()
+  ) : false;
+
   const turnout = (election.totalVoters && election.totalVoters > 0)
     ? Math.min(100, Math.round(((election.totalVotesCast || 0) / election.totalVoters) * 100))
     : 0;
@@ -363,7 +369,20 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
               <Edit size={14} /> Edit Election Details
             </button>
             {election.status !== 'active' && (
-              <button disabled={actionLoading} onClick={() => handleStatusChange('active')} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+              <button
+                disabled={actionLoading || isElectionEnded}
+                onClick={() => handleStatusChange('active')}
+                className="btn btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  fontSize: '0.85rem',
+                  opacity: isElectionEnded ? 0.5 : 1,
+                  cursor: isElectionEnded ? 'not-allowed' : 'pointer'
+                }}
+                title={isElectionEnded ? "Election has ended. Extend the closing date to a future time in order to start it." : "Start Election"}
+              >
                 <Play size={14} /> Start Election
               </button>
             )}
