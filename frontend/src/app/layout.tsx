@@ -1,16 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/context/AuthContext";
 
-// Import all theme styling sheets
-import "@/styles/variables.css";
-import "@/styles/base.css";
-import "@/styles/components.css";
-import "@/styles/layout.css";
-import "@/styles/animations.css";
-import "@/styles/pages/landing.css";
-import "@/styles/pages/auth.css";
-import "@/styles/pages/voter.css";
-import "@/styles/pages/admin.css";
+// Import unified Tailwind CSS stylesheet
+import "./globals.css";
 
 const fontBodyClass = "font-sans";
 

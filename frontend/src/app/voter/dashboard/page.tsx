@@ -8,9 +8,10 @@ import { get, set } from 'idb-keyval';
 import { 
   ShieldCheck, 
   Key, 
-  Search, 
   Clock, 
-  Inbox 
+  Inbox,
+  Award,
+  Vote
 } from 'lucide-react';
 
 interface Election {
@@ -24,10 +25,18 @@ interface Election {
   showResults?: boolean;
 }
 
+interface CacheData {
+  elections: Election[];
+  upcomingElections: Election[];
+  publishedResultsElections: Election[];
+  votedElectionIds: string[];
+  totalVotes: number;
+}
+
 function CountdownTimer({ endsAt }: { endsAt: string }) {
-  const [timeLeft, setTimeLeft] = useState('');
-  const [endingSoon, setEndingSoon] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [endingSoon, setEndingSoon] = useState<boolean>(false);
+  const [mounted, setMounted] = useState<boolean>(false);
 
   useEffect(() => {
     setMounted(true);
@@ -66,14 +75,9 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
   }, [endsAt, mounted]);
 
   return (
-    <div style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '4px',
-      fontSize: 'var(--text-xs, 12px)',
-      color: endingSoon ? 'var(--color-red, #EF4444)' : 'var(--text-secondary, #475569)',
-      fontWeight: endingSoon ? 'var(--weight-semibold, 600)' : 'var(--weight-normal, 400)'
-    }} suppressHydrationWarning>
+    <div className={`inline-flex items-center gap-1 text-xs font-medium ${
+      endingSoon ? 'text-red-500 font-semibold' : 'text-slate-500 dark:text-slate-400'
+    }`} suppressHydrationWarning>
       <Clock size={12} /> {mounted ? timeLeft : 'Loading...'}
     </div>
   );
@@ -85,9 +89,9 @@ export default function VoterDashboard() {
   const [upcomingElections, setUpcomingElections] = useState<Election[]>([]);
   const [publishedResultsElections, setPublishedResultsElections] = useState<Election[]>([]);
   const [votedElectionIds, setVotedElectionIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totalVotes, setTotalVotes] = useState(0);
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [totalVotes, setTotalVotes] = useState<number>(0);
+  const [mounted, setMounted] = useState<boolean>(false);
 
   useEffect(() => {
     setMounted(true);
@@ -101,7 +105,7 @@ export default function VoterDashboard() {
         console.log('[Dashboard] Fetching elections data...');
         
         try {
-          const cachedData = await get('voter_dashboard_cache');
+          const cachedData = await get<CacheData>('voter_dashboard_cache');
           if (cachedData) {
             setElections(cachedData.elections || []);
             setUpcomingElections(cachedData.upcomingElections || []);
@@ -134,7 +138,6 @@ export default function VoterDashboard() {
         try {
           const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
           if (votedRes.status === 'success') {
-            // Combine both sources of voted election IDs for ultimate consistency
             const combinedVotedIds = Array.from(new Set([...newVotedIds, ...votedRes.data]));
             newVotedIds = combinedVotedIds;
             setVotedElectionIds(newVotedIds);
@@ -199,138 +202,107 @@ export default function VoterDashboard() {
   const userName = user?.name || "Voter";
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 'var(--space-6, 1.5rem)'
-    }} suppressHydrationWarning>
+    <div className="flex flex-col gap-6" suppressHydrationWarning>
 
       {/* Top Welcome Card */}
-      <div className="welcome-card">
-        <h2>Welcome back, {userName}!</h2>
-        <p>
+      <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6 md:p-8 rounded-3xl shadow-md shadow-blue-500/10">
+        <h2 className="text-xl md:text-2xl font-extrabold mb-2 tracking-tight">Welcome back, {userName}!</h2>
+        <p className="text-sm text-blue-100 leading-relaxed max-w-3xl font-medium">
           Your student voter account is cryptographically verified and ready. Review the running e-ballots below to securely cast your vote.
         </p>
       </div>
 
       {/* Stats Widgets */}
-      <div className="quick-stats-grid" style={{ marginTop: 0 }}>
-        <div className="stat-widget">
-          <span className="stat-widget-label">Active Ballots</span>
-          <span className="stat-widget-val">{elections.length}</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Active Ballots</span>
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{elections.length}</span>
+          </div>
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl">
+            <Vote size={20} />
+          </div>
         </div>
-        <div className="stat-widget">
-          <span className="stat-widget-label">Upcoming Elections</span>
-          <span className="stat-widget-val">{upcomingElections.length}</span>
+
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Upcoming Elections</span>
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{upcomingElections.length}</span>
+          </div>
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-xl">
+            <Clock size={20} />
+          </div>
         </div>
-        <div className="stat-widget">
-          <span className="stat-widget-label">Total Votes Cast</span>
-          <span className="stat-widget-val">{totalVotes}</span>
+
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Total Votes Cast</span>
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{totalVotes}</span>
+          </div>
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
+            <Award size={20} />
+          </div>
         </div>
       </div>
 
       {/* Main Grid: Left Main Area, Right Sidebar */}
-      <div className="dashboard-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
         {/* Left Column — Active Elections */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div className="lg:col-span-2 flex flex-col gap-8">
 
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', margin: 0 }}>Active Elections</h3>
-              <Link href="/voter/elections" style={{ fontSize: 'var(--text-xs, 12px)', color: 'var(--color-primary, #2563EB)', fontWeight: 600 }}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-base font-bold text-slate-950 dark:text-white tracking-tight">Active Elections</h3>
+              <Link href="/voter/elections" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline">
                 View All
               </Link>
             </div>
 
             {loading ? (
-              <div style={{ padding: '2rem', textAlign: 'center', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
-                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '13px' }}>Syncing active ballots...</p>
+              <div className="p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800">
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Syncing active ballots...</p>
               </div>
             ) : elections.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '3rem 1.5rem',
-                border: '1px dashed var(--border-color, #E2E8F0)',
-                borderRadius: 'var(--radius-lg, 10px)',
-                backgroundColor: 'var(--bg-secondary, #FFFFFF)'
-              }}>
-                <Inbox size={36} style={{ color: 'var(--text-tertiary, #94A3B8)', marginBottom: '0.75rem' }} />
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>No Active Elections</h4>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>There are no running elections at the moment. Please check back later.</p>
+              <div className="text-center py-12 px-6 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800">
+                <Inbox size={40} className="text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No Active Elections</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal max-w-xs mx-auto">There are no running elections at the moment. Please check back later.</p>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="flex flex-col gap-4">
                 {elections.map(el => {
                   const hasVoted = votedElectionIds.includes(el.id);
                   return (
-                    <div key={el.id} style={{
-                      backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-                      border: '1px solid var(--border-color, #E2E8F0)',
-                      borderRadius: 'var(--radius-lg, 10px)',
-                      padding: '1.25rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '1rem'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                    <div key={el.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col gap-4 shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-all">
+                      <div className="flex justify-between items-start gap-4">
                         <div>
-                          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>{el.title}</h4>
-                          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>{el.description}</p>
+                          <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-1">{el.title}</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{el.description}</p>
                         </div>
-                        <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <div className="shrink-0">
                           {hasVoted ? (
-                            <span style={{ fontSize: '10px', backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>✓ Voted</span>
+                            <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-md font-bold border border-emerald-200 dark:border-emerald-900/30">✓ Voted</span>
                           ) : (
-                            <span style={{ fontSize: '10px', backgroundColor: 'var(--color-primary-50)', color: 'var(--color-primary)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>Active</span>
+                            <span className="text-[10px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-md font-bold border border-blue-200 dark:border-blue-900/30">Active</span>
                           )}
                         </div>
                       </div>
 
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        borderTop: '1px solid var(--border-light, #F1F5F9)',
-                        paddingTop: '0.75rem'
-                      }}>
+                      <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-700 pt-4 mt-1">
                         <CountdownTimer endsAt={el.endDate} />
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div className="flex gap-2">
                           {hasVoted ? (
-                            <button disabled style={{
-                              padding: '0.45rem 0.85rem',
-                              fontSize: '11px',
-                              borderRadius: '6px',
-                              border: '1px solid var(--border-color)',
-                              backgroundColor: 'var(--bg-tertiary)',
-                              color: 'var(--text-tertiary)',
-                              cursor: 'not-allowed'
-                            }}>
+                            <button disabled className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 font-bold cursor-not-allowed">
                               Already Voted
                             </button>
                           ) : (
-                            <Link href={`/voter/elections/${el.id}`} style={{
-                              padding: '0.45rem 0.85rem',
-                              fontSize: '11px',
-                              borderRadius: '6px',
-                              backgroundColor: 'var(--color-primary, #2563EB)',
-                              color: '#ffffff',
-                              fontWeight: 600,
-                              textDecoration: 'none'
-                            }}>
+                            <Link href={`/voter/elections/${el.id}`} className="px-3.5 py-2 text-xs rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">
                               Vote Now
                             </Link>
                           )}
                           {el.showResults && (
-                            <Link href={`/voter/elections/${el.id}/results`} style={{
-                              padding: '0.45rem 0.85rem',
-                              fontSize: '11px',
-                              borderRadius: '6px',
-                              border: '1px solid var(--border-color)',
-                              color: 'var(--text-secondary)',
-                              fontWeight: 600,
-                              textDecoration: 'none'
-                            }}>
+                            <Link href={`/voter/elections/${el.id}/results`} className="px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 font-bold transition-all">
                               View Results
                             </Link>
                           )}
@@ -346,24 +318,16 @@ export default function VoterDashboard() {
           {/* Upcoming Elections */}
           {upcomingElections.length > 0 && (
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', marginBottom: '1rem' }}>Upcoming Elections</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h3 className="text-base font-bold text-slate-950 dark:text-white tracking-tight mb-4">Upcoming Elections</h3>
+              <div className="flex flex-col gap-4">
                 {upcomingElections.map(el => (
-                  <div key={el.id} style={{
-                    backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-                    border: '1px solid var(--border-color, #E2E8F0)',
-                    borderRadius: 'var(--radius-lg, 10px)',
-                    padding: '1.25rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{el.title}</h4>
-                      <span style={{ fontSize: '10px', backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>Upcoming</span>
+                  <div key={el.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col gap-3 shadow-sm">
+                    <div className="flex justify-between items-center gap-4">
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">{el.title}</h4>
+                      <span className="text-[10px] bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-md font-bold border border-amber-200 dark:border-amber-900/30">Upcoming</span>
                     </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>{el.description}</p>
-                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{el.description}</p>
+                    <div className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 font-medium">
                       <Clock size={12} /> Starts {new Date(el.startDate).toLocaleDateString()}
                     </div>
                   </div>
@@ -375,31 +339,15 @@ export default function VoterDashboard() {
           {/* Published Election Results */}
           {publishedResultsElections.length > 0 && (
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary, #0F172A)', marginBottom: '1rem' }}>📊 Published Results</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h3 className="text-base font-bold text-slate-950 dark:text-white tracking-tight mb-4">📊 Published Results</h3>
+              <div className="flex flex-col gap-4">
                 {publishedResultsElections.map(el => (
-                  <div key={el.id} style={{
-                    backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-                    border: '1px solid var(--border-color, #E2E8F0)',
-                    borderRadius: 'var(--radius-lg, 10px)',
-                    padding: '1.25rem',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
+                  <div key={el.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex justify-between items-center shadow-sm">
                     <div>
-                      <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.15rem 0' }}>{el.title}</h4>
-                      <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>Ended</span>
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-1">{el.title}</h4>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block">Ended</span>
                     </div>
-                    <Link href={`/voter/elections/${el.id}/results`} style={{
-                      padding: '0.45rem 0.85rem',
-                      fontSize: '11px',
-                      borderRadius: '6px',
-                      backgroundColor: 'var(--color-primary, #2563EB)',
-                      color: '#ffffff',
-                      fontWeight: 600,
-                      textDecoration: 'none'
-                    }}>
+                    <Link href={`/voter/elections/${el.id}/results`} className="px-3.5 py-2 text-xs rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">
                       View Results
                     </Link>
                   </div>
@@ -411,37 +359,32 @@ export default function VoterDashboard() {
         </div>
 
         {/* Right Column — Sidebar Profile & Security Integrities */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="flex flex-col gap-4">
 
-          {/* Flat Security Info */}
-          <div style={{
-            backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
-            borderRadius: 'var(--radius-lg, 10px)',
-            padding: '1.25rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem'
-          }}>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Security Status</h4>
+          {/* Security Info Card */}
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
+            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">Security Status</h4>
 
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-              <div style={{ color: 'var(--color-info)', marginTop: '2px' }}><ShieldCheck size={16} /></div>
+            <div className="flex gap-3 items-start">
+              <div className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0">
+                <ShieldCheck size={18} />
+              </div>
               <div>
-                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 2px 0' }}>MFA Credentials Validated</p>
-                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>Single Sign-On authentication is active for this session.</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-white mb-0.5">MFA Credentials Validated</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">Single Sign-On authentication is active for this session.</p>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', borderTop: '1px solid var(--border-light)', paddingTop: '0.75rem' }}>
-              <div style={{ color: 'var(--color-success)', marginTop: '2px' }}><Key size={16} /></div>
+            <div className="flex gap-3 items-start border-t border-slate-100 dark:border-slate-700 pt-4 mt-1">
+              <div className="text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0">
+                <Key size={18} />
+              </div>
               <div>
-                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 2px 0' }}>Tamper-proof Log Verified</p>
-                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>Cryptographic SHA-256 chain checked and valid.</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-white mb-0.5">Tamper-proof Log Verified</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">Cryptographic SHA-256 chain checked and valid.</p>
               </div>
             </div>
           </div>
-
 
         </div>
 

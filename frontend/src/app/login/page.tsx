@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { ShieldCheck, Lock } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const { loginWithGoogle } = useAuth();
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
   const handleGoogleLogin = async () => {
     setError('');
@@ -34,101 +33,37 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      minHeight: '100vh',
-      width: '100vw',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'var(--bg-primary, #F8FAFC)',
-      fontFamily: 'var(--font-body, system-ui, sans-serif)',
-      padding: '1.5rem'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '440px',
-        backgroundColor: 'var(--bg-secondary, #ffffff)',
-        borderRadius: 'var(--radius-xl, 12px)',
-        border: '1px solid var(--border-color, #E2E8F0)',
-        padding: '2.5rem 2rem',
-        boxShadow: 'var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05))'
-      }}>
+    <div className="min-h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-6 py-12 transition-colors duration-200">
+      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-8 md:p-10 shadow-lg shadow-slate-100 dark:shadow-none">
 
         {/* Header Logo & Title */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '56px',
-            height: '56px',
-            borderRadius: 'var(--radius-md, 8px)',
-            backgroundColor: 'var(--color-primary-50, #EFF6FF)',
-            color: 'var(--color-primary, #2563EB)',
-            marginBottom: '1.25rem'
-          }}>
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mb-5 shadow-sm">
             <ShieldCheck size={32} />
           </div>
-          <h2 style={{
-            fontSize: '1.625rem',
-            fontWeight: 'var(--weight-bold, 700)',
-            color: 'var(--text-primary, #0F172A)',
-            margin: '0 0 0.5rem 0',
-            letterSpacing: '-0.02em'
-          }}>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2">
             HTU Elect
           </h2>
-          <p style={{
-            fontSize: 'var(--text-sm, 0.875rem)',
-            color: 'var(--text-secondary, #475569)',
-            margin: 0,
-            lineHeight: 1.4
-          }}>
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-normal max-w-xs mx-auto">
             Ho Technical University Electronic Voting Portal
           </p>
         </div>
 
         {error && (
-          <div style={{
-            padding: '0.75rem 1rem',
-            borderRadius: 'var(--radius-md, 8px)',
-            marginBottom: '1.5rem',
-            fontSize: 'var(--text-xs, 0.75rem)',
-            backgroundColor: 'var(--color-danger-bg, #FEF2F2)',
-            color: 'var(--color-danger, #EF4444)',
-            border: '1px solid var(--border-error, #EF4444)',
-            fontWeight: 'var(--weight-medium, 500)'
-          }}>
+          <div className="p-4 rounded-xl text-xs bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 font-semibold mb-6 animate-in fade-in slide-in-from-top-1 duration-200">
             {error}
           </div>
         )}
 
         {/* Action Button */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="flex flex-col gap-6">
           <button
             type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-              padding: '0.9rem 1.25rem',
-              backgroundColor: 'var(--color-primary, #2563EB)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: 'var(--radius-lg, 10px)',
-              fontSize: 'var(--text-sm, 0.875rem)',
-              fontWeight: 'var(--weight-semibold, 600)',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all var(--transition-fast, 100ms)',
-              boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.15)',
-              opacity: loading ? 0.7 : 1
-            }}
+            className="w-full flex items-center justify-center gap-3 py-3.5 px-5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/70 text-white rounded-2xl font-semibold text-sm cursor-pointer disabled:cursor-not-allowed transition-all duration-150 shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.99]"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" style={{ filter: 'brightness(0) invert(1)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" className="brightness-0 invert">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
               <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.27v3.13C3.25 21.3 7.31 24 12 24z"/>
               <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.6H1.27C.46 8.23 0 10.06 0 12s.46 3.77 1.27 5.4l4.01-3.13z"/>
@@ -137,13 +72,7 @@ export default function LoginPage() {
             <span>{loading ? 'Authenticating...' : 'Sign In with Google'}</span>
           </button>
 
-          <p style={{
-            fontSize: 'var(--text-xs, 0.75rem)',
-            color: 'var(--text-secondary, #475569)',
-            textAlign: 'center',
-            lineHeight: '1.5',
-            margin: 0
-          }}>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center leading-relaxed max-w-xs mx-auto">
             Unified login portal for voters, department executives, and system administrators via secure Google Authentication.
           </p>
         </div>
