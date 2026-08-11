@@ -1187,47 +1187,44 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
       doc.image(logoPath, 50, 45, { width: 60 });
     }
 
-    // Letterhead text
-    doc.fillColor(primaryColor)
+    // HTU Logo text next to logo - exactly matching image.png layout
+    doc.fillColor('#0F172A')
        .fontSize(14)
        .font('Helvetica-Bold')
-       .text('HO TECHNICAL UNIVERSITY', 125, 45);
-
-    doc.fillColor(darkGray)
-       .fontSize(9)
+       .text('HO TECHNICAL', 125, 52);
+    doc.fillColor('#0F172A')
+       .fontSize(14)
        .font('Helvetica-Bold')
-       .text('STUDENTS\' REPRESENTATIVE COUNCIL (SRC)', 125, 62);
+       .text('UNIVERSITY', 125, 68);
 
-    doc.fillColor(secondaryColor)
-       .fontSize(11)
+    // Address block on the right - exactly matching image.png layout and EC customization
+    doc.fillColor('#0F172A')
+       .fontSize(10)
        .font('Helvetica-Bold')
-       .text('OFFICIAL CERTIFIED ELECTION AUDIT REPORT', 125, 76);
+       .text('Office of the Electoral Commission', 340, 45);
 
-    doc.fillColor(lightGray)
+    doc.fillColor('#334155')
        .fontSize(8)
        .font('Helvetica')
-       .text('P.O. Box HP 35, Ho, Volta Region, Ghana | info@htu.edu.gh', 125, 93);
+       .text('P.O. Box HP 35', 340, 58)
+       .text('Ho - Ghana', 340, 69)
+       .text('Mobile: +233 (0)24 777 2381', 340, 80)
+       .text('E-mail: ec@htu.edu.gh', 340, 91)
+       .text('Website: www.htu.edu.gh', 340, 102);
 
     // Thick primary color line
-    doc.moveTo(50, 110)
-       .lineTo(545, 110)
-       .lineWidth(2)
-       .strokeColor(primaryColor)
-       .stroke();
-
-    // Thin secondary color line
     doc.moveTo(50, 114)
        .lineTo(545, 114)
-       .lineWidth(1)
-       .strokeColor(secondaryColor)
+       .lineWidth(2)
+       .strokeColor('#0B2545')
        .stroke();
 
     // Reset coordinates for body text
     doc.y = 135;
     
-    // Formal Letter Metadata block
+    // Formal Letter Metadata block - updated style to match image.png letter layout
     doc.fillColor(darkGray).fontSize(9).font('Helvetica-Bold');
-    doc.text(`DATE: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
+    doc.text(`DATE: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`);
     doc.text(`TO: All Students, Faculty Members, and Stakeholders of Ho Technical University`);
     doc.text(`FROM: Chairperson, Students' Representative Council (SRC) Electoral Commission`);
     doc.text(`SUBJECT: OFFICIAL DECLARATION OF RESULTS FOR ${election.title.toUpperCase()}`);
@@ -1293,112 +1290,163 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     doc.moveDown(0.5);
     
     Object.entries(candidatesByPosition).forEach(([position, list]) => {
-      if (doc.y > 600) doc.addPage();
-
-      doc.fillColor(primaryColor)
-         .fontSize(12)
-         .font('Helvetica-Bold')
-         .text(`Position: ${position}`);
-      doc.moveDown(0.2);
-
-      const posTotal = positionTotals[position] || 0;
       const sorted = [...list].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-      
-      sorted.forEach((cand, idx) => {
-        if (doc.y > 650) doc.addPage();
-        
+      const posTotal = positionTotals[position] || 0;
+
+      // Prepare Table Rows
+      const tableRows = [];
+      let rowIdx = 1;
+      sorted.forEach((cand) => {
         if (cand.isIndependent) {
           const yesVotes = cand.votes || 0;
           const noVotes = cand.noVotes || 0;
           const totalInd = yesVotes + noVotes;
           const yesRatio = totalInd > 0 ? ((yesVotes / totalInd) * 100).toFixed(2) : '0.00';
           const noRatio = totalInd > 0 ? ((noVotes / totalInd) * 100).toFixed(2) : '0.00';
+          const approved = yesVotes > noVotes;
 
-          doc.fillColor(darkGray)
-             .fontSize(10)
-             .font('Helvetica-Bold')
-             .text(`   ${idx + 1}. ${cand.name} (Unopposed)`, 50, doc.y);
-          doc.y += 4;
+          tableRows.push({
+            num: rowIdx++,
+            name: `${cand.name} (YES)`,
+            votes: yesVotes,
+            percentage: `${yesRatio}%`,
+            status: approved ? 'Approved Winner' : 'Rejected'
+          });
 
-          doc.fillColor(lightGray)
-             .fontSize(9)
-             .font('Helvetica')
-             .text(`      YES: ${yesVotes} (${yesRatio}%)`, 50, doc.y);
-          const yesBarY = doc.y + 1;
-          doc.save();
-          doc.rect(180, yesBarY, 300, 8).fill('#E2E8F0');
-          if (yesVotes > 0) {
-            const fillWidth = 300 * (yesVotes / totalInd);
-            doc.rect(180, yesBarY, fillWidth, 8).fill(secondaryColor);
-          }
-          doc.restore();
-          doc.y += 14;
-
-          doc.fillColor(lightGray)
-             .fontSize(9)
-             .font('Helvetica')
-             .text(`      NO: ${noVotes} (${noRatio}%)`, 50, doc.y);
-          const noBarY = doc.y + 1;
-          doc.save();
-          doc.rect(180, noBarY, 300, 8).fill('#E2E8F0');
-          if (noVotes > 0) {
-            const fillWidth = 300 * (noVotes / totalInd);
-            doc.rect(180, noBarY, fillWidth, 8).fill(lightGray);
-          }
-          doc.restore();
-          doc.y += 20;
+          tableRows.push({
+            num: rowIdx++,
+            name: `${cand.name} (NO)`,
+            votes: noVotes,
+            percentage: `${noRatio}%`,
+            status: approved ? 'Rejected' : 'Approved'
+          });
         } else {
           const candVotes = cand.votes || 0;
           const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(2) : '0.00';
-
-          doc.fillColor(darkGray)
-             .fontSize(10)
-             .font('Helvetica-Bold')
-             .text(`   ${idx + 1}. ${cand.name}`, 50, doc.y);
-          doc.y += 4;
-
-          doc.fillColor(lightGray)
-             .fontSize(9)
-             .font('Helvetica')
-             .text(`      Votes: ${candVotes} (${ratio}%)`, 50, doc.y);
-          const barY = doc.y + 1;
-          doc.save();
-          doc.rect(180, barY, 300, 8).fill('#E2E8F0');
-          if (candVotes > 0) {
-            const fillWidth = 300 * (candVotes / posTotal);
-            const barColor = (idx === 0) ? primaryColor : lightGray;
-            doc.rect(180, barY, fillWidth, 8).fill(barColor);
-          }
-          doc.restore();
-          doc.y += 20;
+          const isWinner = sorted.indexOf(cand) === 0 && candVotes > 0;
+          tableRows.push({
+            num: rowIdx++,
+            name: cand.name,
+            votes: candVotes,
+            percentage: `${ratio}%`,
+            status: isWinner ? 'Winner Elect' : 'Candidate'
+          });
         }
       });
-      
-      let winnerText = 'No winner';
-      const topCand = sorted[0];
-      if (topCand) {
-        if (topCand.isIndependent) {
-          const yes = topCand.votes || 0;
-          const no = topCand.noVotes || 0;
-          winnerText = yes > no ? `${topCand.name} (Approved by Yes votes)` : `${topCand.name} (Rejected by No votes)`;
-        } else {
-          const runnerUp = sorted[1];
-          if (runnerUp && runnerUp.votes === topCand.votes && topCand.votes > 0) {
-            winnerText = `Tie between ${topCand.name} and ${runnerUp.name} (${topCand.votes} votes each)`;
-          } else if (topCand.votes > 0) {
-            const ratio = posTotal > 0 ? ((topCand.votes / posTotal) * 100).toFixed(2) : '0.00';
-            winnerText = `${topCand.name} (${topCand.votes} votes, ${ratio}%)`;
-          } else {
-            winnerText = 'No votes cast for this position';
-          }
-        }
+
+      // Page break check for table headers
+      if (doc.y + 60 > 740) {
+        doc.addPage();
       }
 
-      doc.fillColor(primaryColor)
-         .fontSize(10)
+      const posHeaderY = doc.y;
+      doc.save();
+      doc.rect(50, posHeaderY, 495, 20).fill('#0F172A');
+      doc.restore();
+
+      doc.fillColor('#FFFFFF')
+         .fontSize(9.5)
          .font('Helvetica-Bold')
-         .text(`   Winner: ${winnerText}`, 50, doc.y);
-      doc.moveDown(1.5);
+         .text(`POSITION: ${position.toUpperCase()}`, 60, posHeaderY + 5);
+
+      const headerY = posHeaderY + 20;
+      doc.save();
+      doc.rect(50, headerY, 495, 18).fill('#E2E8F0');
+      doc.restore();
+
+      doc.fillColor('#1E293B').fontSize(8.5).font('Helvetica-Bold');
+      doc.text('No.', 55, headerY + 5, { width: 30, align: 'center' });
+      doc.text('Candidate Name', 90, headerY + 5, { width: 200 });
+      doc.text('Votes Obtained', 290, headerY + 5, { width: 95, align: 'right' });
+      doc.text('Percentage (%)', 385, headerY + 5, { width: 80, align: 'right' });
+      doc.text('Status / Remarks', 465, headerY + 5, { width: 80, align: 'center' });
+
+      doc.moveTo(50, headerY + 18)
+         .lineTo(545, headerY + 18)
+         .lineWidth(0.5)
+         .strokeColor('#94A3B8')
+         .stroke();
+
+      doc.y = headerY + 18;
+
+      // Draw rows
+      tableRows.forEach((row, rIdx) => {
+        const rowHeight = 18;
+        if (doc.y + rowHeight > 740) {
+          doc.addPage();
+
+          const newPosHeaderY = doc.y;
+          doc.save();
+          doc.rect(50, newPosHeaderY, 495, 20).fill('#0F172A');
+          doc.restore();
+          doc.fillColor('#FFFFFF').fontSize(9.5).font('Helvetica-Bold').text(`POSITION: ${position.toUpperCase()} (Continued)`, 60, newPosHeaderY + 5);
+
+          const newHeaderY = newPosHeaderY + 20;
+          doc.save();
+          doc.rect(50, newHeaderY, 495, 18).fill('#E2E8F0');
+          doc.restore();
+          doc.fillColor('#1E293B').fontSize(8.5).font('Helvetica-Bold');
+          doc.text('No.', 55, newHeaderY + 5, { width: 30, align: 'center' });
+          doc.text('Candidate Name', 90, newHeaderY + 5, { width: 200 });
+          doc.text('Votes Obtained', 290, newHeaderY + 5, { width: 95, align: 'right' });
+          doc.text('Percentage (%)', 385, newHeaderY + 5, { width: 80, align: 'right' });
+          doc.text('Status / Remarks', 465, newHeaderY + 5, { width: 80, align: 'center' });
+          doc.moveTo(50, newHeaderY + 18).lineTo(545, newHeaderY + 18).lineWidth(0.5).strokeColor('#94A3B8').stroke();
+          doc.y = newHeaderY + 18;
+        }
+
+        const rowY = doc.y;
+        if (rIdx % 2 === 1) {
+          doc.save();
+          doc.rect(50, rowY, 495, rowHeight).fill('#F8FAFC');
+          doc.restore();
+        }
+
+        doc.fillColor('#334155').fontSize(8.5).font('Helvetica');
+        doc.text(row.num.toString(), 55, rowY + 5, { width: 30, align: 'center' });
+
+        const isWinner = row.status === 'Winner Elect' || row.status === 'Approved Winner';
+        if (isWinner) {
+          doc.font('Helvetica-Bold').fillColor('#0F172A');
+        } else {
+          doc.font('Helvetica');
+        }
+        doc.text(row.name, 90, rowY + 5, { width: 200 });
+
+        doc.font('Helvetica');
+        doc.text(row.votes.toLocaleString(), 290, rowY + 5, { width: 95, align: 'right' });
+        doc.text(row.percentage, 385, rowY + 5, { width: 80, align: 'right' });
+
+        if (isWinner) {
+          doc.fillColor('#10B981').font('Helvetica-Bold');
+        } else if (row.status === 'Rejected') {
+          doc.fillColor('#EF4444');
+        } else {
+          doc.fillColor('#64748B');
+        }
+        doc.text(row.status, 465, rowY + 5, { width: 80, align: 'center' });
+
+        doc.moveTo(50, rowY + rowHeight)
+           .lineTo(545, rowY + rowHeight)
+           .lineWidth(0.5)
+           .strokeColor('#E2E8F0')
+           .stroke();
+
+        doc.y = rowY + rowHeight;
+      });
+
+      const finalTableY = doc.y;
+      doc.save();
+      doc.strokeColor('#94A3B8').lineWidth(0.5);
+      doc.moveTo(50, posHeaderY).lineTo(50, finalTableY).stroke();
+      doc.moveTo(85, posHeaderY + 20).lineTo(85, finalTableY).stroke();
+      doc.moveTo(295, posHeaderY + 20).lineTo(295, finalTableY).stroke();
+      doc.moveTo(390, posHeaderY + 20).lineTo(390, finalTableY).stroke();
+      doc.moveTo(470, posHeaderY + 20).lineTo(470, finalTableY).stroke();
+      doc.moveTo(545, posHeaderY).lineTo(545, finalTableY).stroke();
+      doc.restore();
+
+      doc.y = finalTableY + 15;
     });
 
     if (doc.y > 600) doc.addPage();
@@ -1652,61 +1700,83 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
     const darkGray = '#334155';
     const lightGray = '#64748B';
 
+    // Load logo
     const logoPath = path.join(__dirname, '../../assets/logo.png');
     if (fs.existsSync(logoPath)) {
       doc.image(logoPath, 50, 45, { width: 60 });
     }
 
-    doc.fillColor(primaryColor)
+    // HTU Logo text next to logo - exactly matching image.png layout
+    doc.fillColor('#0F172A')
        .fontSize(14)
        .font('Helvetica-Bold')
-       .text('HO TECHNICAL UNIVERSITY', 125, 45);
-
-    doc.fillColor(darkGray)
-       .fontSize(9)
+       .text('HO TECHNICAL', 125, 52);
+    doc.fillColor('#0F172A')
+       .fontSize(14)
        .font('Helvetica-Bold')
-       .text('STUDENTS\' REPRESENTATIVE COUNCIL (SRC)', 125, 62);
+       .text('UNIVERSITY', 125, 68);
 
-    doc.fillColor(secondaryColor)
-       .fontSize(11)
+    // Address block on the right - exactly matching image.png layout and EC customization
+    doc.fillColor('#0F172A')
+       .fontSize(10)
        .font('Helvetica-Bold')
-       .text('OFFICIAL CERTIFIED ELECTION RESULTS SHEET', 125, 76);
+       .text('Office of the Electoral Commission', 340, 45);
 
-    doc.fillColor(lightGray)
+    doc.fillColor('#334155')
        .fontSize(8)
        .font('Helvetica')
-       .text('P.O. Box HP 35, Ho, Volta Region, Ghana | info@htu.edu.gh', 125, 93);
+       .text('P.O. Box HP 35', 340, 58)
+       .text('Ho - Ghana', 340, 69)
+       .text('Mobile: +233 (0)24 777 2381', 340, 80)
+       .text('E-mail: ec@htu.edu.gh', 340, 91)
+       .text('Website: www.htu.edu.gh', 340, 102);
 
-    doc.moveTo(50, 110)
-       .lineTo(545, 110)
-       .lineWidth(2)
-       .strokeColor(primaryColor)
-       .stroke();
-
+    // Thick primary color line
     doc.moveTo(50, 114)
        .lineTo(545, 114)
-       .lineWidth(1)
-       .strokeColor(secondaryColor)
+       .lineWidth(2)
+       .strokeColor('#0B2545')
        .stroke();
 
-    doc.y = 135;
-    
-    doc.fillColor(primaryColor)
-       .fontSize(18)
-       .font('Helvetica-Bold')
-       .text(election.title, { align: 'center' });
-    doc.moveDown(0.2);
-    doc.fontSize(10).font('Helvetica').text(`Results Certified On: ${new Date().toLocaleString()}`, { align: 'center' });
-    doc.moveDown(1.5);
+    // Date aligned to the right, matching image.png
+    const dateText = `Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    doc.fillColor('#334155')
+       .fontSize(9)
+       .font('Helvetica')
+       .text(dateText, 400, 135, { width: 145, align: 'right' });
 
-    // Centered Bold Header
-    doc.fillColor('#EF4444')
-       .fontSize(22)
-       .font('Helvetica-Bold')
-       .text('ELECTION ', 50, doc.y, { continued: true, align: 'center' });
+    // Center/Underlined Bold Header
     doc.fillColor('#0F172A')
-       .text('RESULTS', { align: 'center' });
-    doc.moveDown(1.5);
+       .fontSize(11)
+       .font('Helvetica-Bold')
+       .text('LETTER OF DECLARATION — OFFICIAL ELECTION RESULTS', 50, 165, { align: 'center', underline: true });
+
+    // Salutation
+    doc.fillColor('#334155')
+       .fontSize(10)
+       .font('Helvetica')
+       .text('Dear Stakeholders,', 50, 190);
+
+    // Introduction
+    const introText = `Following the successful and transparent completion of the voting period, we write to officially declare the certified election results for ${election.title}. The election was conducted using secure electronic voting technologies, maintaining complete cryptographic audit log verification and turnout analysis.`;
+    doc.text(introText, 50, 205, { width: 495, align: 'justify', lineGap: 3 });
+
+    // Summary statistics block
+    const statsY = doc.y + 15;
+    doc.save();
+    doc.rect(50, statsY, 495, 45).fill('#F8FAFC');
+    doc.roundedRect(50, statsY, 495, 45, 4).lineWidth(0.5).strokeColor('#E2E8F0').stroke();
+    doc.restore();
+
+    const turnoutPercent = totalEligibleVoters > 0 ? ((uniqueVoters / totalEligibleVoters) * 100).toFixed(2) : '0.00';
+    doc.fillColor('#1E293B')
+       .fontSize(8.5)
+       .font('Helvetica-Bold')
+       .text('SUMMARY STATISTICS:', 60, statsY + 8)
+       .font('Helvetica')
+       .text(`Total Roster: ${totalEligibleVoters} | Total Ballots Cast: ${uniqueVoters} (${turnoutPercent}% Turnout) | Total Candidates: ${candidates.length}`, 60, statsY + 22);
+
+    doc.y = statsY + 60;
 
     // Group candidates by position
     const candidatesByPosition = {};
@@ -1725,110 +1795,223 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
 
     Object.entries(candidatesByPosition).forEach(([position, list]) => {
       const sorted = [...list].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-
-      const cardWidth = 220;
-      const cardHeight = 180; // Compact height to prevent overflow
-      const headerH = 26;
-      
-      // Page break check for position group header
-      if (doc.y + headerH + cardHeight + 40 > 760) {
-        doc.addPage();
-      }
-
-      const currentY = doc.y;
-      const headerW = 220;
-      const headerX = 50 + (495 - headerW) / 2;
-
-      doc.rect(headerX, currentY, headerW, headerH).fill('#B91C1C');
-      doc.fillColor('#FFFFFF')
-         .fontSize(10)
-         .font('Helvetica-Bold')
-         .text(position.toUpperCase(), headerX, currentY + 8, { width: headerW, align: 'center' });
-      
-      let startCardsY = currentY + headerH + 20;
       const posTotal = positionTotals[position] || 0;
 
-      sorted.forEach((cand, idx) => {
-        const row = Math.floor(idx / 2);
-        const col = idx % 2;
-        const cardX = 50 + col * (220 + 55);
-        let cardY = startCardsY + row * (cardHeight + 20);
-
-        // Individual row-by-row overflow check
-        if (cardY + cardHeight > 760) {
-          doc.addPage();
-          // Reset card offset for subsequent rows on the new page
-          startCardsY = 60 - row * (cardHeight + 20);
-          cardY = startCardsY + row * (cardHeight + 20);
-        }
-
-        doc.save();
-        doc.roundedRect(cardX, cardY, 220, cardHeight, 10).lineWidth(1.5).strokeColor('#E2E8F0').stroke();
-        doc.restore();
-
-        const photoWidth = 64;
-        const photoHeight = 64;
-        const photoX = cardX + 15;
-        const photoY = cardY + 15;
-
-        // Candidate Photo inside circle
-        if (imageBuffers[cand.id]) {
-          doc.save();
-          doc.circle(photoX + 32, photoY + 32, 32).clip();
-          doc.image(imageBuffers[cand.id], photoX, photoY, { width: photoWidth, height: photoHeight });
-          doc.restore();
-        } else {
-          doc.save();
-          doc.circle(photoX + 32, photoY + 32, 32).fill('#F1F5F9');
-          const initials = cand.name ? cand.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
-          doc.fillColor('#64748B')
-             .fontSize(18)
-             .font('Helvetica-Bold')
-             .text(initials, photoX, photoY + 22, { width: photoWidth, align: 'center' });
-          doc.restore();
-        }
-
-        // Candidate Name and Tally
-        const textLeft = cardX + 90;
-        doc.fillColor(primaryColor)
-           .fontSize(10)
-           .font('Helvetica-Bold')
-           .text(cand.name, textLeft, cardY + 18, { width: 120, height: 32, overflow: 'ellipses' });
-
+      // Prepare Table Rows
+      const tableRows = [];
+      let rowIdx = 1;
+      sorted.forEach((cand) => {
         if (cand.isIndependent) {
           const yesVotes = cand.votes || 0;
           const noVotes = cand.noVotes || 0;
           const totalInd = yesVotes + noVotes;
-          const yesRatio = totalInd > 0 ? ((yesVotes / totalInd) * 100).toFixed(0) : '0';
-          const noRatio = totalInd > 0 ? ((noVotes / totalInd) * 100).toFixed(0) : '0';
-
-          doc.fillColor('#10B981').fontSize(11).font('Helvetica-Bold').text(`YES: ${yesRatio}% (${yesVotes})`, textLeft, cardY + 54);
-          doc.fillColor('#EF4444').fontSize(11).font('Helvetica-Bold').text(`NO: ${noRatio}% (${noVotes})`, textLeft, cardY + 70);
-
+          const yesRatio = totalInd > 0 ? ((yesVotes / totalInd) * 100).toFixed(2) : '0.00';
+          const noRatio = totalInd > 0 ? ((noVotes / totalInd) * 100).toFixed(2) : '0.00';
           const approved = yesVotes > noVotes;
-          doc.fillColor(approved ? '#10B981' : '#EF4444')
-             .fontSize(8)
-             .font('Helvetica-Bold')
-             .text(approved ? 'APPROVED WINNER' : 'REJECTED', textLeft, cardY + 92);
+
+          tableRows.push({
+            num: rowIdx++,
+            name: `${cand.name} (YES)`,
+            votes: yesVotes,
+            percentage: `${yesRatio}%`,
+            status: approved ? 'Approved Winner' : 'Rejected'
+          });
+
+          tableRows.push({
+            num: rowIdx++,
+            name: `${cand.name} (NO)`,
+            votes: noVotes,
+            percentage: `${noRatio}%`,
+            status: approved ? 'Rejected' : 'Approved'
+          });
         } else {
           const candVotes = cand.votes || 0;
-          const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(0) : '0';
-
-          doc.fillColor(primaryColor).fontSize(14).font('Helvetica-Bold').text(`${ratio}%`, textLeft, cardY + 54);
-          doc.fillColor(lightGray).fontSize(8.5).font('Helvetica').text(`${candVotes} Votes`, textLeft, cardY + 72);
-
-          const isWinner = idx === 0 && candVotes > 0;
-          doc.fillColor(isWinner ? '#10B981' : '#64748B')
-             .fontSize(8)
-             .font('Helvetica-Bold')
-             .text(isWinner ? '🏆 WINNER ELECT' : 'CANDIDATE', textLeft, cardY + 92);
+          const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(2) : '0.00';
+          const isWinner = sorted.indexOf(cand) === 0 && candVotes > 0;
+          tableRows.push({
+            num: rowIdx++,
+            name: cand.name,
+            votes: candVotes,
+            percentage: `${ratio}%`,
+            status: isWinner ? 'Winner Elect' : 'Candidate'
+          });
         }
       });
 
-      // Advance doc.y to bottom of last drawn rows
-      const rowsTotal = Math.ceil(sorted.length / 2);
-      doc.y = startCardsY + rowsTotal * (cardHeight + 20) + 15;
+      // Page break check for table headers
+      if (doc.y + 60 > 740) {
+        doc.addPage();
+      }
+
+      const posHeaderY = doc.y;
+      doc.save();
+      doc.rect(50, posHeaderY, 495, 20).fill('#0F172A');
+      doc.restore();
+
+      doc.fillColor('#FFFFFF')
+         .fontSize(9.5)
+         .font('Helvetica-Bold')
+         .text(`POSITION: ${position.toUpperCase()}`, 60, posHeaderY + 5);
+
+      const headerY = posHeaderY + 20;
+      doc.save();
+      doc.rect(50, headerY, 495, 18).fill('#E2E8F0');
+      doc.restore();
+
+      doc.fillColor('#1E293B').fontSize(8.5).font('Helvetica-Bold');
+      doc.text('No.', 55, headerY + 5, { width: 30, align: 'center' });
+      doc.text('Candidate Name', 90, headerY + 5, { width: 200 });
+      doc.text('Votes Obtained', 290, headerY + 5, { width: 95, align: 'right' });
+      doc.text('Percentage (%)', 385, headerY + 5, { width: 80, align: 'right' });
+      doc.text('Status / Remarks', 465, headerY + 5, { width: 80, align: 'center' });
+
+      doc.moveTo(50, headerY + 18)
+         .lineTo(545, headerY + 18)
+         .lineWidth(0.5)
+         .strokeColor('#94A3B8')
+         .stroke();
+
+      doc.y = headerY + 18;
+
+      // Draw rows
+      tableRows.forEach((row, rIdx) => {
+        const rowHeight = 18;
+        if (doc.y + rowHeight > 740) {
+          doc.addPage();
+
+          const newPosHeaderY = doc.y;
+          doc.save();
+          doc.rect(50, newPosHeaderY, 495, 20).fill('#0F172A');
+          doc.restore();
+          doc.fillColor('#FFFFFF').fontSize(9.5).font('Helvetica-Bold').text(`POSITION: ${position.toUpperCase()} (Continued)`, 60, newPosHeaderY + 5);
+
+          const newHeaderY = newPosHeaderY + 20;
+          doc.save();
+          doc.rect(50, newHeaderY, 495, 18).fill('#E2E8F0');
+          doc.restore();
+          doc.fillColor('#1E293B').fontSize(8.5).font('Helvetica-Bold');
+          doc.text('No.', 55, newHeaderY + 5, { width: 30, align: 'center' });
+          doc.text('Candidate Name', 90, newHeaderY + 5, { width: 200 });
+          doc.text('Votes Obtained', 290, newHeaderY + 5, { width: 95, align: 'right' });
+          doc.text('Percentage (%)', 385, newHeaderY + 5, { width: 80, align: 'right' });
+          doc.text('Status / Remarks', 465, newHeaderY + 5, { width: 80, align: 'center' });
+          doc.moveTo(50, newHeaderY + 18).lineTo(545, newHeaderY + 18).lineWidth(0.5).strokeColor('#94A3B8').stroke();
+          doc.y = newHeaderY + 18;
+        }
+
+        const rowY = doc.y;
+        if (rIdx % 2 === 1) {
+          doc.save();
+          doc.rect(50, rowY, 495, rowHeight).fill('#F8FAFC');
+          doc.restore();
+        }
+
+        doc.fillColor('#334155').fontSize(8.5).font('Helvetica');
+        doc.text(row.num.toString(), 55, rowY + 5, { width: 30, align: 'center' });
+
+        const isWinner = row.status === 'Winner Elect' || row.status === 'Approved Winner';
+        if (isWinner) {
+          doc.font('Helvetica-Bold').fillColor('#0F172A');
+        } else {
+          doc.font('Helvetica');
+        }
+        doc.text(row.name, 90, rowY + 5, { width: 200 });
+
+        doc.font('Helvetica');
+        doc.text(row.votes.toLocaleString(), 290, rowY + 5, { width: 95, align: 'right' });
+        doc.text(row.percentage, 385, rowY + 5, { width: 80, align: 'right' });
+
+        if (isWinner) {
+          doc.fillColor('#10B981').font('Helvetica-Bold');
+        } else if (row.status === 'Rejected') {
+          doc.fillColor('#EF4444');
+        } else {
+          doc.fillColor('#64748B');
+        }
+        doc.text(row.status, 465, rowY + 5, { width: 80, align: 'center' });
+
+        doc.moveTo(50, rowY + rowHeight)
+           .lineTo(545, rowY + rowHeight)
+           .lineWidth(0.5)
+           .strokeColor('#E2E8F0')
+           .stroke();
+
+        doc.y = rowY + rowHeight;
+      });
+
+      const finalTableY = doc.y;
+      doc.save();
+      doc.strokeColor('#94A3B8').lineWidth(0.5);
+      doc.moveTo(50, posHeaderY).lineTo(50, finalTableY).stroke();
+      doc.moveTo(85, posHeaderY + 20).lineTo(85, finalTableY).stroke();
+      doc.moveTo(295, posHeaderY + 20).lineTo(295, finalTableY).stroke();
+      doc.moveTo(390, posHeaderY + 20).lineTo(390, finalTableY).stroke();
+      doc.moveTo(470, posHeaderY + 20).lineTo(470, finalTableY).stroke();
+      doc.moveTo(545, posHeaderY).lineTo(545, finalTableY).stroke();
+      doc.restore();
+
+      doc.y = finalTableY + 15;
     });
+
+    // Formal Signature block, matching image.png
+    if (doc.y > 600) {
+      doc.addPage();
+    }
+
+    const signY = doc.y + 20;
+    doc.fillColor('#334155')
+       .fontSize(10)
+       .font('Helvetica')
+       .text('Yours faithfully,', 50, signY);
+
+    doc.moveTo(50, signY + 50)
+       .lineTo(220, signY + 50)
+       .lineWidth(0.8)
+       .strokeColor('#0F172A')
+       .stroke();
+
+    doc.fillColor('#1E293B')
+       .fontSize(9.5)
+       .font('Helvetica-Bold')
+       .text('Electoral Commissioner', 50, signY + 55);
+    doc.fillColor('#64748B')
+       .fontSize(8.5)
+       .font('Helvetica')
+       .text('Electoral Commission', 50, signY + 67)
+       .text('Ho Technical University', 50, signY + 77);
+
+    const sealCenterX = 450;
+    const sealCenterY = signY + 45;
+
+    doc.circle(sealCenterX, sealCenterY, 32)
+       .lineWidth(1.2)
+       .strokeColor('#B91C1C')
+       .stroke();
+
+    doc.circle(sealCenterX, sealCenterY, 28)
+       .lineWidth(0.6)
+       .strokeColor('#B91C1C')
+       .stroke();
+
+    doc.fillColor('#B91C1C')
+       .fontSize(5)
+       .font('Helvetica-Bold')
+       .text('ELECTORAL COMMISSION', sealCenterX - 25, sealCenterY - 14, { align: 'center', width: 50 })
+       .fontSize(5.5)
+       .font('Helvetica-Bold')
+       .text('APPROVED', sealCenterX - 25, sealCenterY - 3, { align: 'center', width: 50 })
+       .fontSize(5)
+       .font('Helvetica')
+       .text('HTU-ELECT', sealCenterX - 25, sealCenterY + 7, { align: 'center', width: 50 });
+
+    doc.fillColor('#334155')
+       .fontSize(8.5)
+       .font('Helvetica-Bold')
+       .text('OFFICIAL SEAL & STAMP', 280, signY + 30, { align: 'right', width: 110 });
+    doc.fillColor('#64748B')
+       .fontSize(8)
+       .font('Helvetica')
+       .text(`DATE: ${new Date().toLocaleDateString()}`, 280, signY + 42, { align: 'right', width: 110 });
 
     const pages = doc.bufferedPageRange();
     for (let i = 0; i < pages.count; i++) {
