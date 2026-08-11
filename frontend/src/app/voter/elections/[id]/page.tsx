@@ -58,6 +58,7 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
   const [votedPositions, setVotedPositions] = useState<Record<string, { candidateId: string; auditTxId: string }>>({});
   const [castingPosition, setCastingPosition] = useState<string | null>(null);
   const [notOnRoster, setNotOnRoster] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -76,6 +77,15 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
             setOtpCodeError(accessRes.data.message || 'You have no access to vote in this election.');
           }
         }
+
+        try {
+          const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
+          if (votedRes.status === 'success' && Array.isArray(votedRes.data)) {
+            if (votedRes.data.includes(electionId)) {
+              setHasVoted(true);
+            }
+          }
+        } catch (_) {}
       } catch (err) {
         console.error('Error fetching candidate selection details:', err);
       } finally {
@@ -395,30 +405,92 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
           </div>
 
           {/* Action CTA Trigger */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.5rem', width: '100%' }}>
             {election.status === 'active' ? (
-              <button
-                onClick={() => setProceedToBallot(true)}
-                style={{
-                  padding: '0.85rem 2rem',
+              hasVoted ? (
+                <div className="card animate-fade-in" style={{
+                  padding: '1.5rem',
+                  textAlign: 'center',
+                  border: '2px solid var(--color-success, #22c55e)',
                   borderRadius: '12px',
-                  backgroundColor: 'var(--color-primary, #2563EB)',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 6px 20px rgba(37, 99, 235, 0.25)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <ShieldCheck size={18} /> Proceed to Secure Ballot
-              </button>
+                  backgroundColor: 'var(--bg-secondary)',
+                  width: '100%',
+                  boxShadow: 'var(--shadow-glow-green)'
+                }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    color: 'var(--color-success, #22c55e)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1rem auto'
+                  }}>
+                    <Check size={24} />
+                  </div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-success, #22c55e)', margin: '0 0 0.5rem 0' }}>Ballot Successfully Cast</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem auto', lineHeight: 1.5 }}>
+                    You have successfully cast your ballot in this election. Your choices are securely saved and locked.
+                  </p>
+                  <div style={{
+                    background: 'var(--bg-tertiary, #f8fafc)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    display: 'inline-block',
+                    minWidth: '220px',
+                    border: '1px solid var(--border-color, #e2e8f0)'
+                  }}>
+                    <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', display: 'block', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Currently Voting</span>
+                    <span style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--color-primary, #2563EB)' }}>
+                      {election.totalVotesCast || 1}
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
+                      total voters active in this election
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setProceedToBallot(true)}
+                  style={{
+                    padding: '0.85rem 2rem',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--color-primary, #2563EB)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 6px 20px rgba(37, 99, 235, 0.25)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <ShieldCheck size={18} /> Request to Cast Vote
+                </button>
+              )
             ) : (
-              <div style={{ padding: '0.85rem 2rem', borderRadius: '12px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', fontWeight: 700, fontSize: '14px', border: '1px solid var(--border-color)' }}>
-                Polls Closed
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', alignItems: 'center' }}>
+                <div style={{ padding: '0.85rem 2rem', borderRadius: '12px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', fontWeight: 700, fontSize: '14px', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+                  Polls Closed
+                </div>
+                {election.showResults && (
+                  <Link href={`/voter/elections/${election.id}/results`} className="btn btn-primary" style={{
+                    padding: '0.85rem 2rem',
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    textDecoration: 'none'
+                  }}>
+                    View Results
+                  </Link>
+                )}
               </div>
             )}
           </div>
@@ -685,17 +757,36 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
                   <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem auto', lineHeight: 1.5 }}>
                     Your choices have been securely locked and sequentialized with cryptographic signatures. You may now safely leave this portal.
                   </p>
-                  <Link href="/voter/elections" style={{
-                    padding: '0.6rem 1.25rem',
-                    borderRadius: '6px',
-                    backgroundColor: 'var(--color-primary, #2563EB)',
-                    color: '#ffffff',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    fontSize: '12px'
+                  <div style={{
+                    background: 'var(--bg-tertiary, #f8fafc)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    display: 'inline-block',
+                    minWidth: '220px',
+                    border: '1px solid var(--border-color, #e2e8f0)',
+                    marginBottom: '1.5rem'
                   }}>
-                    Return to Elections List
-                  </Link>
+                    <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', display: 'block', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Currently Voting</span>
+                    <span style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--color-primary, #2563EB)' }}>
+                      {Math.max(election.totalVotesCast || 0, 1)}
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
+                      total voters active in this election
+                    </span>
+                  </div>
+                  <div>
+                    <Link href="/voter/elections" style={{
+                      padding: '0.6rem 1.25rem',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--color-primary, #2563EB)',
+                      color: '#ffffff',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      fontSize: '12px'
+                    }}>
+                      Return to Elections List
+                    </Link>
+                  </div>
                 </div>
               )}
 

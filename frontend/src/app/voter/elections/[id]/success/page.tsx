@@ -108,9 +108,6 @@ export default function VoteSuccessPage({ params }: { params: Promise<{ id: stri
             <Download size={14} /> Download Receipt
           </button>
         </div>
-        <Link href={`/voter/verify?verificationId=${verificationId}`} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-          <Search size={16} /> Verify on Audit Explorer
-        </Link>
       </div>
 
       <Link href="/voter/dashboard" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>

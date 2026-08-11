@@ -118,8 +118,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
 
   const navLinks = [
     { label: "Dashboard", href: "/voter/dashboard", icon: LayoutDashboard },
-    { label: "Elections List", href: "/voter/elections", icon: Archive },
-    { label: "Verify Vote", href: "/voter/verify", icon: Search }
+    { label: "Elections List", href: "/voter/elections", icon: Archive }
   ];
 
   if (loading) {
