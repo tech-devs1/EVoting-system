@@ -60,6 +60,8 @@ async function findElectionDoc(electionId, req) {
 
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
+const path = require('path');
+const fs = require('fs');
 const cache = require('../services/cache');
 const { logActivity } = require('../services/activityLog');
 
@@ -1080,25 +1082,79 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     const { executiveSummary, customNotes, ecName, ecTitle, showSignature, signatureText } = req.query;
     
     // Generate PDF Document
-    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
     
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${election.title.replace(/[^a-zA-Z0-9]/g, '_')}_report.pdf"`);
     
     doc.pipe(res);
     
-    doc.fontSize(24).font('Helvetica-Bold').text('Election Report', { align: 'center' });
-    doc.moveDown();
+    // --- STEP 1: Professional Letterhead Header ---
+    const primaryColor = '#0F172A';
+    const secondaryColor = '#B91C1C';
+    const darkGray = '#334155';
+    const lightGray = '#64748B';
+    const borderBgColor = '#F1F5F9';
+
+    // Load logo
+    const logoPath = path.join(__dirname, '../../assets/logo.png');
+    if (fs.existsSync(logoPath)) {
+      doc.image(logoPath, 50, 45, { width: 60 });
+    }
+
+    // Letterhead text
+    doc.fillColor(primaryColor)
+       .fontSize(14)
+       .font('Helvetica-Bold')
+       .text('HO TECHNICAL UNIVERSITY', 125, 45);
+
+    doc.fillColor(darkGray)
+       .fontSize(9)
+       .font('Helvetica-Bold')
+       .text('STUDENTS\' REPRESENTATIVE COUNCIL (SRC)', 125, 62);
+
+    doc.fillColor(secondaryColor)
+       .fontSize(11)
+       .font('Helvetica-Bold')
+       .text('OFFICIAL CERTIFIED ELECTION AUDIT REPORT', 125, 76);
+
+    doc.fillColor(lightGray)
+       .fontSize(8)
+       .font('Helvetica')
+       .text('P.O. Box HP 35, Ho, Volta Region, Ghana | info@htu.edu.gh', 125, 93);
+
+    // Thick primary color line
+    doc.moveTo(50, 110)
+       .lineTo(545, 110)
+       .lineWidth(2)
+       .strokeColor(primaryColor)
+       .stroke();
+
+    // Thin secondary color line
+    doc.moveTo(50, 114)
+       .lineTo(545, 114)
+       .lineWidth(1)
+       .strokeColor(secondaryColor)
+       .stroke();
+
+    // Reset coordinates for body text
+    doc.y = 135;
     
-    doc.fontSize(18).font('Helvetica-Bold').text(election.title);
-    doc.moveDown();
+    doc.fillColor(primaryColor)
+       .fontSize(18)
+       .font('Helvetica-Bold')
+       .text(election.title);
+    doc.moveDown(0.5);
     
-    doc.fontSize(12).font('Helvetica').text(`Description: ${election.description || 'N/A'}`);
-    doc.text(`Start Date: ${new Date(election.startDate).toLocaleString()}`);
-    doc.text(`End Date: ${new Date(election.endDate).toLocaleString()}`);
-    doc.text(`Status: ${election.status.toUpperCase()}`);
-    doc.text(`Type: ${election.type || 'N/A'}`);
-    doc.text(`Department: ${election.department || 'N/A'}`);
+    doc.fillColor(darkGray)
+       .fontSize(10)
+       .font('Helvetica')
+       .text(`Description: ${election.description || 'N/A'}`)
+       .text(`Start Date: ${new Date(election.startDate).toLocaleString()}`)
+       .text(`End Date: ${new Date(election.endDate).toLocaleString()}`)
+       .text(`Status: ${election.status.toUpperCase()}`)
+       .text(`Type: ${election.type || 'N/A'}`)
+       .text(`Department: ${election.department || 'N/A'}`);
     doc.moveDown();
 
     // Custom Executive Summary
@@ -1136,11 +1192,22 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     });
 
     // Candidates section
-    doc.fontSize(16).font('Helvetica-Bold').text('Certified Position Results & Tally Ratios', { underline: true });
-    doc.moveDown();
+    if (doc.y > 600) doc.addPage();
+    doc.fillColor(primaryColor)
+       .fontSize(14)
+       .font('Helvetica-Bold')
+       .text('Certified Position Results & Tally Ratios', { underline: true });
+    doc.moveDown(0.5);
     
     Object.entries(candidatesByPosition).forEach(([position, list]) => {
-      doc.fontSize(14).font('Helvetica-Bold').text(`Position: ${position}`);
+      if (doc.y > 600) doc.addPage();
+
+      doc.fillColor(primaryColor)
+         .fontSize(12)
+         .font('Helvetica-Bold')
+         .text(`Position: ${position}`);
+      doc.moveDown(0.2);
+
       const posTotal = positionTotals[position] || 0;
       
       // Sort candidates by votes/Yes votes
@@ -1151,17 +1218,75 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
       });
       
       sorted.forEach((cand, idx) => {
-        const candVotes = cand.votes || 0;
-        const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(2) : '0.00';
+        if (doc.y > 650) doc.addPage();
         
         if (cand.isIndependent) {
           const yesVotes = cand.votes || 0;
           const noVotes = cand.noVotes || 0;
           const totalInd = yesVotes + noVotes;
           const yesRatio = totalInd > 0 ? ((yesVotes / totalInd) * 100).toFixed(2) : '0.00';
-          doc.fontSize(11).font('Helvetica').text(`   ${idx + 1}. ${cand.name} (Unopposed) | Yes: ${yesVotes} (${yesRatio}%) | No: ${noVotes}`);
+          const noRatio = totalInd > 0 ? ((noVotes / totalInd) * 100).toFixed(2) : '0.00';
+
+          doc.fillColor(darkGray)
+             .fontSize(10)
+             .font('Helvetica-Bold')
+             .text(`   ${idx + 1}. ${cand.name} (Unopposed)`, 50, doc.y);
+          doc.y += 4;
+
+          // Draw YES bar
+          doc.fillColor(lightGray)
+             .fontSize(9)
+             .font('Helvetica')
+             .text(`      YES: ${yesVotes} (${yesRatio}%)`, 50, doc.y);
+          const yesBarY = doc.y + 1;
+          // BG bar
+          doc.rect(180, yesBarY, 300, 8).fill('#E2E8F0');
+          // FG bar
+          if (yesVotes > 0) {
+            const fillWidth = 300 * (yesVotes / totalInd);
+            doc.rect(180, yesBarY, fillWidth, 8).fill(secondaryColor);
+          }
+          doc.y += 14;
+
+          // Draw NO bar
+          doc.fillColor(lightGray)
+             .fontSize(9)
+             .font('Helvetica')
+             .text(`      NO: ${noVotes} (${noRatio}%)`, 50, doc.y);
+          const noBarY = doc.y + 1;
+          // BG bar
+          doc.rect(180, noBarY, 300, 8).fill('#E2E8F0');
+          // FG bar
+          if (noVotes > 0) {
+            const fillWidth = 300 * (noVotes / totalInd);
+            doc.rect(180, noBarY, fillWidth, 8).fill(lightGray);
+          }
+          doc.y += 20;
+
         } else {
-          doc.fontSize(11).font('Helvetica').text(`   ${idx + 1}. ${cand.name} | Votes: ${candVotes} (${ratio}%)`);
+          const candVotes = cand.votes || 0;
+          const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(2) : '0.00';
+
+          doc.fillColor(darkGray)
+             .fontSize(10)
+             .font('Helvetica-Bold')
+             .text(`   ${idx + 1}. ${cand.name}`, 50, doc.y);
+          doc.y += 4;
+
+          doc.fillColor(lightGray)
+             .fontSize(9)
+             .font('Helvetica')
+             .text(`      Votes: ${candVotes} (${ratio}%)`, 50, doc.y);
+          const barY = doc.y + 1;
+          // BG bar
+          doc.rect(180, barY, 300, 8).fill('#E2E8F0');
+          // FG bar
+          if (candVotes > 0) {
+            const fillWidth = 300 * (candVotes / posTotal);
+            const barColor = (idx === 0) ? primaryColor : lightGray;
+            doc.rect(180, barY, fillWidth, 8).fill(barColor);
+          }
+          doc.y += 20;
         }
       });
       
@@ -1185,8 +1310,12 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
           }
         }
       }
-      doc.fontSize(11).font('Helvetica-Bold').text(`   Winner: ${winnerText}`);
-      doc.moveDown();
+
+      doc.fillColor(primaryColor)
+         .fontSize(10)
+         .font('Helvetica-Bold')
+         .text(`   Winner: ${winnerText}`, 50, doc.y);
+      doc.moveDown(1.5);
     });
 
     if (doc.y > 600) doc.addPage();
@@ -1216,29 +1345,115 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     // EC Official Sign-Off Section
     if (showSignature === 'true') {
       doc.moveDown(2);
-      if (doc.y > 620) doc.addPage();
+      if (doc.y > 600) doc.addPage();
       
       const signY = doc.y;
       
-      // Draw signature line
-      doc.moveTo(50, signY + 35).lineTo(250, signY + 35).stroke();
+      // Left Side: Signature and Details
+      doc.fillColor(primaryColor)
+         .fontSize(10)
+         .font('Helvetica-Bold')
+         .text('CERTIFIED AND SIGNED BY:', 50, signY);
       
-      // Draw the digital signature text above line
-      const sigTxt = signatureText || ecName || 'HTU EC';
-      doc.fontSize(16).font('Courier-Oblique').text(sigTxt.toString(), 55, signY + 15);
+      // Draw the digital signature text above line in Courier-Oblique mimicking ink/handwriting
+      const sigTxt = signatureText || ecName || 'Electoral Commission';
+      doc.fillColor('#1E40AF') // Blue ink style
+         .fontSize(15)
+         .font('Courier-Oblique')
+         .text(sigTxt.toString(), 50, signY + 22);
+
+      // Draw signature line
+      doc.moveTo(50, signY + 42)
+         .lineTo(250, signY + 42)
+         .lineWidth(0.8)
+         .strokeColor(primaryColor)
+         .stroke();
       
       // Draw Commissioner name and title below line
-      doc.fontSize(10).font('Helvetica-Bold').text(ecName ? ecName.toString() : 'Electoral Commissioner', 50, signY + 40);
-      doc.fontSize(9).font('Helvetica').text(ecTitle ? ecTitle.toString() : 'Electoral Commission', 50, signY + 52);
+      doc.fillColor(darkGray)
+         .fontSize(9)
+         .font('Helvetica-Bold')
+         .text(ecName ? ecName.toString() : 'Electoral Commissioner', 50, signY + 47);
+      doc.fillColor(lightGray)
+         .fontSize(8)
+         .font('Helvetica')
+         .text(ecTitle ? ecTitle.toString() : 'Electoral Commission', 50, signY + 58);
       
-      // Draw Official Seal
-      doc.fontSize(10).font('Helvetica-Bold').text('OFFICIAL SEAL / STAMP', 350, signY + 15, { align: 'right', width: 200 });
-      doc.fontSize(8).font('Helvetica').text('APPROVED & CERTIFIED', 350, signY + 30, { align: 'right', width: 200 });
-      doc.fontSize(8).font('Helvetica').text(new Date().toLocaleDateString(), 350, signY + 42, { align: 'right', width: 200 });
+      // Right Side: Official Seal / Stamp Group
+      // Circular Seal representation in vector red ink
+      const sealCenterX = 450;
+      const sealCenterY = signY + 40;
+
+      // Outer double circle
+      doc.circle(sealCenterX, sealCenterY, 32)
+         .lineWidth(1.2)
+         .strokeColor(secondaryColor)
+         .stroke();
+
+      doc.circle(sealCenterX, sealCenterY, 28)
+         .lineWidth(0.6)
+         .strokeColor(secondaryColor)
+         .stroke();
+
+      // Seal internal text
+      doc.fillColor(secondaryColor)
+         .fontSize(5)
+         .font('Helvetica-Bold')
+         .text('ELECTORAL COMMISSION', sealCenterX - 25, sealCenterY - 14, { align: 'center', width: 50 })
+         .fontSize(5.5)
+         .font('Helvetica-Bold')
+         .text('APPROVED', sealCenterX - 25, sealCenterY - 3, { align: 'center', width: 50 })
+         .fontSize(5)
+         .font('Helvetica')
+         .text('HTU-ELECT', sealCenterX - 25, sealCenterY + 7, { align: 'center', width: 50 });
+
+      // Date label right next to the seal
+      doc.fillColor(darkGray)
+         .fontSize(8)
+         .font('Helvetica-Bold')
+         .text('OFFICIAL SEAL & STAMP', 280, signY + 25, { align: 'right', width: 110 });
+      doc.fillColor(lightGray)
+         .fontSize(8)
+         .font('Helvetica')
+         .text(`DATE: ${new Date().toLocaleDateString()}`, 280, signY + 37, { align: 'right', width: 110 });
+
+      // Set spacing for layout integrity
+      doc.y = signY + 80;
+    }
+
+    // --- STEP 2: Add dynamic page headers and footers (Two-Pass approach) ---
+    const pages = doc.bufferedPageRange();
+    for (let i = 0; i < pages.count; i++) {
+      doc.switchToPage(i);
+
+      // Running header on pages 2+
+      if (i > 0) {
+        doc.fillColor('#0F172A')
+           .fontSize(8)
+           .font('Helvetica-Bold')
+           .text('Electoral Commission - Official Election Report', 50, 30);
+        doc.moveTo(50, 42)
+           .lineTo(545, 42)
+           .lineWidth(0.5)
+           .strokeColor('#64748B')
+           .stroke();
+      }
+
+      // Footer on all pages
+      doc.moveTo(50, 790)
+         .lineTo(545, 790)
+         .lineWidth(0.5)
+         .strokeColor('#64748B')
+         .stroke();
+
+      doc.fillColor('#64748B')
+         .fontSize(8)
+         .font('Helvetica')
+         .text(`Page ${i + 1} of ${pages.count}`, 50, 796, { align: 'right', width: 495 });
+
+      doc.text('GENERATED BY COMPSSA SECURE ELECTIONS SYSTEM • HTU-ELECT', 50, 796, { align: 'left', width: 400 });
     }
     
-    doc.moveDown();
-    doc.fontSize(10).font('Helvetica').text('Generated by COMPSSA ELECTIONS SYSTEM', { align: 'center' });
     doc.end();
 
   } catch (error) {
