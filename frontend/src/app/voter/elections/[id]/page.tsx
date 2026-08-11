@@ -28,6 +28,9 @@ interface Election {
   otpRequired?: boolean;
   previewImageUrl?: string;
   category?: string;
+  totalVoters?: number;
+  totalVotesCast?: number;
+  showResults?: boolean;
 }
 
 export default function VoterElectionDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -218,6 +221,10 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
       </div>
     );
   }
+
+  const turnout = (election.totalVoters && election.totalVoters > 0)
+    ? Math.min(100, Math.round(((election.totalVotesCast || 0) / election.totalVoters) * 100))
+    : 0;
 
   // Group candidates by position and sort strictly by ballot number ascending
   const positionGroups: Record<string, Candidate[]> = {};
@@ -434,21 +441,14 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
                   <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem auto', lineHeight: 1.5 }}>
                     You have successfully cast your ballot in this election. Your choices are securely saved and locked.
                   </p>
-                  <div style={{
-                    background: 'var(--bg-tertiary, #f8fafc)',
-                    borderRadius: '8px',
-                    padding: '1rem',
-                    display: 'inline-block',
-                    minWidth: '220px',
-                    border: '1px solid var(--border-color, #e2e8f0)'
-                  }}>
-                    <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', display: 'block', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Currently Voting</span>
-                    <span style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--color-primary, #2563EB)' }}>
-                      {election.totalVotesCast || 1}
-                    </span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
-                      total voters active in this election
-                    </span>
+                  <div style={{ backgroundColor: 'var(--bg-input, #F8FAFC)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color, #E2E8F0)', maxWidth: '480px', margin: '0 auto', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                      <span>Live Turnout Progress</span>
+                      <span>{turnout}% ({election.totalVotesCast || 0} / {election.totalVoters || 0} voters)</span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-color, #E2E8F0)', borderRadius: '999px', overflow: 'hidden' }}>
+                      <div style={{ width: `${turnout}%`, height: '100%', backgroundColor: 'var(--color-primary, #2563EB)', borderRadius: '999px' }} />
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -757,22 +757,14 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
                   <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem auto', lineHeight: 1.5 }}>
                     Your choices have been securely locked and sequentialized with cryptographic signatures. You may now safely leave this portal.
                   </p>
-                  <div style={{
-                    background: 'var(--bg-tertiary, #f8fafc)',
-                    borderRadius: '8px',
-                    padding: '1rem',
-                    display: 'inline-block',
-                    minWidth: '220px',
-                    border: '1px solid var(--border-color, #e2e8f0)',
-                    marginBottom: '1.5rem'
-                  }}>
-                    <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', display: 'block', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Currently Voting</span>
-                    <span style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--color-primary, #2563EB)' }}>
-                      {Math.max(election.totalVotesCast || 0, 1)}
-                    </span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
-                      total voters active in this election
-                    </span>
+                  <div style={{ backgroundColor: 'var(--bg-input, #F8FAFC)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color, #E2E8F0)', maxWidth: '480px', margin: '0 auto 1.5rem auto', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                      <span>Live Turnout Progress</span>
+                      <span>{turnout}% ({election.totalVotesCast || 0} / {election.totalVoters || 0} voters)</span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-color, #E2E8F0)', borderRadius: '999px', overflow: 'hidden' }}>
+                      <div style={{ width: `${turnout}%`, height: '100%', backgroundColor: 'var(--color-primary, #2563EB)', borderRadius: '999px' }} />
+                    </div>
                   </div>
                   <div>
                     <Link href="/voter/elections" style={{
