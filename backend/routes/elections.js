@@ -1080,6 +1080,36 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     }, 30000); // Cache pdf data for 30s
     const { election, candidates, totalVotes, uniqueVoters, totalEligibleVoters, verificationIds } = reportData;
     const { executiveSummary, customNotes, ecName, ecTitle, showSignature, signatureText } = req.query;
+
+    // Pre-fetch candidate images to memory buffers in parallel
+    const getImageBuffer = async (url) => {
+      try {
+        if (!url) return null;
+        if (url.startsWith('/')) {
+          const localPath = path.join(__dirname, '../../public', url);
+          if (fs.existsSync(localPath)) return fs.readFileSync(localPath);
+        }
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      } catch (e) {
+        console.warn('Error fetching image for PDF:', e.message);
+        return null;
+      }
+    };
+
+    const imageBuffers = {};
+    await Promise.all(
+      candidates.map(async (cand) => {
+        if (cand.photoUrl) {
+          const buf = await getImageBuffer(cand.photoUrl);
+          if (buf) {
+            imageBuffers[cand.id] = buf;
+          }
+        }
+      })
+    );
     
     // Generate PDF Document
     const doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
@@ -1191,131 +1221,127 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
       positionTotals[pos] += (c.votes || 0) + (c.noVotes || 0);
     });
 
-    // Candidates section
-    if (doc.y > 600) doc.addPage();
-    doc.fillColor(primaryColor)
-       .fontSize(14)
+    // Candidates section - start on a clean fresh page
+    doc.addPage();
+
+    // Centered Bold Header
+    doc.fillColor('#EF4444') // Red color for "ELECTION"
+       .fontSize(22)
        .font('Helvetica-Bold')
-       .text('Certified Position Results & Tally Ratios', { underline: true });
-    doc.moveDown(0.5);
-    
+       .text('ELECTION ', 50, doc.y, { continued: true, align: 'center' });
+    doc.fillColor('#0F172A') // Black/Dark slate color for "RESULTS"
+       .text('RESULTS', { align: 'center' });
+    doc.moveDown(1.5);
+
     Object.entries(candidatesByPosition).forEach(([position, list]) => {
-      if (doc.y > 600) doc.addPage();
-
-      doc.fillColor(primaryColor)
-         .fontSize(12)
-         .font('Helvetica-Bold')
-         .text(`Position: ${position}`);
-      doc.moveDown(0.2);
-
-      const posTotal = positionTotals[position] || 0;
-      
       // Sort candidates by votes/Yes votes
       const sorted = [...list].sort((a, b) => {
         const votesA = a.votes || 0;
         const votesB = b.votes || 0;
         return votesB - votesA;
       });
+
+      const cardWidth = 220;
+      const cardHeight = 220;
+      const rowsCount = Math.ceil(sorted.length / 2);
+      const headerH = 26;
       
+      // Calculate total height needed for this position
+      const totalPositionHeight = headerH + 20 + (rowsCount * cardHeight) + ((rowsCount - 1) * 20) + 45;
+      
+      if (doc.y + totalPositionHeight > 760) {
+        doc.addPage();
+      }
+
+      const currentY = doc.y;
+      const headerW = 220;
+      const headerX = 50 + (495 - headerW) / 2;
+
+      // Red header rectangle
+      doc.rect(headerX, currentY, headerW, headerH).fill('#B91C1C');
+      doc.fillColor('#FFFFFF')
+         .fontSize(10)
+         .font('Helvetica-Bold')
+         .text(position.toUpperCase(), headerX, currentY + 8, { width: headerW, align: 'center' });
+      
+      const startCardsY = currentY + headerH + 20;
+      const posTotal = positionTotals[position] || 0;
+
       sorted.forEach((cand, idx) => {
-        if (doc.y > 650) doc.addPage();
-        
+        const row = Math.floor(idx / 2);
+        const col = idx % 2;
+        const cardX = 50 + col * (220 + 55);
+        const cardY = startCardsY + row * (cardHeight + 20);
+
+        // Draw Card border
+        doc.roundedRect(cardX, cardY, 220, cardHeight, 10).lineWidth(1.5).strokeColor('#E2E8F0').stroke();
+
+        // 1. Draw circular candidate photo
+        const photoWidth = 90;
+        const photoHeight = 90;
+        const photoX = cardX + 65;
+        const photoY = cardY + 20;
+
+        if (imageBuffers[cand.id]) {
+          doc.save();
+          doc.circle(photoX + 45, photoY + 45, 45).clip();
+          doc.image(imageBuffers[cand.id], photoX, photoY, { width: photoWidth, height: photoHeight });
+          doc.restore();
+        } else {
+          doc.circle(photoX + 45, photoY + 45, 45).fill('#F1F5F9');
+          const initials = cand.name ? cand.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
+          doc.fillColor('#64748B')
+             .fontSize(24)
+             .font('Helvetica-Bold')
+             .text(initials, photoX, photoY + 30, { width: photoWidth, align: 'center' });
+        }
+
+        // 2. Draw name bar (green/teal background)
+        doc.rect(cardX + 15, cardY + 125, 190, 26).fill('#10B981');
+        doc.fillColor('#FFFFFF')
+           .fontSize(9)
+           .font('Helvetica-Bold')
+           .text(cand.name.toUpperCase(), cardX + 15, cardY + 133, { width: 190, align: 'center' });
+
+        // 3. Draw Votes & Percentage
         if (cand.isIndependent) {
           const yesVotes = cand.votes || 0;
           const noVotes = cand.noVotes || 0;
           const totalInd = yesVotes + noVotes;
-          const yesRatio = totalInd > 0 ? ((yesVotes / totalInd) * 100).toFixed(2) : '0.00';
-          const noRatio = totalInd > 0 ? ((noVotes / totalInd) * 100).toFixed(2) : '0.00';
+          const yesRatio = totalInd > 0 ? ((yesVotes / totalInd) * 100).toFixed(0) : '0';
+          const noRatio = totalInd > 0 ? ((noVotes / totalInd) * 100).toFixed(0) : '0';
 
-          doc.fillColor(darkGray)
-             .fontSize(10)
+          // YES column
+          doc.fillColor('#10B981').fontSize(13).font('Helvetica-Bold').text(yesRatio + '%', cardX + 15, cardY + 162, { width: 90, align: 'center' });
+          doc.fillColor('#64748B').fontSize(7).font('Helvetica').text(`YES (${yesVotes})`, cardX + 15, cardY + 178, { width: 90, align: 'center' });
+
+          // NO column
+          doc.fillColor('#EF4444').fontSize(13).font('Helvetica-Bold').text(noRatio + '%', cardX + 115, cardY + 162, { width: 90, align: 'center' });
+          doc.fillColor('#64748B').fontSize(7).font('Helvetica').text(`NO (${noVotes})`, cardX + 115, cardY + 178, { width: 90, align: 'center' });
+
+          // Winner Approved label
+          const approved = yesVotes > noVotes;
+          doc.fillColor(approved ? '#10B981' : '#EF4444')
+             .fontSize(8)
              .font('Helvetica-Bold')
-             .text(`   ${idx + 1}. ${cand.name} (Unopposed)`, 50, doc.y);
-          doc.y += 4;
-
-          // Draw YES bar
-          doc.fillColor(lightGray)
-             .fontSize(9)
-             .font('Helvetica')
-             .text(`      YES: ${yesVotes} (${yesRatio}%)`, 50, doc.y);
-          const yesBarY = doc.y + 1;
-          // BG bar
-          doc.rect(180, yesBarY, 300, 8).fill('#E2E8F0');
-          // FG bar
-          if (yesVotes > 0) {
-            const fillWidth = 300 * (yesVotes / totalInd);
-            doc.rect(180, yesBarY, fillWidth, 8).fill(secondaryColor);
-          }
-          doc.y += 14;
-
-          // Draw NO bar
-          doc.fillColor(lightGray)
-             .fontSize(9)
-             .font('Helvetica')
-             .text(`      NO: ${noVotes} (${noRatio}%)`, 50, doc.y);
-          const noBarY = doc.y + 1;
-          // BG bar
-          doc.rect(180, noBarY, 300, 8).fill('#E2E8F0');
-          // FG bar
-          if (noVotes > 0) {
-            const fillWidth = 300 * (noVotes / totalInd);
-            doc.rect(180, noBarY, fillWidth, 8).fill(lightGray);
-          }
-          doc.y += 20;
-
+             .text(approved ? 'APPROVED WINNER' : 'REJECTED', cardX, cardY + 198, { width: 220, align: 'center' });
         } else {
           const candVotes = cand.votes || 0;
-          const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(2) : '0.00';
+          const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(0) : '0';
 
-          doc.fillColor(darkGray)
-             .fontSize(10)
+          doc.fillColor('#0F172A').fontSize(18).font('Helvetica-Bold').text(ratio + '%', cardX, cardY + 162, { width: 220, align: 'center' });
+          doc.fillColor('#64748B').fontSize(8).font('Helvetica').text(`${candVotes} Votes`, cardX, cardY + 182, { width: 220, align: 'center' });
+
+          // Winner label
+          const isWinner = idx === 0 && candVotes > 0;
+          doc.fillColor(isWinner ? '#10B981' : '#64748B')
+             .fontSize(8)
              .font('Helvetica-Bold')
-             .text(`   ${idx + 1}. ${cand.name}`, 50, doc.y);
-          doc.y += 4;
-
-          doc.fillColor(lightGray)
-             .fontSize(9)
-             .font('Helvetica')
-             .text(`      Votes: ${candVotes} (${ratio}%)`, 50, doc.y);
-          const barY = doc.y + 1;
-          // BG bar
-          doc.rect(180, barY, 300, 8).fill('#E2E8F0');
-          // FG bar
-          if (candVotes > 0) {
-            const fillWidth = 300 * (candVotes / posTotal);
-            const barColor = (idx === 0) ? primaryColor : lightGray;
-            doc.rect(180, barY, fillWidth, 8).fill(barColor);
-          }
-          doc.y += 20;
+             .text(isWinner ? 'WINNER ELECT' : 'CANDIDATE', cardX, cardY + 198, { width: 220, align: 'center' });
         }
       });
-      
-      // Winner determination
-      let winnerText = 'No winner';
-      const topCand = sorted[0];
-      if (topCand) {
-        if (topCand.isIndependent) {
-          const yes = topCand.votes || 0;
-          const no = topCand.noVotes || 0;
-          winnerText = yes > no ? `${topCand.name} (Approved by Yes votes)` : `${topCand.name} (Rejected by No votes)`;
-        } else {
-          const runnerUp = sorted[1];
-          if (runnerUp && runnerUp.votes === topCand.votes && topCand.votes > 0) {
-            winnerText = `Tie between ${topCand.name} and ${runnerUp.name} (${topCand.votes} votes each)`;
-          } else if (topCand.votes > 0) {
-            const ratio = posTotal > 0 ? ((topCand.votes / posTotal) * 100).toFixed(2) : '0.00';
-            winnerText = `${topCand.name} (${topCand.votes} votes, ${ratio}%)`;
-          } else {
-            winnerText = 'No votes cast for this position';
-          }
-        }
-      }
 
-      doc.fillColor(primaryColor)
-         .fontSize(10)
-         .font('Helvetica-Bold')
-         .text(`   Winner: ${winnerText}`, 50, doc.y);
-      doc.moveDown(1.5);
+      doc.y = startCardsY + rowsCount * (cardHeight + 20) + 15;
     });
 
     if (doc.y > 600) doc.addPage();

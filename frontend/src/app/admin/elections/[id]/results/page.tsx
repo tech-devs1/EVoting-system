@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, getAuthHeaders } from '@/lib/api';
 import { 
   ArrowLeft, 
   Send, 
@@ -40,7 +40,7 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
   const [election, setElection] = useState<Election | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [broadcastLoading, setBroadcastLoading] = useState(false);
+
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(0); // 0 means off
@@ -90,20 +90,29 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
     return () => clearInterval(interval);
   }, [electionId, autoRefreshInterval]);
 
-  // Broadcast Results Action
-  const handleBroadcastResults = async () => {
-    setBroadcastLoading(true);
+  // Download Results PDF Action
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const handleDownloadPDF = async () => {
+    setPdfLoading(true);
     setMessage(null);
     try {
-      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}/broadcast-results`, 'POST');
-      if (res.status === 'success') {
-        setMessage({ type: 'success', text: res.message || 'Election results broadcasted successfully to all roster voters via email!' });
-        fetchResultsData();
-      }
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/elections/${electionId}/report/pdf`, {
+        headers
+      });
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${election?.title || 'election'}_results.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setMessage({ type: 'success', text: 'Election results PDF generated and downloaded successfully!' });
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to broadcast results.' });
+      setMessage({ type: 'error', text: err.message || 'Failed to generate PDF results.' });
     } finally {
-      setBroadcastLoading(false);
+      setPdfLoading(false);
     }
   };
 
@@ -169,12 +178,12 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
             </button>
 
             <button
-              onClick={handleBroadcastResults}
-              disabled={broadcastLoading}
+              onClick={handleDownloadPDF}
+              disabled={pdfLoading}
               className="btn btn-primary"
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}
             >
-              <Send size={16} /> {broadcastLoading ? 'Broadcasting...' : '1-Click Broadcast Results to Voters'}
+              <Download size={16} /> {pdfLoading ? 'Generating PDF...' : 'Download Results PDF'}
             </button>
           </div>
         </div>

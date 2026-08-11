@@ -261,20 +261,31 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
     }
   };
 
-  // Broadcast Results Action
-  const handleBroadcastResults = async () => {
+  // Download Results PDF Action
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const handleDownloadPDF = async () => {
     setActionLoading(true);
+    setPdfLoading(true);
     setMessage(null);
     try {
-      const res = await apiRequest<{ status: string; message: string }>(`/elections/${electionId}/broadcast-results`, 'POST');
-      if (res.status === 'success') {
-        setMessage({ type: 'success', text: res.message || 'Final election results broadcasted to roster voters!' });
-        fetchElectionData();
-      }
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/elections/${electionId}/report/pdf`, {
+        headers
+      });
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${election?.title || 'election'}_results.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setMessage({ type: 'success', text: 'Election results PDF generated and downloaded successfully!' });
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to broadcast results.' });
+      setMessage({ type: 'error', text: err.message || 'Failed to generate PDF results.' });
     } finally {
       setActionLoading(false);
+      setPdfLoading(false);
     }
   };
 
@@ -364,8 +375,8 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
             <button disabled={actionLoading} onClick={openInviteModal} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
               <Mail size={14} /> Send Invitations
             </button>
-            <button disabled={actionLoading} onClick={handleBroadcastResults} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
-              <Send size={14} /> Broadcast Results
+            <button disabled={actionLoading || pdfLoading} onClick={handleDownloadPDF} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+              <Download size={14} /> Download Results PDF
             </button>
             <button onClick={handleExportAudit} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
               <Download size={14} /> Audit Ledger CSV
