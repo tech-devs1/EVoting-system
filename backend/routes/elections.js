@@ -1223,125 +1223,114 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
 
     // Candidates section - start on a clean fresh page
     doc.addPage();
-
-    // Centered Bold Header
-    doc.fillColor('#EF4444') // Red color for "ELECTION"
-       .fontSize(22)
+    doc.fillColor(primaryColor)
+       .fontSize(14)
        .font('Helvetica-Bold')
-       .text('ELECTION ', 50, doc.y, { continued: true, align: 'center' });
-    doc.fillColor('#0F172A') // Black/Dark slate color for "RESULTS"
-       .text('RESULTS', { align: 'center' });
-    doc.moveDown(1.5);
-
+       .text('Certified Position Results & Tally Ratios', { underline: true });
+    doc.moveDown(0.5);
+    
     Object.entries(candidatesByPosition).forEach(([position, list]) => {
-      // Sort candidates by votes/Yes votes
-      const sorted = [...list].sort((a, b) => {
-        const votesA = a.votes || 0;
-        const votesB = b.votes || 0;
-        return votesB - votesA;
-      });
+      if (doc.y > 600) doc.addPage();
 
-      const cardWidth = 220;
-      const cardHeight = 220;
-      const rowsCount = Math.ceil(sorted.length / 2);
-      const headerH = 26;
-      
-      // Calculate total height needed for this position
-      const totalPositionHeight = headerH + 20 + (rowsCount * cardHeight) + ((rowsCount - 1) * 20) + 45;
-      
-      if (doc.y + totalPositionHeight > 760) {
-        doc.addPage();
-      }
-
-      const currentY = doc.y;
-      const headerW = 220;
-      const headerX = 50 + (495 - headerW) / 2;
-
-      // Red header rectangle
-      doc.rect(headerX, currentY, headerW, headerH).fill('#B91C1C');
-      doc.fillColor('#FFFFFF')
-         .fontSize(10)
+      doc.fillColor(primaryColor)
+         .fontSize(12)
          .font('Helvetica-Bold')
-         .text(position.toUpperCase(), headerX, currentY + 8, { width: headerW, align: 'center' });
-      
-      const startCardsY = currentY + headerH + 20;
+         .text(`Position: ${position}`);
+      doc.moveDown(0.2);
+
       const posTotal = positionTotals[position] || 0;
-
+      
+      const sorted = [...list].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+      
       sorted.forEach((cand, idx) => {
-        const row = Math.floor(idx / 2);
-        const col = idx % 2;
-        const cardX = 50 + col * (220 + 55);
-        const cardY = startCardsY + row * (cardHeight + 20);
-
-        // Draw Card border
-        doc.roundedRect(cardX, cardY, 220, cardHeight, 10).lineWidth(1.5).strokeColor('#E2E8F0').stroke();
-
-        // 1. Draw circular candidate photo
-        const photoWidth = 90;
-        const photoHeight = 90;
-        const photoX = cardX + 65;
-        const photoY = cardY + 20;
-
-        if (imageBuffers[cand.id]) {
-          doc.save();
-          doc.circle(photoX + 45, photoY + 45, 45).clip();
-          doc.image(imageBuffers[cand.id], photoX, photoY, { width: photoWidth, height: photoHeight });
-          doc.restore();
-        } else {
-          doc.circle(photoX + 45, photoY + 45, 45).fill('#F1F5F9');
-          const initials = cand.name ? cand.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
-          doc.fillColor('#64748B')
-             .fontSize(24)
-             .font('Helvetica-Bold')
-             .text(initials, photoX, photoY + 30, { width: photoWidth, align: 'center' });
-        }
-
-        // 2. Draw name bar (green/teal background)
-        doc.rect(cardX + 15, cardY + 125, 190, 26).fill('#10B981');
-        doc.fillColor('#FFFFFF')
-           .fontSize(9)
-           .font('Helvetica-Bold')
-           .text(cand.name.toUpperCase(), cardX + 15, cardY + 133, { width: 190, align: 'center' });
-
-        // 3. Draw Votes & Percentage
+        if (doc.y > 650) doc.addPage();
+        
         if (cand.isIndependent) {
           const yesVotes = cand.votes || 0;
           const noVotes = cand.noVotes || 0;
           const totalInd = yesVotes + noVotes;
-          const yesRatio = totalInd > 0 ? ((yesVotes / totalInd) * 100).toFixed(0) : '0';
-          const noRatio = totalInd > 0 ? ((noVotes / totalInd) * 100).toFixed(0) : '0';
+          const yesRatio = totalInd > 0 ? ((yesVotes / totalInd) * 100).toFixed(2) : '0.00';
+          const noRatio = totalInd > 0 ? ((noVotes / totalInd) * 100).toFixed(2) : '0.00';
 
-          // YES column
-          doc.fillColor('#10B981').fontSize(13).font('Helvetica-Bold').text(yesRatio + '%', cardX + 15, cardY + 162, { width: 90, align: 'center' });
-          doc.fillColor('#64748B').fontSize(7).font('Helvetica').text(`YES (${yesVotes})`, cardX + 15, cardY + 178, { width: 90, align: 'center' });
-
-          // NO column
-          doc.fillColor('#EF4444').fontSize(13).font('Helvetica-Bold').text(noRatio + '%', cardX + 115, cardY + 162, { width: 90, align: 'center' });
-          doc.fillColor('#64748B').fontSize(7).font('Helvetica').text(`NO (${noVotes})`, cardX + 115, cardY + 178, { width: 90, align: 'center' });
-
-          // Winner Approved label
-          const approved = yesVotes > noVotes;
-          doc.fillColor(approved ? '#10B981' : '#EF4444')
-             .fontSize(8)
+          doc.fillColor(darkGray)
+             .fontSize(10)
              .font('Helvetica-Bold')
-             .text(approved ? 'APPROVED WINNER' : 'REJECTED', cardX, cardY + 198, { width: 220, align: 'center' });
+             .text(`   ${idx + 1}. ${cand.name} (Unopposed)`, 50, doc.y);
+          doc.y += 4;
+
+          doc.fillColor(lightGray)
+             .fontSize(9)
+             .font('Helvetica')
+             .text(`      YES: ${yesVotes} (${yesRatio}%)`, 50, doc.y);
+          const yesBarY = doc.y + 1;
+          doc.rect(180, yesBarY, 300, 8).fill('#E2E8F0');
+          if (yesVotes > 0) {
+            const fillWidth = 300 * (yesVotes / totalInd);
+            doc.rect(180, yesBarY, fillWidth, 8).fill(secondaryColor);
+          }
+          doc.y += 14;
+
+          doc.fillColor(lightGray)
+             .fontSize(9)
+             .font('Helvetica')
+             .text(`      NO: ${noVotes} (${noRatio}%)`, 50, doc.y);
+          const noBarY = doc.y + 1;
+          doc.rect(180, noBarY, 300, 8).fill('#E2E8F0');
+          if (noVotes > 0) {
+            const fillWidth = 300 * (noVotes / totalInd);
+            doc.rect(180, noBarY, fillWidth, 8).fill(lightGray);
+          }
+          doc.y += 20;
         } else {
           const candVotes = cand.votes || 0;
-          const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(0) : '0';
+          const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(2) : '0.00';
 
-          doc.fillColor('#0F172A').fontSize(18).font('Helvetica-Bold').text(ratio + '%', cardX, cardY + 162, { width: 220, align: 'center' });
-          doc.fillColor('#64748B').fontSize(8).font('Helvetica').text(`${candVotes} Votes`, cardX, cardY + 182, { width: 220, align: 'center' });
-
-          // Winner label
-          const isWinner = idx === 0 && candVotes > 0;
-          doc.fillColor(isWinner ? '#10B981' : '#64748B')
-             .fontSize(8)
+          doc.fillColor(darkGray)
+             .fontSize(10)
              .font('Helvetica-Bold')
-             .text(isWinner ? 'WINNER ELECT' : 'CANDIDATE', cardX, cardY + 198, { width: 220, align: 'center' });
+             .text(`   ${idx + 1}. ${cand.name}`, 50, doc.y);
+          doc.y += 4;
+
+          doc.fillColor(lightGray)
+             .fontSize(9)
+             .font('Helvetica')
+             .text(`      Votes: ${candVotes} (${ratio}%)`, 50, doc.y);
+          const barY = doc.y + 1;
+          doc.rect(180, barY, 300, 8).fill('#E2E8F0');
+          if (candVotes > 0) {
+            const fillWidth = 300 * (candVotes / posTotal);
+            const barColor = (idx === 0) ? primaryColor : lightGray;
+            doc.rect(180, barY, fillWidth, 8).fill(barColor);
+          }
+          doc.y += 20;
         }
       });
+      
+      let winnerText = 'No winner';
+      const topCand = sorted[0];
+      if (topCand) {
+        if (topCand.isIndependent) {
+          const yes = topCand.votes || 0;
+          const no = topCand.noVotes || 0;
+          winnerText = yes > no ? `${topCand.name} (Approved by Yes votes)` : `${topCand.name} (Rejected by No votes)`;
+        } else {
+          const runnerUp = sorted[1];
+          if (runnerUp && runnerUp.votes === topCand.votes && topCand.votes > 0) {
+            winnerText = `Tie between ${topCand.name} and ${runnerUp.name} (${topCand.votes} votes each)`;
+          } else if (topCand.votes > 0) {
+            const ratio = posTotal > 0 ? ((topCand.votes / posTotal) * 100).toFixed(2) : '0.00';
+            winnerText = `${topCand.name} (${topCand.votes} votes, ${ratio}%)`;
+          } else {
+            winnerText = 'No votes cast for this position';
+          }
+        }
+      }
 
-      doc.y = startCardsY + rowsCount * (cardHeight + 20) + 15;
+      doc.fillColor(primaryColor)
+         .fontSize(10)
+         .font('Helvetica-Bold')
+         .text(`   Winner: ${winnerText}`, 50, doc.y);
+      doc.moveDown(1.5);
     });
 
     if (doc.y > 600) doc.addPage();
@@ -1488,6 +1477,301 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     }
     console.error('Error generating PDF report:', error);
     res.status(500).json({ status: 'error', message: 'Failed to generate PDF report' });
+  }
+});
+
+// Download visual election results as PDF (Admin only) - CACHED
+router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const cacheKey = `elections:results:pdf:${electionId}`;
+
+    const reportData = await cache.getOrSet(cacheKey, async () => {
+      const { doc: electionDoc, tenantId: resolvedTenantId } = await findElectionDoc(electionId, req);
+      if (!electionDoc || !electionDoc.exists) {
+        throw new Error('NOT_FOUND');
+      }
+      const election = { id: electionId, ...electionDoc.data() };
+      
+      let candidatesSnapshot = await db.collection('tenants').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+      if (candidatesSnapshot.empty) {
+        candidatesSnapshot = await db.collection('organizations').doc(resolvedTenantId).collection('candidates').where('electionId', '==', electionId).get();
+      }
+      const candidates = [];
+      candidatesSnapshot.forEach(doc => {
+        candidates.push({ id: doc.id, ...doc.data() });
+      });
+      
+      let votesCountSnap = await db.collection('tenants').doc(resolvedTenantId).collection('votes').where('electionId', '==', electionId).count().get();
+      let totalVotes = votesCountSnap.data().count;
+      if (totalVotes === 0) {
+        votesCountSnap = await db.collection('organizations').doc(resolvedTenantId).collection('votes').where('electionId', '==', electionId).count().get();
+        totalVotes = votesCountSnap.data().count;
+      }
+      
+      let votedVotersCountSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).count().get();
+      let uniqueVoters = votedVotersCountSnap.data().count;
+      if (uniqueVoters === 0) {
+        votedVotersCountSnap = await db.collection('organizations').doc(resolvedTenantId).collection('voted_voters').where('electionId', '==', electionId).count().get();
+        uniqueVoters = votedVotersCountSnap.data().count;
+      }
+
+      let totalEligibleVoters = 0;
+      try {
+        const rosterSnap = await db.collection('tenants').doc(resolvedTenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+        const eligibleSnap = await db.collection('tenants').doc(resolvedTenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+        const subcolCount = Math.max(rosterSnap.size, eligibleSnap.size);
+        if (subcolCount > 0) {
+          totalEligibleVoters = subcolCount;
+        } else {
+          const tenantRollSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voter_rolls').get();
+          const orgRollSnap = await db.collection('organizations').doc(resolvedTenantId).collection('voter_rolls').get();
+          totalEligibleVoters = Math.max(tenantRollSnap.size, orgRollSnap.size);
+        }
+      } catch (e) {}
+
+      return {
+        election,
+        candidates,
+        totalVotes,
+        uniqueVoters,
+        totalEligibleVoters
+      };
+    }, 30000);
+
+    const { election, candidates, totalVotes, uniqueVoters, totalEligibleVoters } = reportData;
+
+    // Pre-fetch candidate images to memory buffers in parallel
+    const getImageBuffer = async (url) => {
+      try {
+        if (!url) return null;
+        if (url.startsWith('/')) {
+          const localPath = path.join(__dirname, '../../public', url);
+          if (fs.existsSync(localPath)) return fs.readFileSync(localPath);
+        }
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      } catch (e) {
+        console.warn('Error fetching image for PDF:', e.message);
+        return null;
+      }
+    };
+
+    const imageBuffers = {};
+    await Promise.all(
+      candidates.map(async (cand) => {
+        if (cand.photoUrl) {
+          const buf = await getImageBuffer(cand.photoUrl);
+          if (buf) {
+            imageBuffers[cand.id] = buf;
+          }
+        }
+      })
+    );
+    
+    const doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${election.title.replace(/[^a-zA-Z0-9]/g, '_')}_results.pdf"`);
+    
+    doc.pipe(res);
+    
+    const primaryColor = '#0F172A';
+    const secondaryColor = '#B91C1C';
+    const darkGray = '#334155';
+    const lightGray = '#64748B';
+
+    const logoPath = path.join(__dirname, '../../assets/logo.png');
+    if (fs.existsSync(logoPath)) {
+      doc.image(logoPath, 50, 45, { width: 60 });
+    }
+
+    doc.fillColor(primaryColor)
+       .fontSize(14)
+       .font('Helvetica-Bold')
+       .text('HO TECHNICAL UNIVERSITY', 125, 45);
+
+    doc.fillColor(darkGray)
+       .fontSize(9)
+       .font('Helvetica-Bold')
+       .text('STUDENTS\' REPRESENTATIVE COUNCIL (SRC)', 125, 62);
+
+    doc.fillColor(secondaryColor)
+       .fontSize(11)
+       .font('Helvetica-Bold')
+       .text('OFFICIAL CERTIFIED ELECTION RESULTS SHEET', 125, 76);
+
+    doc.fillColor(lightGray)
+       .fontSize(8)
+       .font('Helvetica')
+       .text('P.O. Box HP 35, Ho, Volta Region, Ghana | info@htu.edu.gh', 125, 93);
+
+    doc.moveTo(50, 110)
+       .lineTo(545, 110)
+       .lineWidth(2)
+       .strokeColor(primaryColor)
+       .stroke();
+
+    doc.moveTo(50, 114)
+       .lineTo(545, 114)
+       .lineWidth(1)
+       .strokeColor(secondaryColor)
+       .stroke();
+
+    doc.y = 135;
+    
+    doc.fillColor(primaryColor)
+       .fontSize(18)
+       .font('Helvetica-Bold')
+       .text(election.title, { align: 'center' });
+    doc.moveDown(0.2);
+    doc.fontSize(10).font('Helvetica').text(`Results Certified On: ${new Date().toLocaleString()}`, { align: 'center' });
+    doc.moveDown(1.5);
+
+    // Centered Bold Header
+    doc.fillColor('#EF4444')
+       .fontSize(22)
+       .font('Helvetica-Bold')
+       .text('ELECTION ', 50, doc.y, { continued: true, align: 'center' });
+    doc.fillColor('#0F172A')
+       .text('RESULTS', { align: 'center' });
+    doc.moveDown(1.5);
+
+    // Group candidates by position
+    const candidatesByPosition = {};
+    candidates.forEach(c => {
+      const pos = c.position || 'General';
+      if (!candidatesByPosition[pos]) candidatesByPosition[pos] = [];
+      candidatesByPosition[pos].push(c);
+    });
+
+    const positionTotals = {};
+    candidates.forEach(c => {
+      const pos = c.position || 'General';
+      if (!positionTotals[pos]) positionTotals[pos] = 0;
+      positionTotals[pos] += (c.votes || 0) + (c.noVotes || 0);
+    });
+
+    Object.entries(candidatesByPosition).forEach(([position, list]) => {
+      const sorted = [...list].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+
+      const cardWidth = 220;
+      const cardHeight = 220;
+      const rowsCount = Math.ceil(sorted.length / 2);
+      const headerH = 26;
+      
+      const totalPositionHeight = headerH + 20 + (rowsCount * cardHeight) + ((rowsCount - 1) * 20) + 45;
+      
+      if (doc.y + totalPositionHeight > 760) {
+        doc.addPage();
+      }
+
+      const currentY = doc.y;
+      const headerW = 220;
+      const headerX = 50 + (495 - headerW) / 2;
+
+      doc.rect(headerX, currentY, headerW, headerH).fill('#B91C1C');
+      doc.fillColor('#FFFFFF')
+         .fontSize(10)
+         .font('Helvetica-Bold')
+         .text(position.toUpperCase(), headerX, currentY + 8, { width: headerW, align: 'center' });
+      
+      const startCardsY = currentY + headerH + 20;
+      const posTotal = positionTotals[position] || 0;
+
+      sorted.forEach((cand, idx) => {
+        const row = Math.floor(idx / 2);
+        const col = idx % 2;
+        const cardX = 50 + col * (220 + 55);
+        const cardY = startCardsY + row * (cardHeight + 20);
+
+        doc.roundedRect(cardX, cardY, 220, cardHeight, 10).lineWidth(1.5).strokeColor('#E2E8F0').stroke();
+
+        const photoWidth = 90;
+        const photoHeight = 90;
+        const photoX = cardX + 65;
+        const photoY = cardY + 20;
+
+        if (imageBuffers[cand.id]) {
+          doc.save();
+          doc.circle(photoX + 45, photoY + 45, 45).clip();
+          doc.image(imageBuffers[cand.id], photoX, photoY, { width: photoWidth, height: photoHeight });
+          doc.restore();
+        } else {
+          doc.circle(photoX + 45, photoY + 45, 45).fill('#F1F5F9');
+          const initials = cand.name ? cand.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
+          doc.fillColor('#64748B')
+             .fontSize(24)
+             .font('Helvetica-Bold')
+             .text(initials, photoX, photoY + 30, { width: photoWidth, align: 'center' });
+        }
+
+        doc.rect(cardX + 15, cardY + 125, 190, 26).fill('#10B981');
+        doc.fillColor('#FFFFFF')
+           .fontSize(9)
+           .font('Helvetica-Bold')
+           .text(cand.name.toUpperCase(), cardX + 15, cardY + 133, { width: 190, align: 'center' });
+
+        if (cand.isIndependent) {
+          const yesVotes = cand.votes || 0;
+          const noVotes = cand.noVotes || 0;
+          const totalInd = yesVotes + noVotes;
+          const yesRatio = totalInd > 0 ? ((yesVotes / totalInd) * 100).toFixed(0) : '0';
+          const noRatio = totalInd > 0 ? ((noVotes / totalInd) * 100).toFixed(0) : '0';
+
+          doc.fillColor('#10B981').fontSize(13).font('Helvetica-Bold').text(yesRatio + '%', cardX + 15, cardY + 162, { width: 90, align: 'center' });
+          doc.fillColor('#64748B').fontSize(7).font('Helvetica').text(`YES (${yesVotes})`, cardX + 15, cardY + 178, { width: 90, align: 'center' });
+
+          doc.fillColor('#EF4444').fontSize(13).font('Helvetica-Bold').text(noRatio + '%', cardX + 115, cardY + 162, { width: 90, align: 'center' });
+          doc.fillColor('#64748B').fontSize(7).font('Helvetica').text(`NO (${noVotes})`, cardX + 115, cardY + 178, { width: 90, align: 'center' });
+
+          const approved = yesVotes > noVotes;
+          doc.fillColor(approved ? '#10B981' : '#EF4444')
+             .fontSize(8)
+             .font('Helvetica-Bold')
+             .text(approved ? 'APPROVED WINNER' : 'REJECTED', cardX, cardY + 198, { width: 220, align: 'center' });
+        } else {
+          const candVotes = cand.votes || 0;
+          const ratio = posTotal > 0 ? ((candVotes / posTotal) * 100).toFixed(0) : '0';
+
+          doc.fillColor('#0F172A').fontSize(18).font('Helvetica-Bold').text(ratio + '%', cardX, cardY + 162, { width: 220, align: 'center' });
+          doc.fillColor('#64748B').fontSize(8).font('Helvetica').text(`${candVotes} Votes`, cardX, cardY + 182, { width: 220, align: 'center' });
+
+          const isWinner = idx === 0 && candVotes > 0;
+          doc.fillColor(isWinner ? '#10B981' : '#64748B')
+             .fontSize(8)
+             .font('Helvetica-Bold')
+             .text(isWinner ? 'WINNER ELECT' : 'CANDIDATE', cardX, cardY + 198, { width: 220, align: 'center' });
+        }
+      });
+
+      doc.y = startCardsY + rowsCount * (cardHeight + 20) + 15;
+    });
+
+    const pages = doc.bufferedPageRange();
+    for (let i = 0; i < pages.count; i++) {
+      doc.switchToPage(i);
+      doc.moveTo(50, 790)
+         .lineTo(545, 790)
+         .lineWidth(0.5)
+         .strokeColor('#64748B')
+         .stroke();
+      doc.fillColor('#64748B')
+         .fontSize(8)
+         .font('Helvetica')
+         .text(`Page ${i + 1} of ${pages.count}`, 50, 796, { align: 'right', width: 495 });
+      doc.text('OFFICIAL CERTIFIED RESULTS SHEET • HO TECHNICAL UNIVERSITY', 50, 796, { align: 'left', width: 400 });
+    }
+    
+    doc.end();
+  } catch (error) {
+    if (error.message === 'NOT_FOUND') {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
+    console.error('Error generating PDF results:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to generate PDF results' });
   }
 });
 

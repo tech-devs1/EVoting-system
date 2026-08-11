@@ -73,20 +73,47 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Check if main dashboard (No sidebar requested for /admin/dashboard)
   const isDashboardPage = pathname === '/admin/dashboard';
 
-  // Detect Per-Election Workspace Context
-  const electionMatch = pathname.match(/\/admin\/elections\/([^/]+)/);
-  const isElectionWorkspace = Boolean(electionMatch);
-  const electionId = electionMatch ? electionMatch[1] : null;
+  const [electionId, setElectionId] = useState<string | null>(null);
+
+  // Sync election workspace context from URL paths, query parameters, or sessionStorage
+  useEffect(() => {
+    if (pathname === '/admin/dashboard') {
+      setElectionId(null);
+      try {
+        sessionStorage.removeItem('currentElectionId');
+      } catch (e) {}
+      return;
+    }
+
+    const match = pathname.match(/\/admin\/elections\/([^/]+)/);
+    if (match) {
+      setElectionId(match[1]);
+      try {
+        sessionStorage.setItem('currentElectionId', match[1]);
+      } catch (e) {}
+    } else {
+      // Check query parameter
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const qId = params.get('electionId');
+        if (qId) {
+          setElectionId(qId);
+          sessionStorage.setItem('currentElectionId', qId);
+        } else {
+          const storedId = sessionStorage.getItem('currentElectionId');
+          setElectionId(storedId);
+        }
+      } catch (e) {}
+    }
+  }, [pathname]);
+
+  const isElectionWorkspace = Boolean(electionId);
 
   const defaultNavLinks = [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-    { label: 'Positions & Candidates', href: '/admin/elections', icon: Layers },
-    { label: 'Voters Roster', href: '/admin/voters', icon: Users },
     { label: 'Broadcast Center', href: '/admin/messages', icon: Send },
-    { label: 'Live Results', href: '/admin/results', icon: BarChart3 },
     { label: 'Election Reports', href: '/admin/reports', icon: FileText },
     { label: 'Audit Ledger', href: '/admin/audit', icon: History },
-    { label: 'Access Security', href: '/admin/fraud', icon: ShieldAlert },
   ];
 
   const electionNavLinks = electionId ? [
@@ -95,7 +122,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Roster & CSV Upload', href: `/admin/elections/${electionId}/voters`, icon: Users },
     { label: 'Broadcast Messages', href: `/admin/elections/${electionId}/messages`, icon: Send },
     { label: 'Live Results', href: `/admin/elections/${electionId}/results`, icon: BarChart3 },
-    { label: 'Election Reports', href: '/admin/reports', icon: FileText },
+    { label: 'Election Reports', href: `/admin/reports?electionId=${electionId}`, icon: FileText },
     { label: '360° Audit Ledger', href: `/admin/elections/${electionId}/audit`, icon: History },
     { label: 'Access Security', href: `/admin/elections/${electionId}/fraud`, icon: ShieldAlert },
   ] : defaultNavLinks;
@@ -140,6 +167,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {isElectionWorkspace && (
           <Link
             href="/admin/dashboard"
+            onClick={() => {
+              try {
+                sessionStorage.removeItem('currentElectionId');
+              } catch (e) {}
+              setElectionId(null);
+            }}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -168,7 +201,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             {activeNavLinks.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin/dashboard');
+              const cleanHref = item.href.split('?')[0];
+              const isActive = pathname === cleanHref || (pathname.startsWith(cleanHref) && cleanHref !== '/admin/dashboard');
 
               return (
                 <Link
@@ -204,7 +238,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             <Link
-              href="/admin/settings"
+              href={electionId ? `/admin/settings?electionId=${electionId}` : '/admin/settings'}
               style={{
                 display: 'flex',
                 alignItems: 'center',

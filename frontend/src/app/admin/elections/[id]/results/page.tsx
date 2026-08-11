@@ -97,7 +97,7 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
     setMessage(null);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`/api/elections/${electionId}/report/pdf`, {
+      const res = await fetch(`/api/elections/${electionId}/results/pdf`, {
         headers
       });
       const blob = await res.blob();

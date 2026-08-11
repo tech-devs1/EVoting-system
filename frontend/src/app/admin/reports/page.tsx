@@ -27,7 +27,8 @@ export default function AdminReportsPage() {
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [downloadingResultsId, setDownloadingResultsId] = useState<string | null>(null);
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
 
   const fetchElections = async () => {
@@ -50,14 +51,14 @@ export default function AdminReportsPage() {
     fetchElections();
   }, []);
 
-  const handleDownloadPDF = async (electionId: string, title: string) => {
-    setDownloadingId(electionId);
+  const handleDownloadResults = async (electionId: string, title: string) => {
+    setDownloadingResultsId(electionId);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`/api/elections/${electionId}/report/pdf`, {
+      const res = await fetch(`/api/elections/${electionId}/results/pdf`, {
         headers
       });
-      if (!res.ok) throw new Error('Failed to generate PDF');
+      if (!res.ok) throw new Error('Failed to generate results PDF');
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -67,10 +68,35 @@ export default function AdminReportsPage() {
       a.click();
       a.remove();
     } catch (err) {
-      console.error('Failed to export PDF report:', err);
+      console.error('Failed to export results PDF:', err);
       alert('Failed to generate results PDF.');
     } finally {
-      setDownloadingId(null);
+      setDownloadingResultsId(null);
+    }
+  };
+
+  const handleDownloadReport = async (electionId: string, title: string) => {
+    setDownloadingReportId(electionId);
+    try {
+      const headers = await getAuthHeaders();
+      // pass defaults for EC signature section in certified reports
+      const res = await fetch(`/api/elections/${electionId}/report/pdf?showSignature=true`, {
+        headers
+      });
+      if (!res.ok) throw new Error('Failed to generate report PDF');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title.replace(/[^a-zA-Z0-9]/g, '_')}_certified_report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      console.error('Failed to export report PDF:', err);
+      alert('Failed to generate certified report PDF.');
+    } finally {
+      setDownloadingReportId(null);
     }
   };
 
@@ -200,17 +226,26 @@ export default function AdminReportsPage() {
 
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <button
-                  onClick={() => handleDownloadPDF(election.id, election.title)}
-                  disabled={downloadingId !== null || exportingId !== null}
+                  onClick={() => handleDownloadResults(election.id, election.title)}
+                  disabled={downloadingResultsId !== null || downloadingReportId !== null || exportingId !== null}
                   className="btn btn-primary"
                   style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700 }}
                 >
                   <Download size={14} />
-                  {downloadingId === election.id ? 'Generating PDF...' : 'Download Results PDF'}
+                  {downloadingResultsId === election.id ? 'Generating Results...' : 'Download Results Poster'}
+                </button>
+                <button
+                  onClick={() => handleDownloadReport(election.id, election.title)}
+                  disabled={downloadingResultsId !== null || downloadingReportId !== null || exportingId !== null}
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700, backgroundColor: '#4F46E5', color: '#FFFFFF', border: 'none' }}
+                >
+                  <FileText size={14} />
+                  {downloadingReportId === election.id ? 'Generating Report...' : 'Download Certified Report'}
                 </button>
                 <button
                   onClick={() => handleExportAudit(election.id, election.title)}
-                  disabled={downloadingId !== null || exportingId !== null}
+                  disabled={downloadingResultsId !== null || downloadingReportId !== null || exportingId !== null}
                   className="btn btn-outline"
                   style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700 }}
                 >
