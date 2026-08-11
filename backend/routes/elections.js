@@ -2781,34 +2781,134 @@ router.get('/:id/export-audit', verifyAuth, requireAdmin, async (req, res) => {
 router.get('/:id/voters', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
-    const tenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+    const reqTenantId = req.user.tenantId || DEFAULT_TENANT_ID;
+    const reqTenantCollection = getTenantCollection(req);
 
-    let rosterSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('voter_roster').get();
+    // 1. Resolve exact election document location across tenants/organizations
+    const { doc: electionDoc, ref: electionRef, tenantId: resolvedTenantId, tenantCollection: resolvedTenantCollection } = await findElectionDoc(electionId, req);
     
-    if (rosterSnap.empty) {
-      rosterSnap = await db.collection('tenants').doc(tenantId).collection('elections').doc(electionId).collection('eligible_voters').get();
+    const finalTenantId = resolvedTenantId || reqTenantId;
+    const finalTenantCollection = resolvedTenantCollection || reqTenantCollection;
+
+    let rosterSnap = null;
+    if (electionRef) {
+      rosterSnap = await electionRef.collection('voter_roster').get().catch(() => null);
+      if (!rosterSnap || rosterSnap.empty) {
+        rosterSnap = await electionRef.collection('eligible_voters').get().catch(() => null);
+      }
     }
 
-    if (rosterSnap.empty) {
-      rosterSnap = await db.collection('tenants').doc(tenantId).collection('voter_rolls').get();
+    if (!rosterSnap || rosterSnap.empty) {
+      rosterSnap = await db.collection(finalTenantCollection).doc(finalTenantId).collection('voter_rolls').get().catch(() => null);
+    }
+    if (!rosterSnap || rosterSnap.empty) {
+      rosterSnap = await db.collection(reqTenantCollection).doc(reqTenantId).collection('voter_rolls').get().catch(() => null);
     }
 
-    // Check voted voters to flag hasVoted status accurately
-    const votedSnap = await db.collection('tenants').doc(tenantId).collection('voted_voters').where('electionId', '==', electionId).get();
+    if (!rosterSnap) {
+      return res.status(200).json({ status: 'success', data: [] });
+    }
+
+    // 2. Fetch all voted_voters records for this election across possible tenant spaces
     const votedSet = new Set();
-    votedSnap.forEach(d => {
-      const data = d.data();
-      if (data.voterId) votedSet.add(data.voterId);
-      if (data.studentId) votedSet.add(data.studentId);
-      if (data.email) votedSet.add(data.email.toLowerCase());
-    });
+    const addVotedDocs = (snap) => {
+      if (snap && !snap.empty) {
+        snap.forEach(d => {
+          const data = d.data();
+          if (data.voterId) {
+            votedSet.add(data.voterId);
+            votedSet.add(data.voterId.toLowerCase());
+          }
+          if (data.studentId) {
+            votedSet.add(data.studentId);
+            votedSet.add(data.studentId.toLowerCase());
+          }
+          if (data.email) {
+            votedSet.add(data.email.toLowerCase().trim());
+          }
+        });
+      }
+    };
 
+    const queryPromises = [
+      db.collection(finalTenantCollection).doc(finalTenantId).collection('voted_voters').where('electionId', '==', electionId).get().catch(() => null),
+      db.collection('tenants').doc(finalTenantId).collection('voted_voters').where('electionId', '==', electionId).get().catch(() => null),
+      db.collection('organizations').doc(finalTenantId).collection('voted_voters').where('electionId', '==', electionId).get().catch(() => null)
+    ];
+
+    if (finalTenantId !== reqTenantId) {
+      queryPromises.push(db.collection(reqTenantCollection).doc(reqTenantId).collection('voted_voters').where('electionId', '==', electionId).get().catch(() => null));
+    }
+
+    const snaps = await Promise.all(queryPromises);
+    snaps.forEach(addVotedDocs);
+
+    // Safety fallback using collectionGroup
+    if (votedSet.size === 0) {
+      try {
+        const groupSnap = await db.collectionGroup('voted_voters').where('electionId', '==', electionId).get();
+        addVotedDocs(groupSnap);
+      } catch (err) {
+        console.warn('[Voters List CollectionGroup fallback error]:', err.message);
+      }
+    }
+
+    // 3. Fetch voter rolls to build a lookup map mapping various identifiers (studentId, email, id) to their active voterId (uid)
+    const idToVoterIdMap = new Map();
+    const fetchRolls = async (coll, tid) => {
+      try {
+        const snap = await db.collection(coll).doc(tid).collection('voter_rolls').get();
+        snap.forEach(doc => {
+          const data = doc.data();
+          const uid = doc.id;
+          if (data.studentId) idToVoterIdMap.set(data.studentId.toLowerCase().trim(), uid);
+          if (data.indexNumber) idToVoterIdMap.set(data.indexNumber.toLowerCase().trim(), uid);
+          if (data.email) idToVoterIdMap.set(data.email.toLowerCase().trim(), uid);
+          idToVoterIdMap.set(uid.toLowerCase().trim(), uid);
+        });
+      } catch (err) {}
+    };
+
+    await fetchRolls(finalTenantCollection, finalTenantId);
+    if (finalTenantId !== reqTenantId) {
+      await fetchRolls(reqTenantCollection, reqTenantId);
+    }
+
+    // 4. Map the roster to check hasVoted status accurately using any potential matched identifiers
     const voters = rosterSnap.docs.map(doc => {
       const data = doc.data();
       const id = doc.id;
       const studentId = data.studentId || data.indexNumber || id;
-      const email = (data.email || '').toLowerCase();
-      const hasVoted = votedSet.has(id) || votedSet.has(studentId) || (email && votedSet.has(email));
+      const email = (data.email || '').toLowerCase().trim();
+
+      const candidateIds = new Set();
+      if (id) {
+        candidateIds.add(id);
+        candidateIds.add(id.toLowerCase());
+        candidateIds.add('voter_' + id.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+      }
+      if (studentId) {
+        candidateIds.add(studentId);
+        candidateIds.add(studentId.toLowerCase());
+        candidateIds.add('voter_' + studentId.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+      }
+      if (email) {
+        candidateIds.add(email);
+        candidateIds.add('voter_' + email.replace(/[^a-z0-9]/g, '_'));
+      }
+
+      // Lookup mapped voterIds from voter_rolls
+      if (studentId && idToVoterIdMap.has(studentId.toLowerCase())) {
+        candidateIds.add(idToVoterIdMap.get(studentId.toLowerCase()));
+      }
+      if (email && idToVoterIdMap.has(email)) {
+        candidateIds.add(idToVoterIdMap.get(email));
+      }
+      if (id && idToVoterIdMap.has(id.toLowerCase())) {
+        candidateIds.add(idToVoterIdMap.get(id.toLowerCase()));
+      }
+
+      const hasVoted = Array.from(candidateIds).some(cid => votedSet.has(cid));
 
       return {
         id,
