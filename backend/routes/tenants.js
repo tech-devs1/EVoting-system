@@ -82,7 +82,7 @@ router.get('/branding', verifyAuth, requireAdmin, async (req, res) => {
       return res.status(200).json({
         status: 'success',
         data: {
-          orgName: "Students' Representative Council (SRC)",
+          orgName: "HTU ELECT",
           portalTitle: "HTU Elect Portal",
           supportEmail: "info@htu.edu.gh",
           supportPhone: "+233 24 000 0000",
@@ -103,7 +103,7 @@ router.get('/branding', verifyAuth, requireAdmin, async (req, res) => {
       data: {
         logoUrl: data.logoUrl || '/assets/logo.png',
         brandColor: data.brandColor || '#3b82f6',
-        orgName: data.orgName || "Students' Representative Council (SRC)",
+        orgName: data.orgName || "HTU ELECT",
         portalTitle: data.portalTitle || 'HTU Elect Portal',
         supportEmail: data.supportEmail || 'info@htu.edu.gh',
         supportPhone: data.supportPhone || '+233 24 000 0000',

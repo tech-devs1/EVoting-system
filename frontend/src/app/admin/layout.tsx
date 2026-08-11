@@ -152,7 +152,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             color: '#FFFFFF',
             boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
           }}>
-            <ShieldCheck size={24} />
+            <img src='/assets/logo.png'>
           </div>
           <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em' }}>
             HTU Elect <span style={{ color: '#2563EB' }}>✓</span>
