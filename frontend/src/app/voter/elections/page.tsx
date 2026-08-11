@@ -235,30 +235,18 @@ export default function VoterElectionsPage() {
                     <CountdownTimer endsAt={el.endDate} status={el.status} />
                     <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
                       {el.status === 'active' ? (
-                        hasVoted ? (
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            disabled
-                            style={{ opacity: 0.5, cursor: 'not-allowed' }}
-                          >
-                            Already Voted
-                          </button>
-                        ) : (
-                          <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
-                            Vote Now
-                          </Link>
-                        )
-                      ) : el.status === 'completed' ? (
-                        <Link href={`/voter/verify`} className="btn btn-outline btn-sm">
-                          Audit Records
+                        <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
+                          View Votes
                         </Link>
+                      ) : el.status === 'completed' ? (
+                        null
                       ) : (
                         <button className="btn btn-secondary btn-sm" disabled style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <Lock size={12} /> Locked
                         </button>
                       )}
-                      {el.showResults && (
-                        <Link href={`/voter/elections/${el.id}/results`} className="btn btn-secondary btn-sm">
+                      {el.status === 'completed' && el.showResults && (
+                        <Link href={`/voter/elections/${el.id}/results`} className="btn btn-primary btn-sm">
                           View Results
                         </Link>
                       )}

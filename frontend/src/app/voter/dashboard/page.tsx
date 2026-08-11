@@ -442,37 +442,6 @@ export default function VoterDashboard() {
             </div>
           </div>
 
-          {/* Quick Verification Lookup */}
-          <div style={{
-            backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
-            borderRadius: 'var(--radius-lg, 10px)',
-            padding: '1.25rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Cryptographic Verification</h4>
-            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
-              Verify the exact inclusion of your vote in the electoral ledger using your unique tracking token.
-            </p>
-            <Link href="/voter/verify" style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              padding: '0.55rem',
-              borderRadius: '6px',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-secondary)',
-              fontSize: '11px',
-              fontWeight: 600,
-              textDecoration: 'none',
-              backgroundColor: 'var(--bg-secondary)'
-            }}>
-              <Search size={12} /> Lookup Verification ID
-            </Link>
-          </div>
 
         </div>
 

@@ -1225,37 +1225,44 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     // Reset coordinates for body text
     doc.y = 135;
     
-    doc.fillColor(primaryColor)
-       .fontSize(18)
-       .font('Helvetica-Bold')
-       .text(election.title);
-    doc.moveDown(0.5);
+    // Formal Letter Metadata block
+    doc.fillColor(darkGray).fontSize(9).font('Helvetica-Bold');
+    doc.text(`DATE: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
+    doc.text(`TO: All Students, Faculty Members, and Stakeholders of Ho Technical University`);
+    doc.text(`FROM: Chairperson, Students' Representative Council (SRC) Electoral Commission`);
+    doc.text(`SUBJECT: OFFICIAL DECLARATION OF RESULTS FOR ${election.title.toUpperCase()}`);
     
+    // Thin horizontal separator line
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y)
+       .lineTo(545, doc.y)
+       .lineWidth(0.5)
+       .strokeColor(lightGray)
+       .stroke();
+    doc.moveDown();
+
+    // Formal Opening
     doc.fillColor(darkGray)
        .fontSize(10)
        .font('Helvetica')
-       .text(`Description: ${election.description || 'N/A'}`)
-       .text(`Start Date: ${new Date(election.startDate).toLocaleString()}`)
-       .text(`End Date: ${new Date(election.endDate).toLocaleString()}`)
-       .text(`Status: ${election.status.toUpperCase()}`)
-       .text(`Type: ${election.type || 'N/A'}`)
-       .text(`Department: ${election.department || 'N/A'}`);
+       .text('Dear Stakeholders,', { lineGap: 4 });
+    doc.text('Following the successful completion of the voting period, we officially present to you the certified election report and results. The election was conducted under secure, end-to-end verifiable cryptographic protocols to ensure maximum transparency, accuracy, and fairness.', { lineGap: 4 });
     doc.moveDown();
 
     // Custom Executive Summary
     if (executiveSummary) {
-      doc.fontSize(14).font('Helvetica-Bold').fillColor(primaryColor).text('Executive Summary', { underline: true });
+      doc.fontSize(11).font('Helvetica-Bold').fillColor(primaryColor).text('EXECUTIVE SUMMARY', { underline: true });
       doc.moveDown(0.3);
-      doc.fontSize(10).font('Helvetica').fillColor(darkGray).text(executiveSummary.toString());
+      doc.fontSize(10).font('Helvetica').fillColor(darkGray).text(executiveSummary.toString(), { lineGap: 4 });
       doc.moveDown();
     }
 
-    // Statistics section
-    doc.fontSize(14).font('Helvetica-Bold').fillColor(primaryColor).text('General Statistics', { underline: true });
+    // Statistics section (Report Summary)
+    doc.fontSize(11).font('Helvetica-Bold').fillColor(primaryColor).text('GENERAL STATISTICS SUMMARY', { underline: true });
     doc.moveDown(0.3);
     doc.fontSize(10).font('Helvetica').fillColor(darkGray);
     doc.text(`Total Valid Voters (Roster Size): ${totalEligibleVoters || 'N/A'}`);
-    doc.text(`Total Votes Cast (Ballots cast): ${uniqueVoters}`);
+    doc.text(`Total Votes Cast (Ballots processed): ${uniqueVoters}`);
     doc.text(`Voter Turnout Rate: ${totalEligibleVoters > 0 ? ((uniqueVoters / totalEligibleVoters) * 100).toFixed(2) : '0.00'}%`);
     doc.text(`Total Registered Candidates: ${candidates.length}`);
     doc.text(`System Activity Integrity Log: SECURE & VERIFIED`);
@@ -1278,12 +1285,11 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
       positionTotals[pos] += (c.votes || 0) + (c.noVotes || 0);
     });
 
-    // Candidates section - start on a clean fresh page
-    doc.addPage();
+    // Certified Election Results Section - flowing directly after the summary statistics
     doc.fillColor(primaryColor)
-       .fontSize(14)
+       .fontSize(11)
        .font('Helvetica-Bold')
-       .text('Certified Position Results & Tally Ratios', { underline: true });
+       .text('OFFICIAL CERTIFIED ELECTION RESULTS & STANDINGS', { underline: true });
     doc.moveDown(0.5);
     
     Object.entries(candidatesByPosition).forEach(([position, list]) => {
