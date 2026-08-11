@@ -469,12 +469,25 @@ router.get('/:id/results', async (req, res) => {
     }
     const uniqueVotersCast = votedSnap.size;
 
+    const positionTotals = {};
+    candidates.forEach(c => {
+      const pos = c.position || 'General';
+      if (!positionTotals[pos]) positionTotals[pos] = 0;
+      positionTotals[pos] += (c.votes || 0) + (c.noVotes || 0);
+    });
+    const maxPositionVotes = Object.values(positionTotals).length > 0 ? Math.max(...Object.values(positionTotals)) : 0;
+
+    let finalUniqueVoters = uniqueVotersCast;
+    if (finalUniqueVoters < maxPositionVotes) {
+      finalUniqueVoters = maxPositionVotes;
+    }
+
     let candidateTotalVotes = 0;
     candidates.forEach(c => {
       candidateTotalVotes += (c.votes || 0) + (c.noVotes || 0);
     });
 
-    const totalVotesCast = electionData.totalVotesCast || uniqueVotersCast || candidateTotalVotes;
+    const totalVotesCast = electionData.totalVotesCast || finalUniqueVoters || candidateTotalVotes;
 
     // 3. Calculate total roster voters
     let totalVoters = electionData.totalVoters || 0;
@@ -986,6 +999,12 @@ router.get('/:id/report', verifyAuth, requireAdmin, async (req, res) => {
         positionTotals[pos] += (c.votes || 0) + (c.noVotes || 0);
       });
 
+      // Robust fallback: ensure uniqueVoters is at least the maximum votes of any single position
+      const maxPositionVotes = Object.values(positionTotals).length > 0 ? Math.max(...Object.values(positionTotals)) : 0;
+      if (uniqueVoters < maxPositionVotes) {
+        uniqueVoters = maxPositionVotes;
+      }
+
       // Get total roster voters
       let totalVotersCount = 0;
       try {
@@ -1088,6 +1107,18 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
         uniqueVoters = votedVotersCountSnap.data().count;
       }
 
+      // Robust fallback: Sum candidate votes for each position and find maximum
+      const posTotals = {};
+      candidates.forEach(c => {
+        const pos = c.position || 'General';
+        if (!posTotals[pos]) posTotals[pos] = 0;
+        posTotals[pos] += (c.votes || 0) + (c.noVotes || 0);
+      });
+      const maxPositionVotes = Object.values(posTotals).length > 0 ? Math.max(...Object.values(posTotals)) : 0;
+      if (uniqueVoters < maxPositionVotes) {
+        uniqueVoters = maxPositionVotes;
+      }
+
       // 5. Fetch ONLY the 50 most recent verification hashes to prevent PDF overload & quota exhaustion
       let verificationLogsSnap = await db.collection('tenants').doc(resolvedTenantId).collection('voted_voters')
         .where('electionId', '==', electionId)
@@ -1125,17 +1156,35 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
         }
       } catch (e) {}
 
+      // Fetch dynamic branding / settings for this organization
+      let tenantDoc = await db.collection('tenants').doc(resolvedTenantId).get();
+      let tenantData = tenantDoc.exists ? tenantDoc.data() : null;
+      if (!tenantDoc.exists) {
+        tenantDoc = await db.collection('organizations').doc(resolvedTenantId).get();
+        tenantData = tenantDoc.exists ? tenantDoc.data() : null;
+      }
+
       return {
         election,
         candidates,
         totalVotes,
         uniqueVoters,
         totalEligibleVoters,
-        verificationIds
+        verificationIds,
+        tenantData
       };
     }, 30000); // Cache pdf data for 30s
-    const { election, candidates, totalVotes, uniqueVoters, totalEligibleVoters, verificationIds } = reportData;
+    const { election, candidates, totalVotes, uniqueVoters, totalEligibleVoters, verificationIds, tenantData } = reportData;
     const { executiveSummary, customNotes, ecName, ecTitle, showSignature, signatureText } = req.query;
+
+    // Resolve customized tenant fields with standard fallbacks
+    const orgName = (tenantData && tenantData.orgName) || 'Ho Technical University';
+    const ecNameVal = ecName || (tenantData && tenantData.ecName) || 'Electoral Commissioner';
+    const ecTitleVal = ecTitle || (tenantData && tenantData.ecTitle) || 'Office of the Electoral Commission';
+    const address = (tenantData && tenantData.address) || 'P.O. Box HP 35, Ho, Volta Region, Ghana';
+    const supportPhone = (tenantData && tenantData.supportPhone) || '+233 (0)24 777 2381';
+    const supportEmail = (tenantData && tenantData.supportEmail) || 'ec@htu.edu.gh';
+    const website = 'www.htu.edu.gh';
 
     // Pre-fetch candidate images to memory buffers in parallel
     const getImageBuffer = async (url) => {
@@ -1187,30 +1236,31 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
       doc.image(logoPath, 50, 45, { width: 60 });
     }
 
-    // HTU Logo text next to logo - exactly matching image.png layout
-    doc.fillColor('#0F172A')
-       .fontSize(14)
-       .font('Helvetica-Bold')
-       .text('HO TECHNICAL', 125, 52);
-    doc.fillColor('#0F172A')
-       .fontSize(14)
-       .font('Helvetica-Bold')
-       .text('UNIVERSITY', 125, 68);
+    // HTU Logo text next to logo - dynamic organization name layout (wrapping handled nicely)
+    doc.fillColor('#0F172A');
+    if (orgName.length > 20) {
+      doc.fontSize(11)
+         .font('Helvetica-Bold')
+         .text(orgName.toUpperCase(), 125, 52, { width: 200, lineGap: 2 });
+    } else {
+      doc.fontSize(13)
+         .font('Helvetica-Bold')
+         .text(orgName.toUpperCase(), 125, 56, { width: 200, lineGap: 2 });
+    }
 
-    // Address block on the right - exactly matching image.png layout and EC customization
+    // Address block on the right - dynamic EC and organization details layout
     doc.fillColor('#0F172A')
        .fontSize(10)
        .font('Helvetica-Bold')
-       .text('Office of the Electoral Commission', 340, 45);
+       .text(ecTitleVal, 340, 45, { width: 205 });
 
     doc.fillColor('#334155')
        .fontSize(8)
        .font('Helvetica')
-       .text('P.O. Box HP 35', 340, 58)
-       .text('Ho - Ghana', 340, 69)
-       .text('Mobile: +233 (0)24 777 2381', 340, 80)
-       .text('E-mail: ec@htu.edu.gh', 340, 91)
-       .text('Website: www.htu.edu.gh', 340, 102);
+       .text(address, 340, 58, { width: 205 })
+       .text(`Mobile: ${supportPhone}`, 340, 80, { width: 205 })
+       .text(`E-mail: ${supportEmail}`, 340, 91, { width: 205 })
+       .text(`Website: ${website}`, 340, 102, { width: 205 });
 
     // Thick primary color line
     doc.moveTo(50, 114)
@@ -1225,8 +1275,8 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
     // Formal Letter Metadata block - updated style to match image.png letter layout
     doc.fillColor(darkGray).fontSize(9).font('Helvetica-Bold');
     doc.text(`DATE: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`);
-    doc.text(`TO: All Students, Faculty Members, and Stakeholders of Ho Technical University`);
-    doc.text(`FROM: Chairperson, Students' Representative Council (SRC) Electoral Commission`);
+    doc.text(`TO: All Students, Faculty Members, and Stakeholders of ${orgName}`);
+    doc.text(`FROM: Chairperson, ${ecTitleVal}`);
     doc.text(`SUBJECT: OFFICIAL DECLARATION OF RESULTS FOR ${election.title.toUpperCase()}`);
     
     // Thin horizontal separator line
@@ -1243,7 +1293,11 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
        .fontSize(10)
        .font('Helvetica')
        .text('Dear Stakeholders,', { lineGap: 4 });
-    doc.text('Following the successful completion of the voting period, we officially present to you the certified election report and results. The election was conducted under secure, end-to-end verifiable cryptographic protocols to ensure maximum transparency, accuracy, and fairness.', { lineGap: 4 });
+    let openingText = `Following the successful completion of the voting period, we officially present to you the certified election report and results for ${election.title}. The election was conducted under secure, end-to-end verifiable cryptographic protocols to ensure maximum transparency, accuracy, and fairness.`;
+    if (election.description) {
+      openingText += `\n\nElection Details: ${election.description}`;
+    }
+    doc.text(openingText, { lineGap: 4 });
     doc.moveDown();
 
     // Custom Executive Summary
@@ -1505,11 +1559,12 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
       doc.fillColor(darkGray)
          .fontSize(9)
          .font('Helvetica-Bold')
-         .text(ecName ? ecName.toString() : 'Electoral Commissioner', 50, signY + 47);
+         .text(ecNameVal ? ecNameVal.toString() : 'Electoral Commissioner', 50, signY + 47);
       doc.fillColor(lightGray)
          .fontSize(8)
          .font('Helvetica')
-         .text(ecTitle ? ecTitle.toString() : 'Electoral Commission', 50, signY + 58);
+         .text(ecTitleVal ? ecTitleVal.toString() : 'Electoral Commission', 50, signY + 58)
+         .text(orgName, 50, signY + 68);
       
       // Right Side: Official Seal / Stamp Group
       // Circular Seal representation in vector red ink
@@ -1583,7 +1638,7 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
          .font('Helvetica')
          .text(`Page ${i + 1} of ${pages.count}`, 50, 796, { align: 'right', width: 495 });
 
-      doc.text('GENERATED BY HTU-ELECT SECURE PASSWORDLESS SYSTEM • HO TECHNICAL UNIVERSITY', 50, 796, { align: 'left', width: 400 });
+      doc.text(`GENERATED BY HTU-ELECT SECURE PASSWORDLESS SYSTEM • ${orgName.toUpperCase()}`, 50, 796, { align: 'left', width: 400 });
     }
     
     doc.end();
@@ -1633,6 +1688,18 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
         uniqueVoters = votedVotersCountSnap.data().count;
       }
 
+      // Robust fallback: Sum candidate votes for each position and find maximum
+      const posTotals = {};
+      candidates.forEach(c => {
+        const pos = c.position || 'General';
+        if (!posTotals[pos]) posTotals[pos] = 0;
+        posTotals[pos] += (c.votes || 0) + (c.noVotes || 0);
+      });
+      const maxPositionVotes = Object.values(posTotals).length > 0 ? Math.max(...Object.values(posTotals)) : 0;
+      if (uniqueVoters < maxPositionVotes) {
+        uniqueVoters = maxPositionVotes;
+      }
+
       let totalEligibleVoters = 0;
       try {
         const rosterSnap = await db.collection('tenants').doc(resolvedTenantId).collection('elections').doc(electionId).collection('voter_roster').get();
@@ -1647,16 +1714,34 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
         }
       } catch (e) {}
 
+      // Fetch dynamic branding / settings for this organization
+      let tenantDoc = await db.collection('tenants').doc(resolvedTenantId).get();
+      let tenantData = tenantDoc.exists ? tenantDoc.data() : null;
+      if (!tenantDoc.exists) {
+        tenantDoc = await db.collection('organizations').doc(resolvedTenantId).get();
+        tenantData = tenantDoc.exists ? tenantDoc.data() : null;
+      }
+
       return {
         election,
         candidates,
         totalVotes,
         uniqueVoters,
-        totalEligibleVoters
+        totalEligibleVoters,
+        tenantData
       };
     }, 30000);
 
-    const { election, candidates, totalVotes, uniqueVoters, totalEligibleVoters } = reportData;
+    const { election, candidates, totalVotes, uniqueVoters, totalEligibleVoters, tenantData } = reportData;
+
+    // Resolve customized tenant fields with standard fallbacks
+    const orgName = (tenantData && tenantData.orgName) || 'Ho Technical University';
+    const ecName = (tenantData && tenantData.ecName) || 'Electoral Commissioner';
+    const ecTitle = (tenantData && tenantData.ecTitle) || 'Office of the Electoral Commission';
+    const address = (tenantData && tenantData.address) || 'P.O. Box HP 35, Ho, Volta Region, Ghana';
+    const supportPhone = (tenantData && tenantData.supportPhone) || '+233 (0)24 777 2381';
+    const supportEmail = (tenantData && tenantData.supportEmail) || 'ec@htu.edu.gh';
+    const website = 'www.htu.edu.gh';
 
     // Pre-fetch candidate images to memory buffers in parallel
     const getImageBuffer = async (url) => {
@@ -1706,30 +1791,31 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
       doc.image(logoPath, 50, 45, { width: 60 });
     }
 
-    // HTU Logo text next to logo - exactly matching image.png layout
-    doc.fillColor('#0F172A')
-       .fontSize(14)
-       .font('Helvetica-Bold')
-       .text('HO TECHNICAL', 125, 52);
-    doc.fillColor('#0F172A')
-       .fontSize(14)
-       .font('Helvetica-Bold')
-       .text('UNIVERSITY', 125, 68);
+    // HTU Logo text next to logo - dynamic organization name layout (wrapping handled nicely)
+    doc.fillColor('#0F172A');
+    if (orgName.length > 20) {
+      doc.fontSize(11)
+         .font('Helvetica-Bold')
+         .text(orgName.toUpperCase(), 125, 52, { width: 200, lineGap: 2 });
+    } else {
+      doc.fontSize(13)
+         .font('Helvetica-Bold')
+         .text(orgName.toUpperCase(), 125, 56, { width: 200, lineGap: 2 });
+    }
 
-    // Address block on the right - exactly matching image.png layout and EC customization
+    // Address block on the right - dynamic EC and organization details layout
     doc.fillColor('#0F172A')
        .fontSize(10)
        .font('Helvetica-Bold')
-       .text('Office of the Electoral Commission', 340, 45);
+       .text(ecTitle, 340, 45, { width: 205 });
 
     doc.fillColor('#334155')
        .fontSize(8)
        .font('Helvetica')
-       .text('P.O. Box HP 35', 340, 58)
-       .text('Ho - Ghana', 340, 69)
-       .text('Mobile: +233 (0)24 777 2381', 340, 80)
-       .text('E-mail: ec@htu.edu.gh', 340, 91)
-       .text('Website: www.htu.edu.gh', 340, 102);
+       .text(address, 340, 58, { width: 205 })
+       .text(`Mobile: ${supportPhone}`, 340, 80, { width: 205 })
+       .text(`E-mail: ${supportEmail}`, 340, 91, { width: 205 })
+       .text(`Website: ${website}`, 340, 102, { width: 205 });
 
     // Thick primary color line
     doc.moveTo(50, 114)
@@ -1757,8 +1843,11 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
        .font('Helvetica')
        .text('Dear Stakeholders,', 50, 190);
 
-    // Introduction
-    const introText = `Following the successful and transparent completion of the voting period, we write to officially declare the certified election results for ${election.title}. The election was conducted using secure electronic voting technologies, maintaining complete cryptographic audit log verification and turnout analysis.`;
+    // Introduction - Dynamic description included
+    let introText = `Following the successful and transparent completion of the voting period, we write to officially declare the certified election results for ${election.title}. The election was conducted using secure electronic voting technologies, maintaining complete cryptographic audit log verification and turnout analysis.`;
+    if (election.description) {
+      introText += `\n\nElection Details: ${election.description}`;
+    }
     doc.text(introText, 50, 205, { width: 495, align: 'justify', lineGap: 3 });
 
     // Summary statistics block
@@ -1973,12 +2062,12 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
     doc.fillColor('#1E293B')
        .fontSize(9.5)
        .font('Helvetica-Bold')
-       .text('Electoral Commissioner', 50, signY + 55);
+       .text(ecName, 50, signY + 55);
     doc.fillColor('#64748B')
        .fontSize(8.5)
        .font('Helvetica')
-       .text('Electoral Commission', 50, signY + 67)
-       .text('Ho Technical University', 50, signY + 77);
+       .text(ecTitle, 50, signY + 67)
+       .text(orgName, 50, signY + 77);
 
     const sealCenterX = 450;
     const sealCenterY = signY + 45;
@@ -2025,7 +2114,7 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
          .fontSize(8)
          .font('Helvetica')
          .text(`Page ${i + 1} of ${pages.count}`, 50, 796, { align: 'right', width: 495 });
-      doc.text('OFFICIAL CERTIFIED RESULTS SHEET • HO TECHNICAL UNIVERSITY', 50, 796, { align: 'left', width: 400 });
+      doc.text(`OFFICIAL CERTIFIED RESULTS SHEET • ${orgName.toUpperCase()}`, 50, 796, { align: 'left', width: 400 });
     }
     
     doc.end();
