@@ -15,7 +15,9 @@ import {
   Bell, 
   ChevronLeft,
   ChevronDown,
-  UserCheck
+  UserCheck,
+  Menu,
+  X
 } from 'lucide-react';
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -24,12 +26,50 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const router = useRouter();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  const [pushSupported, setPushSupported] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<'default' | 'granted' | 'denied'>('default');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPushSupported(true);
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) return;
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      if (permission === 'granted') {
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          registration.showNotification('HTU Elect ✓', {
+            body: 'Push notifications successfully enabled! Stay tuned for live updates.',
+            icon: '/assets/logo.png',
+            badge: '/assets/logo.png',
+            vibrate: [100, 50, 100],
+          } as any);
+        } else {
+          new Notification('HTU Elect ✓', {
+            body: 'Push notifications successfully enabled! Stay tuned for live updates.',
+            icon: '/assets/logo.png',
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to request notification permission', err);
+    }
+  };
 
   // Auth Guard
   useEffect(() => {
     if (!loading && (!user || user.role !== 'superadmin')) {
-      router.push('/login');
+      const t = setTimeout(() => router.push('/login'), 100);
+      return () => clearTimeout(t);
     }
   }, [user, loading, router]);
 
@@ -43,6 +83,11 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
@@ -66,79 +111,140 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
   const currentTitle = navLinks.find(link => pathname.startsWith(link.href))?.label || 'Super Admin Console';
 
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex p-3 md:p-5 gap-4 md:gap-5">
-      {/* Floating Justadmin Left Navigation Sidebar */}
-      <aside className="w-64 shrink-0 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between shadow-sm">
-        <div>
-          {/* Logo Brand Header */}
-          <div className="flex items-center gap-3 mb-8 px-2">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden shadow-md">
-              <img src="/assets/logo.png" alt="HTU Elect Logo" className="w-full h-full object-contain" />
-            </div>
-            <span className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Superadmin <span className="text-blue-600 dark:text-blue-500">✓</span>
-            </span>
+  const renderNavigationContent = () => (
+    <>
+      <div>
+        {/* Logo Brand Header */}
+        <div className="flex items-center gap-3 mb-8 px-2">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden shadow-md">
+            <img src="/assets/logo.png" alt="HTU Elect Logo" className="w-full h-full object-contain" />
           </div>
-
-          {/* Navigation Category 1: Root Menu */}
-          <div className="mb-6">
-            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 px-3">
-              Root Controls
-            </div>
-            <nav className="flex flex-col gap-1">
-              {navLinks.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/superadmin/dashboard');
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                      isActive 
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 font-bold'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <Icon size={18} className={isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+          <span className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Superadmin <span className="text-blue-600 dark:text-blue-500">✓</span>
+          </span>
         </div>
 
-        {/* Sign Out Button */}
-        <button
-          onClick={logout}
-          className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 mt-6 w-full transition-colors"
-        >
-          <LogOut size={18} />
-          <span>Log out</span>
-        </button>
+        {/* Navigation Category 1: Root Menu */}
+        <div className="mb-6">
+          <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 px-3">
+            Root Controls
+          </div>
+          <nav className="flex flex-col gap-1">
+            {navLinks.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/superadmin/dashboard');
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon size={18} className={isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Sign Out Button */}
+      <button
+        onClick={logout}
+        className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 mt-6 w-full transition-colors"
+      >
+        <LogOut size={18} />
+        <span>Log out</span>
+      </button>
+    </>
+  );
+
+  return (
+    <div className="h-screen max-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex p-3 md:p-5 gap-4 md:gap-5">
+      {/* Floating Justadmin Left Navigation Sidebar */}
+      <aside className="hidden lg:flex w-64 shrink-0 h-[calc(100vh-2.5rem)] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 flex-col justify-between shadow-sm">
+        {renderNavigationContent()}
       </aside>
 
+      {/* Mobile Drawer Navigation overlay */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex lg:hidden"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-72 h-full bg-white dark:bg-slate-900 p-5 flex flex-col justify-between shadow-2xl overflow-y-auto"
+          >
+            <div>
+              <div className="flex justify-end mb-2">
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                  <X size={22} />
+                </button>
+              </div>
+              {renderNavigationContent()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col gap-4 md:gap-5 min-w-0">
+      <div className="flex-1 flex flex-col gap-4 md:gap-5 min-w-0 w-full h-[calc(100vh-2.5rem)] overflow-hidden">
         {/* Top Navigation Bar */}
-        <header className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 px-6 py-3 flex justify-between items-center shadow-sm shrink-0">
+        <header className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-2 sm:py-3 flex justify-between items-center shadow-sm shrink-0 flex-wrap gap-2 sm:gap-3">
           {/* Left Title & Back Button */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              className="lg:hidden w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={20} />
+            </button>
+
             <button
               onClick={() => router.back()}
-              className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={18} />
             </button>
-            <span className="text-base font-bold text-slate-900 dark:text-white">
+            <span className="text-xs sm:text-sm md:text-base font-bold text-slate-900 dark:text-white truncate max-w-[120px] sm:max-w-[220px] md:max-w-none" title={currentTitle}>
               {currentTitle}
             </span>
           </div>
 
           {/* Right Action Icons & User Profile Badge */}
           <div className="flex items-center gap-4">
+            {/* PWA Notifications pill */}
+            {pushSupported && (
+              <button
+                onClick={requestNotificationPermission}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                  notificationPermission === 'granted'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30'
+                    : notificationPermission === 'denied'
+                    ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/30'
+                    : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/60'
+                }`}
+                title={
+                  notificationPermission === 'granted'
+                    ? 'Notifications active!'
+                    : notificationPermission === 'denied'
+                    ? 'Notifications blocked. Check browser settings.'
+                    : 'Click to enable live election alerts.'
+                }
+              >
+                <span className="text-sm">🔔</span>
+                <span className="hidden sm:inline">
+                  {notificationPermission === 'granted' ? 'Active' : notificationPermission === 'denied' ? 'Blocked' : 'Enable Alerts'}
+                </span>
+              </button>
+            )}
+
             {/* Theme Toggle Pill */}
             <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full p-1">
               <button
@@ -200,6 +306,16 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
+                        window.dispatchEvent(new CustomEvent('open-pwa-install'));
+                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full text-left"
+                    >
+                      <span className="text-blue-600 dark:text-blue-400 text-sm">📲</span> Install App Guide
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
                         toggleTheme();
                       }}
                       className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 w-full text-left transition-colors"
@@ -226,7 +342,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         </header>
 
         {/* Content Container Frame */}
-        <main className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 flex-1 shadow-sm overflow-y-auto">
+        <main className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 flex-1 shadow-sm overflow-y-auto min-h-0">
           {children}
         </main>
       </div>

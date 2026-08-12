@@ -17,10 +17,10 @@ function initFirestore() {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
 
-  const hasCert = clientEmail && privateKeyRaw && privateKeyRaw.includes('BEGIN PRIVATE KEY');
+  const hasCert = clientEmail && privateKeyRaw && privateKeyRaw.includes('BEGIN PRIVATE KEY') && process.env.FORCE_MOCK_FIRESTORE !== 'true';
 
   if (!hasCert) {
-    console.warn('⚠️ Firebase Admin service account cert not provided in environment. Falling back to in-memory MockFirestore.');
+    console.warn('⚠️ Firebase Admin service account cert not provided in environment or FORCE_MOCK_FIRESTORE is active. Falling back to in-memory MockFirestore.');
     return null;
   }
 

@@ -35,6 +35,42 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   const settingsRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
 
+  const [pushSupported, setPushSupported] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<'default' | 'granted' | 'denied'>('default');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPushSupported(true);
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) return;
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      if (permission === 'granted') {
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          registration.showNotification('HTU Elect ✓', {
+            body: 'Push notifications successfully enabled! Stay tuned for live updates.',
+            icon: '/assets/logo.png',
+            badge: '/assets/logo.png',
+            vibrate: [100, 50, 100],
+          } as any);
+        } else {
+          new Notification('HTU Elect ✓', {
+            body: 'Push notifications successfully enabled! Stay tuned for live updates.',
+            icon: '/assets/logo.png',
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to request notification permission', err);
+    }
+  };
+
   // Close sidebar on route change
   useEffect(() => {
     setSidebarOpen(false);
@@ -48,11 +84,14 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.push('/login');
+        const t = setTimeout(() => router.push('/login'), 100);
+        return () => clearTimeout(t);
       } else if (user.role === 'admin') {
-        router.push('/admin/dashboard');
+        const t = setTimeout(() => router.push('/admin/dashboard'), 100);
+        return () => clearTimeout(t);
       } else if (user.role === 'superadmin') {
-        router.push('/superadmin/dashboard');
+        const t = setTimeout(() => router.push('/superadmin/dashboard'), 100);
+        return () => clearTimeout(t);
       }
     }
   }, [user, loading, router]);
@@ -199,6 +238,32 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* PWA Notifications pill */}
+            {pushSupported && (
+              <button
+                onClick={requestNotificationPermission}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                  notificationPermission === 'granted'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30'
+                    : notificationPermission === 'denied'
+                    ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/30'
+                    : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/60'
+                }`}
+                title={
+                  notificationPermission === 'granted'
+                    ? 'Notifications active!'
+                    : notificationPermission === 'denied'
+                    ? 'Notifications blocked. Check browser settings.'
+                    : 'Click to enable live election alerts.'
+                }
+              >
+                <span className="text-sm">🔔</span>
+                <span className="hidden sm:inline">
+                  {notificationPermission === 'granted' ? 'Active' : notificationPermission === 'denied' ? 'Blocked' : 'Enable Alerts'}
+                </span>
+              </button>
+            )}
+
             <div className="relative" ref={settingsRef}>
               <button 
                 className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" 
@@ -221,6 +286,16 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => {
+                        setSettingsOpen(false);
+                        window.dispatchEvent(new CustomEvent('open-pwa-install'));
+                      }}
+                      className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 w-full text-left transition-colors"
+                    >
+                      <span className="text-blue-600 dark:text-blue-400 text-base">📲</span>
+                      <span>Install App Guide</span>
+                    </button>
                     <button 
                       onClick={() => {
                         setSettingsOpen(false);

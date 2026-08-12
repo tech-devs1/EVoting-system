@@ -282,6 +282,13 @@
       "adminPassword": "$2b$10$iQDbm048yWu1HcLR6rHnwOwomUm6L4WnbeTPsUbL2BlpnBiIbqfuC",
       "status": "active",
       "createdAt": 1786353748209
+    },
+    "compssa": {
+      "name": "COMPSSA",
+      "adminEmail": "admin@htu.edu.gh",
+      "adminPassword": "$2b$10$vibjEwABqrupa/3wxdJkjOWsnqUQPc/2.pSs8w0G8AbXr3DgVtvEO",
+      "createdAt": 1786535091267,
+      "id": "compssa"
     }
   },
   "organizations/dept_org_1786353371312/voter_rolls": {
@@ -1018,6 +1025,62 @@
       "timestamp": 1786353762141,
       "createdAt": "2026-08-10T09:22:42.141Z",
       "id": "sd3m456r0db"
+    },
+    "cilgqbtmmg4": {
+      "tenantId": "compssa",
+      "tenantName": "COMPSSA",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "COMPSSA Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::1",
+      "meta": {},
+      "timestamp": 1786537141824,
+      "createdAt": "2026-08-12T12:19:01.824Z",
+      "id": "cilgqbtmmg4"
+    },
+    "0ke99e83fr5": {
+      "tenantId": "compssa",
+      "tenantName": "COMPSSA",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "COMPSSA Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::1",
+      "meta": {},
+      "timestamp": 1786537189789,
+      "createdAt": "2026-08-12T12:19:49.789Z",
+      "id": "0ke99e83fr5"
+    },
+    "bwqz2zo4is6": {
+      "tenantId": "compssa",
+      "tenantName": "COMPSSA",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "COMPSSA Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::1",
+      "meta": {},
+      "timestamp": 1786537324193,
+      "createdAt": "2026-08-12T12:22:04.193Z",
+      "id": "bwqz2zo4is6"
+    },
+    "4j3orgkimvs": {
+      "tenantId": "compssa",
+      "tenantName": "COMPSSA",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "COMPSSA Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786537692072,
+      "createdAt": "2026-08-12T12:28:12.072Z",
+      "id": "4j3orgkimvs"
     }
   },
   "organizations/dept_org_1786353371312/elections": {
@@ -2017,6 +2080,943 @@
       "position": "General Secretary",
       "timestamp": 1786353761677,
       "id": "5pyvdoj791f"
+    }
+  },
+  "organizations/compssa/voter_rolls": {
+    "voter-001": {
+      "isRegistered": true,
+      "password": "$2b$10$T7V91G/1Mc/ozjNRSE2YVO4rXJR9VIPA9nbGYKt91FJKJHxP0jfua",
+      "name": "Playwright Voter 1",
+      "email": "voter1@htu.edu.gh",
+      "phone": "0240000001",
+      "studentId": "voter-001",
+      "role": "voter",
+      "createdAt": 1786535091374,
+      "id": "voter-001"
+    },
+    "voter-002": {
+      "isRegistered": true,
+      "password": "$2b$10$T7V91G/1Mc/ozjNRSE2YVO4rXJR9VIPA9nbGYKt91FJKJHxP0jfua",
+      "name": "Playwright Voter 2",
+      "email": "voter2@htu.edu.gh",
+      "phone": "0240000002",
+      "studentId": "voter-002",
+      "role": "voter",
+      "createdAt": 1786535091375,
+      "id": "voter-002"
+    },
+    "voter-003": {
+      "isRegistered": true,
+      "password": "$2b$10$T7V91G/1Mc/ozjNRSE2YVO4rXJR9VIPA9nbGYKt91FJKJHxP0jfua",
+      "name": "Playwright Voter 3",
+      "email": "voter3@htu.edu.gh",
+      "phone": "0240000003",
+      "studentId": "voter-003",
+      "role": "voter",
+      "createdAt": 1786535091376,
+      "id": "voter-003"
+    },
+    "voter-004": {
+      "isRegistered": true,
+      "password": "$2b$10$T7V91G/1Mc/ozjNRSE2YVO4rXJR9VIPA9nbGYKt91FJKJHxP0jfua",
+      "name": "Playwright Voter 4",
+      "email": "voter4@htu.edu.gh",
+      "phone": "0240000004",
+      "studentId": "voter-004",
+      "role": "voter",
+      "createdAt": 1786535091376,
+      "id": "voter-004"
+    },
+    "voter-005": {
+      "isRegistered": true,
+      "password": "$2b$10$T7V91G/1Mc/ozjNRSE2YVO4rXJR9VIPA9nbGYKt91FJKJHxP0jfua",
+      "name": "Playwright Voter 5",
+      "email": "voter5@htu.edu.gh",
+      "phone": "0240000005",
+      "studentId": "voter-005",
+      "role": "voter",
+      "createdAt": 1786535091377,
+      "id": "voter-005"
+    },
+    "voter-006": {
+      "isRegistered": true,
+      "password": "$2b$10$T7V91G/1Mc/ozjNRSE2YVO4rXJR9VIPA9nbGYKt91FJKJHxP0jfua",
+      "name": "Playwright Voter 6",
+      "email": "voter6@htu.edu.gh",
+      "phone": "0240000006",
+      "studentId": "voter-006",
+      "role": "voter",
+      "createdAt": 1786535091377,
+      "id": "voter-006"
+    },
+    "voter-007": {
+      "isRegistered": false,
+      "password": "",
+      "name": "Playwright Voter 7",
+      "email": "voter7@htu.edu.gh",
+      "phone": "0240000007",
+      "studentId": "voter-007",
+      "role": "voter",
+      "createdAt": 1786535091378,
+      "id": "voter-007"
+    },
+    "voter-008": {
+      "isRegistered": false,
+      "password": "",
+      "name": "Playwright Voter 8",
+      "email": "voter8@htu.edu.gh",
+      "phone": "0240000008",
+      "studentId": "voter-008",
+      "role": "voter",
+      "createdAt": 1786535091378,
+      "id": "voter-008"
+    },
+    "voter-009": {
+      "isRegistered": false,
+      "password": "",
+      "name": "Playwright Voter 9",
+      "email": "voter9@htu.edu.gh",
+      "phone": "0240000009",
+      "studentId": "voter-009",
+      "role": "voter",
+      "createdAt": 1786535091379,
+      "id": "voter-009"
+    },
+    "voter-0010": {
+      "isRegistered": false,
+      "password": "",
+      "name": "Playwright Voter 10",
+      "email": "voter10@htu.edu.gh",
+      "phone": "02400000010",
+      "studentId": "voter-0010",
+      "role": "voter",
+      "createdAt": 1786535091379,
+      "id": "voter-0010"
+    }
+  },
+  "organizations/compssa/voted_voters": {
+    "voter-001_playwright_election_2026": {
+      "voterId": "voter-001",
+      "electionId": "playwright_election_2026",
+      "timestamp": 1786535091450,
+      "auditTxId": "audit-tx-001",
+      "id": "voter-001_playwright_election_2026"
+    },
+    "voter-002_playwright_election_2026": {
+      "voterId": "voter-002",
+      "electionId": "playwright_election_2026",
+      "timestamp": 1786535091451,
+      "auditTxId": "audit-tx-002",
+      "id": "voter-002_playwright_election_2026"
+    },
+    "voter-003_playwright_election_2026": {
+      "voterId": "voter-003",
+      "electionId": "playwright_election_2026",
+      "timestamp": 1786535091452,
+      "auditTxId": "audit-tx-003",
+      "id": "voter-003_playwright_election_2026"
+    },
+    "voter-004_playwright_election_2026": {
+      "voterId": "voter-004",
+      "electionId": "playwright_election_2026",
+      "timestamp": 1786535091454,
+      "auditTxId": "audit-tx-004",
+      "id": "voter-004_playwright_election_2026"
+    }
+  },
+  "organizations/compssa/votes": {
+    "2a1ds1f17xq": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-0",
+      "timestamp": 1786535091382,
+      "id": "2a1ds1f17xq"
+    },
+    "71zbqg4mk6w": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-1",
+      "timestamp": 1786535091382,
+      "id": "71zbqg4mk6w"
+    },
+    "ab6nusukcw": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-2",
+      "timestamp": 1786535091383,
+      "id": "ab6nusukcw"
+    },
+    "1nrk8yx9158": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-3",
+      "timestamp": 1786535091384,
+      "id": "1nrk8yx9158"
+    },
+    "h05wnvnkp0v": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-4",
+      "timestamp": 1786535091384,
+      "id": "h05wnvnkp0v"
+    },
+    "bpa7fdjwa1d": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-5",
+      "timestamp": 1786535091385,
+      "id": "bpa7fdjwa1d"
+    },
+    "wtjmumdoc1i": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-6",
+      "timestamp": 1786535091386,
+      "id": "wtjmumdoc1i"
+    },
+    "u670luo50ss": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-7",
+      "timestamp": 1786535091386,
+      "id": "u670luo50ss"
+    },
+    "dfgbybmddkn": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-8",
+      "timestamp": 1786535091387,
+      "id": "dfgbybmddkn"
+    },
+    "vmalk50d08": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-9",
+      "timestamp": 1786535091388,
+      "id": "vmalk50d08"
+    },
+    "zzkmfbxcfp8": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-10",
+      "timestamp": 1786535091388,
+      "id": "zzkmfbxcfp8"
+    },
+    "oysdiqwcw2": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-11",
+      "timestamp": 1786535091389,
+      "id": "oysdiqwcw2"
+    },
+    "lw6vad5w2is": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-12",
+      "timestamp": 1786535091390,
+      "id": "lw6vad5w2is"
+    },
+    "v9nmztrjmcl": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-13",
+      "timestamp": 1786535091390,
+      "id": "v9nmztrjmcl"
+    },
+    "y8txlv2xz7": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-14",
+      "timestamp": 1786535091392,
+      "id": "y8txlv2xz7"
+    },
+    "6r7h4ke9aws": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-15",
+      "timestamp": 1786535091392,
+      "id": "6r7h4ke9aws"
+    },
+    "u015qc4wb5": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-16",
+      "timestamp": 1786535091393,
+      "id": "u015qc4wb5"
+    },
+    "0ujbtb9fc6l": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-17",
+      "timestamp": 1786535091394,
+      "id": "0ujbtb9fc6l"
+    },
+    "a8480c1wfh9": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-18",
+      "timestamp": 1786535091395,
+      "id": "a8480c1wfh9"
+    },
+    "qedm6pechn": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-19",
+      "timestamp": 1786535091396,
+      "id": "qedm6pechn"
+    },
+    "dlu14bjzqhl": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-20",
+      "timestamp": 1786535091396,
+      "id": "dlu14bjzqhl"
+    },
+    "cmjrxgz9r5l": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-21",
+      "timestamp": 1786535091397,
+      "id": "cmjrxgz9r5l"
+    },
+    "ujgdh9ennjn": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-22",
+      "timestamp": 1786535091398,
+      "id": "ujgdh9ennjn"
+    },
+    "kl2to462xnb": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-23",
+      "timestamp": 1786535091398,
+      "id": "kl2to462xnb"
+    },
+    "twdhw4uzuv": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-24",
+      "timestamp": 1786535091399,
+      "id": "twdhw4uzuv"
+    },
+    "zjyzx0jmwuh": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-25",
+      "timestamp": 1786535091400,
+      "id": "zjyzx0jmwuh"
+    },
+    "14vndntbbzt": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-26",
+      "timestamp": 1786535091400,
+      "id": "14vndntbbzt"
+    },
+    "oz4qqnt61i": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-27",
+      "timestamp": 1786535091401,
+      "id": "oz4qqnt61i"
+    },
+    "b1odw0jokw": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-28",
+      "timestamp": 1786535091402,
+      "id": "b1odw0jokw"
+    },
+    "cxqxbq9gw8a": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-29",
+      "timestamp": 1786535091403,
+      "id": "cxqxbq9gw8a"
+    },
+    "gxr76k28k1l": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-30",
+      "timestamp": 1786535091404,
+      "id": "gxr76k28k1l"
+    },
+    "8q2davdh4xh": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-31",
+      "timestamp": 1786535091405,
+      "id": "8q2davdh4xh"
+    },
+    "ydwxu2lgc8": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-32",
+      "timestamp": 1786535091405,
+      "id": "ydwxu2lgc8"
+    },
+    "13jb5gqmtqp": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-33",
+      "timestamp": 1786535091406,
+      "id": "13jb5gqmtqp"
+    },
+    "sujmipjne6": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-34",
+      "timestamp": 1786535091407,
+      "id": "sujmipjne6"
+    },
+    "2i9xxhzgeqe": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-35",
+      "timestamp": 1786535091408,
+      "id": "2i9xxhzgeqe"
+    },
+    "z4ju9c56uf": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-36",
+      "timestamp": 1786535091408,
+      "id": "z4ju9c56uf"
+    },
+    "v50xh693c3g": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-37",
+      "timestamp": 1786535091409,
+      "id": "v50xh693c3g"
+    },
+    "fsiporiyf9h": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-38",
+      "timestamp": 1786535091410,
+      "id": "fsiporiyf9h"
+    },
+    "c8xe40x6tdb": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-39",
+      "timestamp": 1786535091410,
+      "id": "c8xe40x6tdb"
+    },
+    "t29ojkssenm": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-40",
+      "timestamp": 1786535091411,
+      "id": "t29ojkssenm"
+    },
+    "y61i9r5zl7m": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_1",
+      "position": "President",
+      "voterId": "voter-cast-41",
+      "timestamp": 1786535091412,
+      "id": "y61i9r5zl7m"
+    },
+    "0nu9oyg4os4p": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-0",
+      "timestamp": 1786535091413,
+      "id": "0nu9oyg4os4p"
+    },
+    "u53iqrd9j3": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-1",
+      "timestamp": 1786535091415,
+      "id": "u53iqrd9j3"
+    },
+    "hx47x6l5xut": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-2",
+      "timestamp": 1786535091416,
+      "id": "hx47x6l5xut"
+    },
+    "1zxuaccc5ir": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-3",
+      "timestamp": 1786535091416,
+      "id": "1zxuaccc5ir"
+    },
+    "j5nzwehf9q": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-4",
+      "timestamp": 1786535091417,
+      "id": "j5nzwehf9q"
+    },
+    "go1nw4opftp": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-5",
+      "timestamp": 1786535091418,
+      "id": "go1nw4opftp"
+    },
+    "wjdo24njg4k": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-6",
+      "timestamp": 1786535091418,
+      "id": "wjdo24njg4k"
+    },
+    "sn8pgs2jloi": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-7",
+      "timestamp": 1786535091419,
+      "id": "sn8pgs2jloi"
+    },
+    "a5nrkosqc0c": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-8",
+      "timestamp": 1786535091420,
+      "id": "a5nrkosqc0c"
+    },
+    "d7emw04ldor": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-9",
+      "timestamp": 1786535091420,
+      "id": "d7emw04ldor"
+    },
+    "abfae717r06": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-10",
+      "timestamp": 1786535091421,
+      "id": "abfae717r06"
+    },
+    "40eup52rhh2": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-11",
+      "timestamp": 1786535091422,
+      "id": "40eup52rhh2"
+    },
+    "9j2y3yaglo": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-12",
+      "timestamp": 1786535091422,
+      "id": "9j2y3yaglo"
+    },
+    "bg46m2h9lpe": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-13",
+      "timestamp": 1786535091423,
+      "id": "bg46m2h9lpe"
+    },
+    "94a2x57cou": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-14",
+      "timestamp": 1786535091424,
+      "id": "94a2x57cou"
+    },
+    "1i1hexhq58n": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-15",
+      "timestamp": 1786535091425,
+      "id": "1i1hexhq58n"
+    },
+    "2s3y7bhdct5": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-16",
+      "timestamp": 1786535091426,
+      "id": "2s3y7bhdct5"
+    },
+    "cwrxfeqj2sf": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-17",
+      "timestamp": 1786535091426,
+      "id": "cwrxfeqj2sf"
+    },
+    "tfyjaj0gwd": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-18",
+      "timestamp": 1786535091427,
+      "id": "tfyjaj0gwd"
+    },
+    "0wn994ef1qhg": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-19",
+      "timestamp": 1786535091428,
+      "id": "0wn994ef1qhg"
+    },
+    "2lgjgy4x3ec": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-20",
+      "timestamp": 1786535091429,
+      "id": "2lgjgy4x3ec"
+    },
+    "b2r8cehff58": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-21",
+      "timestamp": 1786535091429,
+      "id": "b2r8cehff58"
+    },
+    "42wx00aadig": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-22",
+      "timestamp": 1786535091430,
+      "id": "42wx00aadig"
+    },
+    "8sjadhmt51b": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-23",
+      "timestamp": 1786535091431,
+      "id": "8sjadhmt51b"
+    },
+    "5jqpkls9sfg": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-24",
+      "timestamp": 1786535091432,
+      "id": "5jqpkls9sfg"
+    },
+    "phwb92cl5ti": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-25",
+      "timestamp": 1786535091432,
+      "id": "phwb92cl5ti"
+    },
+    "br22y3a7fzi": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-26",
+      "timestamp": 1786535091433,
+      "id": "br22y3a7fzi"
+    },
+    "xa55617nec": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_2",
+      "position": "President",
+      "voterId": "voter-cast-27",
+      "timestamp": 1786535091434,
+      "id": "xa55617nec"
+    },
+    "khjvjc8sne": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-0",
+      "timestamp": 1786535091436,
+      "id": "khjvjc8sne"
+    },
+    "jogdd0aflz": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-1",
+      "timestamp": 1786535091436,
+      "id": "jogdd0aflz"
+    },
+    "qhml9vdwat": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-2",
+      "timestamp": 1786535091437,
+      "id": "qhml9vdwat"
+    },
+    "u5hrvfwu4z": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-3",
+      "timestamp": 1786535091438,
+      "id": "u5hrvfwu4z"
+    },
+    "6orb6exxvqn": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-4",
+      "timestamp": 1786535091441,
+      "id": "6orb6exxvqn"
+    },
+    "ay4vgjrwszr": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-5",
+      "timestamp": 1786535091442,
+      "id": "ay4vgjrwszr"
+    },
+    "6momya3g1zw": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-6",
+      "timestamp": 1786535091442,
+      "id": "6momya3g1zw"
+    },
+    "z0820wqe6lh": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-7",
+      "timestamp": 1786535091444,
+      "id": "z0820wqe6lh"
+    },
+    "b61klivd4rr": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-8",
+      "timestamp": 1786535091444,
+      "id": "b61klivd4rr"
+    },
+    "mvpmnqxoq8p": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-9",
+      "timestamp": 1786535091445,
+      "id": "mvpmnqxoq8p"
+    },
+    "yfrx19197k": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-10",
+      "timestamp": 1786535091446,
+      "id": "yfrx19197k"
+    },
+    "wiz0s68uhe": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-11",
+      "timestamp": 1786535091447,
+      "id": "wiz0s68uhe"
+    },
+    "4fapgjnyyi6": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-12",
+      "timestamp": 1786535091447,
+      "id": "4fapgjnyyi6"
+    },
+    "fmnokk1bvkt": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-13",
+      "timestamp": 1786535091448,
+      "id": "fmnokk1bvkt"
+    },
+    "xa4yh30haw": {
+      "electionId": "playwright_election_2026",
+      "candidateId": "cand_3",
+      "position": "General Secretary",
+      "voterId": "voter-cast-14",
+      "timestamp": 1786535091449,
+      "id": "xa4yh30haw"
+    }
+  },
+  "organizations/compssa/elections": {
+    "playwright_election_2026": {
+      "title": "HTU COMPSSA Executive Council Elections 2026",
+      "description": "Dynamic voting for the 2026/2027 executive body.",
+      "startDate": "2026-08-12T11:44:51.380Z",
+      "endDate": "2026-08-12T12:44:51.380Z",
+      "status": "active",
+      "category": "Executive",
+      "type": "src",
+      "showResults": true,
+      "createdAt": 1786535091380,
+      "id": "playwright_election_2026"
+    }
+  },
+  "organizations/compssa/candidates": {
+    "cand_1": {
+      "electionId": "playwright_election_2026",
+      "name": "Alice Gifty",
+      "position": "President",
+      "manifesto": "Alice Gifty's Manifesto",
+      "votes": 42,
+      "noVotes": 0,
+      "isIndependent": false,
+      "ballotNumber": "1",
+      "photoUrl": "",
+      "createdAt": 1786535091381,
+      "id": "cand_1"
+    },
+    "cand_2": {
+      "electionId": "playwright_election_2026",
+      "name": "Emmanuel Kofi",
+      "position": "President",
+      "manifesto": "Emmanuel Kofi's Manifesto",
+      "votes": 28,
+      "noVotes": 0,
+      "isIndependent": false,
+      "ballotNumber": "2",
+      "photoUrl": "",
+      "createdAt": 1786535091413,
+      "id": "cand_2"
+    },
+    "cand_3": {
+      "electionId": "playwright_election_2026",
+      "name": "Sampson Kwame",
+      "position": "General Secretary",
+      "manifesto": "Sampson Kwame's Manifesto",
+      "votes": 15,
+      "noVotes": 0,
+      "isIndependent": false,
+      "ballotNumber": "1",
+      "photoUrl": "",
+      "createdAt": 1786535091435,
+      "id": "cand_3"
+    }
+  },
+  "organizations/compssa/activity_logs": {
+    "qkqnzd5xtp9": {
+      "tenantId": "compssa",
+      "tenantName": "COMPSSA",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "COMPSSA Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::1",
+      "meta": {},
+      "timestamp": 1786537141824,
+      "createdAt": "2026-08-12T12:19:01.824Z",
+      "id": "qkqnzd5xtp9"
+    },
+    "drbvqonq0wt": {
+      "tenantId": "compssa",
+      "tenantName": "COMPSSA",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "COMPSSA Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::1",
+      "meta": {},
+      "timestamp": 1786537189789,
+      "createdAt": "2026-08-12T12:19:49.789Z",
+      "id": "drbvqonq0wt"
+    },
+    "j2rwgecbdrr": {
+      "tenantId": "compssa",
+      "tenantName": "COMPSSA",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "COMPSSA Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::1",
+      "meta": {},
+      "timestamp": 1786537324193,
+      "createdAt": "2026-08-12T12:22:04.193Z",
+      "id": "j2rwgecbdrr"
+    },
+    "ph47utfvbts": {
+      "tenantId": "compssa",
+      "tenantName": "COMPSSA",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "COMPSSA Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786537692072,
+      "createdAt": "2026-08-12T12:28:12.072Z",
+      "id": "ph47utfvbts"
     }
   }
 }

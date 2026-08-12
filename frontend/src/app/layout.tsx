@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   title: "HTU Elect ✓ - Secure Digital Elections & Cryptographic Verification",
   description: "Secure, digital, and end-to-end verifiable e-voting for organizations. Audit-trail verified elections using SHA-256 with real-time AI security diagnostics.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/assets/logo.png",
+    shortcut: "/assets/logo.png",
+    apple: "/assets/logo.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

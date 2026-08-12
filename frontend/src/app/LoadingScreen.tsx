@@ -13,6 +13,16 @@ export default function LoadingScreen() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    const handleOpenInstall = () => {
+      setShowInstallModal(true);
+    };
+    window.addEventListener('open-pwa-install', handleOpenInstall);
+    return () => {
+      window.removeEventListener('open-pwa-install', handleOpenInstall);
+    };
+  }, []);
+
+  useEffect(() => {
     const ua = window.navigator.userAgent.toLowerCase();
     const ios = /iphone|ipad|ipod/.test(ua);
     const android = /android/.test(ua);
@@ -232,44 +242,8 @@ export default function LoadingScreen() {
     </AnimatePresence>
   );
 
-  const renderFloatingTrigger = () => {
-    if (isStandalone) return null;
-    return (
-      <>
-        {!showInstallModal && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onClick={() => setShowInstallModal(true)}
-            style={{
-              position: 'fixed',
-              bottom: '24px',
-              right: '24px',
-              padding: '12px 20px',
-              borderRadius: '30px',
-              background: 'linear-gradient(135deg, #6366f1, #2563eb)',
-              color: '#fff',
-              border: 'none',
-              fontWeight: 'bold',
-              fontSize: '13px',
-              boxShadow: '0 8px 24px rgba(99,102,241,0.4)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              zIndex: 9999
-            }}
-          >
-            <span>📲</span> Install App
-          </motion.button>
-        )}
-        {renderFloatingModal()}
-      </>
-    );
-  };
-
   if (phase === 'hidden') {
-    return renderFloatingTrigger();
+    return renderFloatingModal();
   }
 
   if (phase === 'woezor') {

@@ -8,7 +8,7 @@ let expressApp: any = null;
 function getExpressApp() {
   if (expressApp) return expressApp;
   try {
-    expressApp = require('../../../../../backend/server');
+    expressApp = eval('require')('../../../../../backend/server');
   } catch (err) {
     console.error('[API Proxy] Failed to load expressApp lazily:', err);
   }
@@ -21,7 +21,7 @@ function ensureBackendListening(): Promise<number> {
 
   serverPromise = new Promise((resolve, reject) => {
     try {
-      const http = require('http');
+      const http = eval('require')('http');
       const server = http.createServer(getExpressApp());
       server.listen(0, '127.0.0.1', () => {
         const address = server.address();
