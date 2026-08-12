@@ -520,10 +520,10 @@ export default function OrganizationElectionHub() {
       </div>
 
       {/* Analytics Visual Grid Row (Bar Chart + Doughnut Breakdown) */}
-      <div className="dashboard-analytics-grid" style={{ gap: '1.25rem' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* Voting Activity Bar Chart Card */}
-        <div style={{
+        <div className="lg:col-span-2" style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '20px',
           padding: '1.5rem',
@@ -576,7 +576,7 @@ export default function OrganizationElectionHub() {
         </div>
 
         {/* Voter Turnout Doughnut Breakdown Card */}
-        <div style={{
+        <div className="lg:col-span-1" style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '20px',
           padding: '1.5rem',
@@ -670,7 +670,7 @@ export default function OrganizationElectionHub() {
           Loading organization elections...
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '1.25rem' }}>
           
           {/* Create New Election Dashed Action Card */}
           <div 
