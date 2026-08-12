@@ -35,57 +35,30 @@ export default function SuperAdminDashboard() {
   }, []);
 
   return (
-    <div className="animate-page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+    <div className="animate-page-enter flex flex-col gap-6 md:gap-7">
       
       {/* Justadmin Hero Header Row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, color: '#0F172A', letterSpacing: '-0.025em' }}>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight m-0">
             Hi, Superadmin
           </h1>
-          <p style={{ fontSize: '0.95rem', color: '#64748B', margin: '0.25rem 0 0 0' }}>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 m-0">
             Welcome back to HTU Elect Root Console!
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div className="flex items-center gap-3">
           <button
             onClick={() => window.print()}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.25rem',
-              backgroundColor: '#FFFFFF',
-              color: '#475569',
-              border: '1px solid #E2E8F0',
-              borderRadius: '14px',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-            }}
+            className="px-5 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl text-sm font-semibold inline-flex items-center gap-2 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
           >
             <Upload size={16} /> Download Report
           </button>
 
           <Link
             href="/superadmin/departments"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.25rem',
-              backgroundColor: '#7C3AED',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '14px',
-              fontSize: '0.9rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              textDecoration: 'none',
-              boxShadow: '0 4px 14px rgba(124, 58, 237, 0.35)'
-            }}
+            className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold inline-flex items-center gap-2 shadow-md shadow-blue-500/20 active:scale-[0.99] transition-all cursor-pointer no-underline"
           >
             <Plus size={18} /> + Add Department
           </Link>
@@ -93,126 +66,54 @@ export default function SuperAdminDashboard() {
       </div>
 
       {error && (
-        <div style={{ padding: '1rem', backgroundColor: '#FEF2F2', color: '#DC2626', borderRadius: '12px', fontSize: '0.875rem', border: '1px solid #FECACA' }}>
+        <div className="p-4 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40 rounded-xl text-sm font-medium">
           {error}
         </div>
       )}
 
-      {/* 4 KPI Stat Cards Row (Card 1 is Primary Purple) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+      {/* 4 KPI Stat Cards Row (Card 1 is Primary Blue) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
-        {/* Card 1: Primary Purple */}
-        <div style={{
-          backgroundColor: '#7C3AED',
-          color: '#FFFFFF',
-          borderRadius: '20px',
-          padding: '1.5rem',
-          boxShadow: '0 8px 24px -4px rgba(124, 58, 237, 0.35)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start'
-        }}>
+        {/* Card 1: Primary Blue */}
+        <div className="bg-blue-600 text-white rounded-3xl p-6 shadow-lg shadow-blue-500/20 flex justify-between items-start">
           <div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, opacity: 0.9, display: 'block', marginBottom: '0.5rem' }}>Active Departments</span>
-            <span style={{ fontSize: '2.25rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.departments}</span>
+            <span className="text-xs font-semibold opacity-90 block mb-2">Active Departments</span>
+            <span className="text-4xl font-extrabold tracking-tight leading-none">{stats.departments}</span>
           </div>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF'
-          }}>
+          <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-white">
             <Building2 size={22} />
           </div>
         </div>
 
         {/* Card 2: Total Elections */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
-          padding: '1.5rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start'
-        }}>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex justify-between items-start">
           <div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem' }}>Total Elections</span>
-            <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.elections}</span>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">Total Elections</span>
+            <span className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{stats.elections}</span>
           </div>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            backgroundColor: '#EFF6FF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#2563EB'
-          }}>
+          <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
             <Activity size={22} />
           </div>
         </div>
 
         {/* Card 3: Registered Voters */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
-          padding: '1.5rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start'
-        }}>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex justify-between items-start">
           <div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem' }}>Registered Voters</span>
-            <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.voters.toLocaleString()}</span>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">Registered Voters</span>
+            <span className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{stats.voters.toLocaleString()}</span>
           </div>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            backgroundColor: '#ECFDF5',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#10B981'
-          }}>
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
             <Users size={22} />
           </div>
         </div>
 
         {/* Card 4: System Health */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
-          padding: '1.5rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start'
-        }}>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex justify-between items-start">
           <div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem' }}>System Health</span>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10B981', letterSpacing: '-0.02em', lineHeight: 1 }}>100% Operational</span>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">System Health</span>
+            <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight leading-none block mt-1">100% Operational</span>
           </div>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            backgroundColor: '#ECFDF5',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#10B981'
-          }}>
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
             <ShieldCheck size={22} />
           </div>
         </div>
@@ -220,30 +121,24 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Analytics Visual Grid Row (Bar Chart + Donut Breakdown) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* Voting Activity Bar Chart Card */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
-          padding: '1.5rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-5">
             <div>
-              <span style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 600 }}>Global System Activity</span>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Global System Activity</span>
+              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white m-0 mt-1">
                 {stats.voters.toLocaleString()} Platform Requests
               </h3>
             </div>
-            <div style={{ padding: '0.35rem 0.85rem', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
               <Calendar size={14} /> Aug 08 - Aug 14
             </div>
           </div>
 
           {/* Visual Bar Chart Height Indicators */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '140px', paddingTop: '1rem', borderBottom: '1px solid #F1F5F9' }}>
+          <div className="flex items-end justify-between h-36 pt-4 border-b border-slate-100 dark:border-slate-800">
             {[
               { day: 'Mon', height: '40%', active: false },
               { day: 'Tue', height: '65%', active: false },
@@ -252,49 +147,38 @@ export default function SuperAdminDashboard() {
               { day: 'Fri', height: '75%', active: false },
               { day: 'Sat', height: '80%', active: false }
             ].map((bar, idx) => (
-              <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-                <div style={{
-                  width: '36px',
-                  height: bar.height,
-                  backgroundColor: bar.active ? '#7C3AED' : '#E2E8F0',
-                  borderRadius: '10px',
-                  transition: 'height 0.3s ease',
-                  boxShadow: bar.active ? '0 4px 12px rgba(124, 58, 237, 0.3)' : 'none'
-                }} />
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94A3B8' }}>{bar.day}</span>
+              <div key={idx} className="flex flex-col items-center gap-2 flex-1">
+                <div
+                  className={`w-9 rounded-lg transition-all duration-300 ${
+                    bar.active ? 'bg-blue-600 shadow-md shadow-blue-500/20' : 'bg-slate-200 dark:bg-slate-800'
+                  }`}
+                  style={{ height: bar.height }}
+                />
+                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">{bar.day}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* System Uptime Donut Breakdown Card */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
-          padding: '1.5rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>System SLA</h4>
-            <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>Railway Cluster</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-center">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white m-0">System SLA</h4>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Railway Cluster</span>
           </div>
 
-          <div style={{ position: 'relative', width: '130px', height: '130px', margin: '1rem auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="130" height="130" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
-              <path stroke="#E2E8F0" strokeWidth="4" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              <path stroke="#7C3AED" strokeWidth="4.5" strokeDasharray="99, 100" strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          <div className="relative w-32 h-32 my-4 mx-auto flex items-center justify-center">
+            <svg width="130" height="130" viewBox="0 0 36 36" className="transform -rotate-90">
+              <path strokeWidth="4" className="stroke-slate-200 dark:stroke-slate-800 fill-none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path strokeWidth="4.5" strokeDasharray="99, 100" strokeLinecap="round" className="stroke-blue-600 fill-none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
             </svg>
-            <div style={{ position: 'absolute', textAlign: 'center' }}>
-              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', display: 'block', lineHeight: 1 }}>99.9%</span>
-              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>Uptime</span>
+            <div className="absolute text-center">
+              <span className="text-xl font-extrabold text-slate-900 dark:text-white block leading-none">99.9%</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1 block">Uptime</span>
             </div>
           </div>
 
-          <div style={{ fontSize: '0.8rem', color: '#64748B', textAlign: 'center', fontWeight: 500 }}>
+          <div className="text-xs text-slate-500 dark:text-slate-400 text-center font-medium">
             Zero downtime logged this month
           </div>
         </div>

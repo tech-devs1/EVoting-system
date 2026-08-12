@@ -141,8 +141,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div>
         {/* Brand Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-extrabold shadow-md shadow-blue-500/20">
-            <ShieldCheck size={22} />
+          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden shadow-md">
+            <img src="/assets/logo.png" alt="HTU Elect Logo" className="w-full h-full object-contain" />
           </div>
           <span className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
             HTU Elect <span className="text-blue-600 dark:text-blue-500">✓</span>
@@ -276,8 +276,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Brand Logo on Dashboard Page */}
             {isDashboardPage && (
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
-                  <ShieldCheck size={22} />
+                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                  <img src="/assets/logo.png" alt="HTU Elect Logo" className="w-full h-full object-contain" />
                 </div>
                 <span className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
                   HTU Elect <span className="text-blue-600 dark:text-blue-500">✓</span>

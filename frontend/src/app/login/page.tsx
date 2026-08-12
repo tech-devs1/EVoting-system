@@ -38,8 +38,8 @@ export default function LoginPage() {
 
         {/* Header Logo & Title */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mb-5 shadow-sm">
-            <ShieldCheck size={32} />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-900 mb-5 shadow-sm overflow-hidden">
+            <img src="/assets/logo.png" alt="HTU Elect Logo" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2">
             HTU Elect

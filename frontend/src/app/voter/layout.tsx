@@ -150,7 +150,9 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
       >
         <div className="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-800/60 shrink-0">
           <Link href="/voter/dashboard" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2.5 text-slate-900 dark:text-white font-extrabold text-lg tracking-tight">
-            <ShieldCheck size={24} className="text-blue-600 dark:text-blue-500" />
+            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+              <img src="/assets/logo.png" alt="HTU Elect Logo" className="w-full h-full object-contain" />
+            </div>
             <span>HTU Elect <span className="text-blue-600 dark:text-blue-500">✓</span></span>
           </Link>
         </div>
