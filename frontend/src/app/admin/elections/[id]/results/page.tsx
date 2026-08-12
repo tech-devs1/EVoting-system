@@ -129,7 +129,6 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
   const turnout = totalVoters > 0 ? Math.min(100, Math.round((totalVotesCast / totalVoters) * 100)) : 0;
 
   return (
-  return (
     <div className="flex flex-col gap-6">
       {/* Banner */}
       <div>

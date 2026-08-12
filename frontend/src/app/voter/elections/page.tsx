@@ -142,7 +142,6 @@ export default function VoterElectionsPage() {
   };
 
   return (
-  return (
     <div className="flex flex-col gap-6">
       {/* Top Filter and Search Bar */}
       <div className="flex justify-between items-center flex-wrap gap-4">
