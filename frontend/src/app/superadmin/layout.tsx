@@ -58,8 +58,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
   if (loading || !user) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#F4F6F9' }}>
-        <p style={{ color: '#64748B', fontWeight: 500 }}>Loading Superadmin Console...</p>
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 font-medium">
+        <p className="text-sm">Loading Superadmin Console...</p>
       </div>
     );
   }
@@ -67,56 +67,26 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const currentTitle = navLinks.find(link => pathname.startsWith(link.href))?.label || 'Super Admin Console';
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#F4F6F9',
-      color: '#0F172A',
-      fontFamily: 'var(--font-body, "Plus Jakarta Sans", system-ui, sans-serif)',
-      display: 'flex',
-      padding: '1.25rem',
-      gap: '1.25rem',
-      boxSizing: 'border-box'
-    }}>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex p-3 md:p-5 gap-4 md:gap-5">
       {/* Floating Justadmin Left Navigation Sidebar */}
-      <aside style={{
-        width: '260px',
-        flexShrink: 0,
-        backgroundColor: '#FFFFFF',
-        borderRadius: '24px',
-        border: '1px solid #E2E8F0',
-        padding: '1.5rem 1.25rem',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)'
-      }}>
+      <aside className="w-64 shrink-0 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between shadow-sm">
         <div>
           {/* Logo Brand Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem', paddingLeft: '0.5rem' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-              backgroundColor: '#7C3AED',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
-            }}>
+          <div className="flex items-center gap-3 mb-8 px-2">
+            <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20">
               <ShieldCheck size={24} />
             </div>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em' }}>
-              Superadmin <span style={{ color: '#7C3AED' }}>✓</span>
+            <span className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Superadmin <span className="text-purple-600 dark:text-purple-400">✓</span>
             </span>
           </div>
 
           {/* Navigation Category 1: Root Menu */}
-          <div style={{ marginBottom: '1.75rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
+          <div className="mb-6">
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 px-3">
               Root Controls
             </div>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <nav className="flex flex-col gap-1">
               {navLinks.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/superadmin/dashboard');
@@ -125,22 +95,13 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                   <Link
                     key={item.href}
                     href={item.href}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.85rem',
-                      padding: '0.85rem 1rem',
-                      borderRadius: '16px',
-                      fontSize: '0.9rem',
-                      fontWeight: isActive ? 700 : 500,
-                      textDecoration: 'none',
-                      backgroundColor: isActive ? '#7C3AED' : 'transparent',
-                      color: isActive ? '#FFFFFF' : '#64748B',
-                      boxShadow: isActive ? '0 4px 14px rgba(124, 58, 237, 0.35)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      isActive 
+                        ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20 font-bold' 
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+                    }`}
                   >
-                    <Icon size={19} style={{ color: isActive ? '#FFFFFF' : '#64748B' }} />
+                    <Icon size={18} className={isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'} />
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -152,233 +113,108 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         {/* Sign Out Button */}
         <button
           onClick={logout}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.85rem',
-            padding: '0.85rem 1rem',
-            borderRadius: '16px',
-            fontSize: '0.9rem',
-            fontWeight: 600,
-            color: '#DC2626',
-            backgroundColor: '#FEF2F2',
-            border: 'none',
-            cursor: 'pointer',
-            marginTop: '1.5rem',
-            width: '100%',
-            transition: 'all 0.2s ease'
-          }}
+          className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 mt-6 w-full transition-colors"
         >
-          <LogOut size={19} />
+          <LogOut size={18} />
           <span>Log out</span>
         </button>
       </aside>
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0 }}>
+      <div className="flex-1 flex flex-col gap-4 md:gap-5 min-w-0">
         {/* Top Navigation Bar */}
-        <header style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '24px',
-          border: '1px solid #E2E8F0',
-          padding: '0.85rem 1.5rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)'
-        }}>
+        <header className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 px-6 py-3 flex justify-between items-center shadow-sm shrink-0">
           {/* Left Title & Back Button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                backgroundColor: '#7C3AED',
-                color: '#FFFFFF',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}
+              className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors"
             >
               <ChevronLeft size={20} />
             </button>
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A' }}>
+            <span className="text-base font-bold text-slate-900 dark:text-white">
               {currentTitle}
             </span>
           </div>
 
-          {/* Right Action Icons & User Profile Badge with Interactive Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {/* Right Action Icons & User Profile Badge */}
+          <div className="flex items-center gap-4">
             {/* Theme Toggle Pill */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: '#F1F5F9',
-              borderRadius: '9999px',
-              padding: '0.25rem'
-            }}>
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full p-1">
               <button
                 onClick={toggleTheme}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  backgroundColor: theme === 'light' ? '#7C3AED' : 'transparent',
-                  color: theme === 'light' ? '#FFFFFF' : '#64748B',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                  theme === 'light' ? 'bg-purple-600 text-white' : 'text-slate-500 dark:text-slate-400'
+                }`}
               >
-                <Sun size={16} />
+                <Sun size={15} />
               </button>
               <button
                 onClick={toggleTheme}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  backgroundColor: theme === 'dark' ? '#7C3AED' : 'transparent',
-                  color: theme === 'dark' ? '#FFFFFF' : '#64748B',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                  theme === 'dark' ? 'bg-purple-600 text-white' : 'text-slate-500 dark:text-slate-400'
+                }`}
               >
-                <Moon size={16} />
+                <Moon size={15} />
               </button>
             </div>
 
             {/* Notification Bell */}
-            <button style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              backgroundColor: '#F8FAFC',
-              border: '1px solid #E2E8F0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#64748B',
-              cursor: 'pointer'
-            }}>
+            <button className="w-9 h-9 rounded-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
               <Bell size={18} />
             </button>
 
             {/* Divider */}
-            <div style={{ width: '1px', height: '24px', backgroundColor: '#E2E8F0' }} />
+            <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
 
             {/* User Profile Badge with Dropdown */}
-            <div style={{ position: 'relative' }} ref={profileRef}>
+            <div className="relative" ref={profileRef}>
               <div 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.75rem', 
-                  cursor: 'pointer',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '16px',
-                  backgroundColor: isProfileOpen ? '#F1F5F9' : 'transparent',
-                  transition: 'all 0.2s ease'
-                }}
+                className={`flex items-center gap-3 cursor-pointer p-1.5 rounded-2xl transition-colors ${
+                  isProfileOpen ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                }`}
               >
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: '#EDE9FE',
-                  color: '#7C3AED',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 800,
-                  fontSize: '0.95rem'
-                }}>
+                <div className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center font-extrabold text-xs">
                   SA
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>{user.name}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Superadmin</span>
+                <div className="flex flex-col text-left">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{user.name}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">Superadmin</span>
                 </div>
-                <ChevronDown size={16} style={{ color: '#94A3B8', transform: isProfileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
               </div>
 
               {/* Profile Dropdown Menu */}
               {isProfileOpen && (
-                <div style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 12px)',
-                  right: 0,
-                  width: '260px',
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '20px',
-                  border: '1px solid #E2E8F0',
-                  boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.15)',
-                  padding: '1.25rem',
-                  zIndex: 1000
-                }}>
-                  <div style={{ paddingBottom: '0.85rem', marginBottom: '0.85rem', borderBottom: '1px solid #F1F5F9' }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0F172A' }}>{user.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B', wordBreak: 'break-all' }}>{user.email}</div>
-                    <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', backgroundColor: '#EDE9FE', color: '#7C3AED', textTransform: 'uppercase' }}>
+                <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-4 z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="font-bold text-sm text-slate-900 dark:text-white">{user.name}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</div>
+                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 uppercase">
                       <UserCheck size={12} /> Root Superadmin
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <div className="flex flex-col gap-1">
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
                         toggleTheme();
                       }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.65rem',
-                        padding: '0.65rem 0.85rem',
-                        borderRadius: '12px',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: '#475569',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 w-full text-left transition-colors"
                     >
                       {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />} Switch Theme
                     </button>
 
-                    <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
+                    <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
 
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
                         logout();
                       }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.65rem',
-                        padding: '0.65rem 0.85rem',
-                        borderRadius: '12px',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: '#DC2626',
-                        backgroundColor: '#FEF2F2',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 w-full text-left transition-colors"
                     >
                       <LogOut size={16} /> Log Out
                     </button>
@@ -390,15 +226,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         </header>
 
         {/* Content Container Frame */}
-        <main style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '24px',
-          border: '1px solid #E2E8F0',
-          padding: '2rem',
-          flex: 1,
-          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)',
-          overflowY: 'auto'
-        }}>
+        <main className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 flex-1 shadow-sm overflow-y-auto">
           {children}
         </main>
       </div>

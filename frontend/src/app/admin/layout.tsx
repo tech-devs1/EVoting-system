@@ -139,23 +139,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const renderNavigationContent = () => (
     <>
       <div>
-        {/* Logo Brand Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem', paddingLeft: '0.5rem' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '12px',
-            backgroundColor: '#2563EB',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF',
-            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-          }}>
-            <img src='/assets/logo.png' alt="Logo" />
+        {/* Brand Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-extrabold shadow-md shadow-blue-500/20">
+            <ShieldCheck size={22} />
           </div>
-          <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em' }}>
-            HTU Elect <span style={{ color: '#2563EB' }}>✓</span>
+          <span className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+            HTU Elect <span className="text-blue-600 dark:text-blue-500">✓</span>
           </span>
         </div>
 
@@ -169,32 +159,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               } catch (e) {}
               setElectionId(null);
             }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              color: '#2563EB',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              textDecoration: 'none',
-              padding: '0.6rem 0.85rem',
-              borderRadius: '12px',
-              backgroundColor: '#EFF6FF',
-              marginBottom: '1.25rem',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}
+            className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs font-bold px-3.5 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 mb-5 w-full transition-colors"
           >
             <ArrowLeft size={16} /> Back to All Elections
           </Link>
         )}
 
         {/* Navigation Category: Menu */}
-        <div style={{ marginBottom: '1.75rem' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
+        <div className="mb-6">
+          <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 px-3">
             {isElectionWorkspace ? 'Election Workspace' : 'Menu'}
           </div>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <nav className="flex flex-col gap-1">
             {activeNavLinks.map((item) => {
               const Icon = item.icon;
               const cleanHref = item.href.split('?')[0];
@@ -204,22 +180,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link
                   key={item.href}
                   href={item.href}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.85rem',
-                    padding: '0.85rem 1rem',
-                    borderRadius: '16px',
-                    fontSize: '0.9rem',
-                    fontWeight: isActive ? 700 : 500,
-                    textDecoration: 'none',
-                    backgroundColor: isActive ? '#2563EB' : 'transparent',
-                    color: isActive ? '#FFFFFF' : '#64748B',
-                    boxShadow: isActive ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive 
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 font-bold' 
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+                  }`}
                 >
-                  <Icon size={19} style={{ color: isActive ? '#FFFFFF' : '#64748B' }} />
+                  <Icon size={18} className={isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'} />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -229,28 +196,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Navigation Category 2: Miscellaneous */}
         <div>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.75rem' }}>
+          <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 px-3">
             Miscellaneous
           </div>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <nav className="flex flex-col gap-1">
             <Link
               href={electionId ? `/admin/settings?electionId=${electionId}` : '/admin/settings'}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.85rem',
-                padding: '0.85rem 1rem',
-                borderRadius: '16px',
-                fontSize: '0.9rem',
-                fontWeight: pathname === '/admin/settings' ? 700 : 500,
-                textDecoration: 'none',
-                backgroundColor: pathname === '/admin/settings' ? '#2563EB' : 'transparent',
-                color: pathname === '/admin/settings' ? '#FFFFFF' : '#64748B',
-                boxShadow: pathname === '/admin/settings' ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
-                transition: 'all 0.2s ease'
-              }}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                pathname === '/admin/settings' 
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 font-bold' 
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+              }`}
             >
-              <Settings size={19} style={{ color: pathname === '/admin/settings' ? '#FFFFFF' : '#64748B' }} />
+              <Settings size={18} className={pathname === '/admin/settings' ? 'text-white' : 'text-slate-500 dark:text-slate-400'} />
               <span>Settings</span>
             </Link>
           </nav>
@@ -260,95 +218,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sign Out Button */}
       <button
         onClick={logout}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.85rem',
-          padding: '0.85rem 1rem',
-          borderRadius: '16px',
-          fontSize: '0.9rem',
-          fontWeight: 600,
-          color: '#DC2626',
-          backgroundColor: '#FEF2F2',
-          border: 'none',
-          cursor: 'pointer',
-          marginTop: '1.5rem',
-          width: '100%',
-          transition: 'all 0.2s ease'
-        }}
+        className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 mt-6 w-full transition-colors"
       >
-        <LogOut size={19} />
+        <LogOut size={18} />
         <span>Log out</span>
       </button>
     </>
   );
 
   return (
-    <div style={{
-      height: '100vh',
-      maxHeight: '100vh',
-      overflow: 'hidden',
-      backgroundColor: '#F4F6F9',
-      color: '#0F172A',
-      fontFamily: 'var(--font-body, "Plus Jakarta Sans", system-ui, sans-serif)',
-      display: 'flex',
-      padding: '1.25rem',
-      gap: '1.25rem',
-      boxSizing: 'border-box'
-    }} className="admin-layout-container">
+    <div className="h-screen max-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex p-3 md:p-5 gap-4 md:gap-5">
       
       {/* Sidebar rendered ONLY on non-dashboard pages */}
       {!isDashboardPage && (
-        <aside className="admin-desktop-sidebar" style={{
-          width: '260px',
-          flexShrink: 0,
-          height: 'calc(100vh - 2.5rem)',
-          overflowY: 'auto',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '24px',
-          border: '1px solid #E2E8F0',
-          padding: '1.5rem 1.25rem',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)',
-          boxSizing: 'border-box'
-        }}>
+        <aside className="hidden lg:flex w-64 shrink-0 h-[calc(100vh-2.5rem)] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 flex-col justify-between shadow-sm">
           {renderNavigationContent()}
         </aside>
       )}
 
-      {/* Mobile Drawer Navigation overlay (when toggled via hamburger menu) */}
+      {/* Mobile Drawer Navigation overlay */}
       {isMobileMenuOpen && (
         <div 
           onClick={() => setIsMobileMenuOpen(false)} 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.6)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 9999,
-            display: 'flex'
-          }}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex lg:hidden"
         >
           <div 
             onClick={(e) => e.stopPropagation()} 
-            style={{
-              width: '280px',
-              height: '100%',
-              backgroundColor: '#FFFFFF',
-              padding: '1.5rem 1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              overflowY: 'auto'
-            }}
+            className="w-72 h-full bg-white dark:bg-slate-900 p-5 flex flex-col justify-between shadow-2xl overflow-y-auto"
           >
             <div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-                <button onClick={() => setIsMobileMenuOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
-                  <X size={24} />
+              <div className="flex justify-end mb-2">
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                  <X size={22} />
                 </button>
               </div>
               {renderNavigationContent()}
@@ -358,38 +259,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Main Content Area */}
-      <div className="admin-main-container-col" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0, width: '100%', height: 'calc(100vh - 2.5rem)', overflow: 'hidden' }}>
+      <div className="flex-1 flex flex-col gap-4 md:gap-5 min-w-0 w-full h-[calc(100vh-2.5rem)] overflow-hidden">
         {/* Top Navigation Bar */}
-        <header style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '24px',
-          border: '1px solid #E2E8F0',
-          padding: '0.85rem 1.5rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)',
-          flexWrap: 'wrap',
-          gap: '0.75rem'
-        }}>
+        <header className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 px-6 py-3 flex justify-between items-center shadow-sm flex-wrap gap-3 shrink-0">
           {/* Left Title & Mobile Hamburger Button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="flex items-center gap-3">
             {!isDashboardPage && (
               <button
-                className="admin-mobile-menu-btn"
+                className="lg:hidden w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors"
                 onClick={() => setIsMobileMenuOpen(true)}
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '12px',
-                  backgroundColor: '#F1F5F9',
-                  color: '#0F172A',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}
               >
                 <Menu size={20} />
               </button>
@@ -397,21 +275,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             {/* Brand Logo on Dashboard Page */}
             {isDashboardPage && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '12px',
-                  backgroundColor: '#2563EB',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF'
-                }}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
                   <ShieldCheck size={22} />
                 </div>
-                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A' }}>
-                  HTU Elect <span style={{ color: '#2563EB' }}>✓</span>
+                <span className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  HTU Elect <span className="text-blue-600 dark:text-blue-500">✓</span>
                 </span>
               </div>
             )}
@@ -420,170 +289,83 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <>
                 <button
                   onClick={() => router.back()}
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    backgroundColor: '#2563EB',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer'
-                  }}
+                  className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors"
                 >
                   <ChevronLeft size={20} />
                 </button>
-                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A' }}>
+                <span className="text-base font-bold text-slate-900 dark:text-white">
                   {currentTitle}
                 </span>
               </>
             )}
           </div>
 
-          {/* Right Action Icons & User Profile Badge with Interactive Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Right Action Icons & User Profile Badge */}
+          <div className="flex items-center gap-3">
             {/* Theme Toggle Pill */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: '#F1F5F9',
-              borderRadius: '9999px',
-              padding: '0.25rem'
-            }}>
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full p-1">
               <button
                 onClick={toggleTheme}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  backgroundColor: theme === 'light' ? '#2563EB' : 'transparent',
-                  color: theme === 'light' ? '#FFFFFF' : '#64748B',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                  theme === 'light' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400'
+                }`}
               >
-                <Sun size={16} />
+                <Sun size={15} />
               </button>
               <button
                 onClick={toggleTheme}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  backgroundColor: theme === 'dark' ? '#2563EB' : 'transparent',
-                  color: theme === 'dark' ? '#FFFFFF' : '#64748B',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                  theme === 'dark' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400'
+                }`}
               >
-                <Moon size={16} />
+                <Moon size={15} />
               </button>
             </div>
 
             {/* Notification Bell */}
-            <button style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              backgroundColor: '#F8FAFC',
-              border: '1px solid #E2E8F0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#64748B',
-              cursor: 'pointer'
-            }}>
+            <button className="w-9 h-9 rounded-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
               <Bell size={18} />
             </button>
 
             {/* Divider */}
-            <div style={{ width: '1px', height: '24px', backgroundColor: '#E2E8F0' }} />
+            <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
 
             {/* User Profile Badge with Interactive Dropdown */}
-            <div style={{ position: 'relative' }} ref={profileRef}>
+            <div className="relative" ref={profileRef}>
               <div 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.65rem', 
-                  cursor: 'pointer',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '16px',
-                  backgroundColor: isProfileOpen ? '#F1F5F9' : 'transparent',
-                  transition: 'all 0.2s ease'
-                }}
+                className={`flex items-center gap-2.5 cursor-pointer p-1.5 rounded-2xl transition-colors ${
+                  isProfileOpen ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                }`}
               >
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: '#DBEAFE',
-                  color: '#1D4ED8',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 800,
-                  fontSize: '0.95rem',
-                  flexShrink: 0
-                }}>
+                <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-extrabold text-xs shrink-0">
                   {adminName.substring(0, 2).toUpperCase()}
                 </div>
-                <div className="admin-profile-meta" style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>{adminName}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Admin</span>
+                <div className="hidden sm:flex flex-col text-left">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{adminName}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">Admin</span>
                 </div>
-                <ChevronDown size={16} style={{ color: '#94A3B8', transform: isProfileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
               </div>
 
               {/* Profile Dropdown Menu */}
               {isProfileOpen && (
-                <div style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 12px)',
-                  right: 0,
-                  width: '260px',
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '20px',
-                  border: '1px solid #E2E8F0',
-                  boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.15)',
-                  padding: '1.25rem',
-                  zIndex: 1000
-                }}>
+                <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-4 z-50 animate-in fade-in zoom-in-95 duration-100">
                   {/* Account Summary */}
-                  <div style={{ paddingBottom: '0.85rem', marginBottom: '0.85rem', borderBottom: '1px solid #F1F5F9' }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0F172A' }}>{user.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B', wordBreak: 'break-all' }}>{user.email}</div>
-                    <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', backgroundColor: '#EFF6FF', color: '#2563EB', textTransform: 'uppercase' }}>
+                  <div className="pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="font-bold text-sm text-slate-900 dark:text-white">{user.name}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</div>
+                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 uppercase">
                       <UserCheck size={12} /> {user.role || 'Administrator'}
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <div className="flex flex-col gap-1">
                     <Link
                       href="/admin/settings"
                       onClick={() => setIsProfileOpen(false)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.65rem',
-                        padding: '0.65rem 0.85rem',
-                        borderRadius: '12px',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: '#475569',
-                        textDecoration: 'none',
-                        transition: 'all 0.2s ease'
-                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                     >
                       <Settings size={16} /> Organization Settings
                     </Link>
@@ -593,45 +375,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         setIsProfileOpen(false);
                         toggleTheme();
                       }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.65rem',
-                        padding: '0.65rem 0.85rem',
-                        borderRadius: '12px',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: '#475569',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 w-full text-left transition-colors"
                     >
                       {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />} Switch Theme
                     </button>
 
-                    <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
+                    <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
 
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
                         logout();
                       }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.65rem',
-                        padding: '0.65rem 0.85rem',
-                        borderRadius: '12px',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: '#DC2626',
-                        backgroundColor: '#FEF2F2',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 w-full text-left transition-colors"
                     >
                       <LogOut size={16} /> Log Out
                     </button>
@@ -643,16 +399,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Content Container Frame */}
-        <main className="admin-main-content" style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '24px',
-          border: '1px solid #E2E8F0',
-          padding: '2rem',
-          flex: 1,
-          minHeight: 0,
-          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)',
-          overflowY: 'auto'
-        }}>
+        <main className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 flex-1 min-h-0 shadow-sm overflow-y-auto">
           {children}
         </main>
       </div>

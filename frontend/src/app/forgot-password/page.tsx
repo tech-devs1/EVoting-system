@@ -8,129 +8,43 @@ export default function ForgotPasswordPage() {
   const router = useRouter();
 
   return (
-    <div style={{
-      display: 'flex',
-      minHeight: '100vh',
-      width: '100vw',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'var(--bg-primary, #F8FAFC)',
-      fontFamily: 'var(--font-body, system-ui, sans-serif)',
-      padding: '1.5rem',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* Decorative gradient mesh background */}
-      <div style={{
-        position: 'absolute',
-        width: '600px',
-        height: '600px',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%)',
-        top: '-10%',
-        left: '-10%',
-        zIndex: 0,
-        pointerEvents: 'none'
-      }} />
-      <div style={{
-        position: 'absolute',
-        width: '500px',
-        height: '500px',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%)',
-        bottom: '-10%',
-        right: '-10%',
-        zIndex: 0,
-        pointerEvents: 'none'
-      }} />
+    <div className="min-h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-6 transition-colors duration-200 relative overflow-hidden">
+      {/* Decorative radial mesh background */}
+      <div className="absolute w-[600px] h-[600px] rounded-full bg-blue-500/5 blur-3xl -top-20 -left-20 pointer-events-none" />
+      <div className="absolute w-[500px] h-[500px] rounded-full bg-emerald-500/5 blur-3xl -bottom-20 -right-20 pointer-events-none" />
 
-      <div style={{
-        width: '100%',
-        maxWidth: '480px',
-        backgroundColor: 'var(--bg-secondary, #ffffff)',
-        borderRadius: 'var(--radius-xl, 12px)',
-        border: '1px solid var(--border-color, #E2E8F0)',
-        padding: '3rem 2.25rem',
-        boxShadow: 'var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.05))',
-        textAlign: 'center',
-        position: 'relative',
-        zIndex: 1
-      }}>
+      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-8 md:p-10 shadow-lg text-center relative z-10">
         
         {/* Header Icon */}
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '64px',
-          height: '64px',
-          borderRadius: '50%',
-          backgroundColor: 'var(--color-primary-50, #EFF6FF)',
-          color: 'var(--color-primary, #2563EB)',
-          marginBottom: '1.5rem'
-        }}>
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mb-6 shadow-sm">
           <ShieldCheck size={36} />
         </div>
 
         {/* Title */}
-        <h2 style={{
-          fontSize: '1.75rem',
-          fontWeight: 800,
-          color: 'var(--text-primary, #0F172A)',
-          margin: '0 0 0.75rem 0',
-          letterSpacing: '-0.025em'
-        }}>
+        <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">
           Password Recovery Deprecated
         </h2>
 
         {/* Message */}
-        <p style={{
-          fontSize: 'var(--text-sm, 0.875rem)',
-          color: 'var(--text-secondary, #475569)',
-          lineHeight: 1.6,
-          margin: '0 0 2rem 0'
-        }}>
-          Password recovery is no longer required. HTU Elect has transitioned exclusively to secure **Google Single Sign-On**.
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-8 max-w-sm mx-auto">
+          Password recovery is no longer required. HTU Elect has transitioned exclusively to secure <strong className="text-slate-900 dark:text-white">Google Single Sign-On</strong>.
           <br /><br />
           Since you log in directly using your Google account, you do not need to configure or recover passwords here.
         </p>
 
         {/* Action Button */}
         <button
+          type="button"
           onClick={() => router.push('/login')}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            padding: '0.9rem 1.25rem',
-            backgroundColor: 'var(--color-primary, #2563EB)',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: 'var(--radius-lg, 10px)',
-            fontSize: 'var(--text-sm, 0.875rem)',
-            fontWeight: 600,
-            cursor: 'pointer',
-            boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.15)',
-            transition: 'transform var(--transition-fast, 100ms)'
-          }}
+          className="w-full flex items-center justify-center gap-2 py-3.5 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs cursor-pointer transition-all duration-150 shadow-md shadow-blue-500/10 active:scale-[0.99]"
         >
           <span>Return to Sign In</span>
           <ArrowRight size={16} />
         </button>
 
         {/* Footer info decoration */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          marginTop: '1.75rem',
-          color: 'var(--text-muted, #64748B)',
-          fontSize: 'var(--text-xs, 0.75rem)'
-        }}>
-          <Sparkles size={12} style={{ color: 'var(--color-warning, #D97706)' }} />
+        <div className="flex items-center justify-center gap-1.5 mt-6 text-slate-400 dark:text-slate-500 text-[11px]">
+          <Sparkles size={12} className="text-amber-500" />
           <span>Login authorization managed by Google security.</span>
         </div>
 
