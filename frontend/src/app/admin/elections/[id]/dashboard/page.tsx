@@ -310,14 +310,14 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
   };
 
   if (loading) {
-    return <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading election workspace...</div>;
+    return <div className="p-12 text-center text-slate-500 dark:text-slate-400 font-medium text-xs">Loading election workspace...</div>;
   }
 
   if (!election) {
     return (
-      <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
-        <h3>Election Not Found</h3>
-        <Link href="/admin/dashboard" className="btn btn-primary" style={{ marginTop: '1rem' }}>
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-12 text-center">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Election Not Found</h3>
+        <Link href="/admin/dashboard" className="inline-block mt-4 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors">
           Back to Organization Hub
         </Link>
       </div>
@@ -335,69 +335,81 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
     : 0;
 
   return (
-    <div className="animate-page-enter">
+    <div className="flex flex-col gap-6">
       {/* Top Banner & Context */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <Link href="/admin/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', marginBottom: '0.75rem' }}>
-          <ArrowLeft size={16} /> Back to Organization Hub
+      <div>
+        <Link href="/admin/dashboard" className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
+          <ArrowLeft size={14} /> Back to Organization Hub
         </Link>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="flex justify-between items-start flex-wrap gap-4">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-              <span className="badge badge-info">{election.category || 'Executive'}</span>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            <div className="flex items-center gap-2.5 flex-wrap mb-2">
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30 uppercase tracking-wider">
+                {election.category || 'Executive'}
+              </span>
+              <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {election.title}
               </h2>
-              {election.status === 'active' && <span className="badge badge-success">🟢 LIVE NOW</span>}
-              {election.status === 'scheduled' && <span className="badge badge-info">⏰ SCHEDULED</span>}
-              {election.status === 'ended' && <span className="badge badge-secondary">🏁 CLOSED</span>}
-              {election.status === 'draft' && <span className="badge badge-warning">📝 DRAFT</span>}
+              {election.status === 'active' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">🟢 LIVE NOW</span>}
+              {election.status === 'scheduled' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-900/30">⏰ SCHEDULED</span>}
+              {election.status === 'ended' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">🏁 CLOSED</span>}
+              {election.status === 'draft' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">📝 DRAFT</span>}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-              <Calendar size={14} />
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+              <Calendar size={14} className="text-slate-400" />
               <span>
-                Window: <strong>{new Date(election.startDate).toLocaleString()}</strong> ➔ <strong>{new Date(election.endDate).toLocaleString()}</strong>
+                Window: <strong className="text-slate-700 dark:text-slate-300">{new Date(election.startDate).toLocaleString()}</strong> ➔ <strong className="text-slate-700 dark:text-slate-300">{new Date(election.endDate).toLocaleString()}</strong>
               </span>
             </div>
           </div>
 
           {/* Quick Action Toolbar */}
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button onClick={() => setIsEditModalOpen(true)} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700 }}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button 
+              onClick={() => setIsEditModalOpen(true)} 
+              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+            >
               <Edit size={14} /> Edit Election Details
             </button>
             {election.status !== 'active' && (
               <button
                 disabled={actionLoading || isElectionEnded}
                 onClick={() => handleStatusChange('active')}
-                className="btn btn-primary"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.85rem',
-                  opacity: isElectionEnded ? 0.5 : 1,
-                  cursor: isElectionEnded ? 'not-allowed' : 'pointer'
-                }}
+                className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed"
                 title={isElectionEnded ? "Election has ended. Extend the closing date to a future time in order to start it." : "Start Election"}
               >
                 <Play size={14} /> Start Election
               </button>
             )}
             {election.status === 'active' && (
-              <button disabled={actionLoading} onClick={() => handleStatusChange('ended')} className="btn btn-danger" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+              <button 
+                disabled={actionLoading} 
+                onClick={() => handleStatusChange('ended')} 
+                className="px-3.5 py-2 text-xs font-bold rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors flex items-center gap-1.5"
+              >
                 <Square size={14} /> End Election
               </button>
             )}
-            <button disabled={actionLoading} onClick={openInviteModal} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+            <button 
+              disabled={actionLoading} 
+              onClick={openInviteModal} 
+              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+            >
               <Mail size={14} /> Send Invitations
             </button>
-            <button disabled={actionLoading || pdfLoading} onClick={handleDownloadPDF} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+            <button 
+              disabled={actionLoading || pdfLoading} 
+              onClick={handleDownloadPDF} 
+              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+            >
               <Download size={14} /> Download Results PDF
             </button>
-            <button onClick={handleExportAudit} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+            <button 
+              onClick={handleExportAudit} 
+              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+            >
               <Download size={14} /> Audit Ledger CSV
             </button>
           </div>
@@ -405,30 +417,29 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
       </div>
 
       {message && (
-        <div style={{
-          padding: '0.85rem 1.25rem',
-          borderRadius: '10px',
-          marginBottom: '1.5rem',
-          fontSize: '0.875rem',
-          fontWeight: 600,
-          backgroundColor: message.type === 'success' ? '#f0fdf4' : '#fef2f2',
-          color: message.type === 'success' ? '#166534' : '#dc2626',
-          border: `1px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}`
-        }}>
+        <div className={`p-4 rounded-xl text-xs font-semibold ${
+          message.type === 'success' 
+            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30' 
+            : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30'
+        }`}>
           {message.text}
         </div>
       )}
 
       {/* Official Results Visibility & Public Access Card */}
-      <div className="card" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderLeft: `4px solid ${election.showResults ? '#166534' : '#F59E0B'}` }}>
+      <div className={`p-5 rounded-2xl bg-white dark:bg-slate-800/90 border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm border-l-4 ${
+        election.showResults ? 'border-l-emerald-500 border-slate-200 dark:border-slate-700' : 'border-l-amber-500 border-slate-200 dark:border-slate-700'
+      }`}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: election.showResults ? '#166534' : '#B45309', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-xs font-extrabold flex items-center gap-1.5 ${
+              election.showResults ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+            }`}>
               {election.showResults ? <Eye size={16} /> : <EyeOff size={16} />}
               {election.showResults ? 'Official Results PUBLISHED to Voters' : 'Official Results HIDDEN from Voters'}
             </span>
           </div>
-          <p style={{ fontSize: '0.85rem', color: '#64748B', margin: 0 }}>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             {election.showResults
               ? 'Roster voters can view live charts, percentages, winner declarations, and audit logs.'
               : 'Public charts are locked. Only EC administrators can view live tally statistics until published.'}
@@ -438,69 +449,80 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
         <button
           onClick={handleTogglePublishResults}
           disabled={actionLoading}
-          className={election.showResults ? "btn btn-outline" : "btn btn-primary"}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, backgroundColor: election.showResults ? 'transparent' : '#2563eb' }}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 transition-colors flex items-center gap-1.5 ${
+            election.showResults
+              ? 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20'
+          }`}
         >
           {election.showResults ? <EyeOff size={16} /> : <Eye size={16} />}
           {election.showResults ? 'Unpublish / Hide Results' : '📢 Publish Official Results to All Voters'}
         </button>
       </div>
 
-      {/* Election Workspace KPI Cards */}
-      <div className="admin-grid-top" style={{ marginBottom: '1.5rem' }}>
-        <div className="card kpi-card">
-          <div className="kpi-details">
-            <span className="kpi-label">Ballots Cast</span>
-            <span className="kpi-value">{election.totalVotesCast || 0}</span>
-            <div className="kpi-trend up"><span>{turnout}% Turnout</span></div>
+      {/* Election Workspace KPI Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Ballots Cast</span>
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{election.totalVotesCast || 0}</span>
+            <div className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1"><span>{turnout}% Turnout</span></div>
           </div>
-          <div className="kpi-icon-wrapper blue"><Vote size={20} /></div>
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl">
+            <Vote size={22} />
+          </div>
         </div>
 
-        <div className="card kpi-card">
-          <div className="kpi-details">
-            <span className="kpi-label">Eligible Voters</span>
-            <span className="kpi-value">{election.totalVoters || 0}</span>
-            <div className="kpi-trend"><span>Uploaded CSV roster</span></div>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Eligible Voters</span>
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{election.totalVoters || 0}</span>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1"><span>Uploaded CSV roster</span></div>
           </div>
-          <div className="kpi-icon-wrapper green"><Users size={20} /></div>
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
+            <Users size={22} />
+          </div>
         </div>
 
-        <div className="card kpi-card">
-          <div className="kpi-details">
-            <span className="kpi-label">Positions & Lineup</span>
-            <span className="kpi-value">{election.candidateCount || 0}</span>
-            <div className="kpi-trend"><span>Registered candidates</span></div>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Positions & Lineup</span>
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{election.candidateCount || 0}</span>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1"><span>Registered candidates</span></div>
           </div>
-          <div className="kpi-icon-wrapper purple"><Layers size={20} /></div>
+          <div className="p-3 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-xl">
+            <Layers size={22} />
+          </div>
         </div>
 
-        <div className="card kpi-card">
-          <div className="kpi-details">
-            <span className="kpi-label">Access Health</span>
-            <span className="kpi-value" style={{ color: 'var(--color-success)', fontSize: '1.2rem' }}>Nominal</span>
-            <div className="kpi-trend"><span>0 Security Anomalies</span></div>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Access Health</span>
+            <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">Nominal</span>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1"><span>0 Security Anomalies</span></div>
           </div>
-          <div className="kpi-icon-wrapper green"><ShieldCheck size={20} /></div>
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
+            <ShieldCheck size={22} />
+          </div>
         </div>
       </div>
 
       {/* Turnout Details Card */}
-      <div className="card" style={{ padding: '1.5rem' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1rem 0' }}>Live Election Status & Guidelines</h3>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 1.25rem 0' }}>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm">
+        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">Live Election Status & Guidelines</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-5">
           {election.description && !election.description.includes('Student Representative Council (SRC) election')
             ? election.description
             : `This is the ${election.title || 'election'} scheduled for ${election.startDate ? new Date(election.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'the active voting window'}. Eligible voters are invited to vote for their preferred candidates across all positions.`}
         </p>
 
-        <div style={{ backgroundColor: 'var(--bg-input)', padding: '1rem', borderRadius: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+        <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700/60 p-4 rounded-2xl">
+          <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
             <span>Live Turnout Progress</span>
             <span>{turnout}% ({election.totalVotesCast || 0} / {election.totalVoters || 0} voters)</span>
           </div>
-          <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-color)', borderRadius: '999px', overflow: 'hidden' }}>
-            <div style={{ width: `${turnout}%`, height: '100%', backgroundColor: 'var(--color-primary)', borderRadius: '999px' }} />
+          <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${turnout}%` }} />
           </div>
         </div>
       </div>

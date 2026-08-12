@@ -258,99 +258,72 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', fontFamily: 'var(--font-body, system-ui, sans-serif)', paddingBottom: '3rem' }}>
-
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-12">
       {/* Top Breadcrumb Navigation */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <Link href="/voter/elections" style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '4px',
-          color: 'var(--text-secondary, #475569)',
-          fontSize: '12px',
-          fontWeight: 600,
-          textDecoration: 'none',
-          marginBottom: '0.75rem'
-        }}>
+      <div>
+        <Link 
+          href="/voter/elections" 
+          className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-2"
+        >
           <ArrowLeft size={14} /> Back to Eligible Elections
         </Link>
       </div>
 
       {/* --- PHASE 1: ELECTION DETAILS & DESCRIPTIONS VIEW --- */}
       {!proceedToBallot ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="flex flex-col gap-6">
 
           {/* Election Card Header Image or Fallback */}
-          <div style={{
-            borderRadius: '16px',
-            border: '1px solid var(--border-color, #E2E8F0)',
-            overflow: 'hidden',
-            backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.02)'
-          }}>
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl overflow-hidden shadow-sm">
             {election.previewImageUrl ? (
               <img
                 src={election.previewImageUrl}
                 alt={election.title}
-                style={{ width: '100%', height: '240px', objectFit: 'cover' }}
+                className="w-full h-56 object-cover"
               />
             ) : (
-              <div style={{ width: '100%', height: '160px', backgroundColor: 'var(--bg-tertiary, #EFF6FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary, #2563EB)' }}>
+              <div className="w-full h-40 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <Sparkles size={48} />
               </div>
             )}
 
-            <div style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: 'var(--color-primary-50, #EFF6FF)', color: 'var(--color-primary, #2563EB)', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30">
                   {election.category || 'Executive'}
                 </span>
-                <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: election.status === 'active' ? 'var(--color-success-bg, #22c55e22)' : 'var(--bg-tertiary)', color: election.status === 'active' ? 'var(--color-success, #22c55e)' : 'var(--text-secondary)', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                  election.status === 'active' 
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30' 
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                }`}>
                   {election.status === 'active' ? '🟢 Active' : '🏁 Ended'}
                 </span>
               </div>
 
-              <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary, #0F172A)', margin: '0 0 0.75rem 0' }}>{election.title}</h2>
-              <p style={{ color: 'var(--text-secondary, #475569)', fontSize: '14px', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{election.description}</p>
+              <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2">{election.title}</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">{election.description}</p>
             </div>
           </div>
 
           {/* Guidelines and Timing Metadata Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '1rem'
-          }}>
-            <div style={{
-              backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-              border: '1px solid var(--border-color, #E2E8F0)',
-              borderRadius: '12px',
-              padding: '1.25rem',
-              display: 'flex',
-              gap: '12px'
-            }}>
-              <Calendar size={20} style={{ color: 'var(--color-primary, #2563EB)', flexShrink: 0 }} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex items-start gap-3 shadow-sm">
+              <Calendar size={20} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
               <div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 700 }}>Poll Schedule</h4>
-                <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-1">Poll Schedule</h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                   Opens: {new Date(election.startDate).toLocaleString()}<br />
                   Closes: {new Date(election.endDate).toLocaleString()}
                 </p>
               </div>
             </div>
 
-            <div style={{
-              backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-              border: '1px solid var(--border-color, #E2E8F0)',
-              borderRadius: '12px',
-              padding: '1.25rem',
-              display: 'flex',
-              gap: '12px'
-            }}>
-              <Info size={20} style={{ color: 'var(--color-primary, #2563EB)', flexShrink: 0 }} />
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex items-start gap-3 shadow-sm">
+              <Info size={20} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
               <div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 700 }}>Voting Guidelines</h4>
-                <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-1">Voting Guidelines</h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                   Ensure you are listed on the official roster. Have your 6-digit voting access code ready. Double voting attempts are cryptographically flagged.
                 </p>
               </div>
@@ -358,47 +331,42 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
           </div>
 
           {/* List of Registered Candidate Standings and Manifestos (View-Only Mode) */}
-          <div style={{
-            backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
-            borderRadius: '16px',
-            padding: '1.5rem'
-          }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Trophy size={18} style={{ color: 'var(--color-primary, #2563EB)' }} /> Official Candidate Lineup
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm">
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mb-5">
+              <Trophy size={18} className="text-blue-600 dark:text-blue-400" /> Official Candidate Lineup
             </h3>
 
             {positions.length === 0 ? (
-              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>No candidates are registered for this election yet.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">No candidates are registered for this election yet.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="flex flex-col gap-6">
                 {positions.map((pos, posIdx) => (
-                  <div key={pos} style={{ borderBottom: posIdx === positions.length - 1 ? 'none' : '1px solid var(--border-light, #F1F5F9)', paddingBottom: '1rem' }}>
-                    <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary, #2563EB)', textTransform: 'uppercase', marginBottom: '0.75rem', letterSpacing: '0.05em' }}>
+                  <div key={pos} className={`${posIdx === positions.length - 1 ? '' : 'border-b border-slate-100 dark:border-slate-700/60 pb-5'}`}>
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-3">
                       {pos}
                     </h4>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {positionGroups[pos].map((cand) => (
-                        <div key={cand.id} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'var(--bg-input, #F8FAFC)', border: '1px solid var(--border-subtle, #F1F5F9)' }}>
+                        <div key={cand.id} className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/80">
                           {cand.photoUrl ? (
-                            <img src={cand.photoUrl} alt={cand.name} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
+                            <img src={cand.photoUrl} alt={cand.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
                           ) : (
-                            <div style={{ width: '48px', height: '48px', borderRadius: '8px', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', flexShrink: 0 }}>
+                            <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 shrink-0">
                               <User size={20} />
                             </div>
                           )}
 
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
                               {cand.ballotNumber && (
-                                <span style={{ fontSize: '9px', fontWeight: 700, backgroundColor: 'var(--color-primary, #2563EB)', color: '#FFFFFF', padding: '1px 4px', borderRadius: '3px' }}>
+                                <span className="text-[9px] font-extrabold bg-blue-600 text-white px-1.5 py-0.5 rounded">
                                   #{cand.ballotNumber}
                                 </span>
                               )}
-                              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cand.name}</span>
+                              <span className="text-xs font-bold text-slate-900 dark:text-white truncate">{cand.name}</span>
                             </div>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
                               {cand.manifesto || 'No manifesto provided.'}
                             </p>
                           </div>
@@ -412,82 +380,45 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
           </div>
 
           {/* Action CTA Trigger */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.5rem', width: '100%' }}>
+          <div className="flex justify-center mt-2 w-full">
             {election.status === 'active' ? (
               hasVoted ? (
-                <div className="card animate-fade-in" style={{
-                  padding: '1.5rem',
-                  textAlign: 'center',
-                  border: '2px solid var(--color-success, #22c55e)',
-                  borderRadius: '12px',
-                  backgroundColor: 'var(--bg-secondary)',
-                  width: '100%',
-                  boxShadow: 'var(--shadow-glow-green)'
-                }}>
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                    color: 'var(--color-success, #22c55e)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 1rem auto'
-                  }}>
+                <div className="p-6 text-center border-2 border-emerald-500 rounded-3xl bg-white dark:bg-slate-800 w-full shadow-lg shadow-emerald-500/10">
+                  <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-3">
                     <Check size={24} />
                   </div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-success, #22c55e)', margin: '0 0 0.5rem 0' }}>Ballot Successfully Cast</h3>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem auto', lineHeight: 1.5 }}>
+                  <h3 className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mb-1">Ballot Successfully Cast</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-5 leading-relaxed">
                     You have successfully cast your ballot in this election. Your choices are securely saved and locked.
                   </p>
-                  <div style={{ backgroundColor: 'var(--bg-input, #F8FAFC)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color, #E2E8F0)', maxWidth: '480px', margin: '0 auto', textAlign: 'left' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                  <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto text-left">
+                    <div className="flex justify-between text-xs font-bold text-slate-900 dark:text-white mb-2">
                       <span>Live Turnout Progress</span>
                       <span>{turnout}% ({election.totalVotesCast || 0} / {election.totalVoters || 0} voters)</span>
                     </div>
-                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-color, #E2E8F0)', borderRadius: '999px', overflow: 'hidden' }}>
-                      <div style={{ width: `${turnout}%`, height: '100%', backgroundColor: 'var(--color-primary, #2563EB)', borderRadius: '999px' }} />
+                    <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${turnout}%` }} />
                     </div>
                   </div>
                 </div>
               ) : (
                 <button
                   onClick={() => setProceedToBallot(true)}
-                  style={{
-                    padding: '0.85rem 2rem',
-                    borderRadius: '12px',
-                    backgroundColor: 'var(--color-primary, #2563EB)',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    boxShadow: '0 6px 20px rgba(37, 99, 235, 0.25)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
+                  className="px-8 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm transition-colors shadow-lg shadow-blue-500/25 flex items-center gap-2"
                 >
                   <ShieldCheck size={18} /> Request to Cast Vote
                 </button>
               )
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', alignItems: 'center' }}>
-                <div style={{ padding: '0.85rem 2rem', borderRadius: '12px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', fontWeight: 700, fontSize: '14px', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+              <div className="flex flex-col gap-3 items-center">
+                <div className="px-8 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 font-bold text-xs border border-slate-200 dark:border-slate-700">
                   Polls Closed
                 </div>
                 {election.showResults && (
-                  <Link href={`/voter/elections/${election.id}/results`} className="btn btn-primary" style={{
-                    padding: '0.85rem 2rem',
-                    borderRadius: '12px',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    textDecoration: 'none'
-                  }}>
+                  <Link 
+                    href={`/voter/elections/${election.id}/results`} 
+                    className="px-8 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-2"
+                  >
                     View Results
                   </Link>
                 )}
@@ -498,71 +429,29 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
         </div>
       ) : (
         /* --- PHASE 2: SECURE OTP VERIFICATION & BALLOT INTERACTIVE VIEW --- */
-        <div>
+        <div className="flex flex-col gap-6">
           <button
             onClick={() => setProceedToBallot(false)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: 'var(--color-primary, #2563EB)',
-              backgroundColor: 'transparent',
-              border: 'none',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              marginBottom: '1rem'
-            }}
+            className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline self-start"
           >
             <ArrowLeft size={14} /> Back to Election Details
           </button>
 
           {isLocked ? (
-            <div style={{
-              backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-              border: '1px solid var(--border-color, #E2E8F0)',
-              borderRadius: 'var(--radius-xl, 12px)',
-              padding: '2.5rem 1.5rem',
-              textAlign: 'center'
-            }}>
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-8 md:p-12 text-center max-w-md mx-auto shadow-sm w-full">
               {notOnRoster ? (
                 <>
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    color: 'var(--color-danger, #EF4444)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 1.25rem auto'
-                  }}>
+                  <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-4">
                     <AlertCircle size={22} />
                   </div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem 0' }}>Access Restricted</h3>
-                  <p style={{
-                    fontSize: '13px',
-                    color: 'var(--text-secondary, #475569)',
-                    maxWidth: '440px',
-                    margin: '0 auto 1.5rem auto',
-                    lineHeight: 1.5
-                  }}>
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">Access Restricted</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
                     {otpError || 'Your account is not listed on the official voter roster for this election.'}
                   </p>
-                  <button onClick={() => setProceedToBallot(false)} style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0.65rem 1.25rem',
-                    borderRadius: '6px',
-                    backgroundColor: 'var(--color-primary, #2563EB)',
-                    color: '#ffffff',
-                    fontWeight: 600,
-                    fontSize: '13px',
-                    border: 'none',
-                    cursor: 'pointer'
-                  }}>
+                  <button 
+                    onClick={() => setProceedToBallot(false)} 
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors"
+                  >
                     Return to Details
                   </button>
                 </>
@@ -570,88 +459,48 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
                 <>
                   {!otpRequestSent ? (
                     <>
-                      <div style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '50%',
-                        backgroundColor: 'var(--color-primary-50, #EFF6FF)',
-                        color: 'var(--color-primary, #2563EB)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 1.25rem auto'
-                      }}>
+                      <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-4">
                         <Lock size={22} />
                       </div>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem 0' }}>Verification Required</h3>
-                      <p style={{
-                        fontSize: '13px',
-                        color: 'var(--text-secondary, #475569)',
-                        maxWidth: '440px',
-                        margin: '0 auto 1.5rem auto',
-                        lineHeight: 1.5
-                      }}>
+                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">Verification Required</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
                         An identity verification code is required to unlock your voting ballot. Please request a 6-digit access code.
                       </p>
 
                       {user?.email && (
-                        <div style={{ marginBottom: '1rem', fontSize: '13px', color: 'var(--text-primary)' }}>
-                          Code will be sent to: <strong>{user.email}</strong>
+                        <div className="mb-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          Code will be sent to: <strong className="text-blue-600 dark:text-blue-400">{user.email}</strong>
                         </div>
                       )}
 
                       {otpError && (
-                        <p style={{ color: 'var(--color-danger, #EF4444)', fontSize: '12px', marginBottom: '1rem' }}>{otpError}</p>
+                        <p className="text-red-500 text-xs font-bold mb-4">{otpError}</p>
                       )}
 
                       <button
                         onClick={handleRequestOtp}
                         disabled={requestLoading}
-                        style={{
-                          padding: '0.65rem 1.25rem',
-                          borderRadius: '6px',
-                          backgroundColor: 'var(--color-primary, #2563EB)',
-                          color: '#ffffff',
-                          fontWeight: 600,
-                          fontSize: '13px',
-                          border: 'none',
-                          cursor: 'pointer'
-                        }}
+                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors disabled:opacity-50"
                       >
                         {requestLoading ? 'Requesting...' : 'Request Access Code'}
                       </button>
                     </>
                   ) : (
-                    <form onSubmit={handleVerifyAccessOtp} style={{ maxWidth: '320px', margin: '0 auto' }}>
-                      <div style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '50%',
-                        backgroundColor: 'var(--color-primary-50, #EFF6FF)',
-                        color: 'var(--color-primary, #2563EB)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 1.25rem auto'
-                      }}>
+                    <form onSubmit={handleVerifyAccessOtp} className="flex flex-col gap-4">
+                      <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-2">
                         <ShieldCheck size={22} />
                       </div>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem 0' }}>Enter Verification Code</h3>
-                      <p style={{
-                        fontSize: '13px',
-                        color: 'var(--text-secondary, #475569)',
-                        margin: '0 auto 1.5rem auto',
-                        lineHeight: 1.5
-                      }}>
+                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Enter Verification Code</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-2">
                         Please check your registered email address for the 6-digit voting access OTP.
                       </p>
 
                       {otpError && (
-                        <p style={{ color: 'var(--color-danger, #EF4444)', fontSize: '12px', marginBottom: '1rem' }}>{otpError}</p>
+                        <p className="text-red-500 text-xs font-bold">{otpError}</p>
                       )}
 
                       {fallbackOtp && (
-                        <div style={{ padding: '0.5rem', backgroundColor: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '6px', color: '#B45309', fontSize: '12px', fontWeight: 600, marginBottom: '1rem' }}>
+                        <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-900/40 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold">
                           [DEV MODE] Fallback OTP: {fallbackOtp}
                         </div>
                       )}
@@ -662,53 +511,21 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
                         placeholder="e.g. 123456"
                         value={otpCode}
                         onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                        style={{
-                          width: '100%',
-                          padding: '0.65rem',
-                          borderRadius: '6px',
-                          border: '1px solid var(--border-color)',
-                          textAlign: 'center',
-                          fontSize: '18px',
-                          letterSpacing: '4px',
-                          fontWeight: 'bold',
-                          marginBottom: '1rem',
-                          outline: 'none',
-                          backgroundColor: 'var(--bg-input, #FFFFFF)',
-                          color: 'var(--text-primary)'
-                        }}
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-300 dark:border-slate-600 text-center text-xl tracking-[0.25em] font-extrabold bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
 
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => setOtpRequestSent(false)}
-                          style={{
-                            flex: 1,
-                            padding: '0.65rem',
-                            borderRadius: '6px',
-                            border: '1px solid var(--border-color)',
-                            backgroundColor: 'transparent',
-                            color: 'var(--text-secondary)',
-                            fontSize: '13px',
-                            cursor: 'pointer'
-                          }}
+                          className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs"
                         >
                           Back
                         </button>
                         <button
                           type="submit"
                           disabled={requestLoading}
-                          style={{
-                            flex: 1,
-                            padding: '0.65rem',
-                            borderRadius: '6px',
-                            backgroundColor: 'var(--color-primary, #2563EB)',
-                            color: '#ffffff',
-                            fontWeight: 600,
-                            fontSize: '13px',
-                            border: 'none',
-                            cursor: 'pointer'
-                          }}
+                          className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors disabled:opacity-50"
                         >
                           {requestLoading ? 'Verifying...' : 'Verify & Unlock'}
                         </button>
@@ -719,63 +536,36 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
               )}
             </div>
           ) : (
-            <div>
-              {/* Flat Session Bar */}
-              <div style={{
-                backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-                border: '1px solid var(--border-color, #E2E8F0)',
-                borderLeft: '4px solid var(--color-primary, #2563EB)',
-                borderRadius: 'var(--radius-md, 8px)',
-                padding: '1rem 1.25rem',
-                marginBottom: '1.5rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '0.5rem'
-              }}>
+            <div className="flex flex-col gap-6">
+              {/* Session Status Bar */}
+              <div className="bg-white dark:bg-slate-800 border-l-4 border-l-blue-600 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 flex justify-between items-center flex-wrap gap-2 shadow-sm">
                 <div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Voting Progress</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{votedCount} of {totalPositionsCount} Positions Cast</div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Voting Progress</span>
+                  <span className="text-xs font-extrabold text-slate-900 dark:text-white">{votedCount} of {totalPositionsCount} Positions Cast</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--color-success)' }}>
-                  <ShieldCheck size={14} /> <span>Audited Secure Session</span>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <ShieldCheck size={16} /> <span>Audited Secure Session</span>
                 </div>
               </div>
 
               {isAllPositionsVoted && (
-                <div style={{
-                  backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-                  border: '1px solid var(--color-success)',
-                  borderRadius: 'var(--radius-xl, 12px)',
-                  padding: '2.5rem 1.5rem',
-                  textAlign: 'center',
-                  marginBottom: '2rem'
-                }}>
-                  <Sparkles size={36} style={{ color: 'var(--color-success)', marginBottom: '1rem' }} />
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-success)', margin: '0 0 0.5rem 0' }}>All Ballots Cast Successfully!</h3>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem auto', lineHeight: 1.5 }}>
+                <div className="bg-white dark:bg-slate-800 border-2 border-emerald-500 rounded-3xl p-8 text-center shadow-lg shadow-emerald-500/10">
+                  <Sparkles size={36} className="text-emerald-500 mx-auto mb-3" />
+                  <h3 className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mb-1">All Ballots Cast Successfully!</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">
                     Your choices have been securely locked and sequentialized with cryptographic signatures. You may now safely leave this portal.
                   </p>
-                  <div style={{ backgroundColor: 'var(--bg-input, #F8FAFC)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color, #E2E8F0)', maxWidth: '480px', margin: '0 auto 1.5rem auto', textAlign: 'left' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                  <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto text-left mb-6">
+                    <div className="flex justify-between text-xs font-bold text-slate-900 dark:text-white mb-2">
                       <span>Live Turnout Progress</span>
                       <span>{turnout}% ({election.totalVotesCast || 0} / {election.totalVoters || 0} voters)</span>
                     </div>
-                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-color, #E2E8F0)', borderRadius: '999px', overflow: 'hidden' }}>
-                      <div style={{ width: `${turnout}%`, height: '100%', backgroundColor: 'var(--color-primary, #2563EB)', borderRadius: '999px' }} />
+                    <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${turnout}%` }} />
                     </div>
                   </div>
                   <div>
-                    <Link href="/voter/elections" style={{
-                      padding: '0.6rem 1.25rem',
-                      borderRadius: '6px',
-                      backgroundColor: 'var(--color-primary, #2563EB)',
-                      color: '#ffffff',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      fontSize: '12px'
-                    }}>
+                    <Link href="/voter/elections" className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors inline-block">
                       Return to Elections List
                     </Link>
                   </div>
@@ -790,120 +580,81 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
                 const selectedCandId = selections[pos];
 
                 return (
-                  <div key={pos} style={{
-                    backgroundColor: 'var(--bg-secondary, #FFFFFF)',
-                    border: '1px solid var(--border-color, #E2E8F0)',
-                    borderRadius: 'var(--radius-xl, 12px)',
-                    padding: '1.5rem',
-                    marginBottom: '1.5rem'
-                  }}>
+                  <div key={pos} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm flex flex-col gap-5">
                     {/* Position Title & Tag */}
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderBottom: '1px solid var(--border-light, #F1F5F9)',
-                      paddingBottom: '0.75rem',
-                      marginBottom: '1.25rem'
-                    }}>
+                    <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700/60">
                       <div>
-                        <span style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 700, textTransform: 'uppercase' }}>Position {posIdx + 1} of {totalPositionsCount}</span>
-                        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0.15rem 0 0 0' }}>{pos}</h3>
+                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Position {posIdx + 1} of {totalPositionsCount}</span>
+                        <h3 className="text-base font-extrabold text-slate-900 dark:text-white mt-0.5">{pos}</h3>
                       </div>
 
                       {isPosVoted ? (
-                        <span style={{ fontSize: '11px', color: 'var(--color-success)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <CheckCircle2 size={13} /> Vote Logged
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
+                          <CheckCircle2 size={14} /> Vote Logged
                         </span>
                       ) : (
-                        <span style={{ fontSize: '10px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>Select 1</span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">Select 1</span>
                       )}
                     </div>
 
                     {/* Candidate Grid */}
-                    <div className="candidate-grid" style={{ marginBottom: '1.5rem' }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {posCandidates.map((cand) => {
                         const isSelected = selectedCandId === cand.id;
                         return (
                           <div
                             key={cand.id}
                             onClick={() => handleCardClick(pos, cand.id)}
-                            className={`card candidate-card ${isSelected ? 'selected' : ''}`}
-                            style={{
-                              opacity: isPosVoted && !isSelected ? 0.5 : 1,
-                              cursor: isPosVoted ? 'default' : 'pointer',
-                              position: 'relative'
-                            }}
+                            className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center gap-3 relative ${
+                              isSelected 
+                                ? 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-600 dark:border-blue-500 shadow-sm' 
+                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600'
+                            } ${isPosVoted && !isSelected ? 'opacity-50 cursor-default' : ''}`}
                           >
-                            <div className="candidate-select-indicator" style={{ top: '12px', right: '12px' }}>
-                              {isSelected && <Check size={14} />}
-                            </div>
-
-                            <div className="candidate-photo-wrap" style={{ flex: '0 0 120px', width: '120px', minHeight: '140px', position: 'relative', overflow: 'hidden' }}>
+                            <div className="w-14 h-14 rounded-xl bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center shrink-0">
                               {cand.photoUrl ? (
-                                <img src={cand.photoUrl} alt={cand.name} className="candidate-photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={cand.photoUrl} alt={cand.name} className="w-full h-full object-cover" />
                               ) : (
-                                <div className="candidate-photo" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>
-                                  <User size={36} />
-                                </div>
+                                <User size={24} className="text-slate-400" />
                               )}
                             </div>
 
-                            <div className="candidate-content" style={{ flex: 1, padding: '12px 36px 12px 12px', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                              <div className="candidate-info" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <div className="candidate-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                  {cand.ballotNumber && (
-                                    <span style={{ fontSize: '9px', fontWeight: 700, backgroundColor: 'var(--color-primary, #2563EB)', color: '#FFFFFF', padding: '1px 5px', borderRadius: '3px' }}>
-                                      #{cand.ballotNumber}
-                                    </span>
-                                  )}
-                                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {cand.name}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                {cand.ballotNumber && (
+                                  <span className="text-[9px] font-extrabold bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                                    #{cand.ballotNumber}
                                   </span>
-                                </div>
-                                <div className="candidate-manifesto">
-                                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.3' }}>
-                                    {cand.manifesto || 'No manifesto provided.'}
-                                  </p>
-                                </div>
+                                )}
+                                <span className="text-xs font-bold text-slate-900 dark:text-white truncate">{cand.name}</span>
                               </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
+                                {cand.manifesto || 'No manifesto provided.'}
+                              </p>
+                            </div>
+
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${
+                              isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600'
+                            }`}>
+                              {isSelected && <Check size={12} />}
                             </div>
                           </div>
                         );
                       })}
                     </div>
 
-                    {/* Submit action panel */}
+                    {/* Submit Action Panel */}
                     {isPosVoted ? (
-                      <div style={{
-                        backgroundColor: 'var(--color-success-bg)',
-                        color: 'var(--color-success)',
-                        padding: '0.65rem 1rem',
-                        borderRadius: '6px',
-                        fontSize: '11px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}>
+                      <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium flex justify-between items-center border border-emerald-200 dark:border-emerald-900/30">
                         <span>Your vote has been securely submitted.</span>
-                        <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>ID: {posAudit.auditTxId.substring(0, 12)}...</span>
+                        <span className="font-mono text-[10px] font-bold">ID: {posAudit.auditTxId.substring(0, 12)}...</span>
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <div className="flex justify-end">
                         <button
                           onClick={() => handleCastVoteForPosition(pos)}
                           disabled={!selectedCandId || castingPosition === pos}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            backgroundColor: selectedCandId ? 'var(--color-primary, #2563EB)' : 'var(--bg-tertiary)',
-                            color: selectedCandId ? '#ffffff' : 'var(--text-tertiary)',
-                            fontWeight: 600,
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            cursor: selectedCandId ? 'pointer' : 'not-allowed'
-                          }}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white disabled:text-slate-400 text-xs font-bold rounded-xl transition-colors disabled:cursor-not-allowed"
                         >
                           {castingPosition === pos ? 'Casting...' : `Submit Vote for ${pos}`}
                         </button>

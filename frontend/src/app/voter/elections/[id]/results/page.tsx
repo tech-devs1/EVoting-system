@@ -83,7 +83,7 @@ function PositionChart({
       label: 'Votes',
       data: chartVotes,
       backgroundColor: chartColors,
-      borderRadius: 6,
+      borderRadius: 8,
       borderSkipped: false as const,
     }],
   };
@@ -94,6 +94,11 @@ function PositionChart({
     plugins: {
       legend: { display: false },
       tooltip: {
+        backgroundColor: '#0F172A',
+        titleFont: { size: 13, weight: 'bold' as const },
+        bodyFont: { size: 12 },
+        padding: 12,
+        cornerRadius: 12,
         callbacks: {
           label: (ctx: any) => {
             const pct = positionTotal > 0 ? ((ctx.raw / positionTotal) * 100).toFixed(1) : '0.0';
@@ -105,12 +110,12 @@ function PositionChart({
     scales: {
       y: {
         beginAtZero: true,
-        grid: { color: 'rgba(148, 163, 184, 0.1)' },
-        ticks: { stepSize: 1, color: 'var(--text-tertiary)' },
+        grid: { color: 'rgba(148, 163, 184, 0.15)' },
+        ticks: { stepSize: 1, color: '#64748B', font: { size: 11, weight: 'bold' as const } },
       },
       x: {
         grid: { display: false },
-        ticks: { color: 'var(--text-secondary)' },
+        ticks: { color: '#64748B', font: { size: 11, weight: 'bold' as const } },
       },
     },
   };
@@ -119,150 +124,86 @@ function PositionChart({
   const accentColor = COLORS[colorOffset % COLORS.length];
 
   return (
-    <div style={{
-      marginBottom: 'var(--space-6)',
-      padding: 'var(--space-4)',
-      borderRadius: 'var(--radius-lg)',
-      border: '1px solid var(--border-color)',
-      background: 'var(--bg-card)',
-    }}>
-      {/* Position header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <span style={{
-            width: '10px', height: '10px', borderRadius: '50%',
-            background: accentColor,
-            display: 'inline-block', flexShrink: 0,
-          }} />
-          <h4 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 700 }}>{position}</h4>
-          <span style={{
-            fontSize: 'var(--text-xs)', padding: '2px 8px',
-            borderRadius: '999px', background: 'var(--bg-input)',
-            border: '1px solid var(--border-color)', color: 'var(--text-tertiary)',
-          }}>
+    <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-3xl p-6 mb-6 shadow-sm">
+      {/* Position Header */}
+      <div className="flex justify-between items-center mb-5 flex-wrap gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />
+          <h3 className="text-base font-extrabold text-slate-900 dark:text-white">{position}</h3>
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
             {sorted.length} candidate{sorted.length !== 1 ? 's' : ''}
           </span>
           {isTied && (
-            <span style={{
-              fontSize: 'var(--text-xs)', padding: '2px 8px',
-              borderRadius: '999px', background: '#F59E0B22',
-              border: '1px solid #F59E0B44', color: '#F59E0B',
-              fontWeight: 600,
-            }}>
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">
               ⚖ Tied
             </span>
           )}
         </div>
-        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-          {positionTotal.toLocaleString()} vote{positionTotal !== 1 ? 's' : ''}
+        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+          {positionTotal.toLocaleString()} total vote{positionTotal !== 1 ? 's' : ''}
         </span>
       </div>
 
-      {/* Leader callout */}
+      {/* Leader Callout */}
       {leader && positionTotal > 0 && !isTied && !isIndependentTied && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-          marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-3)',
-          borderRadius: 'var(--radius-md)',
-          background: leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? '#EF444418' : `${accentColor}18`,
-          border: `1px solid ${leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? '#EF444444' : accentColor + '44'}`,
-        }}>
+        <div className={`flex items-center gap-2.5 mb-5 px-4 py-2.5 rounded-xl border text-xs font-bold ${
+          leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0)
+            ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/30'
+            : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30'
+        }`}>
           {leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? (
-            <XCircle size={14} color="#EF4444" />
+            <XCircle size={16} className="text-red-500 shrink-0" />
           ) : (
-            <Trophy size={14} color={accentColor} />
+            <Trophy size={16} className="text-amber-500 shrink-0" />
           )}
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? '#EF4444' : accentColor }}>
+          <span>
             {leader.ballotNumber ? `No. ${leader.ballotNumber} - ` : ''}{leader.name}
           </span>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+          <span className="font-medium text-slate-500 dark:text-slate-400">
             {leader.isIndependent && (leader.noVotes || 0) > (leader.votes || 0) ? (
               <>losing by {(((leader.noVotes || 0) / positionTotal) * 100).toFixed(1)}%</>
             ) : (
-              <>leading with {(leader.votes || 0).toLocaleString()} vote{(leader.votes || 0) !== 1 ? 's' : ''}
-              {' '}({positionTotal > 0 ? (((leader.votes || 0) / positionTotal) * 100).toFixed(1) : 0}%)</>
+              <>leading with {(leader.votes || 0).toLocaleString()} votes ({positionTotal > 0 ? (((leader.votes || 0) / positionTotal) * 100).toFixed(1) : 0}%)</>
             )}
           </span>
         </div>
       )}
 
-      {/* Tie callout */}
-      {isTied && positionTotal > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-          marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-3)',
-          borderRadius: 'var(--radius-md)',
-          background: '#F59E0B18',
-          border: '1px solid #F59E0B44',
-        }}>
-          <span style={{ fontSize: '14px' }}>⚖️</span>
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#F59E0B' }}>
-            Tie — {sorted.filter(c => (c.votes || 0) === topVotes).map(c => `${c.ballotNumber ? `No. ${c.ballotNumber} ` : ''}${c.name}`).join(' & ')}
-          </span>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            each with {topVotes.toLocaleString()} vote{topVotes !== 1 ? 's' : ''}
-          </span>
-        </div>
-      )}
-
-      {/* Independent Tie callout */}
-      {isIndependentTied && positionTotal > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-          marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-3)',
-          borderRadius: 'var(--radius-md)',
-          background: '#F59E0B18',
-          border: '1px solid #F59E0B44',
-        }}>
-          <span style={{ fontSize: '14px' }}>⚖️</span>
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#F59E0B' }}>
-            Tie — {leader.ballotNumber ? `No. ${leader.ballotNumber} ` : ''}{leader.name}
-          </span>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            Yes and No votes are tied at {(leader.votes || 0).toLocaleString()}
-          </span>
-        </div>
-      )}
-
-      {/* Bar chart */}
-      <div style={{ height: `${Math.max(160, sorted.length * 44)}px`, position: 'relative', marginBottom: 'var(--space-4)' }}>
+      {/* Bar Chart Container */}
+      <div className="w-full relative mb-6" style={{ height: `${Math.max(200, sorted.length * 56)}px` }}>
         <Bar data={barData} options={barOptions} />
       </div>
 
-      {/* Rankings */}
-      <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-3)' }}>
+      {/* Candidate Breakdown & Progress Bars */}
+      <div className="border-t border-slate-100 dark:border-slate-700/60 pt-4 flex flex-col gap-4">
         {sorted.map((cand, idx) => {
           const pct = positionTotal > 0 ? Math.round(((cand.votes || 0) / positionTotal) * 100) : 0;
           const color = COLORS[(colorOffset + idx) % COLORS.length];
           const isWinner = idx === 0 && !isTied && positionTotal > 0;
           const isCandTied = isTied && (cand.votes || 0) === topVotes;
+
           return (
-            <div key={cand.id} style={{ marginBottom: 'var(--space-3)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)', fontSize: 'var(--text-sm)' }}>
-                <span style={{ fontWeight: isWinner || isCandTied ? 700 : 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{
-                    width: '20px', height: '20px', borderRadius: '50%',
-                    background: color,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '10px', fontWeight: 700, color: '#fff', flexShrink: 0,
-                  }}>
+            <div key={cand.id} className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: color }}>
                     {idx + 1}
                   </span>
-                  {cand.ballotNumber ? `No. ${cand.ballotNumber} - ` : ''}{cand.name}
-                  {isWinner && <span style={{ fontSize: '12px' }}>🏆</span>}
-                  {isCandTied && (
-                    <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600 }}>⚖</span>
-                  )}
+                  <span className={`font-bold text-slate-900 dark:text-white ${isWinner ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                    {cand.ballotNumber ? `No. ${cand.ballotNumber} - ` : ''}{cand.name}
+                  </span>
+                  {isWinner && <Trophy size={14} className="text-amber-500" />}
+                  {isCandTied && <span className="text-amber-500 font-bold">⚖</span>}
+                </div>
+                <span className="font-bold text-slate-700 dark:text-slate-300">
+                  {(cand.votes || 0).toLocaleString()} votes · <span className="text-slate-500">{pct}%</span>
                 </span>
-                <span style={{ color: 'var(--text-secondary)' }}>{(cand.votes || 0).toLocaleString()} · {pct}%</span>
               </div>
-              <div style={{ height: '6px', background: 'var(--bg-tertiary)', borderRadius: '999px', overflow: 'hidden' }}>
-                <div style={{
-                  width: `${pct}%`, height: '100%',
-                  background: color,
-                  borderRadius: '999px',
-                  transition: 'width 0.6s ease',
-                }} />
+              <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div 
+                  className="h-full rounded-full transition-all duration-500" 
+                  style={{ width: `${pct}%`, backgroundColor: color }} 
+                />
               </div>
             </div>
           );
@@ -316,15 +257,19 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
   }, [electionId]);
 
   if (loading) {
-    return <p style={{ color: 'var(--text-secondary)' }}>Loading live results...</p>;
+    return (
+      <div className="p-12 text-center text-slate-500 dark:text-slate-400 font-medium">
+        Loading live results...
+      </div>
+    );
   }
 
   if (!election) {
     return (
-      <div className="empty-state">
-        <h3>Election Not Found</h3>
-        <p>No valid election parameters were passed to this terminal session.</p>
-        <Link href="/voter/elections" className="btn btn-primary" style={{ marginTop: 'var(--space-4)' }}>
+      <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Election Not Found</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">No valid election parameters were passed to this terminal session.</p>
+        <Link href="/voter/elections" className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors">
           Back to Elections
         </Link>
       </div>
@@ -334,13 +279,13 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
   // Double check client-side block just in case
   if (!election.showResults) {
     return (
-      <div className="empty-state animate-page-enter">
-        <EyeOff size={48} style={{ color: 'var(--color-warning, #f59e0b)', marginBottom: 'var(--space-4)' }} />
-        <h3>Results View Disabled</h3>
-        <p style={{ maxWidth: '480px', margin: '0 auto var(--space-4)' }}>
+      <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 max-w-lg mx-auto">
+        <EyeOff size={48} className="text-amber-500 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Results View Disabled</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
           Live results for "{election.title}" are currently hidden. The administrator has disabled public charts prior to the official declaration of results.
         </p>
-        <Link href="/voter/elections" className="btn btn-primary">
+        <Link href="/voter/elections" className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors">
           Return to Elections List
         </Link>
       </div>
@@ -357,40 +302,34 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
   const totalVotes = candidates.reduce((s, c) => s + (c.votes || 0), 0);
 
   return (
-    <div className="animate-page-enter">
+    <div className="flex flex-col gap-6">
       {/* Header */}
-      <div style={{ marginBottom: 'var(--space-6)' }}>
-        <Link href="/voter/elections" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-3)' }}>
+      <div>
+        <Link href="/voter/elections" className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
           <ArrowLeft size={14} /> Return to Elections
         </Link>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+        <div className="flex justify-between items-start flex-wrap gap-4">
           <div>
-            <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-1)' }}>{election.title} — Results</h2>
-            <div style={{ display: 'flex', gap: 'var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-              <span>{candidates.length} candidate{candidates.length !== 1 ? 's' : ''}</span>
+            <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">
+              {election.title} — Results
+            </h2>
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <span>{candidates.length} candidates</span>
               <span>·</span>
-              <span>{positions.length} position{positions.length !== 1 ? 's' : ''}</span>
+              <span>{positions.length} positions</span>
               <span>·</span>
-              <span>{totalVotes.toLocaleString()} total vote{totalVotes !== 1 ? 's' : ''}</span>
+              <span>{totalVotes.toLocaleString()} total votes</span>
             </div>
           </div>
-          <span style={{
-            padding: '4px 12px',
-            borderRadius: '999px',
-            fontSize: 'var(--text-xs)',
-            fontWeight: 600,
-            background: 'var(--color-success-bg, #22c55e22)',
-            color: 'var(--color-success, #22c55e)',
-            border: '1px solid var(--color-success-border, #22c55e44)',
-          }}>
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
             ● Live Charts
           </span>
         </div>
       </div>
 
       {candidates.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 'var(--space-12)' }}>
-          <p style={{ color: 'var(--text-secondary)' }}>No candidates registered for this election.</p>
+        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-12 text-center text-slate-500 dark:text-slate-400 font-medium">
+          No candidates registered for this election.
         </div>
       ) : (
         positions.map((position, pi) => (

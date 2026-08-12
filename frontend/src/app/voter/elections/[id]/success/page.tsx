@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import React, { use } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ShieldCheck, Copy, Download, Search, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, Copy, Download, AlertTriangle, ArrowLeft, Check } from 'lucide-react';
 
 export default function VoteSuccessPage({ params }: { params: Promise<{ id: string }> }) {
   const searchParams = useSearchParams();
@@ -13,11 +13,11 @@ export default function VoteSuccessPage({ params }: { params: Promise<{ id: stri
 
   if (!verificationId) {
     return (
-      <div className="empty-state" style={{ maxWidth: '500px', margin: '0 auto' }}>
-        <AlertTriangle size={48} style={{ color: 'var(--color-danger)' }} />
-        <h3>Invalid Session</h3>
-        <p>No valid ballot validation receipts were returned during this browser session.</p>
-        <Link href="/voter/dashboard" className="btn btn-primary" style={{ marginTop: 'var(--space-4)' }}>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-12 text-center max-w-md mx-auto shadow-sm">
+        <AlertTriangle size={48} className="text-red-500 mx-auto mb-3" />
+        <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-1">Invalid Session</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">No valid ballot validation receipts were returned during this browser session.</p>
+        <Link href="/voter/dashboard" className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors inline-block">
           Back to Dashboard
         </Link>
       </div>
@@ -41,76 +41,63 @@ export default function VoteSuccessPage({ params }: { params: Promise<{ id: stri
   };
 
   return (
-    <div className="confirm-box animate-page-enter" style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'center' }}>
-      <div style={{ marginBottom: 'var(--space-4)' }}>
-        <Link href="/voter/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
+    <div className="max-w-md mx-auto text-center flex flex-col gap-6 pt-4">
+      <div>
+        <Link href="/voter/dashboard" className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-4">
           <ArrowLeft size={14} /> Return to Dashboard
         </Link>
       </div>
       
       {/* Animated Checkmark Indicator */}
-      <div className="success-checkmark" style={{ margin: '0 auto var(--space-6) auto' }}>
-        <div className="check-icon"></div>
+      <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
+        <Check size={32} />
       </div>
 
-      <h2 style={{ marginBottom: 'var(--space-2)' }}>Vote Cast Successfully!</h2>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-8)' }}>
-        Your ballot transaction has been processed and saved to the audit ledger.
-      </p>
+      <div>
+        <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">Vote Cast Successfully!</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          Your ballot transaction has been processed and saved to the audit ledger.
+        </p>
+      </div>
 
       {/* Digital Receipt Box */}
-      <div className="receipt-box" style={{ 
-        textAlign: 'left', 
-        background: 'var(--bg-secondary)', 
-        borderColor: 'var(--color-success)', 
-        borderStyle: 'solid', 
-        borderWidth: '1px',
-        boxShadow: 'var(--shadow-glow-green)',
-        padding: 'var(--space-4)',
-        borderRadius: 'var(--radius-lg)',
-        marginBottom: 'var(--space-6)'
-      }}>
-        <div style={{ 
-          fontWeight: 'bold', 
-          fontFamily: 'var(--font-body)', 
-          fontSize: 'var(--text-xs)', 
-          color: 'var(--color-success)', 
-          textTransform: 'uppercase', 
-          letterSpacing: 'var(--tracking-wide)', 
-          marginBottom: 'var(--space-4)', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 'var(--space-1.5)' 
-        }}>
+      <div className="bg-white dark:bg-slate-800 border-2 border-emerald-500 rounded-3xl p-6 text-left shadow-lg shadow-emerald-500/10 flex flex-col gap-3">
+        <div className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-100 dark:border-slate-700/60">
           <ShieldCheck size={14} /> Crypto Receipt Generated
         </div>
-        <div className="receipt-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)' }}>
-          <span>Verification ID:</span>
-          <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{verificationId}</span>
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-slate-500 dark:text-slate-400 font-medium">Verification ID:</span>
+          <span className="font-mono font-bold text-slate-900 dark:text-white">{verificationId}</span>
         </div>
-        <div className="receipt-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)' }}>
-          <span>Ledger Status:</span>
-          <span style={{ color: 'var(--color-success)', fontWeight: 'bold' }}>HASH_VERIFIED</span>
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-slate-500 dark:text-slate-400 font-medium">Ledger Status:</span>
+          <span className="font-bold text-emerald-600 dark:text-emerald-400">HASH_VERIFIED</span>
         </div>
-        <div className="receipt-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
-          <span>Timestamp:</span>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{new Date().toLocaleString()}</span>
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-slate-500 dark:text-slate-400 font-medium">Timestamp:</span>
+          <span className="text-[11px] text-slate-400 dark:text-slate-500">{new Date().toLocaleString()}</span>
         </div>
       </div>
 
       {/* Action Items Tools */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-          <button className="btn btn-secondary btn-full btn-sm" onClick={handleCopyId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <Copy size={14} /> Copy Verification ID
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <button 
+            className="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-center gap-1.5" 
+            onClick={handleCopyId}
+          >
+            <Copy size={14} /> Copy ID
           </button>
-          <button className="btn btn-secondary btn-full btn-sm" onClick={handleDownloadReceipt} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+          <button 
+            className="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-center gap-1.5" 
+            onClick={handleDownloadReceipt}
+          >
             <Download size={14} /> Download Receipt
           </button>
         </div>
       </div>
 
-      <Link href="/voter/dashboard" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
+      <Link href="/voter/dashboard" className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
         Return to Dashboard Terminal
       </Link>
     </div>

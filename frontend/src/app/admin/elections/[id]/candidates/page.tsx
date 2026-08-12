@@ -340,63 +340,64 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
   });
 
   return (
-    <div className="animate-page-enter">
+  return (
+    <div className="flex flex-col gap-6">
       {/* Workspace Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+          <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Positions & Candidates Builder
           </h2>
-          <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '0.875rem' }}>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
             Define position types, set selection rules, and organize candidates into position groups
           </p>
         </div>
 
         {/* Header Action Buttons */}
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button onClick={() => setIsPosModalOpen(true)} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button 
+            onClick={() => setIsPosModalOpen(true)} 
+            className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+          >
             <Plus size={16} /> Add Position Type
           </button>
-          <button onClick={() => setIsCandModalOpen(true)} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, backgroundColor: '#2563eb' }}>
+          <button 
+            onClick={() => setIsCandModalOpen(true)} 
+            className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-colors flex items-center gap-1.5"
+          >
             <Plus size={16} /> Register Candidate
           </button>
-          <button onClick={() => setIsPreviewOpen(true)} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <button 
+            onClick={() => setIsPreviewOpen(true)} 
+            className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+          >
             <Eye size={16} /> Live Ballot Preview
           </button>
         </div>
       </div>
 
       {/* Position Types Configured Bar */}
-      <div className="card" style={{ padding: '1.25rem', marginBottom: '1.75rem', backgroundColor: 'var(--bg-card)' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Layers size={18} style={{ color: '#2563eb' }} /> Configured Position Types ({positions.length})
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-5 shadow-sm">
+        <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mb-3">
+          <Layers size={18} className="text-blue-600 dark:text-blue-400" /> Configured Position Types ({positions.length})
         </h3>
         
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="flex items-center gap-2.5 flex-wrap">
           {positions.map((pos) => (
             <div 
               key={pos.id}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                backgroundColor: 'var(--bg-input)',
-                border: '1px solid var(--border-color)',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '10px',
-                fontSize: '0.85rem'
-              }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/80 text-xs font-bold text-slate-800 dark:text-slate-200"
             >
-              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{pos.title}</span>
-              <span className="badge badge-info" style={{ fontSize: '10px' }}>
+              <span>{pos.title}</span>
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30">
                 Select {pos.maxChoices}
               </span>
               {pos.isReferendum && (
-                <span className="badge badge-warning" style={{ fontSize: '10px' }}>YES/NO</span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">YES/NO</span>
               )}
               <button 
                 onClick={() => handleDeletePosition(pos.id)}
-                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, marginLeft: '4px' }}
+                className="text-red-500 hover:text-red-700 transition-colors ml-1"
                 title="Remove Position"
               >
                 ✕
@@ -408,146 +409,122 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
 
       {/* Candidates Grouped Strictly by Position Cards */}
       {loading ? (
-        <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>Loading position lineups...</p>
+        <p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Loading position lineups...</p>
       ) : Object.keys(candidatesByPosition).length === 0 ? (
-        <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No position types configured yet. Click "+ Add Position Type" to begin.</p>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-12 text-center text-xs text-slate-500 dark:text-slate-400 font-medium">
+          No position types configured yet. Click "+ Add Position Type" to begin.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+        <div className="flex flex-col gap-6">
           {Object.entries(candidatesByPosition).map(([posTitle, candList]) => {
             const posMeta = positions.find(p => p.title === posTitle);
 
             return (
               <div 
                 key={posTitle}
-                className="card"
-                style={{ 
-                  padding: '1.5rem',
-                  borderRadius: '18px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)'
-                }}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm"
               >
                 {/* Position Group Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '10px',
-                      backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                      color: '#2563eb',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 700
-                    }}>
+                <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-100 dark:border-slate-700/60 flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
                       <Award size={18} />
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
                         {posTitle}
                       </h3>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                         Voters select up to {posMeta?.maxChoices || 1} candidate{posMeta?.maxChoices !== 1 ? 's' : ''}
                       </span>
                     </div>
                   </div>
 
-                  <span className="badge badge-primary" style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', border: '1px solid rgba(37, 99, 235, 0.3)' }}>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30">
                     {candList.length} Candidate{candList.length !== 1 ? 's' : ''} Listed
                   </span>
                 </div>
 
                 {/* Candidate Cards Grid for THIS Position */}
                 {candList.length === 0 ? (
-                  <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-input)', borderRadius: '12px' }}>
+                  <div className="p-6 text-center text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800">
                     No candidates registered under {posTitle} yet. Click "+ Register Candidate" above to add one.
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {candList.map((cand, idx) => (
                       <div 
                         key={cand.id}
-                        style={{
-                          backgroundColor: 'var(--bg-input)',
-                          borderRadius: '14px',
-                          padding: '1.25rem',
-                          border: '1px solid var(--border-color)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          position: 'relative'
-                        }}
+                        className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between"
                       >
                         <div>
                           {/* Photo & Name */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '0.85rem' }}>
-                            <div style={{
-                              width: '52px',
-                              height: '52px',
-                              borderRadius: '50%',
-                              backgroundColor: 'var(--border-color)',
-                              overflow: 'hidden',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 700,
-                              fontSize: '1.1rem',
-                              border: '2px solid #2563eb'
-                            }}>
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center font-extrabold text-sm text-slate-700 dark:text-slate-200 border-2 border-blue-600 shrink-0">
                               {cand.photoUrl ? (
-                                <img src={cand.photoUrl} alt={cand.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={cand.photoUrl} alt={cand.name} className="w-full h-full object-cover" />
                               ) : (
                                 cand.name.substring(0, 2).toUpperCase()
                               )}
                             </div>
 
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '2px' }}>
-                                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2563eb', backgroundColor: '#EFF6FF', padding: '2px 8px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-900/30">
                                   Ballot #{cand.ballotNumber || idx + 1}
                                 </span>
-                                <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>Pos #</label>
+                                <label className="text-[10px] text-slate-400 font-bold">Pos #</label>
                                 <input
                                   type="number"
                                   min={1}
                                   max={100}
                                   value={cand.ballotNumber || idx + 1}
                                   onChange={(e) => handleUpdateBallotNumber(cand.id, parseInt(e.target.value) || 1)}
-                                  style={{
-                                    width: '46px',
-                                    padding: '2px 4px',
-                                    borderRadius: '6px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
-                                    border: '1.5px solid #CBD5E1',
-                                    textAlign: 'center',
-                                    backgroundColor: '#FFFFFF'
-                                  }}
+                                  className="w-10 px-1 py-0.5 rounded-md text-xs font-extrabold text-center bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
                                   title="Change ballot position number"
                                 />
                               </div>
-                              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '4px 0 0 0', color: 'var(--text-primary)' }}>
+                              <h4 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
                                 {cand.name}
                               </h4>
                             </div>
                           </div>
 
                           {/* Manifesto Snippet */}
-                          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4, margin: '0 0 1rem 0' }}>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4 line-clamp-2">
                             {cand.manifesto || 'No manifesto summary provided.'}
                           </p>
                         </div>
 
                         {/* Card Action Buttons */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
+                          <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
                             {cand.isIndependent ? 'Independent' : 'Candidate'}
                           </span>
-                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <div className="flex items-center gap-1.5">
                             <button
+                              onClick={() => openEditCandidateModal(cand)}
+                              className="px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-1"
+                            >
+                              <Pencil size={12} /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCandidate(cand.id)}
+                              className="px-2.5 py-1 text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors flex items-center gap-1"
+                            >
+                              <Trash2 size={12} /> Remove
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
                               onClick={() => openEditCandidateModal(cand)}
                               className="btn btn-outline"
                               style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#2563eb', borderColor: 'rgba(37, 99, 235, 0.3)' }}

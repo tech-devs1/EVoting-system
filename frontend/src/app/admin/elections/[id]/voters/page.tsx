@@ -192,89 +192,90 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
   });
 
   return (
-    <div className="animate-page-enter">
+  return (
+    <div className="flex flex-col gap-6">
       {/* Banner */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <Link href={`/admin/elections/${electionId}/dashboard`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', marginBottom: '0.75rem' }}>
-          <ArrowLeft size={16} /> Back to Election Command Center
+      <div>
+        <Link href={`/admin/elections/${electionId}/dashboard`} className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
+          <ArrowLeft size={14} /> Back to Election Command Center
         </Link>
-        <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+        <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           Election Voter Roster
         </h2>
-        <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '0.875rem' }}>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
           Manage eligible voters and upload CSV rosters exclusively for this election
         </p>
       </div>
 
       {/* CSV Roster Upload Section */}
-      <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm">
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
           <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Upload size={18} style={{ color: '#2563eb' }} />
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
+              <Upload size={18} className="text-blue-600 dark:text-blue-400" />
               Upload Election Voter Roster (CSV)
             </h3>
-            <p style={{ fontSize: '0.85rem', color: '#64748B', margin: 0 }}>
-              Upload a CSV roster of eligible voters. Required columns: <strong>IndexNumber, FullName, EmailAddress, PhoneNumber, Department</strong>.
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Upload a CSV roster of eligible voters. Required columns: <strong className="text-slate-700 dark:text-slate-300">IndexNumber, FullName, EmailAddress, PhoneNumber, Department</strong>.
             </p>
           </div>
 
           <button
             type="button"
             onClick={handleDownloadSampleCsv}
-            className="btn btn-outline"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700, color: '#2563eb', borderColor: '#BFDBFE', backgroundColor: '#EFF6FF' }}
+            className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors flex items-center gap-1.5"
           >
             <FileText size={16} /> Download Sample Voter CSV Template
           </button>
         </div>
 
         {uploadMessage && (
-          <div style={{
-            padding: '0.85rem 1.25rem',
-            borderRadius: '10px',
-            marginBottom: '1.25rem',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            backgroundColor: uploadMessage.type === 'success' ? '#f0fdf4' : '#fef2f2',
-            color: uploadMessage.type === 'success' ? '#166534' : '#dc2626',
-            border: `1px solid ${uploadMessage.type === 'success' ? '#bbf7d0' : '#fecaca'}`
-          }}>
+          <div className={`p-4 rounded-xl text-xs font-semibold mb-4 ${
+            uploadMessage.type === 'success' 
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30' 
+              : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30'
+          }`}>
             {uploadMessage.text}
           </div>
         )}
 
-        <div style={{ border: '2px dashed var(--border-color)', borderRadius: '12px', padding: '1.5rem', textAlign: 'center', backgroundColor: 'var(--bg-input)' }}>
-          <input type="file" accept=".csv" onChange={handleFileChange} style={{ fontSize: '0.9rem' }} />
+        <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center bg-slate-50 dark:bg-slate-900/60">
+          <input type="file" accept=".csv" onChange={handleFileChange} className="text-xs font-medium text-slate-600 dark:text-slate-300" />
         </div>
 
         {/* Live CSV Pre-Validation Box */}
         {csvStats.total > 0 && (
-          <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)' }}>
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-              <span className="badge badge-success">✓ {csvStats.valid} Valid Voters</span>
-              <span className="badge badge-warning">⚠ {csvStats.duplicates} Duplicates</span>
-              <span className="badge badge-danger">❌ {csvStats.invalid} Invalid Emails</span>
+          <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700/60">
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
+                ✓ {csvStats.valid} Valid Voters
+              </span>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">
+                ⚠ {csvStats.duplicates} Duplicates
+              </span>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30">
+                ❌ {csvStats.invalid} Invalid Emails
+              </span>
             </div>
 
-            <h4 style={{ fontSize: '0.85rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>Live Roster Preview (First 10 Rows)</h4>
-            <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '1.25rem' }}>
-              <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ backgroundColor: 'var(--bg-input)', textAlign: 'left' }}>
-                    <th style={{ padding: '6px 12px' }}>Index No</th>
-                    <th style={{ padding: '6px 12px' }}>Name</th>
-                    <th style={{ padding: '6px 12px' }}>Email</th>
-                    <th style={{ padding: '6px 12px' }}>Phone</th>
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">Live Roster Preview (First 10 Rows)</h4>
+            <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl mb-4">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold">
+                  <tr>
+                    <th className="px-3 py-2">Index No</th>
+                    <th className="px-3 py-2">Name</th>
+                    <th className="px-3 py-2">Email</th>
+                    <th className="px-3 py-2">Phone</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                   {csvPreview.map((row, i) => (
-                    <tr key={i} style={{ borderTop: '1px solid var(--border-color)' }}>
-                      <td style={{ padding: '6px 12px', fontFamily: 'monospace' }}>{row.indexNum}</td>
-                      <td style={{ padding: '6px 12px' }}>{row.name}</td>
-                      <td style={{ padding: '6px 12px' }}>{row.email}</td>
-                      <td style={{ padding: '6px 12px' }}>{row.phone || 'N/A'}</td>
+                    <tr key={i} className="text-slate-700 dark:text-slate-300">
+                      <td className="px-3 py-2 font-mono font-bold">{row.indexNum}</td>
+                      <td className="px-3 py-2">{row.name}</td>
+                      <td className="px-3 py-2">{row.email}</td>
+                      <td className="px-3 py-2">{row.phone || 'N/A'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -284,8 +285,7 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
             <button
               onClick={handleUploadRoster}
               disabled={uploading || csvStats.valid === 0}
-              className="btn btn-primary"
-              style={{ fontWeight: 700 }}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-colors shadow-md shadow-blue-500/20"
             >
               {uploading ? 'Processing & Saving Roster...' : `Save ${csvStats.valid} Eligible Voters to Election`}
             </button>
@@ -294,50 +294,55 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
       </div>
 
       {/* Eligible Voter Directory Table */}
-      <div className="card" style={{ padding: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm">
+        <div className="flex justify-between items-center mb-5 flex-wrap gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Eligible Voters Directory</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Total Roster: {voters.length} voters</p>
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Eligible Voters Directory</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Total Roster: {voters.length} voters</p>
             </div>
             <Link
               href={`/admin/elections/${electionId}/messages`}
-              className="btn btn-primary"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 700, backgroundColor: '#2563eb', padding: '0.4rem 0.85rem' }}
+              className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-colors flex items-center gap-1.5"
             >
               <Mail size={14} /> Compose SMS/Email Broadcast
             </Link>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search voter..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ paddingLeft: '32px', paddingRight: '12px', paddingTop: '6px', paddingBottom: '6px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: 'var(--bg-input)' }}
+                className="pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '0.35rem' }}>
+            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-700 rounded-xl">
               <button
                 onClick={() => setStatusFilter('all')}
-                style={{ padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, border: 'none', cursor: 'pointer', backgroundColor: statusFilter === 'all' ? 'var(--color-primary)' : 'var(--bg-input)', color: statusFilter === 'all' ? '#fff' : 'var(--text-secondary)' }}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                  statusFilter === 'all' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
+                }`}
               >
                 All
               </button>
               <button
                 onClick={() => setStatusFilter('voted')}
-                style={{ padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, border: 'none', cursor: 'pointer', backgroundColor: statusFilter === 'voted' ? 'var(--color-primary)' : 'var(--bg-input)', color: statusFilter === 'voted' ? '#fff' : 'var(--text-secondary)' }}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                  statusFilter === 'voted' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
+                }`}
               >
                 Voted
               </button>
               <button
                 onClick={() => setStatusFilter('pending')}
-                style={{ padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, border: 'none', cursor: 'pointer', backgroundColor: statusFilter === 'pending' ? 'var(--color-primary)' : 'var(--bg-input)', color: statusFilter === 'pending' ? '#fff' : 'var(--text-secondary)' }}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                  statusFilter === 'pending' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
+                }`}
               >
                 Pending
               </button>
@@ -346,35 +351,35 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
         </div>
 
         {loading ? (
-          <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem' }}>Loading eligible voters...</p>
+          <p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Loading eligible voters...</p>
         ) : filteredVoters.length === 0 ? (
-          <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem' }}>No voters found for this election.</p>
+          <p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">No voters found for this election.</p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--bg-input)', textAlign: 'left' }}>
-                  <th style={{ padding: '10px 14px' }}>Index Number</th>
-                  <th style={{ padding: '10px 14px' }}>Full Name</th>
-                  <th style={{ padding: '10px 14px' }}>Email Address</th>
-                  <th style={{ padding: '10px 14px' }}>Phone</th>
-                  <th style={{ padding: '10px 14px' }}>Voting Status</th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-100 dark:border-slate-700/60">
+                <tr>
+                  <th className="px-4 py-3">Index Number</th>
+                  <th className="px-4 py-3">Full Name</th>
+                  <th className="px-4 py-3">Email Address</th>
+                  <th className="px-4 py-3">Phone</th>
+                  <th className="px-4 py-3">Voting Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                 {filteredVoters.map((v, i) => (
-                  <tr key={v.id || i} style={{ borderTop: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontWeight: 600 }}>{v.studentId}</td>
-                    <td style={{ padding: '10px 14px' }}>{v.name}</td>
-                    <td style={{ padding: '10px 14px' }}>{v.email}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>{v.phone || 'N/A'}</td>
-                    <td style={{ padding: '10px 14px' }}>
+                  <tr key={v.id || i} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td className="px-4 py-3 font-mono font-bold text-slate-900 dark:text-white">{v.studentId}</td>
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{v.name}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{v.email}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{v.phone || 'N/A'}</td>
+                    <td className="px-4 py-3">
                       {v.hasVoted ? (
-                        <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
                           <Check size={12} /> Ballot Cast
                         </span>
                       ) : (
-                        <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">
                           <Clock size={12} /> Pending
                         </span>
                       )}

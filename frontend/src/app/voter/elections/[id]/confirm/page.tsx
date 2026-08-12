@@ -84,16 +84,16 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
   }, [electionId, searchParams]);
 
   if (loading) {
-    return <p style={{ color: 'var(--text-secondary)' }}>Preparing ballot confirmation details...</p>;
+    return <p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Preparing ballot confirmation details...</p>;
   }
 
   if (!election || candidates.length === 0) {
     return (
-      <div className="empty-state">
-        <AlertTriangle size={48} style={{ color: 'var(--color-danger)' }} />
-        <h3>Invalid Session</h3>
-        <p>No valid candidates selection parameters were registered for this checkout flow.</p>
-        <Link href="/voter/elections" className="btn btn-primary" style={{ marginTop: 'var(--space-4)' }}>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-12 text-center max-w-md mx-auto shadow-sm">
+        <AlertTriangle size={48} className="text-red-500 mx-auto mb-3" />
+        <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-1">Invalid Session</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">No valid candidate selection parameters were registered for this checkout flow.</p>
+        <Link href="/voter/elections" className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors inline-block">
           Back to Elections
         </Link>
       </div>
@@ -154,102 +154,83 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
   };
 
   return (
-    <div className="confirm-box animate-page-enter" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-      <div style={{ marginBottom: 'var(--space-6)' }}>
-        <h2 style={{ marginBottom: 'var(--space-2)' }}>Confirm Your Vote choices</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
+    <div className="max-w-xl mx-auto text-center flex flex-col gap-6">
+      <div>
+        <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">Confirm Your Vote Choices</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Verify the details of your cryptographic ballot before transmission to the audit chain.
         </p>
       </div>
 
       {error && (
-        <div className="alert alert-danger" style={{ 
-          padding: 'var(--space-3) var(--space-4)', 
-          borderRadius: 'var(--radius-md)', 
-          marginBottom: 'var(--space-4)',
-          fontSize: 'var(--text-sm)',
-          background: 'var(--color-danger-bg)',
-          color: 'var(--color-danger)',
-          border: '1px solid rgba(239, 68, 68, 0.2)',
-          textAlign: 'left'
-        }}>
+        <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30 text-xs font-bold text-left">
           {error}
         </div>
       )}
 
       {/* Selected Summary Card List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
+      <div className="flex flex-col gap-3">
         {candidates.map(candidate => (
-          <div className="glass-card" key={candidate.id} style={{ 
-            textAlign: 'left', 
-            display: 'flex', 
-            gap: 'var(--space-4)', 
-            alignItems: 'center', 
-            borderColor: 'rgba(37, 99, 235, 0.2)',
-            padding: 'var(--space-3)'
-          }}>
+          <div className="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-2xl p-4 flex items-center gap-4 text-left shadow-sm" key={candidate.id}>
             <img 
               src={candidate.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300'} 
               alt={candidate.name} 
-              style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--radius-md)' }} 
+              className="w-14 h-14 object-cover rounded-xl shrink-0" 
             />
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)' }}>
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-extrabold uppercase tracking-wider block">
                 {candidate.position}
               </span>
-              <h3 style={{ fontSize: 'var(--text-base)', margin: '2px 0', fontWeight: 600 }}>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate mt-0.5">
                 {candidate.ballotNumber ? `No. ${candidate.ballotNumber} - ` : ''}{candidate.name}
                 {candidate.choice && (
-                  <span style={{ 
-                    marginLeft: '8px', 
-                    fontSize: '12px', 
-                    color: candidate.choice === 'yes' ? 'var(--color-success, #22c55e)' : 'var(--color-danger, #ef4444)',
-                    fontWeight: 'bold' 
-                  }}>
+                  <span className={`ml-2 text-xs font-bold ${
+                    candidate.choice === 'yes' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                  }`}>
                     ({candidate.choice === 'yes' ? '✓ Voted Yes' : '✗ Voted No'})
                   </span>
                 )}
               </h3>
-              <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: 0 }}>{election.title}</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">{election.title}</p>
             </div>
-            <CheckCircle size={18} color="var(--color-success, #22c55e)" style={{ marginRight: 'var(--space-2)' }} />
+            <CheckCircle size={20} className="text-emerald-500 shrink-0 mr-1" />
           </div>
         ))}
       </div>
 
       {/* Warning Panel Alert */}
-      <div className="alert alert-warning" style={{ marginBottom: 'var(--space-8)', textAlign: 'left', display: 'flex', gap: 'var(--space-3)' }}>
-        <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+      <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/30 text-left flex gap-3">
+        <AlertTriangle size={20} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
         <div>
-          <p style={{ fontWeight: 'bold', margin: 0, color: 'var(--text-primary)' }}>Warning: Action is Permanent</p>
-          <p style={{ margin: 0, fontSize: 'var(--text-xs)' }}>
+          <p className="text-xs font-bold text-slate-900 dark:text-white">Warning: Action is Permanent</p>
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
             Your votes cannot be changed or recalled after submission. The audit ledger does not support modifications once block confirmation completes.
           </p>
         </div>
       </div>
 
-      {/* Submit Items Actions */}
-      <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'center' }}>
+      {/* Submit Actions */}
+      <div className="flex gap-3 justify-center">
         {(() => {
           const backParams = new URLSearchParams();
           candidateIds.forEach(id => backParams.append('candidateId', id));
           return (
-            <Link href={`/voter/elections/${electionId}?${backParams.toString()}`} className="btn btn-secondary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ArrowLeft size={18} /> Go Back
+            <Link 
+              href={`/voter/elections/${electionId}?${backParams.toString()}`} 
+              className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-1.5"
+            >
+              <ArrowLeft size={16} /> Go Back
             </Link>
           );
         })()}
         <button 
-          className="btn btn-primary btn-lg" 
+          className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-2 disabled:opacity-50" 
           onClick={handleCastBallot} 
           disabled={submitting}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          <ShieldCheck size={18} /> {submitting ? 'Transmitting ballot...' : 'Cast Ballot Securely'}
+          <ShieldCheck size={16} /> {submitting ? 'Transmitting ballot...' : 'Cast Ballot Securely'}
         </button>
       </div>
-
-
     </div>
   );
 }
@@ -257,7 +238,7 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
 export default function VoteConfirmationPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   return (
-    <Suspense fallback={<p style={{ color: 'var(--text-secondary)', padding: 'var(--space-8)', textAlign: 'center' }}>Preparing ballot confirmation details...</p>}>
+    <Suspense fallback={<p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Preparing ballot confirmation details...</p>}>
       <VoteConfirmationPageContent electionId={resolvedParams.id} />
     </Suspense>
   );

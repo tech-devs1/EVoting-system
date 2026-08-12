@@ -142,34 +142,51 @@ export default function VoterElectionsPage() {
   };
 
   return (
-    <div className="animate-page-enter">
+  return (
+    <div className="flex flex-col gap-6">
       {/* Top Filter and Search Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <Link href="/voter/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', marginBottom: 'var(--space-2)' }}>
+          <Link href="/voter/dashboard" className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
             <ArrowLeft size={14} /> Return to Dashboard
           </Link>
-          <div className="tabs-container" style={{ marginBottom: 0 }}>
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700">
             <button 
-              className={`tab-btn ${selectedFilter === 'all' ? 'active' : ''}`} 
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                selectedFilter === 'all' 
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`} 
               onClick={() => setSelectedFilter('all')}
             >
               All Elections
             </button>
             <button 
-              className={`tab-btn ${selectedFilter === 'active' ? 'active' : ''}`} 
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                selectedFilter === 'active' 
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`} 
               onClick={() => setSelectedFilter('active')}
             >
               Active
             </button>
             <button 
-              className={`tab-btn ${selectedFilter === 'draft' ? 'active' : ''}`} 
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                selectedFilter === 'draft' 
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`} 
               onClick={() => setSelectedFilter('draft')}
             >
               Upcoming
             </button>
             <button 
-              className={`tab-btn ${selectedFilter === 'completed' ? 'active' : ''}`} 
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                selectedFilter === 'completed' 
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`} 
               onClick={() => setSelectedFilter('completed')}
             >
               Closed
@@ -177,11 +194,11 @@ export default function VoterElectionsPage() {
           </div>
         </div>
         
-        <div className="form-input-container" style={{ maxWidth: '300px', width: '100%' }}>
-          <Search size={18} className="form-input-icon" />
+        <div className="relative w-full sm:w-64">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input 
             type="text" 
-            className="form-input form-input-with-icon" 
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500" 
             placeholder="Search elections..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -191,62 +208,69 @@ export default function VoterElectionsPage() {
 
       {/* Elections Cards Grid */}
       {loading ? (
-        <p style={{ color: 'var(--text-secondary)' }}>Synchronizing ballot database...</p>
+        <p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Synchronizing ballot database...</p>
       ) : filteredList.length === 0 ? (
-        <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-          <FolderOpen size={48} style={{ color: 'var(--text-tertiary)' }} />
-          <h3>No Elections Found</h3>
-          <p>No matching election schedules fit the active queries.</p>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-12 text-center">
+          <FolderOpen size={48} className="text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">No Elections Found</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">No matching election schedules fit the active queries.</p>
         </div>
       ) : (
-        <div className="election-grid">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredList.map(el => {
             const statusLabel = mapStatusLabel(el.status);
-            const badgeClass = mapStatusBadgeClass(el.status);
-
             const hasVoted = votedElectionIds.includes(el.id);
+
             return (
-              <div className="card election-card card-hover" key={el.id} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0 }}>
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow" key={el.id}>
                 {el.previewImageUrl ? (
                   <img
                     src={el.previewImageUrl}
                     alt={el.title}
-                    style={{ width: '100%', height: '140px', objectFit: 'cover' }}
+                    className="w-full h-36 object-cover"
                   />
                 ) : (
-                  <div style={{ width: '100%', height: '140px', backgroundColor: 'var(--bg-tertiary, #EFF6FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary, #2563EB)' }}>
+                  <div className="w-full h-36 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                     <FolderOpen size={40} />
                   </div>
                 )}
-                <div style={{ padding: 'var(--space-4)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+
+                <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <div className="election-card-header" style={{ marginBottom: 'var(--space-2)' }}>
-                      <h4 className="election-card-title" style={{ margin: 0 }}>{el.title}</h4>
-                      <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white line-clamp-1">{el.title}</h4>
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {hasVoted && el.status === 'active' && (
-                          <span className="badge" style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--color-success, #22c55e)', fontSize: '11px' }}>✓ Voted</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">✓ Voted</span>
                         )}
-                        <span className={`badge ${badgeClass}`}>{statusLabel}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold capitalize ${
+                          el.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30' :
+                          el.status === 'completed' ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30' :
+                          'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30'
+                        }`}>
+                          {statusLabel}
+                        </span>
                       </div>
                     </div>
-                    <p className="election-card-desc" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '48px', marginBottom: 'var(--space-4)' }}>{el.description}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3 mb-4">{el.description}</p>
                   </div>
-                  <div className="election-card-meta" style={{ marginTop: 'auto', borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-3)' }}>
+
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-700/60 flex justify-between items-center mt-auto">
                     <CountdownTimer endsAt={el.endDate} status={el.status} />
-                    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                    <div className="flex items-center gap-2">
                       {el.status === 'active' ? (
-                        <Link href={`/voter/elections/${el.id}`} className="btn btn-primary btn-sm">
+                        <Link href={`/voter/elections/${el.id}`} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
                           View Votes
                         </Link>
                       ) : el.status === 'completed' ? (
                         null
                       ) : (
-                        <button className="btn btn-secondary btn-sm" disabled style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button disabled className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-400 text-xs font-bold flex items-center gap-1 cursor-not-allowed">
                           <Lock size={12} /> Locked
                         </button>
                       )}
                       {el.status === 'completed' && el.showResults && (
-                        <Link href={`/voter/elections/${el.id}/results`} className="btn btn-primary btn-sm">
+                        <Link href={`/voter/elections/${el.id}/results`} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
                           View Results
                         </Link>
                       )}

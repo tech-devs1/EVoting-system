@@ -82,26 +82,25 @@ export default function ElectionSystemAuditPage({ params }: { params: Promise<{ 
   });
 
   return (
-    <div className="animate-page-enter">
+    <div className="flex flex-col gap-6">
       {/* Banner Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <Link href={`/admin/elections/${electionId}/dashboard`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', marginBottom: '0.75rem' }}>
-          <ArrowLeft size={16} /> Back to Election Command Center
+      <div>
+        <Link href={`/admin/elections/${electionId}/dashboard`} className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
+          <ArrowLeft size={14} /> Back to Election Command Center
         </Link>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="flex justify-between items-center flex-wrap gap-4">
           <div>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Election System Audit
             </h2>
-            <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '0.875rem' }}>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
               Official system logs detailing admin activities, voter actions, and precise vote cast timestamps.
             </p>
           </div>
 
           <button
             onClick={handleExportCSV}
-            className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors shadow-md shadow-blue-500/20 flex items-center gap-1.5"
           >
             <Download size={16} /> Export Audit Log (CSV)
           </button>
@@ -109,74 +108,84 @@ export default function ElectionSystemAuditPage({ params }: { params: Promise<{ 
       </div>
 
       {/* Audit Log Card */}
-      <div className="card" style={{ padding: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm">
+        <div className="flex justify-between items-center mb-5 flex-wrap gap-4">
           {/* Tab Filter */}
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-700 rounded-xl">
             <button
               onClick={() => setActiveTab('all')}
-              style={{ padding: '0.4rem 0.85rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, border: 'none', cursor: 'pointer', backgroundColor: activeTab === 'all' ? 'var(--color-primary)' : 'var(--bg-input)', color: activeTab === 'all' ? '#fff' : 'var(--text-secondary)' }}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                activeTab === 'all' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
+              }`}
             >
               All Activities ({records.length})
             </button>
             <button
               onClick={() => setActiveTab('admin')}
-              style={{ padding: '0.4rem 0.85rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, border: 'none', cursor: 'pointer', backgroundColor: activeTab === 'admin' ? 'var(--color-primary)' : 'var(--bg-input)', color: activeTab === 'admin' ? '#fff' : 'var(--text-secondary)' }}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                activeTab === 'admin' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
+              }`}
             >
               Admin Activities
             </button>
             <button
               onClick={() => setActiveTab('voter')}
-              style={{ padding: '0.4rem 0.85rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, border: 'none', cursor: 'pointer', backgroundColor: activeTab === 'voter' ? 'var(--color-primary)' : 'var(--bg-input)', color: activeTab === 'voter' ? '#fff' : 'var(--text-secondary)' }}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                activeTab === 'voter' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
+              }`}
             >
               Voter Ballots & Timestamps
             </button>
           </div>
 
           {/* Search */}
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search activities..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: '32px', paddingRight: '12px', paddingTop: '6px', paddingBottom: '6px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              className="pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
         {loading ? (
-          <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading system audit log...</p>
+          <p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Loading system audit log...</p>
         ) : filteredRecords.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+          <div className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">
             No matching activities recorded for this election yet.
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--bg-input)', textAlign: 'left' }}>
-                  <th style={{ padding: '10px 12px' }}>Timestamp</th>
-                  <th style={{ padding: '10px 12px' }}>Actor</th>
-                  <th style={{ padding: '10px 12px' }}>Type</th>
-                  <th style={{ padding: '10px 12px' }}>Activity / Details</th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-100 dark:border-slate-700/60">
+                <tr>
+                  <th className="px-4 py-3">Timestamp</th>
+                  <th className="px-4 py-3">Actor</th>
+                  <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3">Activity / Details</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                 {filteredRecords.map((r, i) => (
-                  <tr key={r.id || i} style={{ borderTop: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                  <tr key={r.id || i} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td className="px-4 py-3 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
                       {new Date(r.timestamp).toLocaleString()}
                     </td>
-                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>{r.actor}</td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <span className={`badge ${r.type === 'admin' ? 'badge-info' : 'badge-success'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{r.actor}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                        r.type === 'admin'
+                          ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30'
+                          : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30'
+                      }`}>
                         {r.type === 'admin' ? <Activity size={12} /> : <User size={12} />}
                         {r.type === 'admin' ? 'Admin Activity' : 'Voter Cast'}
                       </span>
                     </td>
-                    <td style={{ padding: '10px 12px', color: 'var(--text-primary)', fontWeight: 500 }}>
+                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-medium">
                       {r.details || (r.selections ? `Casted vote on ballot: ${JSON.stringify(r.selections)}` : 'Ballot Cast')}
                     </td>
                   </tr>

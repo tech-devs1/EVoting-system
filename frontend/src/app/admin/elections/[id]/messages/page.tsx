@@ -206,115 +206,68 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
 
   if (loading || !election) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', color: '#64748B' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner" style={{ marginBottom: '1rem', border: '3px solid #E2E8F0', borderTop: '3px solid #2563EB', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite' }}></div>
-          <p style={{ fontWeight: 600 }}>Loading Broadcast Communicator...</p>
-        </div>
+      <div className="flex justify-center items-center h-64 text-slate-500 font-medium text-xs">
+        Loading Broadcast Communicator...
       </div>
     );
   }
 
   return (
-    <div className="animate-page-enter" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
       {/* Top Header & Workspace Route Navigator */}
-      <div style={{ marginBottom: '2rem' }}>
+      <div>
         <Link 
           href={`/admin/elections/${electionId}/dashboard`} 
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            color: '#2563eb',
-            fontSize: '0.875rem',
-            fontWeight: 700,
-            textDecoration: 'none',
-            marginBottom: '1rem',
-            padding: '0.4rem 0.8rem',
-            backgroundColor: '#EFF6FF',
-            borderRadius: '10px',
-            transition: 'all 0.2s'
-          }}
-          className="hover-bg-blue"
+          className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3"
         >
-          <ArrowLeft size={16} /> Back to Election Command Center
+          <ArrowLeft size={14} /> Back to Election Command Center
         </Link>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
+        <div className="flex justify-between items-center flex-wrap gap-4">
           <div>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Mail size={36} style={{ color: '#2563eb' }} /> Broadcast Communicator
+            <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+              <Mail size={28} className="text-blue-600 dark:text-blue-400" /> Broadcast Communicator
             </h2>
-            <p style={{ color: '#64748B', margin: '6px 0 0 0', fontSize: '1rem', fontWeight: 500 }}>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
               Design, preview, and securely dispatch dual Email & SMS broadcast announcements to your roster voters.
             </p>
           </div>
 
           {/* Premium Selector Tabs */}
-          <div style={{ display: 'flex', gap: '0.4rem', backgroundColor: '#F1F5F9', padding: '0.35rem', borderRadius: '14px' }}>
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700">
             <button
               type="button"
               onClick={() => setActiveTab('compose')}
-              style={{
-                padding: '0.6rem 1.25rem',
-                borderRadius: '10px',
-                border: 'none',
-                fontSize: '0.875rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                backgroundColor: activeTab === 'compose' ? '#FFFFFF' : 'transparent',
-                color: activeTab === 'compose' ? '#2563eb' : '#64748B',
-                boxShadow: activeTab === 'compose' ? '0 4px 12px rgba(15, 23, 42, 0.05)' : 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                transition: 'all 0.2s ease'
-              }}
+              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${
+                activeTab === 'compose'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
             >
-              <Send size={16} /> Compose Broadcast
+              <Send size={14} /> Compose Broadcast
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('history')}
-              style={{
-                padding: '0.6rem 1.25rem',
-                borderRadius: '10px',
-                border: 'none',
-                fontSize: '0.875rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                backgroundColor: activeTab === 'history' ? '#FFFFFF' : 'transparent',
-                color: activeTab === 'history' ? '#2563eb' : '#64748B',
-                boxShadow: activeTab === 'history' ? '0 4px 12px rgba(15, 23, 42, 0.05)' : 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                transition: 'all 0.2s ease'
-              }}
+              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${
+                activeTab === 'history'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
             >
-              <FileText size={16} /> Transmission Logs ({history.length})
+              <FileText size={14} /> Transmission Logs ({history.length})
             </button>
           </div>
         </div>
       </div>
 
       {feedback && (
-        <div style={{
-          padding: '1rem 1.5rem',
-          borderRadius: '16px',
-          marginBottom: '2rem',
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          backgroundColor: feedback.type === 'success' ? '#ECFDF5' : '#FEF2F2',
-          color: feedback.type === 'success' ? '#065F46' : '#991B1B',
-          border: `1px solid ${feedback.type === 'success' ? '#A7F3D0' : '#FCA5A5'}`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
-        }}>
-          {feedback.type === 'success' ? <CheckCircle2 size={20} style={{ color: '#059669' }} /> : <AlertCircle size={20} style={{ color: '#DC2626' }} />}
+        <div className={`p-4 rounded-2xl text-xs font-semibold flex items-center gap-3 ${
+          feedback.type === 'success' 
+            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30' 
+            : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30'
+        }`}>
+          {feedback.type === 'success' ? <CheckCircle2 size={18} className="text-emerald-500 shrink-0" /> : <AlertCircle size={18} className="text-red-500 shrink-0" />}
           <span>{feedback.text}</span>
         </div>
       )}
