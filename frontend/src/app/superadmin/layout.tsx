@@ -73,11 +73,11 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         <div>
           {/* Logo Brand Header */}
           <div className="flex items-center gap-3 mb-8 px-2">
-            <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20">
-              <ShieldCheck size={24} />
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden shadow-md">
+              <img src="/assets/logo.png" alt="HTU Elect Logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Superadmin <span className="text-purple-600 dark:text-purple-400">✓</span>
+              Superadmin <span className="text-blue-600 dark:text-blue-500">✓</span>
             </span>
           </div>
 
@@ -97,7 +97,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                     href={item.href}
                     className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                       isActive 
-                        ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20 font-bold' 
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 font-bold'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
@@ -128,7 +128,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors"
+              className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors"
             >
               <ChevronLeft size={20} />
             </button>
@@ -144,7 +144,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
               <button
                 onClick={toggleTheme}
                 className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                  theme === 'light' ? 'bg-purple-600 text-white' : 'text-slate-500 dark:text-slate-400'
+                  theme === 'light' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
                 <Sun size={15} />
@@ -152,7 +152,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
               <button
                 onClick={toggleTheme}
                 className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                  theme === 'dark' ? 'bg-purple-600 text-white' : 'text-slate-500 dark:text-slate-400'
+                  theme === 'dark' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
                 <Moon size={15} />
@@ -175,7 +175,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                   isProfileOpen ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <div className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center font-extrabold text-xs">
+                <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-extrabold text-xs">
                   SA
                 </div>
                 <div className="flex flex-col text-left">
@@ -191,7 +191,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                   <div className="pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
                     <div className="font-bold text-sm text-slate-900 dark:text-white">{user.name}</div>
                     <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</div>
-                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 uppercase">
+                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 uppercase">
                       <UserCheck size={12} /> Root Superadmin
                     </div>
                   </div>

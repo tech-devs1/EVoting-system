@@ -25,7 +25,7 @@ interface Department {
 
 const ACTION_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   VOTER_LOGIN:               { label: 'Voter Login',        color: '#2563EB', bg: 'rgba(37,99,235,0.1)' },
-  ADMIN_LOGIN:               { label: 'Admin Login',        color: '#7C3AED', bg: 'rgba(124,58,237,0.1)' },
+  ADMIN_LOGIN:               { label: 'Admin Login',        color: '#2563EB', bg: 'rgba(37,99,235,0.1)' },
   CSV_UPLOAD:                { label: 'CSV Upload',         color: '#059669', bg: 'rgba(5,150,105,0.1)' },
   VOTE_CAST:                 { label: 'Vote Cast',          color: '#0891B2', bg: 'rgba(8,145,178,0.1)' },
   DEPT_CREATED:              { label: 'Dept Created',       color: '#D97706', bg: 'rgba(217,119,6,0.1)' },
@@ -50,7 +50,7 @@ function ActionBadge({ action }: { action: string }) {
 }
 
 function RoleBadge({ role }: { role: string }) {
-  const map: Record<string, string> = { admin: '#7C3AED', voter: '#2563EB', superadmin: '#D97706' };
+  const map: Record<string, string> = { admin: '#2563EB', voter: '#10B981', superadmin: '#EF4444' };
   const color = map[role] || '#6B7280';
   return (
     <span style={{ display: 'inline-block', padding: '2px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 700, color, background: color + '18', textTransform: 'uppercase' }}>
@@ -125,20 +125,19 @@ export default function SuperAdminAudit() {
     : (departments.find(d => d.id === selectedTab)?.name || selectedTab);
 
   return (
-    <div className="animate-page-enter">
+    <div className="animate-page-enter flex flex-col gap-6">
       {/* Header */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, margin: 0 }}>System Audit Trail</h2>
-          <p style={{ color: 'var(--text-secondary)', margin: 'var(--space-1) 0 0 0', fontSize: 'var(--text-sm)' }}>
+          <h2 className="text-xl md:text-2xl font-extrabold tracking-tight m-0 text-slate-900 dark:text-white">System Audit Trail</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 m-0">
             Live activity logs across all departments — auto-refreshes every 15s
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="flex gap-2.5 flex-wrap">
           <button
             onClick={fetchLogs}
-            className="btn btn-outline"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-sm)' }}
+            className="px-4 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw size={14} /> Refresh
           </button>
@@ -146,8 +145,7 @@ export default function SuperAdminAudit() {
             <button
               onClick={() => downloadPDF(selectedTab)}
               disabled={downloading}
-              className="btn btn-outline"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-sm)', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
+              className="px-4 py-2 border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold text-xs rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <Download size={14} /> {downloading ? 'Generating...' : `${currentDeptName} PDF`}
             </button>
@@ -155,8 +153,7 @@ export default function SuperAdminAudit() {
           <button
             onClick={() => downloadPDF()}
             disabled={downloading}
-            className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-sm)' }}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.99] transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Download size={14} /> {downloading ? 'Generating...' : 'Download Global PDF'}
           </button>
@@ -164,19 +161,15 @@ export default function SuperAdminAudit() {
       </header>
 
       {/* Department Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: 'var(--space-6)', flexWrap: 'wrap', overflowX: 'auto' }}>
+      <div className="flex gap-2 mb-2 flex-wrap overflow-x-auto">
         {/* Global Tab */}
         <button
           onClick={() => setSelectedTab('all')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 14px', borderRadius: 'var(--radius-lg)',
-            border: selectedTab === 'all' ? '2px solid var(--color-primary)' : '1px solid var(--border-color)',
-            background: selectedTab === 'all' ? 'var(--color-primary)' : 'var(--bg-secondary)',
-            color: selectedTab === 'all' ? 'white' : 'var(--text-primary)',
-            cursor: 'pointer', fontWeight: 600, fontSize: 'var(--text-sm)',
-            transition: 'all 0.15s ease'
-          }}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+            selectedTab === 'all'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/10'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+          }`}
         >
           <Globe size={14} /> All Departments
         </button>
@@ -186,15 +179,11 @@ export default function SuperAdminAudit() {
           <button
             key={dept.id}
             onClick={() => setSelectedTab(dept.id)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 14px', borderRadius: 'var(--radius-lg)',
-              border: selectedTab === dept.id ? '2px solid var(--color-primary)' : '1px solid var(--border-color)',
-              background: selectedTab === dept.id ? 'var(--color-primary)' : 'var(--bg-secondary)',
-              color: selectedTab === dept.id ? 'white' : 'var(--text-primary)',
-              cursor: 'pointer', fontWeight: 500, fontSize: 'var(--text-sm)',
-              transition: 'all 0.15s ease'
-            }}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+              selectedTab === dept.id
+                ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/10'
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+            }`}
           >
             {dept.id === 'compssa' ? <Shield size={14} /> : <Building2 size={14} />}
             {dept.name}
@@ -203,15 +192,15 @@ export default function SuperAdminAudit() {
       </div>
 
       {/* Summary strip */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
+      <div className="flex gap-3 mb-2 flex-wrap">
         {Object.entries(ACTION_CONFIG).filter(([k]) => k !== 'DEFAULT').map(([key, cfg]) => {
           const count = logs.filter(l => l.action === key).length;
           return (
-            <div key={key} className="card" style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', minWidth: '130px' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
+            <div key={key} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-2.5 flex items-center gap-3 min-w-[130px] shadow-sm">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cfg.color }} />
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{cfg.label}</div>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{count}</div>
+                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider leading-none mb-1">{cfg.label}</div>
+                <div className="text-lg font-extrabold text-slate-900 dark:text-white leading-tight">{count}</div>
               </div>
             </div>
           );
@@ -219,58 +208,55 @@ export default function SuperAdminAudit() {
       </div>
 
       {/* Log Table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-0 shadow-sm overflow-hidden">
         {loading ? (
-          <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-            <Activity size={32} style={{ opacity: 0.3, margin: '0 auto 12px' }} />
-            <p>Loading audit logs...</p>
+          <div className="p-12 text-center text-slate-400 dark:text-slate-500">
+            <Activity className="opacity-30 mx-auto mb-3 animate-spin" size={32} />
+            <p className="text-sm font-medium">Loading audit logs...</p>
           </div>
         ) : logs.length === 0 ? (
-          <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-            <Activity size={40} style={{ opacity: 0.2, margin: '0 auto 12px' }} />
-            <h3 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>No Activity Yet</h3>
-            <p style={{ fontSize: 'var(--text-sm)' }}>Audit entries will appear here as users interact with the platform.</p>
+          <div className="p-12 text-center text-slate-400 dark:text-slate-500">
+            <Activity className="opacity-20 mx-auto mb-3" size={40} />
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No Activity Yet</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Audit entries will appear here as users interact with the platform.</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm text-left">
               <thead>
-                <tr style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-tertiary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timestamp</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-tertiary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Action</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-tertiary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actor</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-tertiary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Role</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-tertiary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Department</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-tertiary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-tertiary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Status</th>
+                <tr className="bg-slate-50 dark:bg-slate-800/40 border-b-2 border-slate-200 dark:border-slate-800">
+                  <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Timestamp</th>
+                  <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Action</th>
+                  <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Actor</th>
+                  <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role</th>
+                  <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Department</th>
+                  <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Description</th>
+                  <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-center">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {logs.map((log, idx) => (
-                  <tr key={log.id} style={{ borderBottom: idx < logs.length - 1 ? '1px solid var(--border-color)' : 'none', transition: 'background 0.1s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <td style={{ padding: '11px 16px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                  <tr key={log.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 last:border-none transition-colors">
+                    <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap text-xs font-medium">
                       {new Date(log.timestamp).toLocaleString('en-GB', { hour12: false })}
                     </td>
-                    <td style={{ padding: '11px 16px' }}><ActionBadge action={log.action} /></td>
-                    <td style={{ padding: '11px 16px', fontWeight: 500, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.actorEmail}>
+                    <td className="px-4 py-3.5"><ActionBadge action={log.action} /></td>
+                    <td className="px-4 py-3.5 font-semibold text-slate-900 dark:text-slate-100 max-w-[180px] truncate" title={log.actorEmail}>
                       {log.actorEmail}
                     </td>
-                    <td style={{ padding: '11px 16px' }}><RoleBadge role={log.actorRole} /></td>
-                    <td style={{ padding: '11px 16px', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                    <td className="px-4 py-3.5"><RoleBadge role={log.actorRole} /></td>
+                    <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400 text-xs">
                       {log.tenantName || log.tenantId}
                     </td>
-                    <td style={{ padding: '11px 16px', color: 'var(--text-secondary)', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.description}>
+                    <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400 max-w-[250px] truncate" title={log.description}>
                       {log.description}
                     </td>
-                    <td style={{ padding: '11px 16px', textAlign: 'center' }}>
-                      <span style={{
-                        display: 'inline-block', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
-                        color: log.status === 'success' ? '#059669' : '#DC2626',
-                        background: log.status === 'success' ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.1)'
-                      }}>
+                    <td className="px-5 py-3.5 text-center">
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                        log.status === 'success'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+                      }`}>
                         {log.status}
                       </span>
                     </td>
@@ -281,7 +267,7 @@ export default function SuperAdminAudit() {
           </div>
         )}
         {logs.length > 0 && (
-          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-color)', fontSize: '12px', color: 'var(--text-tertiary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500 flex justify-between items-center">
             <span>Showing {logs.length} most recent entries for <strong>{currentDeptName}</strong></span>
             <span>Auto-refreshing every 15 seconds</span>
           </div>

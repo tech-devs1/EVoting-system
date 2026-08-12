@@ -231,29 +231,48 @@ export default function SuperAdminDepartments() {
   };
 
   // ── Shared Modal Shell ────────────────────────────────────────────────────
-  const renderModal = (title: string, onSubmit: (e: React.FormEvent) => void, children: React.ReactNode, submitLabel: string, submitClass = 'btn-primary', isDelete = false) =>
+  const renderModal = (title: string, onSubmit: (e: React.FormEvent) => void, children: React.ReactNode, submitLabel: string, submitClass = 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/10', isDelete = false) =>
     mounted && createPortal(
       <div
         onClick={closeModal}
-        style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 16px 88px 16px', overflowY: 'auto', background: 'rgba(0,0,0,0.5)' }}
+        className="fixed inset-0 z-[9000] flex items-start justify-center p-4 md:py-20 overflow-y-auto bg-slate-900/60 backdrop-blur-sm"
       >
-        <div className="modal-container" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '520px', maxHeight: 'calc(100dvh - 180px)' }}>
-          <div className="modal-header">
-            <h3 className="modal-title">{title}</h3>
-            <button className="modal-close" onClick={closeModal}>&times;</button>
+        <div
+          onClick={e => e.stopPropagation()}
+          className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]"
+        >
+          <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">{title}</h3>
+            <button
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+              onClick={closeModal}
+            >
+              <X size={16} />
+            </button>
           </div>
-          <form onSubmit={isDelete ? (e) => { e.preventDefault(); handleDelete(); } : onSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-            <div className="modal-body">
+          <form onSubmit={isDelete ? (e) => { e.preventDefault(); handleDelete(); } : onSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="p-6 overflow-y-auto">
               {error && (
-                <div style={{ padding: '12px', backgroundColor: 'rgba(239,68,68,0.1)', color: '#EF4444', borderRadius: 'var(--radius-md)', marginBottom: '16px', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #EF444444' }}>
+                <div className="p-3 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40 rounded-xl text-xs font-semibold flex items-center gap-2 mb-4">
                   <AlertCircle size={16} /> {error}
                 </div>
               )}
               {children}
             </div>
-            <div className="modal-footer">
-              <button type="button" onClick={closeModal} className="btn btn-secondary" disabled={formLoading}>Cancel</button>
-              <button type="submit" className={`btn ${submitClass}`} disabled={formLoading}>
+            <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                disabled={formLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className={`px-4 py-2.5 font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer ${submitClass}`}
+                disabled={formLoading}
+              >
                 {formLoading ? 'Working...' : submitLabel}
               </button>
             </div>
@@ -264,97 +283,108 @@ export default function SuperAdminDepartments() {
     );
 
   return (
-    <div className="animate-page-enter">
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+    <div className="animate-page-enter flex flex-col gap-6">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-1)' }}>Manage Departments</h2>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Provision and monitor isolated VaaS tenants.</span>
+          <h2 className="text-xl md:text-2xl font-extrabold tracking-tight m-0 text-slate-900 dark:text-white">Manage Departments</h2>
+          <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block">Provision and monitor isolated VaaS tenants.</span>
         </div>
-        <button onClick={() => openModal('create')} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <button
+          onClick={() => openModal('create')}
+          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer transition-all active:scale-95 border-none"
+        >
           <Plus size={16} /> Provision Department
         </button>
       </header>
 
       {loading ? (
-        <p style={{ color: 'var(--text-secondary)' }}>Loading departments registry...</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Loading departments registry...</p>
       ) : (
-        <div className="card" style={{ padding: 'var(--space-6)', overflow: 'visible' }}>
-          <div style={{ overflowX: 'auto', flexGrow: 1, border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm overflow-visible">
+          <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
+            <table className="w-full border-collapse text-sm text-left">
               <thead>
-                <tr style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                  <th style={{ padding: '12px' }}>Department Name</th>
-                  <th style={{ padding: '12px' }}>Tenant ID</th>
-                  <th style={{ padding: '12px' }}>Admin Email</th>
-                  <th style={{ padding: '12px' }}>Admins</th>
-                  <th style={{ padding: '12px' }}>Stats</th>
-                  <th style={{ padding: '12px' }}>Status</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
+                <tr className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-wider">
+                  <th className="p-3.5 pl-5">Department Name</th>
+                  <th className="p-3.5">Tenant ID</th>
+                  <th className="p-3.5">Admin Email</th>
+                  <th className="p-3.5">Admins</th>
+                  <th className="p-3.5">Stats</th>
+                  <th className="p-3.5">Status</th>
+                  <th className="p-3.5 text-center pr-5">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {departments.map((dept, idx) => (
-                  <tr key={dept.id} style={{ borderBottom: idx < departments.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
-                    <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <tr key={dept.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 last:border-none">
+                    <td className="p-3.5 pl-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
                           <Building2 size={20} />
                         </div>
                         <div>
-                          <div style={{ fontWeight: 600 }}>{dept.name}</div>
-                          {dept.domain && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{dept.domain}</div>}
+                          <div className="font-bold text-slate-900 dark:text-white">{dept.name}</div>
+                          {dept.domain && <div className="text-xs text-slate-400 dark:text-slate-500">{dept.domain}</div>}
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px' }}><code style={{ fontSize: '12px', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '4px' }}>{dept.id}</code></td>
-                    <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{dept.adminEmail}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span className="badge badge-info" style={{ cursor: 'pointer' }} onClick={() => openModal('admins', dept)}>
+                    <td className="p-3.5">
+                      <code className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-2.5 py-1 rounded-md font-mono">
+                        {dept.id}
+                      </code>
+                    </td>
+                    <td className="p-3.5 text-slate-600 dark:text-slate-300">{dept.adminEmail}</td>
+                    <td className="p-3.5">
+                      <span
+                        className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold cursor-pointer border border-blue-100/30"
+                        onClick={() => openModal('admins', dept)}
+                      >
                         {dept.adminsCount || 1} {(dept.adminsCount || 1) === 1 ? 'admin' : 'admins'}
                       </span>
                     </td>
-                    <td style={{ padding: '12px' }}>
-                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                        <div><strong style={{ color: 'var(--text-primary)' }}>{dept.electionsCount}</strong> Elections</div>
-                        <div><strong style={{ color: 'var(--text-primary)' }}>{dept.votersCount}</strong> Voters</div>
+                    <td className="p-3.5">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
+                        <div><strong className="text-slate-800 dark:text-slate-200 font-bold">{dept.electionsCount}</strong> Elections</div>
+                        <div><strong className="text-slate-800 dark:text-slate-200 font-bold">{dept.votersCount}</strong> Voters</div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px' }}>
-                      <span className={`badge ${dept.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
+                    <td className="p-3.5">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        dept.status === 'active'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
+                      }`}>
                         {dept.status === 'active' ? 'Active' : 'Disabled'}
                       </span>
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <div style={{ display: 'inline-block' }}>
-                        <button
-                          className="btn btn-outline btn-sm"
-                          style={{ padding: '6px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (openMenuId === dept.id) {
-                              setOpenMenuId(null);
-                              setMenuCoords(null);
-                            } else {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setOpenMenuId(dept.id);
-                              setSelectedDept(dept);
-                              setMenuCoords({
-                                x: rect.right + window.scrollX,
-                                y: rect.bottom + window.scrollY
-                              });
-                            }
-                          }}
-                          aria-label="Department actions"
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-                      </div>
+                    <td className="p-3.5 text-center pr-5">
+                      <button
+                        className="p-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer text-slate-500 dark:text-slate-400"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (openMenuId === dept.id) {
+                            setOpenMenuId(null);
+                            setMenuCoords(null);
+                          } else {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setOpenMenuId(dept.id);
+                            setSelectedDept(dept);
+                            setMenuCoords({
+                              x: rect.right + window.scrollX,
+                              y: rect.bottom + window.scrollY
+                            });
+                          }
+                        }}
+                        aria-label="Department actions"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}
                 {departments.length === 0 && (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-secondary)' }}>No departments found.</td>
+                    <td colSpan={7} className="text-center p-8 text-slate-400 dark:text-slate-500">No departments found.</td>
                   </tr>
                 )}
               </tbody>
@@ -367,19 +397,33 @@ export default function SuperAdminDepartments() {
       {modalType === 'create' && renderModal(
         'Onboard New Organization',
         handleCreate,
-        <>
-          <div className="form-group">
-            <label className="form-label">Organization Name</label>
-            <input type="text" className="form-input" required placeholder="e.g. Computer Science Society" value={createForm.name} onChange={e => setCreateForm({ ...createForm, name: e.target.value })} />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Organization Name</label>
+            <input
+              type="text"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              placeholder="e.g. Computer Science Society"
+              value={createForm.name}
+              onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
+            />
           </div>
-          <div className="form-group">
-            <label className="form-label">EC Admin Google Auth Email</label>
-            <input type="email" className="form-input" required placeholder="admin@organization.org" value={createForm.adminEmail} onChange={e => setCreateForm({ ...createForm, adminEmail: e.target.value })} />
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px', display: 'block' }}>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">EC Admin Google Auth Email</label>
+            <input
+              type="email"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              placeholder="admin@organization.org"
+              value={createForm.adminEmail}
+              onChange={e => setCreateForm({ ...createForm, adminEmail: e.target.value })}
+            />
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block leading-relaxed">
               Passwordless Google Auth: When the administrator signs in with this Google email, they will automatically gain EC Admin access to manage their organization's elections.
             </span>
           </div>
-        </>,
+        </div>,
         'Onboard Organization'
       )}
 
@@ -387,9 +431,16 @@ export default function SuperAdminDepartments() {
       {modalType === 'edit' && selectedDept && renderModal(
         `Rename "${selectedDept.name}"`,
         handleEditName,
-        <div className="form-group">
-          <label className="form-label">New Department Name</label>
-          <input type="text" className="form-input" required placeholder="Enter new name" value={editName} onChange={e => setEditName(e.target.value)} />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">New Department Name</label>
+          <input
+            type="text"
+            className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+            placeholder="Enter new name"
+            value={editName}
+            onChange={e => setEditName(e.target.value)}
+          />
         </div>,
         'Save Changes'
       )}
@@ -398,19 +449,33 @@ export default function SuperAdminDepartments() {
       {modalType === 'password' && selectedDept && renderModal(
         `Change Admin Password — ${selectedDept.name}`,
         handleChangePassword,
-        <>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             Setting a new password for <strong>{selectedDept.adminEmail}</strong>.
           </p>
-          <div className="form-group">
-            <label className="form-label">New Password</label>
-            <input type="password" className="form-input" required placeholder="Enter new password (min 6 chars)" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">New Password</label>
+            <input
+              type="password"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              placeholder="Enter new password (min 6 chars)"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+            />
           </div>
-          <div className="form-group">
-            <label className="form-label">Confirm New Password</label>
-            <input type="password" className="form-input" required placeholder="Repeat password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Confirm New Password</label>
+            <input
+              type="password"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              placeholder="Repeat password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+            />
           </div>
-        </>,
+        </div>,
         'Update Password'
       )}
 
@@ -418,72 +483,91 @@ export default function SuperAdminDepartments() {
       {modalType === 'delete' && selectedDept && renderModal(
         `Delete "${selectedDept.name}"?`,
         handleDelete,
-        <div>
-          <p style={{ fontSize: 'var(--text-sm)', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
-            This will permanently delete <strong style={{ color: 'var(--text-primary)' }}>{selectedDept.name}</strong> and all its associated elections, candidates, and voter rolls. This action <strong style={{ color: '#EF4444' }}>cannot be undone</strong>.
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            This will permanently delete <strong className="text-slate-800 dark:text-slate-200">{selectedDept.name}</strong> and all its associated elections, candidates, and voter rolls. This action <strong className="text-red-500">cannot be undone</strong>.
           </p>
-          <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-3)', background: 'rgba(239,68,68,0.08)', borderRadius: 'var(--radius-md)', border: '1px solid #EF444433', fontSize: 'var(--text-xs)', color: '#EF4444' }}>
+          <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-200/40 text-xs text-red-600 dark:text-red-400">
             ⚠ All data under <code>{selectedDept.id}</code> will be permanently erased.
           </div>
         </div>,
         'Delete Department',
-        'btn-danger',
+        'bg-red-600 hover:bg-red-700 text-white shadow-red-500/10',
         true
       )}
+
       {/* ── Manage Admins Modal ── */}
       {modalType === 'admins' && selectedDept && mounted && createPortal(
         <div
           onClick={closeModal}
-          style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 16px 88px 16px', overflowY: 'auto', background: 'rgba(0,0,0,0.5)' }}
+          className="fixed inset-0 z-[9000] flex items-start justify-center p-4 md:py-20 overflow-y-auto bg-slate-900/60 backdrop-blur-sm"
         >
-          <div className="modal-container" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '640px', maxHeight: 'calc(100dvh - 180px)' }}>
-            <div className="modal-header">
-              <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]"
+          >
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <Users size={18} /> Manage Admins — {selectedDept.name}
               </h3>
-              <button className="modal-close" onClick={closeModal}>&times;</button>
+              <button
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+                onClick={closeModal}
+              >
+                <X size={16} />
+              </button>
             </div>
-            <div className="modal-body" style={{ padding: 'var(--space-4)' }}>
+            <div className="p-6 overflow-y-auto flex-1">
               {error && (
-                <div style={{ padding: '12px', backgroundColor: 'rgba(239,68,68,0.1)', color: '#EF4444', borderRadius: 'var(--radius-md)', marginBottom: '16px', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #EF444444' }}>
+                <div className="p-3 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40 rounded-xl text-xs font-semibold flex items-center gap-2 mb-4">
                   <AlertCircle size={16} /> {error}
                 </div>
               )}
 
               {adminsLoading ? (
-                <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 'var(--space-6)' }}>Loading admins...</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">Loading admins...</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                <div className="flex flex-col gap-3">
                   {deptAdmins.map(admin => (
-                    <div key={admin.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', gap: '12px', flexWrap: 'wrap' }}>
+                    <div key={admin.id} className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-xl gap-3 flex-wrap">
                       {editingAdminId === admin.id ? (
-                        <form onSubmit={handleEditAdmin} style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <input type="text" className="form-input" placeholder="Name" value={editAdminForm.name} onChange={e => setEditAdminForm({ ...editAdminForm, name: e.target.value })} style={{ flex: 1, minWidth: '120px' }} />
-                          <input type="password" className="form-input" placeholder="New password (optional)" value={editAdminForm.password} onChange={e => setEditAdminForm({ ...editAdminForm, password: e.target.value })} style={{ flex: 1, minWidth: '120px' }} />
-                          <button type="submit" className="btn btn-primary btn-sm" disabled={formLoading}>{formLoading ? '...' : 'Save'}</button>
-                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingAdminId(null)}>Cancel</button>
+                        <form onSubmit={handleEditAdmin} className="flex gap-2 flex-1 items-center flex-wrap">
+                          <input
+                            type="text"
+                            className="flex-1 min-w-[120px] px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
+                            placeholder="Name"
+                            value={editAdminForm.name}
+                            onChange={e => setEditAdminForm({ ...editAdminForm, name: e.target.value })}
+                          />
+                          <input
+                            type="password"
+                            className="flex-1 min-w-[120px] px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
+                            placeholder="New password (optional)"
+                            value={editAdminForm.password}
+                            onChange={e => setEditAdminForm({ ...editAdminForm, password: e.target.value })}
+                          />
+                          <button type="submit" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold" disabled={formLoading}>{formLoading ? '...' : 'Save'}</button>
+                          <button type="button" className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold" onClick={() => setEditingAdminId(null)}>Cancel</button>
                         </form>
                       ) : (
                         <>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
                               {admin.name}
-                              {admin.isPrimary && <span className="badge badge-primary" style={{ fontSize: '10px', padding: '2px 6px' }}>Primary</span>}
+                              {admin.isPrimary && <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 uppercase">Primary</span>}
                             </div>
-                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '2px' }}>{admin.email}</div>
+                            <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">{admin.email}</div>
                           </div>
                           {!admin.isPrimary && (
-                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                            <div className="flex gap-1.5 flex-shrink-0">
                               <button
-                                className="btn btn-outline btn-sm"
-                                style={{ padding: '4px 8px' }}
+                                className="p-1.5 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 dark:text-slate-400"
                                 onClick={() => { setEditingAdminId(admin.id); setEditAdminForm({ name: admin.name, password: '' }); }}
                               >
                                 <Pencil size={13} />
                               </button>
                               <button
-                                className="btn btn-outline btn-sm"
-                                style={{ padding: '4px 8px', color: '#EF4444', borderColor: '#EF4444' }}
+                                className="p-1.5 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900 border border-red-200 dark:border-red-900 rounded-lg text-red-600 dark:text-red-400"
                                 onClick={() => handleRemoveAdmin(admin.id)}
                               >
                                 <Trash2 size={13} />
@@ -499,28 +583,28 @@ export default function SuperAdminDepartments() {
 
               {/* Add Admin Form */}
               {showAddAdmin ? (
-                <form onSubmit={handleAddAdmin} style={{ marginTop: 'var(--space-4)', padding: '16px', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-                    <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>Add New Admin</span>
-                    <button type="button" onClick={() => { setShowAddAdmin(false); setAddAdminForm({ name: '', email: '', password: '' }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={16} /></button>
+                <form onSubmit={handleAddAdmin} className="mt-4 p-4 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 flex flex-col gap-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold text-slate-900 dark:text-white text-xs">Add New Admin</span>
+                    <button type="button" onClick={() => { setShowAddAdmin(false); setAddAdminForm({ name: '', email: '', password: '' }); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-white bg-none border-none cursor-pointer"><X size={16} /></button>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                    <input type="text" className="form-input" required placeholder="Admin Name" value={addAdminForm.name} onChange={e => setAddAdminForm({ ...addAdminForm, name: e.target.value })} />
-                    <input type="email" className="form-input" required placeholder="Admin Email" value={addAdminForm.email} onChange={e => setAddAdminForm({ ...addAdminForm, email: e.target.value })} />
-                    <input type="password" className="form-input" required placeholder="Password (min 6 chars)" value={addAdminForm.password} onChange={e => setAddAdminForm({ ...addAdminForm, password: e.target.value })} />
-                    <button type="submit" className="btn btn-primary" disabled={formLoading} style={{ alignSelf: 'flex-end' }}>
+                  <div className="flex flex-col gap-3">
+                    <input type="text" className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white" required placeholder="Admin Name" value={addAdminForm.name} onChange={e => setAddAdminForm({ ...addAdminForm, name: e.target.value })} />
+                    <input type="email" className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white" required placeholder="Admin Email" value={addAdminForm.email} onChange={e => setAddAdminForm({ ...addAdminForm, email: e.target.value })} />
+                    <input type="password" className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white" required placeholder="Password (min 6 chars)" value={addAdminForm.password} onChange={e => setAddAdminForm({ ...addAdminForm, password: e.target.value })} />
+                    <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl self-end" disabled={formLoading}>
                       {formLoading ? 'Adding...' : 'Add Admin'}
                     </button>
                   </div>
                 </form>
               ) : (
-                <button onClick={() => setShowAddAdmin(true)} className="btn btn-outline" style={{ marginTop: 'var(--space-4)', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <button onClick={() => setShowAddAdmin(true)} className="mt-4 w-full px-4 py-3 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/10 text-slate-600 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/20 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer">
                   <UserPlus size={16} /> Add New Admin
                 </button>
               )}
             </div>
-            <div className="modal-footer">
-              <button type="button" onClick={closeModal} className="btn btn-secondary">Close</button>
+            <div className="flex justify-end px-6 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onClick={closeModal} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl cursor-pointer">Close</button>
             </div>
           </div>
         </div>,
@@ -531,17 +615,10 @@ export default function SuperAdminDepartments() {
       {openMenuId && menuCoords && selectedDept && createPortal(
         <div
           ref={menuRef}
+          className="absolute z-[9999] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl min-w-[210px] overflow-hidden p-1.5"
           style={{
-            position: 'absolute',
-            left: `${menuCoords.x - 200}px`,
-            top: `${menuCoords.y + 4}px`,
-            zIndex: 9999,
-            background: 'var(--bg-primary)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-            minWidth: '200px',
-            overflow: 'hidden'
+            left: `${menuCoords.x - 210}px`,
+            top: `${menuCoords.y + 4}px`
           }}
         >
           <button
@@ -549,45 +626,35 @@ export default function SuperAdminDepartments() {
               localStorage.setItem('COMPSSA_tenantId', selectedDept.id);
               router.push('/admin/dashboard');
             }}
-            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--color-warning)', fontWeight: 600, textAlign: 'left' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(234, 179, 8, 0.1)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            className="w-full px-3 py-2 flex items-center gap-2.5 rounded-xl bg-none border-none cursor-pointer text-xs font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors text-left"
           >
-            <ExternalLink size={15} /> Access Admin Console
+            <ExternalLink size={14} /> Access Admin Console
           </button>
-          <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
+          <div className="h-px bg-slate-100 dark:bg-slate-800 my-1.5" />
           <button
             onClick={() => openModal('admins', selectedDept)}
-            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'left' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            className="w-full px-3 py-2 flex items-center gap-2.5 rounded-xl bg-none border-none cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
           >
-            <Users size={15} style={{ color: 'var(--color-primary)' }} /> Manage Admins
+            <Users size={14} className="text-blue-500" /> Manage Admins
           </button>
           <button
             onClick={() => openModal('edit', selectedDept)}
-            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'left' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            className="w-full px-3 py-2 flex items-center gap-2.5 rounded-xl bg-none border-none cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
           >
-            <Pencil size={15} style={{ color: 'var(--color-primary)' }} /> Rename Department
+            <Pencil size={14} className="text-blue-500" /> Rename Department
           </button>
           <button
             onClick={() => openModal('password', selectedDept)}
-            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'left' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            className="w-full px-3 py-2 flex items-center gap-2.5 rounded-xl bg-none border-none cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
           >
-            <KeyRound size={15} style={{ color: 'var(--color-warning)' }} /> Change Admin Password
+            <KeyRound size={14} className="text-amber-500" /> Change Admin Password
           </button>
-          <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
+          <div className="h-px bg-slate-100 dark:bg-slate-800 my-1.5" />
           <button
             onClick={() => openModal('delete', selectedDept)}
-            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', color: '#EF4444', textAlign: 'left' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            className="w-full px-3 py-2 flex items-center gap-2.5 rounded-xl bg-none border-none cursor-pointer text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors text-left"
           >
-            <Trash2 size={15} /> Delete Department
+            <Trash2 size={14} /> Delete Department
           </button>
         </div>,
         document.body

@@ -459,7 +459,7 @@ export default function LoadingScreen() {
                   position: 'absolute',
                   width: `${100 / gridSize}%`, height: `${100 / gridSize}%`,
                   left: `${xOffset}%`, top: `${yOffset}%`,
-                  backgroundImage: "url('/icons/logo.png')",
+                  backgroundImage: "url('/assets/logo.png')",
                   backgroundSize: `${gridSize * 100}% ${gridSize * 100}%`,
                   backgroundPosition: `${(col / (gridSize - 1)) * 100}% ${(row / (gridSize - 1)) * 100}%`,
                   mixBlendMode: 'multiply',
