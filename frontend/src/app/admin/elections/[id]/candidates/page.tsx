@@ -340,7 +340,6 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
   });
 
   return (
-  return (
     <div className="flex flex-col gap-6">
       {/* Workspace Header */}
       <div className="flex justify-between items-center flex-wrap gap-4">
@@ -513,30 +512,6 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
                               className="px-2.5 py-1 text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors flex items-center gap-1"
                             >
                               <Trash2 size={12} /> Remove
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-                              onClick={() => openEditCandidateModal(cand)}
-                              className="btn btn-outline"
-                              style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#2563eb', borderColor: 'rgba(37, 99, 235, 0.3)' }}
-                            >
-                              <Pencil size={14} /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCandidate(cand.id)}
-                              className="btn btn-outline"
-                              style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
-                            >
-                              <Trash2 size={14} /> Remove
                             </button>
                           </div>
                         </div>

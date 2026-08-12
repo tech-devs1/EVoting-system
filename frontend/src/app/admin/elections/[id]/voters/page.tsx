@@ -192,7 +192,6 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
   });
 
   return (
-  return (
     <div className="flex flex-col gap-6">
       {/* Banner */}
       <div>
