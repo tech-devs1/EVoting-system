@@ -41,65 +41,39 @@ A full-stack, PWA-ready electronic voting platform built for HTU. Features real-
 
 ```text
 HTU-Elect/
-├── assets/                       # Brand logos & media assets
-│   ├── logo.png
-│   └── htu logo.jpg
-├── data/                         # Roster CSVs & export data
-│   ├── voters_export.csv
-│   └── voted_voters_export.csv
-├── docs/                         # Technical documentation & reports
+├── CPANEL_DEPLOYMENT.md          # Step-by-step cPanel Deployment Guide
+├── docs/                         # Technical documentation, reports, CSV database templates
 │   ├── DOCUMENTATION.md
+│   ├── CPANEL_DEPLOYMENT.md
+│   ├── DEPLOYMENT.md
 │   ├── IMPLEMENTATION_REPORT.md
-│   └── TODO.md
-├── backend/                      # Express 5 Backend API
+│   ├── TODO.md
+│   ├── schema.sql                # Production MySQL Database Schema
+│   ├── voters_export.csv         # Voter roster template CSV
+│   └── voted_voters_export.csv   # Voted voters template CSV
+├── backend/                      # Node.js/Express Sequelize Backend API
+│   ├── controllers/              # Request controllers
 │   ├── middleware/               # Auth, RateLimiter, Validation
-│   │   ├── auth.js
-│   │   ├── rateLimiter.js
-│   │   └── validate.js
-│   ├── routes/                   # Express router handlers
-│   │   ├── admin.js
-│   │   ├── auth.js
-│   │   ├── candidates.js
-│   │   ├── elections.js
-│   │   ├── imagekit.js
-│   │   ├── superadmin.js
-│   │   └── votes.js
-│   ├── services/                 # Core domain services
-│   │   ├── activityLog.js
-│   │   ├── audit.js
-│   │   ├── cache.js
-│   │   ├── firebase.js
-│   │   ├── fraud.js
-│   │   └── migrateDefaultTenant.js
-│   ├── scripts/                  # Backend utility scripts
-│   │   ├── seed-students.js
-│   │   ├── test-audit.js
-│   │   ├── test_ik.js
-│   │   └── migrate-embeddings.js
+│   ├── models/                   # Sequelize MySQL/SQLite models
+│   ├── routes/                   # API endpoint route declarations
+│   ├── services/                 # Business logic and external service integrations
+│   ├── scripts/                  # Utility & testing scripts
 │   ├── package.json
+│   ├── schema.sql                # Production MySQL Database Schema
 │   └── server.js
-├── frontend/                     # Next.js 16 App Router Frontend
-│   ├── public/                   # Public static assets & PWA files
-│   │   ├── assets/               # Synced brand images & icons
-│   │   └── manifest.json
-│   ├── src/
-│   │   ├── app/                  # Next.js App Router pages
-│   │   ├── components/           # Shared modular UI components
-│   │   │   ├── common/           # Alert, Modal, Button, Loading
-│   │   │   ├── layout/           # Sidebar, Navbar, Footer
-│   │   │   ├── admin/            # Admin charts, KPI cards, table widgets
-│   │   │   └── voter/            # Ballot cards, candidate selector
-│   │   ├── context/              # AuthContext
-│   │   ├── lib/                  # API client & Firebase config
-│   │   ├── styles/               # CSS design system
-│   │   └── types/                # TypeScript interface definitions
-│   ├── next.config.mjs
-│   └── package.json
-├── .firebaserc
-├── .gitignore
-├── firebase.json
-├── firestore.rules
-└── vercel.json
+└── frontend/                     # Next.js App Router Frontend
+    ├── public/                   # Public static assets & brand logos
+    │   ├── assets/               # Standardized brand logos
+    │   └── manifest.json
+    ├── src/
+    │   ├── app/                  # Next.js App Router pages
+    │   ├── components/           # Shared modular UI components
+    │   ├── context/              # AuthContext
+    │   ├── lib/                  # API client config
+    │   ├── styles/               # Global CSS/Tailwind configuration
+    │   └── types/                # TypeScript interface definitions
+    ├── next.config.mjs
+    └── package.json
 ```
 
 ---
