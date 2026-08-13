@@ -1,4 +1,5 @@
 node_modules/
 test_database.sqlite
+test_database.sqlite-journal
 server_5001.log
 .env
