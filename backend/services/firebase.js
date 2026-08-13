@@ -22,6 +22,27 @@ const FieldValue = {
   arrayUnion: (...elements) => new FieldValueArrayUnion(elements)
 };
 
+function mapFields(data) {
+  if (!data) return data;
+  const copy = { ...data };
+
+  // Map accessOtp <-> otp
+  if (copy.accessOtp !== undefined && copy.otp === undefined) {
+    copy.otp = copy.accessOtp;
+  } else if (copy.otp !== undefined && copy.accessOtp === undefined) {
+    copy.accessOtp = copy.otp;
+  }
+
+  // Map accessOtpExpiry <-> otpExpiry
+  if (copy.accessOtpExpiry !== undefined && copy.otpExpiry === undefined) {
+    copy.otpExpiry = copy.accessOtpExpiry;
+  } else if (copy.otpExpiry !== undefined && copy.accessOtpExpiry === undefined) {
+    copy.accessOtpExpiry = copy.otpExpiry;
+  }
+
+  return copy;
+}
+
 function sanitizeDocUpdate(existing, update) {
   const result = { ...existing };
   for (const key in update) {
@@ -37,7 +58,7 @@ function sanitizeDocUpdate(existing, update) {
       result[key] = val;
     }
   }
-  return result;
+  return mapFields(result);
 }
 
 const MOCK_DATA_FILE = path.join(__dirname, '../.mock_firestore_data.json');
@@ -152,20 +173,23 @@ class MockFirestore {
         id: docId,
         path: fullPath,
         set: async (data) => {
-          collectionMap.set(docId, { ...data, id: docId });
+          const mapped = mapFields({ ...data, id: docId });
+          collectionMap.set(docId, mapped);
           this.saveToDisk();
-          return data;
+          return mapped;
         },
         get: async () => {
           const data = collectionMap.get(docId);
-          return { exists: !!data, data: () => data, id: docId, ref: getDocRef(docId, parentPath) };
+          const mapped = data ? mapFields(data) : data;
+          return { exists: !!data, data: () => mapped, id: docId, ref: getDocRef(docId, parentPath) };
         },
         update: async (data) => {
           const existing = collectionMap.get(docId) || {};
           const sanitized = sanitizeDocUpdate(existing, data);
-          collectionMap.set(docId, sanitized);
+          const mapped = mapFields(sanitized);
+          collectionMap.set(docId, mapped);
           this.saveToDisk();
-          return sanitized;
+          return mapped;
         },
         delete: async () => {
           collectionMap.delete(docId);
@@ -183,17 +207,21 @@ class MockFirestore {
       },
       add: async (data) => {
         const docId = Math.random().toString(36).substring(2);
-        collectionMap.set(docId, { ...data, id: docId });
+        const mapped = mapFields({ ...data, id: docId });
+        collectionMap.set(docId, mapped);
         this.saveToDisk();
         return { id: docId, ref: getDocRef(docId) };
       },
       get: async () => {
-        const docs = Array.from(collectionMap.values()).map(data => ({
-          id: data.id,
-          data: () => data,
-          exists: true,
-          ref: getDocRef(data.id)
-        }));
+        const docs = Array.from(collectionMap.values()).map(data => {
+          const mapped = mapFields(data);
+          return {
+            id: mapped.id,
+            data: () => mapped,
+            exists: true,
+            ref: getDocRef(mapped.id)
+          };
+        });
         return { docs, empty: docs.length === 0, size: docs.length, forEach: (cb) => docs.forEach(cb) };
       },
       select: function() { return this; },
@@ -205,7 +233,7 @@ class MockFirestore {
         };
       },
       where: function(field, operator, value) {
-        const filteredDocs = Array.from(collectionMap.values()).filter(doc => {
+        const filteredDocs = Array.from(collectionMap.values()).map(mapFields).filter(doc => {
           if (operator === '==') return doc[field] === value;
           if (operator === '!=') return doc[field] !== value;
           if (operator === '>') return doc[field] > value;
@@ -216,7 +244,10 @@ class MockFirestore {
 
         const buildQuery = (docs) => ({
           get: async () => {
-            const result = docs.map(data => ({ id: data.id, data: () => data, exists: true, ref: getDocRef(data.id) }));
+            const result = docs.map(data => {
+              const mapped = mapFields(data);
+              return { id: mapped.id, data: () => mapped, exists: true, ref: getDocRef(mapped.id) };
+            });
             return { docs: result, empty: result.length === 0, size: result.length, forEach: (cb) => result.forEach(cb) };
           },
           where: (f2, op2, v2) => buildQuery(docs.filter(doc => {

@@ -545,7 +545,11 @@ router.post('/login', loginLimiter, async (req, res) => {
         usersSnapshot = await db.collection('organizations').doc(tenantDoc.id).collection('voter_rolls').where('email', '==', email).get();
       }
       if (!usersSnapshot.empty) {
-        foundVoterDoc = usersSnapshot.docs[0];
+        const found = usersSnapshot.docs.find(d => {
+          const dData = d.data();
+          return dData && dData.isRegistered && dData.password;
+        });
+        foundVoterDoc = found || usersSnapshot.docs[0];
         foundTenantId = tenantDoc.id;
         break;
       }
@@ -831,7 +835,11 @@ router.post('/google-login', async (req, res) => {
     for (const tenantDoc of allTenantsSnapshot.docs) {
       const usersSnapshot = await db.collection('tenants').doc(tenantDoc.id).collection('voter_rolls').where('email', '==', email).get();
       if (!usersSnapshot.empty) {
-        foundVoterDoc = usersSnapshot.docs[0];
+        const found = usersSnapshot.docs.find(d => {
+          const dData = d.data();
+          return dData && dData.isRegistered && dData.password;
+        });
+        foundVoterDoc = found || usersSnapshot.docs[0];
         foundTenantId = tenantDoc.id;
         break;
       }
@@ -929,7 +937,11 @@ router.post('/verify-otp', async (req, res) => {
     if (usersSnapshot.empty) {
       return res.status(400).json({ status: 'error', message: 'Invalid request.' });
     }
- const userDoc = usersSnapshot.docs[0];
+    const found = usersSnapshot.docs.find(d => {
+      const dData = d.data();
+      return dData && dData.isRegistered && dData.password;
+    });
+    const userDoc = found || usersSnapshot.docs[0];
     const userData = userDoc.data();
 
     if (!userData.otp || userData.otp !== otp) {
@@ -984,7 +996,11 @@ router.post('/resend-otp', async (req, res) => {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a new OTP was sent.' });
     }
 
-    const userDoc = usersSnapshot.docs[0];
+    const found = usersSnapshot.docs.find(d => {
+      const dData = d.data();
+      return dData && dData.isRegistered && dData.password;
+    });
+    const userDoc = found || usersSnapshot.docs[0];
     const userData = userDoc.data();
 
     const { otp, emailSent, smsSent } = await generateAndSendOtp(
@@ -1068,9 +1084,14 @@ router.get('/me', verifyAuth, async (req, res) => {
           vSnap = await db.collection('organizations').doc(tDoc.id).collection('voter_rolls').where('email', '==', email).get();
         }
         if (!vSnap.empty) {
-          const uData = vSnap.docs[0].data();
+          const found = vSnap.docs.find(d => {
+            const dData = d.data();
+            return dData && dData.isRegistered && dData.password;
+          });
+          const bestDoc = found || vSnap.docs[0];
+          const uData = bestDoc.data();
           delete uData.password;
-          return res.status(200).json({ status: 'success', data: { ...uData, id: vSnap.docs[0].id, tenantId: tDoc.id } });
+          return res.status(200).json({ status: 'success', data: { ...uData, id: bestDoc.id, tenantId: tDoc.id } });
         }
       }
     }
@@ -1117,7 +1138,11 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
     }
 
-    const userDoc = usersSnapshot.docs[0];
+    const found = usersSnapshot.docs.find(d => {
+      const dData = d.data();
+      return dData && dData.isRegistered && dData.password;
+    });
+    const userDoc = found || usersSnapshot.docs[0];
     const userData = userDoc.data();
 
     // Generate 6-digit code
@@ -1199,7 +1224,11 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Invalid or expired code.' });
     }
 
-    const userDoc = usersSnapshot.docs[0];
+    const found = usersSnapshot.docs.find(d => {
+      const dData = d.data();
+      return dData && dData.isRegistered && dData.password;
+    });
+    const userDoc = found || usersSnapshot.docs[0];
     const userData = userDoc.data();
 
     if (userData.resetCode !== code || Date.now() > userData.resetCodeExpiry) {

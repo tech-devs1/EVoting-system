@@ -546,11 +546,6 @@ async function runTest() {
     console.log('🎉 ALL INTEGRATION TESTS PASSED SUCCESSFULLY! FULL CYCLE TEST COMPLETE.');
     console.log('================================================================');
 
-    // Automatically re-seed live election & candidate tallies so database remains populated for UI
-    console.log('\n--- POPULATING LIVE ELECTION DEMO DATA FOR FRONTEND UI ---');
-    const { execSync } = require('child_process');
-    execSync('node backend/scripts/seed-live-demo-data.js', { stdio: 'inherit' });
-
     process.exit(0);
 
   } catch (error) {
