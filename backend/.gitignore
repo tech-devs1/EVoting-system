@@ -1,0 +1,4 @@
+node_modules/
+backend/test_database.sqlite
+backend/server_5001.log
+.env
