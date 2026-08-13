@@ -318,6 +318,24 @@ async function createTables() {
 // In-Memory Fallback Store when MySQL is connecting or fallback
 const memoryStore = {};
 
+function sanitizeDocUpdate(existing, update) {
+  const result = { ...existing };
+  for (const key in update) {
+    const val = update[key];
+    if (val && typeof val === 'object' && (val.constructor.name === 'FieldValueIncrement' || (val.operand !== undefined && String(val.constructor.name).includes('Increment')))) {
+      const current = typeof result[key] === 'number' ? result[key] : 0;
+      result[key] = current + (val.operand || 1);
+    } else if (val && typeof val === 'object' && (val.constructor.name === 'FieldValueArrayUnion' || (val.elements !== undefined && String(val.constructor.name).includes('ArrayUnion')))) {
+      const current = Array.isArray(result[key]) ? result[key] : [];
+      const newItems = Array.isArray(val.elements) ? val.elements : [];
+      result[key] = [...new Set([...current, ...newItems])];
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
 class MySQLDocumentReference {
   constructor(collectionName, docId) {
     this.collectionName = collectionName;
@@ -365,8 +383,25 @@ class MySQLDocumentReference {
 
   async set(data, options = {}) {
     const key = `${this.collectionName}/${this.id}`;
-    const existing = memoryStore[key] || {};
-    const updated = options.merge ? { ...existing, ...data } : data;
+    let existing = memoryStore[key] || {};
+
+    if (isConnected && pool) {
+      try {
+        const targetTable = resolveTableName(this.collectionName);
+        const [rows] = await pool.query(
+          `SELECT data FROM \`${targetTable}\` WHERE id = ? LIMIT 1`,
+          [this.id]
+        );
+        if (rows.length > 0 && rows[0].data) {
+          const rowData = rows[0].data;
+          existing = typeof rowData === 'string' ? JSON.parse(rowData) : rowData;
+        }
+      } catch (err) {
+        // Safe fallback
+      }
+    }
+
+    const updated = options.merge ? sanitizeDocUpdate(existing, data) : sanitizeDocUpdate({}, data);
     memoryStore[key] = updated;
 
     if (isConnected && pool) {

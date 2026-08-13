@@ -209,6 +209,56 @@
       "position": "President",
       "dataPayload": "{\"electionId\":\"if4v3qw5oz\",\"candidateId\":\"c90gyclvuoe\",\"candidateName\":\"Jane Smith\",\"position\":\"President\",\"timestamp\":1786353762164}",
       "id": "ud9qbojodkl"
+    },
+    "14y4ejx1rbu": {
+      "electionId": "vddnmvtmpo8",
+      "timestamp": 1786622780195,
+      "previousHash": "GENESIS_HASH",
+      "currentHash": "c6920dcbbdaf9c46a2993d93bfc95ccefd2051cbf88fedca1c1705a9090c91fe",
+      "candidateName": "Jane Smith",
+      "position": "President",
+      "dataPayload": "{\"electionId\":\"vddnmvtmpo8\",\"candidateId\":\"eegc79t7v3\",\"candidateName\":\"Jane Smith\",\"position\":\"President\",\"timestamp\":1786622780195}",
+      "id": "14y4ejx1rbu"
+    },
+    "6r9zuesp9e4": {
+      "electionId": "vddnmvtmpo8",
+      "timestamp": 1786622780206,
+      "previousHash": "c6920dcbbdaf9c46a2993d93bfc95ccefd2051cbf88fedca1c1705a9090c91fe",
+      "currentHash": "dcf6112b25a081e7ecadb6f300bce14db9bde67ee0521d070b7f139745d87ae5",
+      "candidateName": "Bob Johnson",
+      "position": "Financial Secretary",
+      "dataPayload": "{\"electionId\":\"vddnmvtmpo8\",\"candidateId\":\"jippvxknmnk\",\"candidateName\":\"Bob Johnson\",\"position\":\"Financial Secretary\",\"timestamp\":1786622780206}",
+      "id": "6r9zuesp9e4"
+    },
+    "3wzh6lblis7": {
+      "electionId": "vddnmvtmpo8",
+      "timestamp": 1786622781848,
+      "previousHash": "dcf6112b25a081e7ecadb6f300bce14db9bde67ee0521d070b7f139745d87ae5",
+      "currentHash": "c203922fd44e4f00cc9c4ea52d1c026e72fe13377dfe6da3625f8c80b903002a",
+      "candidateName": "Jane Smith",
+      "position": "President",
+      "dataPayload": "{\"electionId\":\"vddnmvtmpo8\",\"candidateId\":\"eegc79t7v3\",\"candidateName\":\"Jane Smith\",\"position\":\"President\",\"timestamp\":1786622781848}",
+      "id": "3wzh6lblis7"
+    },
+    "c56j39j2l4t": {
+      "electionId": "vddnmvtmpo8",
+      "timestamp": 1786622781859,
+      "previousHash": "c203922fd44e4f00cc9c4ea52d1c026e72fe13377dfe6da3625f8c80b903002a",
+      "currentHash": "1053d7e4baec6014befc4e6ad5e0ece4e32c98070641fce5029ff59047daa8c8",
+      "candidateName": "Bob Johnson",
+      "position": "Financial Secretary",
+      "dataPayload": "{\"electionId\":\"vddnmvtmpo8\",\"candidateId\":\"jippvxknmnk\",\"candidateName\":\"Bob Johnson\",\"position\":\"Financial Secretary\",\"timestamp\":1786622781859}",
+      "id": "c56j39j2l4t"
+    },
+    "uynvgl96cbq": {
+      "electionId": "vddnmvtmpo8",
+      "timestamp": 1786622781870,
+      "previousHash": "1053d7e4baec6014befc4e6ad5e0ece4e32c98070641fce5029ff59047daa8c8",
+      "currentHash": "50ff60e2bcd8b09c064185ccc3ebe7bca545991a51fe0a646d8d0ef248ede399",
+      "candidateName": "John Doe",
+      "position": "President",
+      "dataPayload": "{\"electionId\":\"vddnmvtmpo8\",\"candidateId\":\"dl6jqt9r9uq\",\"candidateName\":\"John Doe\",\"position\":\"President\",\"timestamp\":1786622781870}",
+      "id": "uynvgl96cbq"
     }
   },
   "fraud_alerts": {
@@ -250,6 +300,19 @@
       "timestamp": 1786353762169,
       "status": "unresolved",
       "id": "0la4q7wu54o"
+    },
+    "ipi4sbr1y1n": {
+      "type": "DUPLICATE_VOTE",
+      "message": "Voter tried to vote twice in the same category",
+      "metadata": {
+        "voterId": "voter-001",
+        "electionId": "vddnmvtmpo8",
+        "candidateId": "dl6jqt9r9uq"
+      },
+      "tenantId": "compssa",
+      "timestamp": 1786622781872,
+      "status": "unresolved",
+      "id": "ipi4sbr1y1n"
     }
   },
   "organizations": {
@@ -286,8 +349,8 @@
     "compssa": {
       "name": "COMPSSA",
       "adminEmail": "admin@htu.edu.gh",
-      "adminPassword": "$2b$10$vibjEwABqrupa/3wxdJkjOWsnqUQPc/2.pSs8w0G8AbXr3DgVtvEO",
-      "createdAt": 1786535091267,
+      "adminPassword": "$2b$10$YVWmg2xls3u.5BQEo7rj7OFM7OvqSpWHuUUU/0i.4zY1ycQDUIXN.",
+      "createdAt": 1786622778237,
       "id": "compssa"
     }
   },
@@ -1081,6 +1144,158 @@
       "timestamp": 1786537692072,
       "createdAt": "2026-08-12T12:28:12.072Z",
       "id": "4j3orgkimvs"
+    },
+    "iiblpz69cdf": {
+      "tenantId": "compssa",
+      "tenantName": "COMPSSA",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "COMPSSA Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786622778526,
+      "createdAt": "2026-08-13T12:06:18.526Z",
+      "id": "iiblpz69cdf"
+    },
+    "im3ou821bre": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ELECTION_CREATE",
+      "description": "Created new election \"COMPSSA E2E Test Election 2026\" (ID: vddnmvtmpo8)",
+      "status": "success",
+      "ip": "unknown",
+      "meta": {},
+      "timestamp": 1786622778571,
+      "createdAt": "2026-08-13T12:06:18.571Z",
+      "id": "im3ou821bre"
+    },
+    "ucebpc9w3yq": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ELECTION_CSV_UPLOAD",
+      "description": "Uploaded voter roster with 2 eligible members for election ID: vddnmvtmpo8",
+      "status": "success",
+      "ip": "unknown",
+      "meta": {},
+      "timestamp": 1786622778587,
+      "createdAt": "2026-08-13T12:06:18.587Z",
+      "id": "ucebpc9w3yq"
+    },
+    "2xsgdu4zxoj": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ELECTION_STATUS_UPDATE",
+      "description": "Manually updated status of election ID: vddnmvtmpo8 to ACTIVE",
+      "status": "success",
+      "ip": "unknown",
+      "meta": {},
+      "timestamp": 1786622778617,
+      "createdAt": "2026-08-13T12:06:18.617Z",
+      "id": "2xsgdu4zxoj"
+    },
+    "baiu32frnlj": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter1@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter E2E Voter One logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786622778756,
+      "createdAt": "2026-08-13T12:06:18.756Z",
+      "id": "baiu32frnlj"
+    },
+    "1z389jcuveu": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter1@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"COMPSSA E2E Test Election 2026\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "vddnmvtmpo8",
+        "electionTitle": "COMPSSA E2E Test Election 2026"
+      },
+      "timestamp": 1786622780201,
+      "createdAt": "2026-08-13T12:06:20.201Z",
+      "id": "1z389jcuveu"
+    },
+    "7x9vlzjg7jh": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter1@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"COMPSSA E2E Test Election 2026\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "vddnmvtmpo8",
+        "electionTitle": "COMPSSA E2E Test Election 2026"
+      },
+      "timestamp": 1786622780211,
+      "createdAt": "2026-08-13T12:06:20.211Z",
+      "id": "7x9vlzjg7jh"
+    },
+    "o058tjqeu9o": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter2@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter E2E Voter Two logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786622780349,
+      "createdAt": "2026-08-13T12:06:20.349Z",
+      "id": "o058tjqeu9o"
+    },
+    "vtzef6v23ho": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter2@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"COMPSSA E2E Test Election 2026\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "vddnmvtmpo8",
+        "electionTitle": "COMPSSA E2E Test Election 2026"
+      },
+      "timestamp": 1786622781854,
+      "createdAt": "2026-08-13T12:06:21.854Z",
+      "id": "vtzef6v23ho"
+    },
+    "tafff42163": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter2@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"COMPSSA E2E Test Election 2026\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "vddnmvtmpo8",
+        "electionTitle": "COMPSSA E2E Test Election 2026"
+      },
+      "timestamp": 1786622781865,
+      "createdAt": "2026-08-13T12:06:21.865Z",
+      "id": "tafff42163"
     }
   },
   "organizations/dept_org_1786353371312/elections": {
@@ -1296,6 +1511,19 @@
       "timestamp": 1786353762169,
       "status": "unresolved",
       "id": "3z03e5yhu08"
+    },
+    "57051p6z0ne": {
+      "type": "DUPLICATE_VOTE",
+      "message": "Voter tried to vote twice in the same category",
+      "metadata": {
+        "voterId": "voter-001",
+        "electionId": "vddnmvtmpo8",
+        "candidateId": "dl6jqt9r9uq"
+      },
+      "tenantId": "compssa",
+      "timestamp": 1786622781872,
+      "status": "unresolved",
+      "id": "57051p6z0ne"
     }
   },
   "organizations/dept_org_1786353644719/voter_rolls": {
@@ -2083,28 +2311,6 @@
     }
   },
   "organizations/compssa/voter_rolls": {
-    "voter-001": {
-      "isRegistered": true,
-      "password": "$2b$10$T7V91G/1Mc/ozjNRSE2YVO4rXJR9VIPA9nbGYKt91FJKJHxP0jfua",
-      "name": "Playwright Voter 1",
-      "email": "voter1@htu.edu.gh",
-      "phone": "0240000001",
-      "studentId": "voter-001",
-      "role": "voter",
-      "createdAt": 1786535091374,
-      "id": "voter-001"
-    },
-    "voter-002": {
-      "isRegistered": true,
-      "password": "$2b$10$T7V91G/1Mc/ozjNRSE2YVO4rXJR9VIPA9nbGYKt91FJKJHxP0jfua",
-      "name": "Playwright Voter 2",
-      "email": "voter2@htu.edu.gh",
-      "phone": "0240000002",
-      "studentId": "voter-002",
-      "role": "voter",
-      "createdAt": 1786535091375,
-      "id": "voter-002"
-    },
     "voter-003": {
       "isRegistered": true,
       "password": "$2b$10$T7V91G/1Mc/ozjNRSE2YVO4rXJR9VIPA9nbGYKt91FJKJHxP0jfua",
@@ -2192,6 +2398,34 @@
       "role": "voter",
       "createdAt": 1786535091379,
       "id": "voter-0010"
+    },
+    "voter1_htu_edu_gh": {
+      "email": "voter1@htu.edu.gh",
+      "indexNumber": "voter-001",
+      "studentId": "voter-001",
+      "name": "Voter One",
+      "department": "",
+      "phone": "",
+      "phoneNumber": "",
+      "uploadedAt": 1786622778580,
+      "isRegistered": true,
+      "role": "voter",
+      "createdAt": 1786622778580,
+      "id": "voter1_htu_edu_gh"
+    },
+    "voter2_htu_edu_gh": {
+      "email": "voter2@htu.edu.gh",
+      "indexNumber": "voter-002",
+      "studentId": "voter-002",
+      "name": "Voter Two",
+      "department": "",
+      "phone": "",
+      "phoneNumber": "",
+      "uploadedAt": 1786622778580,
+      "isRegistered": true,
+      "role": "voter",
+      "createdAt": 1786622778580,
+      "id": "voter2_htu_edu_gh"
     }
   },
   "organizations/compssa/voted_voters": {
@@ -2918,6 +3152,22 @@
       "showResults": true,
       "createdAt": 1786535091380,
       "id": "playwright_election_2026"
+    },
+    "live-src-2026": {
+      "title": "SRC Executive & Departmental Elections 2026",
+      "description": "Official General Student Representative Council & Faculty Association Leadership Ballot for Ho Technical University.",
+      "category": "Executive",
+      "status": "active",
+      "startDate": "2026-08-12T12:06:22.048Z",
+      "endDate": "2026-08-15T12:06:22.048Z",
+      "createdBy": "admin",
+      "showResults": true,
+      "otpRequired": true,
+      "totalVoters": 650,
+      "totalVotesCast": 560,
+      "createdAt": 1786622782048,
+      "updatedAt": 1786622782048,
+      "id": "live-src-2026"
     }
   },
   "organizations/compssa/candidates": {
@@ -2959,6 +3209,78 @@
       "photoUrl": "",
       "createdAt": 1786535091435,
       "id": "cand_3"
+    },
+    "cand-pres-1": {
+      "id": "cand-pres-1",
+      "name": "Jane Smith",
+      "position": "President",
+      "ballotNumber": 1,
+      "votes": 342,
+      "manifesto": "Transforming HTU campus connectivity, student advocacy, and academic support tools.",
+      "photoUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
+      "electionId": "live-src-2026"
+    },
+    "cand-pres-2": {
+      "id": "cand-pres-2",
+      "name": "John Doe",
+      "position": "President",
+      "ballotNumber": 2,
+      "votes": 218,
+      "manifesto": "Empowering student tech initiatives, sports facility upgrades, and welfare funds.",
+      "photoUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+      "electionId": "live-src-2026"
+    },
+    "cand-vp-1": {
+      "id": "cand-vp-1",
+      "name": "Emmanuel Mensah",
+      "position": "Vice President",
+      "ballotNumber": 1,
+      "votes": 410,
+      "manifesto": "Strengthening departmental representation and internship networking partnerships.",
+      "photoUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
+      "electionId": "live-src-2026"
+    },
+    "cand-vp-2": {
+      "id": "cand-vp-2",
+      "name": "Kwame Addo",
+      "position": "Vice President",
+      "ballotNumber": 2,
+      "votes": 150,
+      "manifesto": "Fostering campus unity, entrepreneurship incubators, and student health programs.",
+      "photoUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80",
+      "electionId": "live-src-2026"
+    },
+    "cand-gen-1": {
+      "id": "cand-gen-1",
+      "name": "Abena Osei",
+      "position": "General Secretary",
+      "ballotNumber": 1,
+      "isIndependent": true,
+      "votes": 512,
+      "noVotes": 48,
+      "manifesto": "Digital transparency in SRC proceedings, rapid communications, and prompt updates.",
+      "photoUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80",
+      "electionId": "live-src-2026"
+    },
+    "cand-fin-1": {
+      "id": "cand-fin-1",
+      "name": "Kofi Darko",
+      "position": "Financial Secretary",
+      "ballotNumber": 1,
+      "votes": 298,
+      "manifesto": "Prudent financial accountability, open budget reporting, and student audit committees.",
+      "photoUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=400&q=80",
+      "electionId": "live-src-2026"
+    },
+    "cand-fin-2": {
+      "id": "cand-fin-2",
+      "name": "Samuel Owusu",
+      "position": "Financial Secretary",
+      "ballotNumber": 2,
+      "votes": 262,
+      "manifesto": "Optimizing resource allocation for hall events, academic clubs, and welfare grants.",
+      "photoUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80",
+      "electionId": "live-src-2026"
     }
   },
   "organizations/compssa/activity_logs": {
@@ -3017,6 +3339,232 @@
       "timestamp": 1786537692072,
       "createdAt": "2026-08-12T12:28:12.072Z",
       "id": "ph47utfvbts"
+    },
+    "ojae9lmn6q": {
+      "tenantId": "compssa",
+      "tenantName": "COMPSSA",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ADMIN_LOGIN",
+      "description": "COMPSSA Administrator logged into the admin dashboard",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786622778526,
+      "createdAt": "2026-08-13T12:06:18.526Z",
+      "id": "ojae9lmn6q"
+    },
+    "yahb0g6pnaj": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ELECTION_CREATE",
+      "description": "Created new election \"COMPSSA E2E Test Election 2026\" (ID: vddnmvtmpo8)",
+      "status": "success",
+      "ip": "unknown",
+      "meta": {},
+      "timestamp": 1786622778571,
+      "createdAt": "2026-08-13T12:06:18.571Z",
+      "id": "yahb0g6pnaj"
+    },
+    "r2vgcdcpa4l": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ELECTION_CSV_UPLOAD",
+      "description": "Uploaded voter roster with 2 eligible members for election ID: vddnmvtmpo8",
+      "status": "success",
+      "ip": "unknown",
+      "meta": {},
+      "timestamp": 1786622778587,
+      "createdAt": "2026-08-13T12:06:18.587Z",
+      "id": "r2vgcdcpa4l"
+    },
+    "4wnyzyb1gcf": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "admin@htu.edu.gh",
+      "actorRole": "admin",
+      "action": "ELECTION_STATUS_UPDATE",
+      "description": "Manually updated status of election ID: vddnmvtmpo8 to ACTIVE",
+      "status": "success",
+      "ip": "unknown",
+      "meta": {},
+      "timestamp": 1786622778617,
+      "createdAt": "2026-08-13T12:06:18.617Z",
+      "id": "4wnyzyb1gcf"
+    },
+    "27kpd1k26h": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter1@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter E2E Voter One logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786622778756,
+      "createdAt": "2026-08-13T12:06:18.756Z",
+      "id": "27kpd1k26h"
+    },
+    "27sseg3lh2si": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter1@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"COMPSSA E2E Test Election 2026\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "vddnmvtmpo8",
+        "electionTitle": "COMPSSA E2E Test Election 2026"
+      },
+      "timestamp": 1786622780201,
+      "createdAt": "2026-08-13T12:06:20.201Z",
+      "id": "27sseg3lh2si"
+    },
+    "kelo7mdeyxp": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter1@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"COMPSSA E2E Test Election 2026\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "vddnmvtmpo8",
+        "electionTitle": "COMPSSA E2E Test Election 2026"
+      },
+      "timestamp": 1786622780211,
+      "createdAt": "2026-08-13T12:06:20.211Z",
+      "id": "kelo7mdeyxp"
+    },
+    "sxk8rd3wyrq": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter2@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTER_LOGIN",
+      "description": "Voter E2E Voter Two logged in successfully",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {},
+      "timestamp": 1786622780349,
+      "createdAt": "2026-08-13T12:06:20.349Z",
+      "id": "sxk8rd3wyrq"
+    },
+    "yctesf1mp4b": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter2@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"COMPSSA E2E Test Election 2026\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "vddnmvtmpo8",
+        "electionTitle": "COMPSSA E2E Test Election 2026"
+      },
+      "timestamp": 1786622781854,
+      "createdAt": "2026-08-13T12:06:21.854Z",
+      "id": "yctesf1mp4b"
+    },
+    "ocs01pa6tgh": {
+      "tenantId": "compssa",
+      "tenantName": "compssa",
+      "actorEmail": "voter2@htu.edu.gh",
+      "actorRole": "voter",
+      "action": "VOTE_CAST",
+      "description": "Vote cast in election \"COMPSSA E2E Test Election 2026\"",
+      "status": "success",
+      "ip": "::ffff:127.0.0.1",
+      "meta": {
+        "electionId": "vddnmvtmpo8",
+        "electionTitle": "COMPSSA E2E Test Election 2026"
+      },
+      "timestamp": 1786622781865,
+      "createdAt": "2026-08-13T12:06:21.865Z",
+      "id": "ocs01pa6tgh"
+    }
+  },
+  "organizations/compssa/elections/vddnmvtmpo8/eligible_voters": {
+    "voter1_htu_edu_gh": {
+      "email": "voter1@htu.edu.gh",
+      "indexNumber": "voter-001",
+      "studentId": "voter-001",
+      "name": "Voter One",
+      "department": "",
+      "phone": "",
+      "phoneNumber": "",
+      "uploadedAt": 1786622778580,
+      "id": "voter1_htu_edu_gh"
+    },
+    "voter2_htu_edu_gh": {
+      "email": "voter2@htu.edu.gh",
+      "indexNumber": "voter-002",
+      "studentId": "voter-002",
+      "name": "Voter Two",
+      "department": "",
+      "phone": "",
+      "phoneNumber": "",
+      "uploadedAt": 1786622778580,
+      "id": "voter2_htu_edu_gh"
+    }
+  },
+  "organizations/compssa/elections/vddnmvtmpo8/voter_roster": {
+    "voter1_htu_edu_gh": {
+      "email": "voter1@htu.edu.gh",
+      "indexNumber": "voter-001",
+      "studentId": "voter-001",
+      "name": "Voter One",
+      "department": "",
+      "phone": "",
+      "phoneNumber": "",
+      "uploadedAt": 1786622778580,
+      "id": "voter1_htu_edu_gh"
+    },
+    "voter2_htu_edu_gh": {
+      "email": "voter2@htu.edu.gh",
+      "indexNumber": "voter-002",
+      "studentId": "voter-002",
+      "name": "Voter Two",
+      "department": "",
+      "phone": "",
+      "phoneNumber": "",
+      "uploadedAt": 1786622778580,
+      "id": "voter2_htu_edu_gh"
+    }
+  },
+  "organizations/compssa/elections/live-src-2026/eligible_voters": {
+    "0123456789": {
+      "indexNumber": "0123456789",
+      "fullName": "Alice Johnson",
+      "email": "alice@htu.edu.gh",
+      "phone": "0241234567",
+      "department": "Computer Science",
+      "id": "0123456789"
+    },
+    "0987654321": {
+      "indexNumber": "0987654321",
+      "fullName": "Bernard Kojo",
+      "email": "bernard@htu.edu.gh",
+      "phone": "0247654321",
+      "department": "Electrical Eng.",
+      "id": "0987654321"
+    },
+    "0244556677": {
+      "indexNumber": "0244556677",
+      "fullName": "Clarice Addy",
+      "email": "clarice@htu.edu.gh",
+      "phone": "0244556677",
+      "department": "Business Admin",
+      "id": "0244556677"
     }
   }
 }

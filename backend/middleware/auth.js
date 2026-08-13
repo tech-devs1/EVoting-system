@@ -1,4 +1,3 @@
-const { admin } = require('../services/firebase');
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
@@ -74,33 +73,25 @@ async function verifyAuth(req, res, next) {
       return next();
     }
 
-    // Try to verify as Firebase ID token first
+    // Verify using JWT
     try {
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      req.user = normalizeUserRole(decodedToken);
+      const decoded = jwt.verify(idToken, JWT_SECRET);
+      req.user = normalizeUserRole(decoded);
       await attachTenantCollection(req);
       return next();
-    } catch (firebaseError) {
-      // If Firebase verification fails, try JWT verification
-      try {
-        const decoded = jwt.verify(idToken, JWT_SECRET);
-        req.user = normalizeUserRole(decoded);
+    } catch (jwtError) {
+      const decoded = jwt.decode(idToken);
+      if (decoded && typeof decoded === 'object' && (decoded.uid || decoded.user_id || decoded.sub || decoded.email)) {
+        req.user = normalizeUserRole({
+          uid: decoded.uid || decoded.user_id || decoded.sub || decoded.email,
+          email: decoded.email || '',
+          role: decoded.role || 'voter',
+          ...decoded
+        });
         await attachTenantCollection(req);
         return next();
-      } catch (jwtError) {
-        const decoded = jwt.decode(idToken);
-        if (decoded && typeof decoded === 'object' && (decoded.uid || decoded.user_id || decoded.sub || decoded.email)) {
-          req.user = normalizeUserRole({
-            uid: decoded.uid || decoded.user_id || decoded.sub || decoded.email,
-            email: decoded.email || '',
-            role: decoded.role || 'voter',
-            ...decoded
-          });
-          await attachTenantCollection(req);
-          return next();
-        }
-        throw new Error('Invalid token');
       }
+      throw new Error('Invalid token');
     }
   } catch (error) {
     console.error('[Auth Middleware] Error verifying auth token:', error);

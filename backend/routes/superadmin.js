@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const PDFDocument = require('pdfkit');
-const { db } = require('../services/firebase');
-const { FieldValue } = require('firebase-admin/firestore');
+const { db, FieldValue } = require('../services/firebase');
 const { verifyAuth, requireSuperAdmin } = require('../middleware/auth');
 
 // Protect all superadmin routes
