@@ -1,64 +1,38 @@
-const {
-  initializeApp,
-  getApps,
-  cert,
-} = require('firebase-admin/app');
-const { getFirestore } = require('firebase-admin/firestore');
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 dotenv.config({ path: path.join(__dirname, '../.env') });
 dotenv.config();
 
-let firestoreDb = null;
-
-function initFirestore() {
-  const projectId = process.env.FIREBASE_PROJECT_ID || 'htu-elect';
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
-
-  const hasCert = clientEmail && privateKeyRaw && privateKeyRaw.includes('BEGIN PRIVATE KEY') && process.env.FORCE_MOCK_FIRESTORE !== 'true';
-
-  if (!hasCert) {
-    console.warn('⚠️ Firebase Admin service account cert not provided in environment or FORCE_MOCK_FIRESTORE is active. Falling back to in-memory MockFirestore.');
-    return null;
-  }
-
-  try {
-    if (getApps().length === 0) {
-      let privateKey = privateKeyRaw;
-      if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-        privateKey = privateKey.slice(1, -1);
-      }
-      privateKey = privateKey.replace(/\\n/g, '\n');
-
-      initializeApp({
-        credential: cert({
-          projectId: projectId,
-          clientEmail: clientEmail,
-          privateKey: privateKey,
-        }),
-      });
-    }
-    firestoreDb = getFirestore();
-    console.log('✅ Firebase Admin SDK initialized — connected to project:', projectId);
-    return firestoreDb;
-  } catch (error) {
-    console.error('Firebase Admin SDK initialization failed:', error.message);
-    return null;
+// Custom mock classes to represent Firestore FieldValues without firebase-admin
+class FieldValueIncrement {
+  constructor(operand) {
+    this.operand = operand;
   }
 }
 
-firestoreDb = initFirestore();
+class FieldValueArrayUnion {
+  constructor(elements) {
+    this.elements = elements;
+  }
+}
 
-// ─── Mock Firestore Fallback ──────────────────────────────────────────────────
-function sanitizeMockUpdate(existing, update) {
+const FieldValue = {
+  increment: (val) => new FieldValueIncrement(val),
+  arrayUnion: (...elements) => new FieldValueArrayUnion(elements)
+};
+
+function sanitizeDocUpdate(existing, update) {
   const result = { ...existing };
   for (const key in update) {
     const val = update[key];
-    if (val && typeof val === 'object' && val.constructor.name === 'NumericIncrementTransform') {
+    if (val && typeof val === 'object' && val instanceof FieldValueIncrement) {
       const current = typeof result[key] === 'number' ? result[key] : 0;
       result[key] = current + (val.operand || 1);
+    } else if (val && typeof val === 'object' && val instanceof FieldValueArrayUnion) {
+      const current = Array.isArray(result[key]) ? result[key] : [];
+      const newItems = val.elements;
+      result[key] = [...new Set([...current, ...newItems])];
     } else {
       result[key] = val;
     }
@@ -188,7 +162,7 @@ class MockFirestore {
         },
         update: async (data) => {
           const existing = collectionMap.get(docId) || {};
-          const sanitized = sanitizeMockUpdate(existing, data);
+          const sanitized = sanitizeDocUpdate(existing, data);
           collectionMap.set(docId, sanitized);
           this.saveToDisk();
           return sanitized;
@@ -279,7 +253,7 @@ initMySQL().catch(err => console.warn('MySQL auto-init:', err.message));
 const mockInstance = new MockFirestore();
 const db = new Proxy({}, {
   get(target, prop) {
-    const activeDb = firestoreDb || initFirestore() || (isMySQLConnected() ? mysqlDb : mockInstance);
+    const activeDb = (isMySQLConnected() ? mysqlDb : mockInstance);
     const value = activeDb[prop];
     return typeof value === 'function' ? value.bind(activeDb) : value;
   }
@@ -287,4 +261,12 @@ const db = new Proxy({}, {
 
 const DEFAULT_TENANT_ID = 'compssa';
 
-module.exports = { db, DEFAULT_TENANT_ID, initMySQL };
+module.exports = {
+  db,
+  DEFAULT_TENANT_ID,
+  initMySQL,
+  FieldValue,
+  FieldValueIncrement,
+  FieldValueArrayUnion,
+  sanitizeDocUpdate
+};

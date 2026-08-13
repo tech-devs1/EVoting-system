@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
+const { db, DEFAULT_TENANT_ID, FieldValue } = require('../services/firebase');
 
 const getTenantId = (req) => {
   if (!req) return DEFAULT_TENANT_ID;
@@ -15,7 +15,6 @@ const getCandidatesRef = (req) => db.collection(getTenantCollection(req)).doc(ge
 const getVotedVotersRef = (req) => db.collection(getTenantCollection(req)).doc(getTenantId(req)).collection('voted_voters');
 const getVotesRef = (req) => db.collection(getTenantCollection(req)).doc(getTenantId(req)).collection('votes');
 const getAuditLogsRef = (req) => db.collection(getTenantCollection(req)).doc(getTenantId(req)).collection('audit_logs');
-const { FieldValue } = require('firebase-admin/firestore');
 const { verifyAuth } = require('../middleware/auth');
 const { recordVoteAudit } = require('../services/audit');
 const { logFraudAlert } = require('../services/fraud');

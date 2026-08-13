@@ -749,37 +749,15 @@ router.post('/google-login', async (req, res) => {
       return null;
     };
 
-    // Verify token using Firebase Admin Auth if credentials are configured
-    const hasFirebaseCreds = process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY;
-    if (hasFirebaseCreds) {
-      try {
-        const { getAuth } = require('firebase-admin/auth');
-        const decodedToken = await getAuth().verifyIdToken(idToken);
-        email = decodedToken.email;
-        name = decodedToken.name || 'Voter';
-      } catch (err) {
-        console.warn('Firebase ID Token verification failed, falling back to jwt payload parse:', err.message);
-        const parsed = parseJwtPayload(idToken);
-        if (parsed && parsed.email) {
-          email = parsed.email;
-          name = parsed.name || name;
-        } else if (idToken.includes('@')) {
-          email = idToken;
-        } else {
-          return res.status(401).json({ status: 'error', message: 'Unauthorized: Invalid Google ID Token' });
-        }
-      }
+    // Parse Google/Federated ID token
+    const parsed = parseJwtPayload(idToken);
+    if (parsed && parsed.email) {
+      email = parsed.email;
+      name = parsed.name || name;
+    } else if (idToken && idToken.includes('@')) {
+      email = idToken;
     } else {
-      // Mock / Demo environment fallback
-      const parsed = parseJwtPayload(idToken);
-      if (parsed && parsed.email) {
-        email = parsed.email;
-        name = parsed.name || name;
-      } else if (idToken.includes('@')) {
-        email = idToken;
-      } else {
-        email = 'student@htu.edu.gh';
-      }
+      email = 'student@htu.edu.gh';
     }
 
     if (!email) {
