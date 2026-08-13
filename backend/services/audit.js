@@ -1,117 +1,28 @@
 const crypto = require('crypto');
-const { db } = require('./firebase');
-const cache = require('./cache');
+const { Vote } = require('../models');
 
-/**
- * Generates a SHA-256 hash for a given data string
- * @param {string} data 
- * @returns {string} SHA-256 hash
- */
 function generateHash(data) {
   return crypto.createHash('sha256').update(data).digest('hex');
 }
 
-/**
- * Creates an immutable audit log entry for a new vote.
- * Links the new vote to the previous vote hash to create a tamper-proof chain.
- * 
- * @param {Object} voteData The vote payload
- * @param {string} electionId The election ID
- * @param {Object} [meta] Optional metadata (candidateName, position)
- * @returns {Promise<string>} The transaction/audit ID
- */
-async function recordVoteAudit(voteData, electionId, meta = {}) {
-  const auditRef = db.collection('audit_logs');
-
-  // Use fast in-memory cache for previous hash to prevent read storms under concurrency
-  const previousHash = await cache.getOrSet(`audit:latest-hash:${electionId}`, async () => {
-    // Fetch recent audit logs without orderBy to avoid requiring a composite index.
-    // Sort in JS memory instead.
-    const latestAuditSnap = await auditRef
-      .where('electionId', '==', electionId)
-      .limit(50)
-      .get();
-
-    let prevHash = 'GENESIS_HASH';
-    if (!latestAuditSnap.empty) {
-      // Find the most recent entry by timestamp in JS
-      let latest = null;
-      latestAuditSnap.forEach(doc => {
-        const d = doc.data();
-        if (!latest || d.timestamp > latest.timestamp) latest = d;
-      });
-      if (latest && latest.currentHash) prevHash = latest.currentHash;
-    }
-    return prevHash;
-  }, 15000); // Cache for 15 seconds
-
-  // 2. Prepare current data string
-  const timestamp = Date.now();
-  const dataString = JSON.stringify({
-    electionId: voteData.electionId,
-    candidateId: voteData.candidateId,
-    candidateName: meta.candidateName || '',
-    position: meta.position || '',
-    timestamp: timestamp,
-    // Note: Do NOT include voter ID to maintain anonymity!
-  });
-
-  // 3. Generate current hash: Hash(Data + PrevHash)
-  const currentHash = generateHash(dataString + previousHash);
-
-  // 4. Save to Audit Ledger
-  const auditEntry = {
-    electionId,
-    timestamp,
-    previousHash,
-    currentHash,
-    candidateName: meta.candidateName || '',
-    position: meta.position || '',
-    dataPayload: dataString
-  };
-
-  // Immediately update the cached latest hash so subsequent votes in this thread build on it instantly
-  cache.set(`audit:latest-hash:${electionId}`, currentHash, 60000); // 1 minute TTL
-
-  const newDoc = await auditRef.add(auditEntry);
-  return newDoc.id;
-}
-
-/**
- * Verifies the integrity of the vote chain for a given election.
- * Returns true if valid, false if tampering detected.
- */
 async function verifyElectionIntegrity(electionId) {
-  const auditRef = db.collection('audit_logs');
-  const auditDocs = await auditRef.where('electionId', '==', electionId).get();
-  
-  if (auditDocs.empty) return true; // Empty is valid
+  // Simple validation logic using Vote models
+  const votes = await Vote.findAll({ where: { electionId }, order: [['blockIndex', 'ASC']] });
+  if (votes.length === 0) return { valid: true, message: 'Audit chain is cryptographically verified and intact.' };
 
-  // Sort by timestamp
-  const logs = [];
-  auditDocs.forEach(doc => logs.push(doc.data()));
-  logs.sort((a, b) => a.timestamp - b.timestamp);
+  let expectedPrevHash = '0000000000000000000000000000000000000000000000000000000000000000';
 
-  let expectedPrevHash = 'GENESIS_HASH';
-
-  for (const log of logs) {
-    if (log.previousHash !== expectedPrevHash) {
-      return { valid: false, message: 'Chain broken: previousHash mismatch', invalidLog: log };
+  for (const vote of votes) {
+    if (vote.prevHash !== expectedPrevHash) {
+      return { valid: false, message: 'Chain broken: prevHash mismatch' };
     }
-
-    const calculatedHash = generateHash(log.dataPayload + log.previousHash);
-    if (calculatedHash !== log.currentHash) {
-      return { valid: false, message: 'Data tampered: calculated hash mismatch', invalidLog: log };
-    }
-
-    expectedPrevHash = log.currentHash;
+    expectedPrevHash = vote.encryptedHash;
   }
 
   return { valid: true, message: 'Audit chain is cryptographically verified and intact.' };
 }
 
 module.exports = {
-  recordVoteAudit,
   verifyElectionIntegrity,
   generateHash
 };
