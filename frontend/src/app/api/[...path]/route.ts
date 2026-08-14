@@ -48,7 +48,7 @@ async function handleProxy(req: NextRequest) {
   try {
     const url = new URL(req.url);
 
-    const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+    const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || (process.env.VERCEL ? 'https://htu-elect-t2iw.vercel.app' : null);
     if (BACKEND_URL) {
       const targetUrl = `${BACKEND_URL}${url.pathname}${url.search}`;
       const headers = new Headers(req.headers);
