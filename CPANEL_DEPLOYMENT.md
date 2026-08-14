@@ -89,9 +89,16 @@ In the **Setup Node.js App** configuration page, scroll to **Environment variabl
 ## 🌐 Step 4 — Set up the Frontend on cPanel
 
 ### Option A: Standalone Next.js Node.js Deployment (SSR Support)
-1. In cPanel, create a new Node.js App for the frontend under the application root `frontend_app` pointing to the startup file `.next/standalone/server.js`.
+1. In cPanel, create a new Node.js App for the frontend under the application root `frontend_app` pointing to the startup file `server.js` or `.next/standalone/server.js`.
 2. Set `BACKEND_URL` = `http://127.0.0.1:5000` (pointing to your running backend app port).
-3. Under the frontend app environment variables, also set `PORT` (e.g., `3000`).
+3. Under the frontend app environment variables, set `PORT` (e.g., `3000`).
+
+### Standalone Backend Testing
+You can run standalone backend verification before deploying to cPanel:
+```bash
+npm test --prefix backend
+```
+This executes `backend/scripts/test-cpanel-backend.js` to verify database connection, `.env` loadings, Phusion Passenger hooks, `/api` prefix route registrations, and email/password authentication.
 
 ### Option B: Apache Reverse Proxy and SPA Routing (`.htaccess`)
 If you build Next.js as a single-page application (using `output: 'export'` or a static export build), upload the contents of the `out` or build directory to `public_html/`.
