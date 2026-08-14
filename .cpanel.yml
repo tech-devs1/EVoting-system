@@ -1,0 +1,14 @@
+---
+deployment:
+  tasks:
+    - export BACKENDPATH=/home/evotinghtuedu/backend
+    - export FRONTENDPATH=/home/evotinghtuedu/frontend
+    - /usr/bin/mkdir -p $BACKENDPATH/tmp
+    - /usr/bin/mkdir -p $FRONTENDPATH/tmp
+    - /usr/bin/rsync -ah --exclude='node_modules' --exclude='.env' --exclude='*.sqlite' --exclude='*.sqlite-journal' backend/ $BACKENDPATH/
+    - /usr/bin/rsync -ah --exclude='node_modules' --exclude='.env' --exclude='.next' frontend/ $FRONTENDPATH/
+    - cd $BACKENDPATH && npm install
+    - cd $FRONTENDPATH && npm install
+    - cd $FRONTENDPATH && NODE_ENV=production npm run build
+    - /usr/bin/touch $BACKENDPATH/tmp/restart.txt
+    - /usr/bin/touch $FRONTENDPATH/tmp/restart.txt
