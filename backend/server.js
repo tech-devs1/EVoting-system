@@ -102,6 +102,8 @@ app.use((err, req, res, next) => {
 if (typeof(PhusionPassenger) !== 'undefined') {
   // Bind to Phusion Passenger on cPanel
   app.listen('passenger');
+} else if (process.env.VERCEL) {
+  // Executing as a Vercel Serverless Function - export app only
 } else {
   // Local development / Standalone mode
   app.listen(PORT, () => {
