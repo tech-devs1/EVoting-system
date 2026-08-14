@@ -21,7 +21,7 @@ app.use(express.json({ limit: '50mb' }));
 
 // ─── Base & Health Routes (Prevents 404 on /api) ──────────────────────────────
 
-// Handler for root path (maps to / or /api depending on Passenger BaseURI setup)
+// Handler for root API path
 const rootHandler = (req, res) => {
   res.status(200).json({
     status: 'success',
@@ -30,7 +30,6 @@ const rootHandler = (req, res) => {
   });
 };
 
-app.get('/', rootHandler);
 app.get('/api', rootHandler);
 
 // Health check endpoint
@@ -38,7 +37,6 @@ const healthHandler = (req, res) => {
   res.status(200).json({ status: 'success', message: 'VoteTrust AI Backend is running', timestamp: new Date() });
 };
 
-app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
 
 // Diagnostic status endpoint
@@ -52,12 +50,10 @@ const statusHandler = (req, res) => {
   });
 };
 
-app.get('/status', statusHandler);
 app.get('/api/status', statusHandler);
 
 // ─── API Sub-Routes ────────────────────────────────────────────────────────────
 
-// Dual-register routes so they work whether Passenger passes /api or strips it
 const authRoutes = require('./routes/auth');
 const electionRoutes = require('./routes/elections');
 const candidateRoutes = require('./routes/candidates');
@@ -67,28 +63,13 @@ const superadminRoutes = require('./routes/superadmin');
 const imagekitRoutes = require('./routes/imagekit');
 const tenantRoutes = require('./routes/tenants');
 
-app.use('/auth', authRoutes);
 app.use('/api/auth', authRoutes);
-
-app.use('/elections', electionRoutes);
 app.use('/api/elections', electionRoutes);
-
-app.use('/candidates', candidateRoutes);
 app.use('/api/candidates', candidateRoutes);
-
-app.use('/votes', voteLimiter, voteRoutes);
 app.use('/api/votes', voteLimiter, voteRoutes);
-
-app.use('/admin', adminRoutes);
 app.use('/api/admin', adminRoutes);
-
-app.use('/superadmin', superadminRoutes);
 app.use('/api/superadmin', superadminRoutes);
-
-app.use('/imagekit', imagekitRoutes);
 app.use('/api/imagekit', imagekitRoutes);
-
-app.use('/tenants', tenantRoutes);
 app.use('/api/tenants', tenantRoutes);
 
 // Basic Error Handler
