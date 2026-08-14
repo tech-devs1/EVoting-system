@@ -1,12 +1,13 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
 
 const mysqlUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
-const host = process.env.MYSQL_HOST || '127.0.0.1';
+const host = process.env.MYSQL_HOST || '162.215.128.215';
 const port = parseInt(process.env.MYSQL_PORT || '3306', 10);
-const user = process.env.MYSQL_USER || 'root';
+const user = process.env.MYSQL_USER || 'evotinghtuedu_issaka';
 const password = process.env.MYSQL_PASSWORD || '';
-const database = process.env.MYSQL_DATABASE || 'htu_elect';
+const database = process.env.MYSQL_DATABASE || 'evotinghtuedu_HTUELECT';
 
 let sequelize;
 
@@ -22,7 +23,7 @@ if (mysqlUrl) {
       idle: 10000
     }
   });
-} else if (process.env.MYSQL_HOST) {
+} else {
   console.log(`🐬 Connecting to MySQL at ${host}:${port}/${database}...`);
   sequelize = new Sequelize(database, user, password, {
     host,
@@ -35,14 +36,6 @@ if (mysqlUrl) {
       acquire: 30000,
       idle: 10000
     }
-  });
-} else {
-  const dbPath = path.join(__dirname, '../test_database.sqlite');
-  console.log(`⚡ SQLite fallback database active at ${dbPath}`);
-  sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: dbPath,
-    logging: false
   });
 }
 
