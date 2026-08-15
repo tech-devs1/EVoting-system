@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useEffect, useState, use, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { AlertTriangle, ArrowLeft, ShieldCheck, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-
-
 
 interface Candidate {
   id: string;
@@ -24,9 +22,10 @@ interface Election {
   title: string;
 }
 
-function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
+function VoteConfirmationPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
   const { user } = useAuth();
   
   // Get all candidate IDs passed in search params
@@ -39,7 +38,7 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (candidateIds.length === 0) {
+    if (!electionId || candidateIds.length === 0) {
       setLoading(false);
       return;
     }
@@ -53,12 +52,11 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
 
         const candidatesRes = await apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${electionId}`);
         if (candidatesRes.status === 'success') {
-          // Map searchParam candidateIds to extract base candidate ID and choice (e.g. "cand1:yes" -> base "cand1", choice "yes")
           const selectedMap = new Map<string, { fullId: string; choice?: string }>();
           candidateIds.forEach(fullId => {
             const parts = fullId.split(':');
             const baseId = parts[0];
-            const choice = parts[1]; // 'yes' or 'no'
+            const choice = parts[1];
             selectedMap.set(baseId, { fullId, choice });
           });
 
@@ -104,7 +102,6 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
     setError('');
     setSubmitting(true);
     try {
-      // Cast all votes in parallel with preserved option choice (e.g. candId:yes)
       const castPromises = candidates.map(cand =>
         apiRequest<{ 
           status: string; 
@@ -116,11 +113,8 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
       );
 
       const responses = await Promise.all(castPromises);
-      
-      // Grab verification ID from the first cast response as representative or store all
       const verificationId = responses[0]?.data?.verificationId || 'verified';
 
-      // Save to local storage voter votes history
       if (typeof window !== 'undefined') {
         const storedVotes = localStorage.getItem('COMPSSA_voter_votes') || '[]';
         const parsed = JSON.parse(storedVotes);
@@ -140,8 +134,7 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
         localStorage.setItem('COMPSSA_voter_votes', JSON.stringify(parsed));
       }
 
-      // Redirect to success screen
-      router.push(`/voter/elections/${electionId}/success?verificationId=${verificationId}`);
+      router.push(`/voter/elections/success?id=${electionId}&verificationId=${verificationId}`);
     } catch (err: any) {
       setError(err.message || 'Transmission failed. Ensure you are eligible and haven\'t already voted in these categories.');
     } finally {
@@ -216,7 +209,7 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
           candidateIds.forEach(id => backParams.append('candidateId', id));
           return (
             <Link 
-              href={`/voter/elections/${electionId}?${backParams.toString()}`} 
+              href={`/voter/elections/detail?id=${electionId}&${backParams.toString()}`}
               className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-1.5"
             >
               <ArrowLeft size={16} /> Go Back
@@ -235,11 +228,10 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
   );
 }
 
-export default function VoteConfirmationPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
+export default function VoteConfirmationPage() {
   return (
     <Suspense fallback={<p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Preparing ballot confirmation details...</p>}>
-      <VoteConfirmationPageContent electionId={resolvedParams.id} />
+      <VoteConfirmationPageContent />
     </Suspense>
   );
 }

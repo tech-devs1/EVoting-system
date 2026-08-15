@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { 
   ArrowLeft, 
@@ -50,9 +51,9 @@ interface RosterVoter {
   studentId: string;
 }
 
-export default function ElectionMessagesPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params);
-  const electionId = resolvedParams.id;
+function ElectionMessagesContent() {
+  const searchParams = useSearchParams();
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
 
   const [election, setElection] = useState<Election | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +76,11 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
   const [activeTab, setActiveTab] = useState<'compose' | 'history'>('compose');
 
   useEffect(() => {
+    if (!electionId) {
+      setLoading(false);
+      return;
+    }
+
     async function initData() {
       try {
         setLoading(true);
@@ -217,7 +223,7 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
       {/* Top Header & Workspace Route Navigator */}
       <div>
         <Link 
-          href={`/admin/elections/${electionId}/dashboard`} 
+          href={`/admin/elections/dashboard?electionId=${electionId}`}
           className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3"
         >
           <ArrowLeft size={14} /> Back to Election Command Center
@@ -706,7 +712,7 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
                           .replace(/{{voter_name}}/gi, 'Kwame Mensah')
                           .replace(/{{index_number}}/gi, '0123456789')
                           .replace(/{{election_title}}/gi, election.title)
-                          .replace(/{{voting_link}}/gi, `https://htu-elect-aov2.vercel.app/voter/elections/${election.id}`)}
+                          .replace(/{{voting_link}}/gi, `https://htu-elect-aov2.vercel.app/voter/elections/detail?id=${election.id}`)}
                       </div>
 
                       <div style={{ marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: '#94A3B8' }}>
@@ -746,7 +752,7 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
                           .replace(/{{voter_name}}/gi, 'Kwame Mensah')
                           .replace(/{{index_number}}/gi, '0123456789')
                           .replace(/{{election_title}}/gi, election.title)
-                          .replace(/{{voting_link}}/gi, `https://htu-elect-aov2.vercel.app/voter/elections/${election.id}`)}
+                          .replace(/{{voting_link}}/gi, `https://htu-elect-aov2.vercel.app/voter/elections/detail?id=${election.id}`)}
                       </div>
                     </div>
                   </div>
@@ -846,5 +852,13 @@ export default function ElectionMessagesPage({ params }: { params: Promise<{ id:
         </div>
       )}
     </div>
+  );
+}
+
+export default function ElectionMessagesPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-64 text-slate-500 font-medium text-xs">Loading Broadcast Communicator...</div>}>
+      <ElectionMessagesContent />
+    </Suspense>
   );
 }

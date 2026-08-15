@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Modal from '@/components/Modal';
 import { apiRequest } from '@/lib/api';
 import { 
@@ -74,9 +75,9 @@ const compressImageFile = (file: File, maxWidth = 300, maxHeight = 300, quality 
   });
 };
 
-export default function PerElectionCandidatesPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params);
-  const electionId = resolvedParams.id;
+function PerElectionCandidatesContent() {
+  const searchParams = useSearchParams();
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
 
   const [positions, setPositions] = useState<Position[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -84,7 +85,6 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
-
 
   // Position Modal State
   const [isPosModalOpen, setIsPosModalOpen] = useState(false);
@@ -155,6 +155,10 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   async function fetchPositionsAndCandidates() {
+    if (!electionId) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       
@@ -646,7 +650,6 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
             </label>
             
             <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', backgroundColor: '#F8FAFC', padding: '1.25rem', borderRadius: '18px', border: '1.5px dashed #CBD5E1' }}>
-              {/* Live Preview Avatar */}
               <div style={{
                 width: '80px',
                 height: '80px',
@@ -667,7 +670,6 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
                 )}
               </div>
 
-              {/* Controls */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 <label htmlFor="candidate-file-picker" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.7rem 1.25rem', borderRadius: '12px', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', width: 'fit-content', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)' }}>
                   <Upload size={16} /> Choose Photo Image File
@@ -888,5 +890,13 @@ export default function PerElectionCandidatesPage({ params }: { params: Promise<
         </div>
       </Modal>
     </div>
+  );
+}
+
+export default function PerElectionCandidatesPage() {
+  return (
+    <Suspense fallback={<p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Loading position lineups...</p>}>
+      <PerElectionCandidatesContent />
+    </Suspense>
   );
 }

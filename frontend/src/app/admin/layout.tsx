@@ -123,26 +123,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    const match = pathname.match(/\/admin\/elections\/([^/]+)/);
-    if (match) {
-      setElectionId(match[1]);
-      try {
-        sessionStorage.setItem('currentElectionId', match[1]);
-      } catch (e) {}
-    } else {
-      // Check query parameter
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const qId = params.get('electionId');
-        if (qId) {
-          setElectionId(qId);
-          sessionStorage.setItem('currentElectionId', qId);
-        } else {
-          const storedId = sessionStorage.getItem('currentElectionId');
-          setElectionId(storedId);
-        }
-      } catch (e) {}
-    }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qId = params.get('electionId') || params.get('id');
+      if (qId) {
+        setElectionId(qId);
+        sessionStorage.setItem('currentElectionId', qId);
+      } else if (pathname.startsWith('/admin/elections')) {
+        const storedId = sessionStorage.getItem('currentElectionId');
+        if (storedId) setElectionId(storedId);
+      }
+    } catch (e) {}
   }, [pathname]);
 
   const isElectionWorkspace = Boolean(electionId);
@@ -153,12 +144,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   const electionNavLinks = electionId ? [
-    { label: 'Overview', href: `/admin/elections/${electionId}/dashboard`, icon: LayoutDashboard },
-    { label: 'Positions & Candidates', href: `/admin/elections/${electionId}/candidates`, icon: Layers },
-    { label: 'Roster & CSV Upload', href: `/admin/elections/${electionId}/voters`, icon: Users },
-    { label: 'Broadcast Messages', href: `/admin/elections/${electionId}/messages`, icon: Send },
-    { label: 'Live Results', href: `/admin/elections/${electionId}/results`, icon: BarChart3 },
-    { label: 'Election System Audit', href: `/admin/elections/${electionId}/audit`, icon: History },
+    { label: 'Overview', href: `/admin/elections/dashboard?electionId=${electionId}`, icon: LayoutDashboard },
+    { label: 'Positions & Candidates', href: `/admin/elections/candidates?electionId=${electionId}`, icon: Layers },
+    { label: 'Roster & CSV Upload', href: `/admin/elections/voters?electionId=${electionId}`, icon: Users },
+    { label: 'Broadcast Messages', href: `/admin/elections/messages?electionId=${electionId}`, icon: Send },
+    { label: 'Live Results', href: `/admin/elections/results?electionId=${electionId}`, icon: BarChart3 },
+    { label: 'Election System Audit', href: `/admin/elections/audit?electionId=${electionId}`, icon: History },
   ] : defaultNavLinks;
 
   const activeNavLinks = isElectionWorkspace ? electionNavLinks : defaultNavLinks;

@@ -276,7 +276,7 @@ export default function OrganizationElectionHub() {
 
         setIsWizardOpen(false);
         resetWizard();
-        router.push(`/admin/elections/${electionId}/dashboard`);
+        router.push(`/admin/elections/dashboard?electionId=${electionId}`);
       }
     } catch (err: any) {
       setWizardError(err.message || 'Failed to create election.');
@@ -774,7 +774,7 @@ export default function OrganizationElectionHub() {
 
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <Link
-                    href={`/admin/elections/${election.id}/dashboard`}
+                    href={`/admin/elections/dashboard?electionId=${election.id}`}
                     style={{
                       flex: 1,
                       display: 'flex',
@@ -796,7 +796,7 @@ export default function OrganizationElectionHub() {
                   </Link>
 
                   <Link
-                    href={`/admin/elections/${election.id}/dashboard`}
+                    href={`/admin/elections/dashboard?electionId=${election.id}`}
                     style={{
                       display: 'flex',
                       alignItems: 'center',

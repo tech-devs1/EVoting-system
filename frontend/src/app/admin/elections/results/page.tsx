@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
 import { 
   ArrowLeft, 
@@ -33,9 +34,9 @@ interface Election {
   totalVotesCast?: number;
 }
 
-export default function PerElectionResultsPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params);
-  const electionId = resolvedParams.id;
+function PerElectionResultsContent() {
+  const searchParams = useSearchParams();
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
 
   const [election, setElection] = useState<Election | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -43,9 +44,13 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(0); // 0 means off
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(0);
 
   async function fetchResultsData(showLoader = true) {
+    if (!electionId) {
+      if (showLoader) setLoading(false);
+      return;
+    }
     try {
       if (showLoader) setLoading(true);
       const res = await apiRequest<{
@@ -132,7 +137,7 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
     <div className="flex flex-col gap-6">
       {/* Banner */}
       <div>
-        <Link href={`/admin/elections/${electionId}/dashboard`} className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
+        <Link href={`/admin/elections/dashboard?electionId=${electionId}`} className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
           <ArrowLeft size={14} /> Back to Election Command Center
         </Link>
         <div className="flex justify-between items-center flex-wrap gap-4">
@@ -234,7 +239,6 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
       ) : (
         <div className="flex flex-col gap-6">
           {Object.entries(positionsMap).map(([positionTitle, candidateList]) => {
-            // Sort by highest votes first
             const sortedCandidates = [...candidateList].sort((a, b) => (b.votes || 0) - (a.votes || 0));
             const highestVotes = sortedCandidates[0]?.votes || 0;
 
@@ -306,5 +310,13 @@ export default function PerElectionResultsPage({ params }: { params: Promise<{ i
         </div>
       )}
     </div>
+  );
+}
+
+export default function PerElectionResultsPage() {
+  return (
+    <Suspense fallback={<p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Loading live vote tallies...</p>}>
+      <PerElectionResultsContent />
+    </Suspense>
   );
 }

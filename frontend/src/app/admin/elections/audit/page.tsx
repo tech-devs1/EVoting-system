@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
 import { 
   ArrowLeft, 
@@ -26,9 +27,9 @@ interface AuditRecord {
   hash?: string;
 }
 
-export default function ElectionSystemAuditPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params);
-  const electionId = resolvedParams.id;
+function ElectionSystemAuditContent() {
+  const searchParams = useSearchParams();
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
 
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +37,10 @@ export default function ElectionSystemAuditPage({ params }: { params: Promise<{ 
   const [searchQuery, setSearchQuery] = useState('');
 
   async function fetchAuditData() {
+    if (!electionId) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const res = await apiRequest<{ status: string; data: AuditRecord[] }>(`/elections/${electionId}/audit-records`);
@@ -85,7 +90,7 @@ export default function ElectionSystemAuditPage({ params }: { params: Promise<{ 
     <div className="flex flex-col gap-6">
       {/* Banner Header */}
       <div>
-        <Link href={`/admin/elections/${electionId}/dashboard`} className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
+        <Link href={`/admin/elections/dashboard?electionId=${electionId}`} className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
           <ArrowLeft size={14} /> Back to Election Command Center
         </Link>
         <div className="flex justify-between items-center flex-wrap gap-4">
@@ -196,5 +201,13 @@ export default function ElectionSystemAuditPage({ params }: { params: Promise<{ 
         )}
       </div>
     </div>
+  );
+}
+
+export default function ElectionSystemAuditPage() {
+  return (
+    <Suspense fallback={<p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Loading system audit log...</p>}>
+      <ElectionSystemAuditContent />
+    </Suspense>
   );
 }

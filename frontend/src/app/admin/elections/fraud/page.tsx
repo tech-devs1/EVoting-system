@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { 
   ArrowLeft, 
@@ -25,15 +26,19 @@ interface SecurityAlert {
   status: 'unresolved' | 'resolved';
 }
 
-export default function PerElectionSecurityPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params);
-  const electionId = resolvedParams.id;
+function PerElectionSecurityContent() {
+  const searchParams = useSearchParams();
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
 
   const [alerts, setAlerts] = useState<SecurityAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   async function fetchSecurityAlerts() {
+    if (!electionId) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const res = await apiRequest<{ status: string; data: SecurityAlert[] }>(`/elections/${electionId}/security-alerts`);
@@ -61,7 +66,7 @@ export default function PerElectionSecurityPage({ params }: { params: Promise<{ 
     <div className="animate-page-enter">
       {/* Banner */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <Link href={`/admin/elections/${electionId}/dashboard`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', marginBottom: '0.75rem' }}>
+        <Link href={`/admin/elections/dashboard?electionId=${electionId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', marginBottom: '0.75rem' }}>
           <ArrowLeft size={16} /> Back to Election Command Center
         </Link>
         <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
@@ -155,5 +160,13 @@ export default function PerElectionSecurityPage({ params }: { params: Promise<{ 
         )}
       </div>
     </div>
+  );
+}
+
+export default function PerElectionSecurityPage() {
+  return (
+    <Suspense fallback={<p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading security logs...</p>}>
+      <PerElectionSecurityContent />
+    </Suspense>
   );
 }
