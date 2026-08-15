@@ -35,22 +35,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Center Nav links */}
-        <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-600 dark:text-slate-300">
-          <Link href="#features" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            Features
-          </Link>
-          <Link href="#elections" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            Elections
-          </Link>
-          <Link href="#security" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            Security
-          </Link>
-          <Link href="/voter/verify" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            Audit Ledger
-          </Link>
-        </nav>
-
+        
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
           <Link
@@ -71,12 +56,7 @@ export default function LandingPage() {
       {/* Hero Section */}
       <main className="max-w-6xl mx-auto px-6 pt-8 pb-16 flex-1 flex flex-col justify-center items-center text-center relative">
 
-        {/* Sub-badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm text-slate-800 dark:text-slate-200 text-xs font-semibold mb-8 animate-fade-in">
-          <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span>Next-Gen E-Voting Platform for HTU</span>
-        </div>
-
+        
         {/* Headline */}
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white tracking-tight max-w-4xl leading-[1.1] mb-6">
           A secure place to cast your vote.
@@ -102,89 +82,64 @@ export default function LandingPage() {
 
             {/* Card 1 */}
             <div className="w-36 h-48 md:w-48 md:h-64 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl transform -rotate-12 hover:rotate-0 transition-all duration-300 hover:z-40 hover:scale-105 flex flex-col justify-between shrink-0 relative group">
-              <img src="/images/login_hero.jpg" alt="Ballot Art 1" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              <img src="/assets/school.jpg" alt="Ballot Art 1" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent p-4 flex flex-col justify-between text-white">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-black/40 backdrop-blur-md border border-white/20 px-2 py-0.5 rounded-full">
-                    Verified
-                  </span>
-                  <Lock className="w-4 h-4 text-white/90" />
+                  
                 </div>
                 <div className="text-left">
                   <p className="text-[10px] font-bold text-white/80 uppercase tracking-wide">SRC Executive</p>
-                  <p className="text-sm md:text-base font-black mt-0.5 leading-snug">2025 General Ballot</p>
                 </div>
               </div>
             </div>
 
             {/* Card 2 */}
             <div className="w-36 h-48 md:w-48 md:h-64 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl transform -rotate-6 hover:rotate-0 transition-all duration-300 hover:z-40 hover:scale-105 flex flex-col justify-between shrink-0 relative group">
-              <img src="/compssa_logo.png" alt="Ballot Art 2" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              <img src="/assets/images1.jpeg" alt="Ballot Art 2" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute inset-0 bg-gradient-to-t from-blue-950/90 via-blue-950/40 to-transparent p-4 flex flex-col justify-between text-white">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-black/40 backdrop-blur-md border border-white/20 px-2 py-0.5 rounded-full">
-                    Live
-                  </span>
-                  <Vote className="w-4 h-4 text-white/90" />
-                </div>
+
                 <div className="text-left">
-                  <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wide">Faculty of Eng.</p>
-                  <p className="text-sm md:text-base font-black mt-0.5 leading-snug">Dean & Rep Poll</p>
+                  <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wide">Faculty of ELection</p>
                 </div>
               </div>
             </div>
 
             {/* Card 3 (Center Prominent Card) */}
             <div className="w-40 h-52 md:w-52 md:h-72 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl z-20 border border-slate-700/50 transform hover:scale-105 transition-all duration-300 flex flex-col justify-between shrink-0 relative group">
-              <img src="/htu_logo.png" alt="Ballot Art 3" className="absolute inset-0 w-full h-full object-contain bg-slate-900 p-4 group-hover:scale-105 transition-transform duration-500" />
+              <img src="/assets/images2.jpeg" alt="Ballot Art 3" className="absolute inset-0 w-full h-full object-contain bg-slate-900 p-4 group-hover:scale-105 transition-transform duration-500" />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 p-5 flex flex-col justify-between text-white">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 bg-blue-500/30 text-blue-300 px-2.5 py-1 rounded-full border border-blue-400/40 text-[10px] font-bold backdrop-blur-md">
-                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                    Active Election
-                  </div>
-                  <Award className="w-4 h-4 text-amber-400" />
                 </div>
                 <div className="text-left">
                   <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">HTU ELECT</span>
                   <h3 className="text-base md:text-xl font-black mt-0.5 leading-snug">
                     Presidential & Local Elections
                   </h3>
-                  <p className="text-[10px] text-slate-400 mt-1">End-to-End Encrypted & Audited</p>
                 </div>
               </div>
             </div>
 
             {/* Card 4 */}
             <div className="w-36 h-48 md:w-48 md:h-64 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl transform rotate-6 hover:rotate-0 transition-all duration-300 hover:z-40 hover:scale-105 flex flex-col justify-between shrink-0 relative group">
-              <img src="/assets/logo.png" alt="Ballot Art 4" className="absolute inset-0 w-full h-full object-contain bg-amber-950/80 p-3 group-hover:scale-110 transition-transform duration-500" />
+              <img src="/assets/images3.jpeg" alt="Ballot Art 4" className="absolute inset-0 w-full h-full object-contain bg-amber-950/80 p-3 group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute inset-0 bg-gradient-to-t from-amber-950/95 via-amber-950/40 to-transparent p-4 flex flex-col justify-between text-white">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-black/40 backdrop-blur-md border border-white/20 px-2 py-0.5 rounded-full">
-                    Hall Polls
-                  </span>
-                  <BarChart3 className="w-4 h-4 text-white/90" />
                 </div>
                 <div className="text-left">
                   <p className="text-[10px] font-bold text-amber-200 uppercase tracking-wide">Hall Residence</p>
-                  <p className="text-sm md:text-base font-black mt-0.5 leading-snug">Executives 2025</p>
                 </div>
               </div>
             </div>
 
             {/* Card 5 */}
             <div className="w-36 h-48 md:w-48 md:h-64 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl transform rotate-12 hover:rotate-0 transition-all duration-300 hover:z-40 hover:scale-105 flex flex-col justify-between shrink-0 relative group">
-              <img src="/images/login_hero.jpg" alt="Ballot Art 5" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              <img src="/assets/images4.jpeg" alt="Ballot Art 5" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/95 via-emerald-950/40 to-transparent p-4 flex flex-col justify-between text-white">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-black/40 backdrop-blur-md border border-white/20 px-2 py-0.5 rounded-full">
-                    Realtime
-                  </span>
-                  <CheckCircle2 className="w-4 h-4 text-white/90" />
                 </div>
                 <div className="text-left">
                   <p className="text-[10px] font-bold text-emerald-200 uppercase tracking-wide">Department Reps</p>
-                  <p className="text-sm md:text-base font-black mt-0.5 leading-snug">Instant Turnout</p>
                 </div>
               </div>
             </div>
