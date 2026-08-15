@@ -40,24 +40,23 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   }, []);
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) return;
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
     try {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      if (permission === 'granted') {
-        if ('serviceWorker' in navigator) {
-          const registration = await navigator.serviceWorker.ready;
-          registration.showNotification('HTU Elect ✓', {
-            body: 'Push notifications successfully enabled! Stay tuned for live updates.',
-            icon: '/assets/logo.png',
-            badge: '/assets/logo.png',
-            vibrate: [100, 50, 100],
-          } as any);
-        } else {
-          new Notification('HTU Elect ✓', {
-            body: 'Push notifications successfully enabled! Stay tuned for live updates.',
-            icon: '/assets/logo.png',
-          });
+      if (typeof Notification.requestPermission === 'function') {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
+        if (permission === 'granted') {
+          if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready;
+            if (registration && registration.showNotification) {
+              registration.showNotification('HTU Elect ✓', {
+                body: 'Push notifications successfully enabled! Stay tuned for live updates.',
+                icon: '/assets/logo.png',
+                badge: '/assets/logo.png',
+                vibrate: [100, 50, 100],
+              } as any);
+            }
+          }
         }
       }
     } catch (err) {
@@ -200,7 +199,9 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           {/* Left Title & Back Button */}
           <div className="flex items-center gap-2 sm:gap-3">
             <button
-              className="lg:hidden w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors"
+              type="button"
+              aria-label="Open Mobile Navigation Menu"
+              className="lg:hidden w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer touch-manipulation"
               onClick={() => setIsMobileMenuOpen(true)}
             >
               <Menu size={20} />

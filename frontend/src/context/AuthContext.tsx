@@ -37,45 +37,100 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
+  // Safe storage helper for Mobile Safari / Private Browsing / strict quota environments
+  const safeSetItem = (storage: Storage | null, key: string, value: string) => {
+    try {
+      if (storage) {
+        storage.setItem(key, value);
+      }
+    } catch (err) {
+      console.warn(`[Storage] Failed to set ${key} in storage:`, err);
+    }
+  };
+
+  const safeGetItem = (storage: Storage | null, key: string): string | null => {
+    try {
+      if (storage) {
+        return storage.getItem(key);
+      }
+    } catch (err) {
+      console.warn(`[Storage] Failed to get ${key} from storage:`, err);
+    }
+    return null;
+  };
+
+  const safeRemoveItem = (storage: Storage | null, key: string) => {
+    try {
+      if (storage) {
+        storage.removeItem(key);
+      }
+    } catch (err) {
+      console.warn(`[Storage] Failed to remove ${key} from storage:`, err);
+    }
+  };
+
+  // Safe navigation function with window.location fallback for mobile Safari
+  const safeNavigate = (targetPath: string) => {
+    if (typeof window === 'undefined') return;
+    try {
+      router.push(targetPath);
+    } catch (e) {
+      console.warn('[Navigation] router.push failed, falling back to window.location.href:', e);
+      window.location.href = targetPath;
+      return;
+    }
+
+    // Safety timeout: if URL hasn't updated after 400ms (common on older mobile browsers), force location navigation
+    setTimeout(() => {
+      if (window.location.pathname !== targetPath && !window.location.pathname.startsWith(targetPath)) {
+        console.warn('[Navigation] router.push timeout, forcing window.location.href navigation to:', targetPath);
+        window.location.href = targetPath;
+      }
+    }, 400);
+  };
+
   // Helper to save session tokens isolated by role & tab
   const saveSession = (data: UserProfile, token: string) => {
     const bearerToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
     const userStr = JSON.stringify(data);
     const tenant = data.tenantId || 'default_tenant';
 
+    const session = typeof window !== 'undefined' ? window.sessionStorage : null;
+    const local = typeof window !== 'undefined' ? window.localStorage : null;
+
     // 1. ALWAYS set tab-specific session storage
-    sessionStorage.setItem('COMPSSA_tab_token', bearerToken);
-    sessionStorage.setItem('COMPSSA_tab_user', userStr);
-    sessionStorage.setItem('COMPSSA_tab_tenantId', tenant);
+    safeSetItem(session, 'COMPSSA_tab_token', bearerToken);
+    safeSetItem(session, 'COMPSSA_tab_user', userStr);
+    safeSetItem(session, 'COMPSSA_tab_tenantId', tenant);
 
     // 2. Set role-isolated storage keys
     if (data.role === 'superadmin') {
-      sessionStorage.setItem('COMPSSA_superadmin_token', bearerToken);
-      sessionStorage.setItem('COMPSSA_superadmin_user', userStr);
-      sessionStorage.setItem('COMPSSA_superadmin_tenantId', tenant);
-      localStorage.setItem('COMPSSA_superadmin_token', bearerToken);
-      localStorage.setItem('COMPSSA_superadmin_user', userStr);
-      localStorage.setItem('COMPSSA_superadmin_tenantId', tenant);
+      safeSetItem(session, 'COMPSSA_superadmin_token', bearerToken);
+      safeSetItem(session, 'COMPSSA_superadmin_user', userStr);
+      safeSetItem(session, 'COMPSSA_superadmin_tenantId', tenant);
+      safeSetItem(local, 'COMPSSA_superadmin_token', bearerToken);
+      safeSetItem(local, 'COMPSSA_superadmin_user', userStr);
+      safeSetItem(local, 'COMPSSA_superadmin_tenantId', tenant);
     } else if (data.role === 'admin') {
-      sessionStorage.setItem('COMPSSA_admin_token', bearerToken);
-      sessionStorage.setItem('COMPSSA_admin_user', userStr);
-      sessionStorage.setItem('COMPSSA_admin_tenantId', tenant);
-      localStorage.setItem('COMPSSA_admin_token', bearerToken);
-      localStorage.setItem('COMPSSA_admin_user', userStr);
-      localStorage.setItem('COMPSSA_admin_tenantId', tenant);
+      safeSetItem(session, 'COMPSSA_admin_token', bearerToken);
+      safeSetItem(session, 'COMPSSA_admin_user', userStr);
+      safeSetItem(session, 'COMPSSA_admin_tenantId', tenant);
+      safeSetItem(local, 'COMPSSA_admin_token', bearerToken);
+      safeSetItem(local, 'COMPSSA_admin_user', userStr);
+      safeSetItem(local, 'COMPSSA_admin_tenantId', tenant);
     } else {
-      sessionStorage.setItem('COMPSSA_voter_token', bearerToken);
-      sessionStorage.setItem('COMPSSA_voter_user', userStr);
-      sessionStorage.setItem('COMPSSA_voter_tenantId', tenant);
-      localStorage.setItem('COMPSSA_voter_token', bearerToken);
-      localStorage.setItem('COMPSSA_voter_user', userStr);
-      localStorage.setItem('COMPSSA_voter_tenantId', tenant);
+      safeSetItem(session, 'COMPSSA_voter_token', bearerToken);
+      safeSetItem(session, 'COMPSSA_voter_user', userStr);
+      safeSetItem(session, 'COMPSSA_voter_tenantId', tenant);
+      safeSetItem(local, 'COMPSSA_voter_token', bearerToken);
+      safeSetItem(local, 'COMPSSA_voter_user', userStr);
+      safeSetItem(local, 'COMPSSA_voter_tenantId', tenant);
     }
 
     // Set fallback token for backward compatibility
-    localStorage.setItem('COMPSSA_token', bearerToken);
-    localStorage.setItem('COMPSSA_user', userStr);
-    localStorage.setItem('COMPSSA_tenantId', tenant);
+    safeSetItem(local, 'COMPSSA_token', bearerToken);
+    safeSetItem(local, 'COMPSSA_user', userStr);
+    safeSetItem(local, 'COMPSSA_tenantId', tenant);
   };
 
   // Load user from local/session storage or check backend
@@ -88,44 +143,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let storedToken: string | null = null;
         let storedUserStr: string | null = null;
 
+        const session = typeof window !== 'undefined' ? window.sessionStorage : null;
+        const local = typeof window !== 'undefined' ? window.localStorage : null;
+
         if (path.startsWith('/superadmin')) {
-          storedToken = sessionStorage.getItem('COMPSSA_tab_token') ||
-                        sessionStorage.getItem('COMPSSA_superadmin_token') ||
-                        localStorage.getItem('COMPSSA_superadmin_token') ||
-                        localStorage.getItem('COMPSSA_token');
-          storedUserStr = sessionStorage.getItem('COMPSSA_tab_user') ||
-                          sessionStorage.getItem('COMPSSA_superadmin_user') ||
-                          localStorage.getItem('COMPSSA_superadmin_user') ||
-                          localStorage.getItem('COMPSSA_user');
+          storedToken = safeGetItem(session, 'COMPSSA_tab_token') ||
+                        safeGetItem(session, 'COMPSSA_superadmin_token') ||
+                        safeGetItem(local, 'COMPSSA_superadmin_token') ||
+                        safeGetItem(local, 'COMPSSA_token');
+          storedUserStr = safeGetItem(session, 'COMPSSA_tab_user') ||
+                          safeGetItem(session, 'COMPSSA_superadmin_user') ||
+                          safeGetItem(local, 'COMPSSA_superadmin_user') ||
+                          safeGetItem(local, 'COMPSSA_user');
         } else if (path.startsWith('/admin')) {
-          storedToken = sessionStorage.getItem('COMPSSA_tab_token') ||
-                        sessionStorage.getItem('COMPSSA_admin_token') ||
-                        localStorage.getItem('COMPSSA_admin_token') ||
-                        localStorage.getItem('COMPSSA_token');
-          storedUserStr = sessionStorage.getItem('COMPSSA_tab_user') ||
-                          sessionStorage.getItem('COMPSSA_admin_user') ||
-                          localStorage.getItem('COMPSSA_admin_user') ||
-                          localStorage.getItem('COMPSSA_user');
+          storedToken = safeGetItem(session, 'COMPSSA_tab_token') ||
+                        safeGetItem(session, 'COMPSSA_admin_token') ||
+                        safeGetItem(local, 'COMPSSA_admin_token') ||
+                        safeGetItem(local, 'COMPSSA_token');
+          storedUserStr = safeGetItem(session, 'COMPSSA_tab_user') ||
+                          safeGetItem(session, 'COMPSSA_admin_user') ||
+                          safeGetItem(local, 'COMPSSA_admin_user') ||
+                          safeGetItem(local, 'COMPSSA_user');
         } else if (path.startsWith('/voter')) {
-          storedToken = sessionStorage.getItem('COMPSSA_tab_token') ||
-                        sessionStorage.getItem('COMPSSA_voter_token') ||
-                        localStorage.getItem('COMPSSA_voter_token') ||
-                        localStorage.getItem('COMPSSA_token');
-          storedUserStr = sessionStorage.getItem('COMPSSA_tab_user') ||
-                          sessionStorage.getItem('COMPSSA_voter_user') ||
-                          localStorage.getItem('COMPSSA_voter_user') ||
-                          localStorage.getItem('COMPSSA_user');
+          storedToken = safeGetItem(session, 'COMPSSA_tab_token') ||
+                        safeGetItem(session, 'COMPSSA_voter_token') ||
+                        safeGetItem(local, 'COMPSSA_voter_token') ||
+                        safeGetItem(local, 'COMPSSA_token');
+          storedUserStr = safeGetItem(session, 'COMPSSA_tab_user') ||
+                          safeGetItem(session, 'COMPSSA_voter_user') ||
+                          safeGetItem(local, 'COMPSSA_voter_user') ||
+                          safeGetItem(local, 'COMPSSA_user');
         } else {
-          storedToken = sessionStorage.getItem('COMPSSA_tab_token') ||
-                        sessionStorage.getItem('COMPSSA_superadmin_token') ||
-                        sessionStorage.getItem('COMPSSA_admin_token') ||
-                        sessionStorage.getItem('COMPSSA_voter_token') ||
-                        localStorage.getItem('COMPSSA_token');
-          storedUserStr = sessionStorage.getItem('COMPSSA_tab_user') ||
-                          sessionStorage.getItem('COMPSSA_superadmin_user') ||
-                          sessionStorage.getItem('COMPSSA_admin_user') ||
-                          sessionStorage.getItem('COMPSSA_voter_user') ||
-                          localStorage.getItem('COMPSSA_user');
+          storedToken = safeGetItem(session, 'COMPSSA_tab_token') ||
+                        safeGetItem(session, 'COMPSSA_superadmin_token') ||
+                        safeGetItem(session, 'COMPSSA_admin_token') ||
+                        safeGetItem(session, 'COMPSSA_voter_token') ||
+                        safeGetItem(local, 'COMPSSA_token');
+          storedUserStr = safeGetItem(session, 'COMPSSA_tab_user') ||
+                          safeGetItem(session, 'COMPSSA_superadmin_user') ||
+                          safeGetItem(session, 'COMPSSA_admin_user') ||
+                          safeGetItem(session, 'COMPSSA_voter_user') ||
+                          safeGetItem(local, 'COMPSSA_user');
         }
 
         if (storedToken) {
@@ -156,13 +214,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         saveSession(res.data, res.token);
         setUser(res.data);
         
-        if (res.data.role === 'superadmin') {
-          router.push('/superadmin/dashboard');
-        } else if (res.data.role === 'admin') {
-          router.push('/admin/dashboard');
-        } else {
-          router.push('/voter/elections');
-        }
+        const targetPath = res.data.role === 'superadmin'
+          ? '/superadmin/dashboard'
+          : res.data.role === 'admin'
+          ? '/admin/dashboard'
+          : '/voter/elections';
+
+        safeNavigate(targetPath);
         return {};
       }
       throw new Error('Unexpected response from server.');
@@ -207,7 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.status === 'success' && res.token && res.data) {
         saveSession(res.data, res.token);
         setUser(res.data);
-        router.push('/voter/dashboard');
+        safeNavigate('/voter/dashboard');
       } else {
         throw new Error('OTP verification failed.');
       }
@@ -227,13 +285,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         saveSession(res.data, res.token);
         setUser(res.data);
 
-        if (res.data.role === 'superadmin') {
-          router.push('/superadmin/dashboard');
-        } else if (res.data.role === 'admin') {
-          router.push('/admin/dashboard');
-        } else {
-          router.push('/voter/elections');
-        }
+        const targetPath = res.data.role === 'superadmin'
+          ? '/superadmin/dashboard'
+          : res.data.role === 'admin'
+          ? '/admin/dashboard'
+          : '/voter/elections';
+
+        safeNavigate(targetPath);
         return res.data;
       }
       throw new Error('Google authentication failed.');
@@ -247,31 +305,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    const session = typeof window !== 'undefined' ? window.sessionStorage : null;
+    const local = typeof window !== 'undefined' ? window.localStorage : null;
     
-    sessionStorage.removeItem('COMPSSA_tab_token');
-    sessionStorage.removeItem('COMPSSA_tab_user');
-    sessionStorage.removeItem('COMPSSA_tab_tenantId');
+    safeRemoveItem(session, 'COMPSSA_tab_token');
+    safeRemoveItem(session, 'COMPSSA_tab_user');
+    safeRemoveItem(session, 'COMPSSA_tab_tenantId');
 
     if (path.startsWith('/superadmin')) {
-      sessionStorage.removeItem('COMPSSA_superadmin_token');
-      sessionStorage.removeItem('COMPSSA_superadmin_user');
-      localStorage.removeItem('COMPSSA_superadmin_token');
-      localStorage.removeItem('COMPSSA_superadmin_user');
+      safeRemoveItem(session, 'COMPSSA_superadmin_token');
+      safeRemoveItem(session, 'COMPSSA_superadmin_user');
+      safeRemoveItem(local, 'COMPSSA_superadmin_token');
+      safeRemoveItem(local, 'COMPSSA_superadmin_user');
     } else if (path.startsWith('/admin')) {
-      sessionStorage.removeItem('COMPSSA_admin_token');
-      sessionStorage.removeItem('COMPSSA_admin_user');
-      localStorage.removeItem('COMPSSA_admin_token');
-      localStorage.removeItem('COMPSSA_admin_user');
+      safeRemoveItem(session, 'COMPSSA_admin_token');
+      safeRemoveItem(session, 'COMPSSA_admin_user');
+      safeRemoveItem(local, 'COMPSSA_admin_token');
+      safeRemoveItem(local, 'COMPSSA_admin_user');
     } else {
-      sessionStorage.removeItem('COMPSSA_voter_token');
-      sessionStorage.removeItem('COMPSSA_voter_user');
-      localStorage.removeItem('COMPSSA_voter_token');
-      localStorage.removeItem('COMPSSA_voter_user');
+      safeRemoveItem(session, 'COMPSSA_voter_token');
+      safeRemoveItem(session, 'COMPSSA_voter_user');
+      safeRemoveItem(local, 'COMPSSA_voter_token');
+      safeRemoveItem(local, 'COMPSSA_voter_user');
     }
-    localStorage.removeItem('COMPSSA_token');
-    localStorage.removeItem('COMPSSA_user');
+    safeRemoveItem(local, 'COMPSSA_token');
+    safeRemoveItem(local, 'COMPSSA_user');
     setUser(null);
-    router.push('/login');
+    safeNavigate('/login');
   };
 
   return (

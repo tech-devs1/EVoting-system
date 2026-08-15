@@ -46,24 +46,23 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   }, []);
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) return;
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
     try {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      if (permission === 'granted') {
-        if ('serviceWorker' in navigator) {
-          const registration = await navigator.serviceWorker.ready;
-          registration.showNotification('HTU Elect ✓', {
-            body: 'Push notifications successfully enabled! Stay tuned for live updates.',
-            icon: '/assets/logo.png',
-            badge: '/assets/logo.png',
-            vibrate: [100, 50, 100],
-          } as any);
-        } else {
-          new Notification('HTU Elect ✓', {
-            body: 'Push notifications successfully enabled! Stay tuned for live updates.',
-            icon: '/assets/logo.png',
-          });
+      if (typeof Notification.requestPermission === 'function') {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
+        if (permission === 'granted') {
+          if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready;
+            if (registration && registration.showNotification) {
+              registration.showNotification('HTU Elect ✓', {
+                body: 'Push notifications successfully enabled! Stay tuned for live updates.',
+                icon: '/assets/logo.png',
+                badge: '/assets/logo.png',
+                vibrate: [100, 50, 100],
+              } as any);
+            }
+          }
         }
       }
     } catch (err) {
@@ -224,7 +223,8 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 shrink-0">
           <div className="flex items-center gap-3">
             <button 
-              className="md:hidden p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" 
+              type="button"
+              className="md:hidden p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer touch-manipulation menu-toggle-btn"
               aria-label="Toggle sidebar" 
               onClick={toggleSidebar}
             >
