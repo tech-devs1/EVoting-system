@@ -32,8 +32,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-6 py-12 transition-colors duration-200">
-      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-8 md:p-10 shadow-lg shadow-slate-100 dark:shadow-none">
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4 sm:px-6 py-8 sm:py-12 transition-colors duration-200">
+      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 sm:p-8 md:p-10 shadow-lg shadow-slate-100 dark:shadow-none">
 
         {/* Header Logo & Title */}
         <div className="text-center mb-8">
