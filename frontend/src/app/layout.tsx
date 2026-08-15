@@ -9,7 +9,6 @@ const fontBodyClass = "font-sans";
 import LoadingScreen from "./LoadingScreen";
 import ServiceWorkerRegistrar from "./ServiceWorkerRegistrar";
 
-export const dynamic = 'force-dynamic';
 
 export const viewport: Viewport = {
   themeColor: "#2563eb",
