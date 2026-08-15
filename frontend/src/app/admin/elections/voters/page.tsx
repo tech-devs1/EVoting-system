@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { 
   ArrowLeft, 
@@ -27,9 +28,9 @@ interface Voter {
   hasVoted?: boolean;
 }
 
-export default function PerElectionVotersPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params);
-  const electionId = resolvedParams.id;
+function PerElectionVotersContent() {
+  const searchParams = useSearchParams();
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
 
   const [voters, setVoters] = useState<Voter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +63,10 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
   };
 
   async function fetchRosterVoters() {
+    if (!electionId) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const res = await apiRequest<{ status: string; data: Voter[] }>(`/elections/${electionId}/voters`);
@@ -195,7 +200,7 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
     <div className="flex flex-col gap-6">
       {/* Banner */}
       <div>
-        <Link href={`/admin/elections/${electionId}/dashboard`} className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
+        <Link href={`/admin/elections/dashboard?electionId=${electionId}`} className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
           <ArrowLeft size={14} /> Back to Election Command Center
         </Link>
         <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -301,7 +306,7 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Total Roster: {voters.length} voters</p>
             </div>
             <Link
-              href={`/admin/elections/${electionId}/messages`}
+              href={`/admin/elections/messages?electionId=${electionId}`}
               className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-colors flex items-center gap-1.5"
             >
               <Mail size={14} /> Compose SMS/Email Broadcast
@@ -391,5 +396,13 @@ export default function PerElectionVotersPage({ params }: { params: Promise<{ id
         )}
       </div>
     </div>
+  );
+}
+
+export default function PerElectionVotersPage() {
+  return (
+    <Suspense fallback={<p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Loading eligible voters...</p>}>
+      <PerElectionVotersContent />
+    </Suspense>
   );
 }

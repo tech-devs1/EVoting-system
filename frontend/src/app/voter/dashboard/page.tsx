@@ -297,12 +297,12 @@ export default function VoterDashboard() {
                               Already Voted
                             </button>
                           ) : (
-                            <Link href={`/voter/elections/${el.id}`} className="px-3.5 py-2 text-xs rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">
+                            <Link href={`/voter/elections/detail?id=${el.id}`} className="px-3.5 py-2 text-xs rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">
                               Vote Now
                             </Link>
                           )}
                           {el.showResults && (
-                            <Link href={`/voter/elections/${el.id}/results`} className="px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 font-bold transition-all">
+                            <Link href={`/voter/elections/results?id=${el.id}`} className="px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 font-bold transition-all">
                               View Results
                             </Link>
                           )}
@@ -347,7 +347,7 @@ export default function VoterDashboard() {
                       <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-1">{el.title}</h4>
                       <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block">Ended</span>
                     </div>
-                    <Link href={`/voter/elections/${el.id}/results`} className="px-3.5 py-2 text-xs rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">
+                    <Link href={`/voter/elections/results?id=${el.id}`} className="px-3.5 py-2 text-xs rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">
                       View Results
                     </Link>
                   </div>

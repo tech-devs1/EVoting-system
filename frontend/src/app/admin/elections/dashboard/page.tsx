@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
 import { 
   ArrowLeft, 
@@ -80,9 +81,9 @@ interface Election {
   positionCount?: number;
 }
 
-export default function PerElectionDashboardPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params);
-  const electionId = resolvedParams.id;
+function PerElectionDashboardContent() {
+  const searchParams = useSearchParams();
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
 
   const [election, setElection] = useState<Election | null>(null);
   const [loading, setLoading] = useState(true);
@@ -127,6 +128,10 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
   };
 
   async function fetchElectionData() {
+    if (!electionId) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const res = await apiRequest<{ status: string; data: Election }>(`/elections/${electionId}`);
@@ -993,5 +998,13 @@ export default function PerElectionDashboardPage({ params }: { params: Promise<{
         </form>
       </Modal>
     </div>
+  );
+}
+
+export default function PerElectionDashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center text-slate-500 dark:text-slate-400 font-medium text-xs">Loading election workspace...</div>}>
+      <PerElectionDashboardContent />
+    </Suspense>
   );
 }

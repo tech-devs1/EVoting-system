@@ -258,7 +258,7 @@ export default function VoterElectionsPage() {
                     <CountdownTimer endsAt={el.endDate} status={el.status} />
                     <div className="flex items-center gap-2">
                       {el.status === 'active' ? (
-                        <Link href={`/voter/elections/${el.id}`} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
+                        <Link href={`/voter/elections/detail?id=${el.id}`} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
                           View Votes
                         </Link>
                       ) : el.status === 'completed' ? (
@@ -269,7 +269,7 @@ export default function VoterElectionsPage() {
                         </button>
                       )}
                       {el.status === 'completed' && el.showResults && (
-                        <Link href={`/voter/elections/${el.id}/results`} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
+                        <Link href={`/voter/elections/results?id=${el.id}`} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
                           View Results
                         </Link>
                       )}

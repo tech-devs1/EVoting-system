@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, Check, ShieldCheck, Lock, CheckCircle2, Sparkles, User, AlertCircle, Calendar, Trophy, Info } from 'lucide-react';
@@ -33,11 +33,11 @@ interface Election {
   showResults?: boolean;
 }
 
-export default function VoterElectionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+function VoterElectionDetailContent() {
   const { user } = useAuth();
   const router = useRouter();
-  const resolvedParams = use(params);
-  const electionId = resolvedParams.id;
+  const searchParams = useSearchParams();
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
 
   const [election, setElection] = useState<Election | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -64,6 +64,11 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
   const [hasVoted, setHasVoted] = useState(false);
 
   useEffect(() => {
+    if (!electionId) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchData() {
       try {
         const electionRes = await apiRequest<{ status: string; data: Election }>(`/elections/${electionId}`);
@@ -416,7 +421,7 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
                 </div>
                 {election.showResults && (
                   <Link 
-                    href={`/voter/elections/${election.id}/results`} 
+                    href={`/voter/elections/results?id=${election.id}`}
                     className="px-8 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-2"
                   >
                     View Results
@@ -668,5 +673,13 @@ export default function VoterElectionDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
     </div>
+  );
+}
+
+export default function VoterElectionDetailPage() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center text-xs text-slate-500">Synchronizing candidate profiles...</div>}>
+      <VoterElectionDetailContent />
+    </Suspense>
   );
 }

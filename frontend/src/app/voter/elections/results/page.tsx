@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { ArrowLeft, Trophy, EyeOff, XCircle } from 'lucide-react';
 import {
@@ -213,15 +214,20 @@ function PositionChart({
   );
 }
 
-export default function VoterResultsPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const electionId = resolvedParams.id;
+function VoterResultsContent() {
+  const searchParams = useSearchParams();
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
 
   const [election, setElection] = useState<Election | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!electionId) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchData() {
       try {
         const res = await apiRequest<{
@@ -237,7 +243,6 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
           setElection(res.data.election);
           setCandidates(res.data.candidates);
         } else {
-          // Fallback to direct election doc fetch if needed
           const elRes = await apiRequest<{ status: string; data: Election }>(`/elections/${electionId}`);
           if (elRes.status === 'success') {
             setElection(elRes.data);
@@ -258,7 +263,7 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
 
   if (loading) {
     return (
-      <div className="p-12 text-center text-slate-500 dark:text-slate-400 font-medium">
+      <div className="p-12 text-center text-slate-500 dark:text-slate-400 font-medium text-xs">
         Loading live results...
       </div>
     );
@@ -276,7 +281,6 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  // Double check client-side block just in case
   if (!election.showResults) {
     return (
       <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 max-w-lg mx-auto">
@@ -292,7 +296,6 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  // Group by position
   const positionGroups: Record<string, Candidate[]> = {};
   candidates.forEach(c => {
     if (!positionGroups[c.position]) positionGroups[c.position] = [];
@@ -303,7 +306,6 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
       <div>
         <Link href="/voter/elections" className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3">
           <ArrowLeft size={14} /> Return to Elections
@@ -328,7 +330,7 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
       </div>
 
       {candidates.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-12 text-center text-slate-500 dark:text-slate-400 font-medium">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-12 text-center text-slate-500 dark:text-slate-400 font-medium text-xs">
           No candidates registered for this election.
         </div>
       ) : (
@@ -342,5 +344,13 @@ export default function VoterResultsPage({ params }: { params: Promise<{ id: str
         ))
       )}
     </div>
+  );
+}
+
+export default function VoterResultsPage() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center text-slate-500 dark:text-slate-400 text-xs font-medium">Loading live results...</div>}>
+      <VoterResultsContent />
+    </Suspense>
   );
 }

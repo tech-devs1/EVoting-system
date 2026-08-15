@@ -27,7 +27,7 @@ export default function GlobalMessagesPage() {
           setElections(res.data);
           // If elections exist, default to first election's message hub
           if (res.data.length > 0) {
-            router.replace(`/admin/elections/${res.data[0].id}/messages`);
+            router.replace(`/admin/elections/messages?electionId=${res.data[0].id}`);
           }
         }
       } catch (err) {
@@ -68,7 +68,7 @@ export default function GlobalMessagesPage() {
           {elections.map((el) => (
             <Link
               key={el.id}
-              href={`/admin/elections/${el.id}/messages`}
+              href={`/admin/elections/messages?electionId=${el.id}`}
               className="card"
               style={{
                 padding: '1.25rem 1.5rem',

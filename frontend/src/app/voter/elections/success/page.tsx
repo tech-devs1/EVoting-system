@@ -1,15 +1,14 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ShieldCheck, Copy, Download, AlertTriangle, ArrowLeft, Check } from 'lucide-react';
 
-export default function VoteSuccessPage({ params }: { params: Promise<{ id: string }> }) {
+function VoteSuccessContent() {
   const searchParams = useSearchParams();
   const verificationId = searchParams.get('verificationId');
-  const resolvedParams = use(params);
-  const electionId = resolvedParams.id;
+  const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
 
   if (!verificationId) {
     return (
@@ -101,5 +100,13 @@ export default function VoteSuccessPage({ params }: { params: Promise<{ id: stri
         Return to Dashboard Terminal
       </Link>
     </div>
+  );
+}
+
+export default function VoteSuccessPage() {
+  return (
+    <Suspense fallback={<p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Loading receipt...</p>}>
+      <VoteSuccessContent />
+    </Suspense>
   );
 }
