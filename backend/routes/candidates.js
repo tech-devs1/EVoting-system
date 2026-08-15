@@ -5,6 +5,7 @@ const { verifyAuth, requireAdmin } = require('../middleware/auth');
 
 router.get('/', candidateController.getCandidates);
 router.post('/', verifyAuth, requireAdmin, candidateController.createCandidate);
+router.patch('/:id', verifyAuth, requireAdmin, candidateController.updateCandidate);
 router.delete('/:id', verifyAuth, requireAdmin, candidateController.deleteCandidate);
 
 module.exports = router;

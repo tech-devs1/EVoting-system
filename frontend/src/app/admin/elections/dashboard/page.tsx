@@ -555,9 +555,9 @@ function PerElectionDashboardContent() {
                 width: '100%',
                 padding: '0.75rem 1rem',
                 borderRadius: '10px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-input)',
-                color: 'var(--text-primary)',
+                border: '1.5px solid #CBD5E1',
+                backgroundColor: '#F8FAFC',
+                color: '#0F172A',
                 fontSize: '0.9rem',
                 boxSizing: 'border-box'
               }}
@@ -565,7 +565,7 @@ function PerElectionDashboardContent() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.35rem' }}>
               Detailed Description
             </label>
             <textarea
@@ -577,9 +577,9 @@ function PerElectionDashboardContent() {
                 width: '100%',
                 padding: '0.75rem 1rem',
                 borderRadius: '10px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-input)',
-                color: 'var(--text-primary)',
+                border: '1.5px solid #CBD5E1',
+                backgroundColor: '#F8FAFC',
+                color: '#0F172A',
                 fontSize: '0.9rem',
                 boxSizing: 'border-box',
                 fontFamily: 'inherit'
@@ -589,7 +589,7 @@ function PerElectionDashboardContent() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.35rem' }}>
                 Category / Faculty Scope
               </label>
               <input
@@ -602,9 +602,9 @@ function PerElectionDashboardContent() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   borderRadius: '10px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-input)',
-                  color: 'var(--text-primary)',
+                  border: '1.5px solid #CBD5E1',
+                  backgroundColor: '#F8FAFC',
+                  color: '#0F172A',
                   fontSize: '0.9rem',
                   boxSizing: 'border-box'
                 }}

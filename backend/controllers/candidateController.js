@@ -46,7 +46,7 @@ exports.getCandidates = async (req, res) => {
 
 exports.createCandidate = async (req, res) => {
   try {
-    const { name, position, manifesto, electionId, isIndependent, ballotNumber } = req.body;
+    const { name, position, manifesto, photoUrl, electionId, isIndependent, ballotNumber } = req.body;
     if (!name || !position || !electionId) {
       return res.status(400).json({ status: 'error', message: 'name, position and electionId are required' });
     }
@@ -71,6 +71,7 @@ exports.createCandidate = async (req, res) => {
       positionTitle: position,
       name,
       manifesto: manifesto || '',
+      photoUrl: photoUrl || '',
       isIndependent: isIndependent === true,
       ballotNumber: ballotNumber ? String(ballotNumber) : undefined
     });
@@ -78,10 +79,62 @@ exports.createCandidate = async (req, res) => {
     cache.invalidatePrefix('candidates:');
     cache.invalidatePrefix('elections:');
 
-    res.status(201).json({ status: 'success', data: newCand });
+    const formattedData = {
+      ...newCand.toJSON(),
+      position: newCand.positionTitle
+    };
+
+    res.status(201).json({ status: 'success', data: formattedData });
   } catch (error) {
     console.error('Error creating candidate:', error);
     res.status(500).json({ status: 'error', message: 'Failed to add candidate' });
+  }
+};
+
+exports.updateCandidate = async (req, res) => {
+  try {
+    const candId = req.params.id;
+    const { name, position, manifesto, photoUrl, ballotNumber, isIndependent } = req.body;
+
+    const candidate = await Candidate.findByPk(candId);
+    if (!candidate) {
+      return res.status(404).json({ status: 'error', message: 'Candidate not found' });
+    }
+
+    if (name) candidate.name = name;
+    if (manifesto !== undefined) candidate.manifesto = manifesto;
+    if (photoUrl !== undefined) candidate.photoUrl = photoUrl;
+    if (ballotNumber !== undefined) candidate.ballotNumber = String(ballotNumber);
+    if (isIndependent !== undefined) candidate.isIndependent = Boolean(isIndependent);
+
+    if (position && position !== candidate.positionTitle) {
+      let posRecord = await Position.findOne({ where: { electionId: candidate.electionId, title: position } });
+      if (!posRecord) {
+        const posId = `pos_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        posRecord = await Position.create({
+          id: posId,
+          electionId: candidate.electionId,
+          title: position,
+          maxChoices: 1
+        });
+      }
+      candidate.positionId = posRecord.id;
+      candidate.positionTitle = position;
+    }
+
+    await candidate.save();
+    cache.invalidatePrefix('candidates:');
+    cache.invalidatePrefix('elections:');
+
+    const formattedData = {
+      ...candidate.toJSON(),
+      position: candidate.positionTitle
+    };
+
+    res.status(200).json({ status: 'success', data: formattedData });
+  } catch (error) {
+    console.error('Error updating candidate:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update candidate' });
   }
 };
 
