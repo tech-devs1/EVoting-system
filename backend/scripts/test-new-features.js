@@ -67,7 +67,17 @@ async function runFeatureVerificationTests() {
     return { status: res.status, headers: res.headers, body };
   }
 
-  // 2. Test getPositions (Persistence)
+  // 2. Test createPosition & getPositions
+  const createPosRes = await request(`/api/elections/${testElectionId}/positions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({ title: 'President', maxChoices: 1, order: 1 })
+  });
+  console.log('POST create position status:', createPosRes.status, 'Pos ID:', createPosRes.body.data?.id);
+  if (createPosRes.status !== 201 || !createPosRes.body.data?.id) {
+    throw new Error('createPosition failed');
+  }
+
   const posRes = await request(`/api/elections/${testElectionId}/positions`, {
     headers: { Authorization: `Bearer ${adminToken}` }
   });

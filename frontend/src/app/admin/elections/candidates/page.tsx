@@ -170,7 +170,9 @@ function PerElectionCandidatesContent() {
       if (posRes.status === 'success' && Array.isArray(posRes.data)) {
         setPositions(posRes.data);
         if (posRes.data.length > 0) {
-          setCandPosition(prev => prev || posRes.data[0].title);
+          setCandPosition(prev => (prev && posRes.data.some(p => p.title === prev)) ? prev : posRes.data[0].title);
+        } else {
+          setCandPosition('');
         }
       }
 
@@ -223,7 +225,15 @@ function PerElectionCandidatesContent() {
     if (!confirm('Are you sure you want to delete this position type?')) return;
     try {
       await apiRequest(`/elections/${electionId}/positions/${posId}`, 'DELETE');
-      setPositions(prev => prev.filter(p => p.id !== posId));
+      setPositions(prev => {
+        const next = prev.filter(p => p.id !== posId);
+        if (next.length > 0) {
+          setCandPosition(cur => (cur && next.some(p => p.title === cur)) ? cur : next[0].title);
+        } else {
+          setCandPosition('');
+        }
+        return next;
+      });
     } catch (err: any) {
       alert(err.message || 'Failed to delete position.');
     }
@@ -609,6 +619,23 @@ function PerElectionCandidatesContent() {
         title="Register Candidate"
         subtitle="Add a candidate profile and photo to this election workspace"
       >
+        {positions.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+            <p style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: 600, marginBottom: '1.25rem' }}>
+              No position types configured for this election yet. Please create at least one position type before registering candidates.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setIsCandModalOpen(false);
+                setIsPosModalOpen(true);
+              }}
+              style={{ padding: '0.75rem 1.4rem', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}
+            >
+              + Add Position Type First
+            </button>
+          </div>
+        ) : (
         <form onSubmit={handleCreateCandidate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
             <label style={mLabelStyle}>Full Candidate Name *</label>
@@ -626,7 +653,7 @@ function PerElectionCandidatesContent() {
             <label style={mLabelStyle}>Position Category *</label>
             <select
               required
-              value={candPosition}
+              value={candPosition || (positions.length > 0 ? positions[0].title : '')}
               onChange={(e) => setCandPosition(e.target.value)}
               style={mSelectStyle}
             >
@@ -728,11 +755,12 @@ function PerElectionCandidatesContent() {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #F1F5F9' }}>
             <button type="button" onClick={() => setIsCandModalOpen(false)} style={{ padding: '0.75rem 1.4rem', borderRadius: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={candSubmitting} style={{ padding: '0.75rem 1.6rem', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.4)' }}>
+            <button type="submit" disabled={candSubmitting || positions.length === 0} style={{ padding: '0.75rem 1.6rem', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.4)' }}>
               {candSubmitting ? 'Registering Candidate...' : 'Register Candidate'}
             </button>
           </div>
         </form>
+        )}
       </Modal>
 
       {/* Edit Candidate Modal */}
