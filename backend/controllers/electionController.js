@@ -1154,7 +1154,14 @@ exports.sendInvitations = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'Election not found.' });
     }
 
-    const allRosterVoters = await Voter.findAll({ where: { electionId } });
+    const allRosterVoters = await Voter.findAll({
+      where: {
+        [Op.or]: [
+          { electionId },
+          { tenantId: election.tenantId || DEFAULT_TENANT_ID }
+        ]
+      }
+    });
     const votesCast = await VotedVoter.findAll({ where: { electionId } });
     const votedIdSet = new Set(votesCast.map(v => v.voterId.toLowerCase()));
 
@@ -1260,7 +1267,14 @@ exports.sendBroadcastMessage = async (req, res) => {
     }
 
     // Retrieve all roster voters for this election
-    const allRosterVoters = await Voter.findAll({ where: { electionId } });
+    const allRosterVoters = await Voter.findAll({
+      where: {
+        [Op.or]: [
+          { electionId },
+          { tenantId: election.tenantId || DEFAULT_TENANT_ID }
+        ]
+      }
+    });
     const votesCast = await VotedVoter.findAll({ where: { electionId } });
     const votedIdSet = new Set(votesCast.map(v => v.voterId.toLowerCase()));
 
