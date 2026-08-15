@@ -13,9 +13,9 @@ const gmailTransporter = nodemailer.createTransport({
     pass: gmailPass
   },
   tls: { rejectUnauthorized: false },
-  connectionTimeout: 4000,
-  greetingTimeout: 4000,
-  socketTimeout: 4000
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000
 });
 
 // Secondary Fallback Transporter (Port 587 STARTTLS)
@@ -28,15 +28,19 @@ const fallbackTransporter = nodemailer.createTransport({
     pass: gmailPass
   },
   tls: { rejectUnauthorized: false },
-  connectionTimeout: 4000,
-  greetingTimeout: 4000,
-  socketTimeout: 4000
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000
 });
 
 /**
  * Dispatch an HTML / text email using Gmail SMTP with dual-port fallbacks
  */
 async function sendEmailNotification(to, subject, text, html) {
+  if (!to || !to.trim() || !to.includes('@')) {
+    console.warn('[Email Service Warning] Invalid recipient email address provided:', to);
+    return null;
+  }
   const mailOptions = {
     from: `"HTU ELECT" <${gmailUser}>`,
     to,

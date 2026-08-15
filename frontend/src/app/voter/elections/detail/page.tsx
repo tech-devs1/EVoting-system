@@ -504,7 +504,7 @@ function VoterElectionDetailContent() {
                         <p className="text-red-500 text-xs font-bold">{otpError}</p>
                       )}
 
-                      {fallbackOtp && (
+                      {fallbackOtp && typeof window !== 'undefined' && window.location.hostname === 'localhost' && (
                         <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-900/40 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold">
                           [DEV MODE] Fallback OTP: {fallbackOtp}
                         </div>
