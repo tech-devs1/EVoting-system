@@ -169,40 +169,21 @@ exports.verifyStudent = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Student ID is required' });
     }
 
-    // Look for registered voters matching studentId
     const voter = await Voter.findOne({ where: { studentId } });
 
     if (!voter) {
-      await logFraudAlert('UNRECOGNIZED_STUDENT', `Unrecognized student ID attempted registration: ${studentId}`, {
-        studentId,
-        attemptedAt: new Date().toISOString(),
-        ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown'
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          name: '',
+          email: '',
+          hasPhone: false
+        }
       });
-      return res.status(404).json({ status: 'error', message: 'Student ID not found in school records.' });
     }
 
     if (voter.password && voter.isRegistered) {
       return res.status(403).json({ status: 'error', message: 'This student ID has already been registered.' });
-    }
-
-    if (voter.password) {
-      let otpResult = null;
-      try {
-        otpResult = await generateAndSendOtp(voter, voter.email, voter.name, voter.phone || null);
-      } catch (otpErr) {
-        console.error('OTP delivery failed:', otpErr.message);
-      }
-      const dispatchSuccess = otpResult?.emailSent || otpResult?.smsSent;
-      return res.status(200).json({
-        status: 'incomplete_registration',
-        data: {
-          name: voter.name,
-          email: voter.email,
-          phone: voter.phone || ''
-        },
-        fallbackOtp: dispatchSuccess ? undefined : otpResult?.otp,
-        message: 'You have an incomplete registration. A verification code has been sent to your email.'
-      });
     }
 
     return res.status(200).json({
@@ -235,40 +216,47 @@ exports.register = async (req, res) => {
       });
     }
 
-    const voter = await Voter.findOne({ where: { studentId } });
-    if (!voter) {
-      return res.status(403).json({ status: 'error', message: 'You are not a valid student in this school records.' });
-    }
+    const normalizedEmail = email.toLowerCase().trim();
+    const cleanStudentId = studentId.trim();
 
-    if (voter.email !== email) {
-      return res.status(403).json({ status: 'error', message: 'Email does not match our school records.' });
-    }
-
-    if (voter.phone) {
-      const normalize = (p) => p.replace(/[\s\-().+]/g, '');
-      const recordPhone = normalize(voter.phone);
-      const inputPhone  = phone ? normalize(phone) : '';
-      const toLocal = (p) => p.replace(/^233/, '0');
-
-      if (!inputPhone) {
-        return res.status(400).json({ status: 'error', message: 'A phone number is required for registration.' });
+    let voter = await Voter.findOne({
+      where: {
+        [Op.or]: [
+          { studentId: cleanStudentId },
+          { email: normalizedEmail }
+        ]
       }
-      if (toLocal(recordPhone) !== toLocal(inputPhone)) {
-        return res.status(403).json({ status: 'error', message: 'The phone number provided does not match school records.' });
-      }
-    }
+    });
 
-    if (voter.isRegistered && voter.password) {
-      return res.status(403).json({ status: 'error', message: 'This student ID has already registered an account.' });
+    if (voter && voter.isRegistered && voter.password) {
+      return res.status(403).json({ status: 'error', message: 'This student ID or email has already been registered.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    voter.password = hashedPassword;
-    voter.isRegistered = true;
-    if (name) voter.name = name;
-    if (phone) voter.phone = phone.replace(/\s+/g, '');
-    if (faceImage) voter.faceImage = faceImage;
-    await voter.save();
+
+    if (!voter) {
+      const newUid = `voter_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      voter = await Voter.create({
+        id: newUid,
+        studentId: cleanStudentId,
+        indexNumber: cleanStudentId,
+        email: normalizedEmail,
+        name: name || normalizedEmail.split('@')[0],
+        phone: phone ? phone.replace(/\s+/g, '') : '',
+        role: 'voter',
+        tenantId: DEFAULT_TENANT_ID,
+        isRegistered: true,
+        password: hashedPassword,
+        faceImage: faceImage || ''
+      });
+    } else {
+      voter.password = hashedPassword;
+      voter.isRegistered = true;
+      if (name) voter.name = name;
+      if (phone) voter.phone = phone.replace(/\s+/g, '');
+      if (faceImage) voter.faceImage = faceImage;
+      await voter.save();
+    }
 
     res.status(201).json({
       status: 'success',
