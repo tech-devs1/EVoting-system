@@ -256,7 +256,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 
   return (
-    <div className="h-screen max-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex p-3 md:p-5 gap-4 md:gap-5">
+    <div className="h-screen max-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex p-2 sm:p-3 md:p-5 gap-3 md:gap-5">
       
       {/* Sidebar rendered ONLY on non-dashboard pages */}
       {!isDashboardPage && (
@@ -464,7 +464,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Content Container Frame */}
-        <main className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 flex-1 min-h-0 shadow-sm overflow-y-auto">
+        <main className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 md:p-8 flex-1 min-h-0 shadow-sm overflow-y-auto">
           {children}
         </main>
       </div>
