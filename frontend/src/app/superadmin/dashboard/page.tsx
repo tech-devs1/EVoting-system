@@ -6,13 +6,23 @@ import { apiRequest } from '@/lib/api';
 import { Building2, Activity, Users, ShieldCheck, Plus, Upload, Calendar } from 'lucide-react';
 
 interface SuperAdminStats {
-  departments: number;
-  elections: number;
-  voters: number;
+  departments?: number;
+  elections?: number;
+  voters?: number;
+  totalDepartments?: number;
+  totalUsers?: number;
+  totalRequests?: number;
 }
 
 export default function SuperAdminDashboard() {
-  const [stats, setStats] = useState<SuperAdminStats>({ departments: 0, elections: 0, voters: 0 });
+  const [stats, setStats] = useState<SuperAdminStats>({
+    departments: 0,
+    elections: 0,
+    voters: 0,
+    totalDepartments: 0,
+    totalUsers: 0,
+    totalRequests: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -20,8 +30,15 @@ export default function SuperAdminDashboard() {
     async function fetchStats() {
       try {
         const res = await apiRequest<{ status: string; data: SuperAdminStats }>('/superadmin/stats');
-        if (res.status === 'success') {
-          setStats(res.data);
+        if (res.status === 'success' && res.data) {
+          setStats({
+            departments: res.data.departments ?? res.data.totalDepartments ?? 0,
+            elections: res.data.elections ?? 0,
+            voters: res.data.voters ?? res.data.totalUsers ?? 0,
+            totalDepartments: res.data.totalDepartments ?? res.data.departments ?? 0,
+            totalUsers: res.data.totalUsers ?? res.data.voters ?? 0,
+            totalRequests: res.data.totalRequests ?? 0,
+          });
         } else {
           throw new Error('Failed to load stats');
         }
@@ -33,6 +50,10 @@ export default function SuperAdminDashboard() {
     }
     fetchStats();
   }, []);
+
+  const departmentCount = stats.departments ?? stats.totalDepartments ?? 0;
+  const electionCount = stats.elections ?? 0;
+  const voterCount = stats.voters ?? stats.totalUsers ?? 0;
 
   return (
     <div className="animate-page-enter flex flex-col gap-6 md:gap-7">
@@ -71,14 +92,14 @@ export default function SuperAdminDashboard() {
         </div>
       )}
 
-      {/* 4 KPI Stat Cards Row (Card 1 is Primary Blue) */}
+      {/* 4 KPI Stat Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Card 1: Primary Blue */}
         <div className="bg-blue-600 text-white rounded-3xl p-6 shadow-lg shadow-blue-500/20 flex justify-between items-start">
           <div>
             <span className="text-xs font-semibold opacity-90 block mb-2">Active Departments</span>
-            <span className="text-4xl font-extrabold tracking-tight leading-none">{stats.departments}</span>
+            <span className="text-4xl font-extrabold tracking-tight leading-none">{departmentCount}</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-white">
             <Building2 size={22} />
@@ -89,7 +110,7 @@ export default function SuperAdminDashboard() {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex justify-between items-start">
           <div>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">Total Elections</span>
-            <span className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{stats.elections}</span>
+            <span className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{electionCount}</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
             <Activity size={22} />
@@ -100,7 +121,7 @@ export default function SuperAdminDashboard() {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex justify-between items-start">
           <div>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">Registered Voters</span>
-            <span className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{stats.voters.toLocaleString()}</span>
+            <span className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{voterCount.toLocaleString()}</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
             <Users size={22} />
@@ -129,7 +150,7 @@ export default function SuperAdminDashboard() {
             <div>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Global System Activity</span>
               <h3 className="text-xl font-extrabold text-slate-900 dark:text-white m-0 mt-1">
-                {stats.voters.toLocaleString()} Platform Requests
+                {voterCount.toLocaleString()} Platform Requests
               </h3>
             </div>
             <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">

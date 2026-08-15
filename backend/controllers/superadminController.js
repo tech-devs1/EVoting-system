@@ -1,4 +1,4 @@
-const { Tenant, Organization, User, OnboardingRequest } = require('../models');
+const { Tenant, Organization, User, Election, OnboardingRequest } = require('../models');
 const cache = require('../services/cache');
 
 exports.getStats = async (req, res) => {
@@ -7,9 +7,13 @@ exports.getStats = async (req, res) => {
     const stats = await cache.getOrSet(cacheKey, async () => {
       const totalDepartments = await Tenant.count();
       const totalUsers = await User.count();
+      const totalElections = await Election.count();
       const totalRequests = await OnboardingRequest.count();
 
       return {
+        departments: totalDepartments,
+        elections: totalElections,
+        voters: totalUsers,
         totalDepartments,
         totalUsers,
         totalRequests
