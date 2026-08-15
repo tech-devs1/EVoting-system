@@ -17,39 +17,49 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
   let token: string | null = null;
   let tenantId: string | null = null;
 
+  const safeGet = (storage: Storage | null, key: string): string | null => {
+    try {
+      if (storage) return storage.getItem(key);
+    } catch (e) {}
+    return null;
+  };
+
+  const session = typeof window !== 'undefined' ? window.sessionStorage : null;
+  const local = typeof window !== 'undefined' ? window.localStorage : null;
+
   if (path.startsWith('/superadmin')) {
-    token = sessionStorage.getItem('COMPSSA_tab_token') ||
-            sessionStorage.getItem('COMPSSA_superadmin_token') ||
-            localStorage.getItem('COMPSSA_superadmin_token');
-    tenantId = sessionStorage.getItem('COMPSSA_tab_tenantId') ||
-              sessionStorage.getItem('COMPSSA_superadmin_tenantId') ||
-              localStorage.getItem('COMPSSA_superadmin_tenantId');
+    token = safeGet(session, 'COMPSSA_tab_token') ||
+            safeGet(session, 'COMPSSA_superadmin_token') ||
+            safeGet(local, 'COMPSSA_superadmin_token');
+    tenantId = safeGet(session, 'COMPSSA_tab_tenantId') ||
+              safeGet(session, 'COMPSSA_superadmin_tenantId') ||
+              safeGet(local, 'COMPSSA_superadmin_tenantId');
   } else if (path.startsWith('/admin')) {
-    token = sessionStorage.getItem('COMPSSA_tab_token') ||
-            sessionStorage.getItem('COMPSSA_admin_token') ||
-            localStorage.getItem('COMPSSA_admin_token');
-    tenantId = sessionStorage.getItem('COMPSSA_tab_tenantId') ||
-              sessionStorage.getItem('COMPSSA_admin_tenantId') ||
-              localStorage.getItem('COMPSSA_admin_tenantId');
+    token = safeGet(session, 'COMPSSA_tab_token') ||
+            safeGet(session, 'COMPSSA_admin_token') ||
+            safeGet(local, 'COMPSSA_admin_token');
+    tenantId = safeGet(session, 'COMPSSA_tab_tenantId') ||
+              safeGet(session, 'COMPSSA_admin_tenantId') ||
+              safeGet(local, 'COMPSSA_admin_tenantId');
   } else if (path.startsWith('/voter')) {
-    token = sessionStorage.getItem('COMPSSA_tab_token') ||
-            sessionStorage.getItem('COMPSSA_voter_token') ||
-            localStorage.getItem('COMPSSA_voter_token');
-    tenantId = sessionStorage.getItem('COMPSSA_tab_tenantId') ||
-              sessionStorage.getItem('COMPSSA_voter_tenantId') ||
-              localStorage.getItem('COMPSSA_voter_tenantId');
+    token = safeGet(session, 'COMPSSA_tab_token') ||
+            safeGet(session, 'COMPSSA_voter_token') ||
+            safeGet(local, 'COMPSSA_voter_token');
+    tenantId = safeGet(session, 'COMPSSA_tab_tenantId') ||
+              safeGet(session, 'COMPSSA_voter_tenantId') ||
+              safeGet(local, 'COMPSSA_voter_tenantId');
   } else {
-    token = sessionStorage.getItem('COMPSSA_tab_token') ||
-            sessionStorage.getItem('COMPSSA_admin_token') ||
-            sessionStorage.getItem('COMPSSA_superadmin_token') ||
-            sessionStorage.getItem('COMPSSA_voter_token') ||
-            localStorage.getItem('COMPSSA_admin_token') ||
-            localStorage.getItem('COMPSSA_superadmin_token') ||
-            localStorage.getItem('COMPSSA_voter_token') ||
-            localStorage.getItem('COMPSSA_token');
-    tenantId = sessionStorage.getItem('COMPSSA_tab_tenantId') ||
-              localStorage.getItem('COMPSSA_admin_tenantId') ||
-              localStorage.getItem('COMPSSA_tenantId');
+    token = safeGet(session, 'COMPSSA_tab_token') ||
+            safeGet(session, 'COMPSSA_admin_token') ||
+            safeGet(session, 'COMPSSA_superadmin_token') ||
+            safeGet(session, 'COMPSSA_voter_token') ||
+            safeGet(local, 'COMPSSA_admin_token') ||
+            safeGet(local, 'COMPSSA_superadmin_token') ||
+            safeGet(local, 'COMPSSA_voter_token') ||
+            safeGet(local, 'COMPSSA_token');
+    tenantId = safeGet(session, 'COMPSSA_tab_tenantId') ||
+              safeGet(local, 'COMPSSA_admin_tenantId') ||
+              safeGet(local, 'COMPSSA_tenantId');
   }
 
   const headers: Record<string, string> = {

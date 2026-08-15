@@ -48,24 +48,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) return;
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
     try {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      if (permission === 'granted') {
-        if ('serviceWorker' in navigator) {
-          const registration = await navigator.serviceWorker.ready;
-          registration.showNotification('HTU Elect ✓', {
-            body: 'Push notifications successfully enabled! Stay tuned for live updates.',
-            icon: '/assets/logo.png',
-            badge: '/assets/logo.png',
-            vibrate: [100, 50, 100],
-          } as any);
-        } else {
-          new Notification('HTU Elect ✓', {
-            body: 'Push notifications successfully enabled! Stay tuned for live updates.',
-            icon: '/assets/logo.png',
-          });
+      if (typeof Notification.requestPermission === 'function') {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
+        if (permission === 'granted') {
+          if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready;
+            if (registration && registration.showNotification) {
+              registration.showNotification('HTU Elect ✓', {
+                body: 'Push notifications successfully enabled! Stay tuned for live updates.',
+                icon: '/assets/logo.png',
+                badge: '/assets/logo.png',
+                vibrate: [100, 50, 100],
+              } as any);
+            }
+          }
         }
       }
     } catch (err) {
@@ -293,32 +292,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-2 sm:py-3 flex justify-between items-center shadow-sm flex-wrap gap-2 sm:gap-3 shrink-0">
           {/* Left Title & Mobile Hamburger Button */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {!isDashboardPage && (
-              <button
-                className="lg:hidden w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors"
-                onClick={() => setIsMobileMenuOpen(true)}
-              >
-                <Menu size={20} />
-              </button>
-            )}
+            <button
+              type="button"
+              aria-label="Open Mobile Navigation Menu"
+              className="lg:hidden w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer touch-manipulation"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={20} />
+            </button>
 
             {/* Brand Logo on Dashboard Page */}
             {isDashboardPage && (
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
                   <img src="/assets/logo.png" alt="HTU Elect Logo" className="w-full h-full object-contain" />
                 </div>
-                <span className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <span className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
                   HTU Elect <span className="text-blue-600 dark:text-blue-500">✓</span>
                 </span>
               </div>
             )}
-
             {!isDashboardPage && (
               <>
                 <button
+                  type="button"
                   onClick={() => router.back()}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors touch-manipulation cursor-pointer"
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -327,6 +326,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </span>
               </>
             )}
+
           </div>
 
           {/* Right Action Icons & User Profile Badge */}
