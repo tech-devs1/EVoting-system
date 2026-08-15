@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
-import { Building2, Plus, AlertCircle, Shield, MoreVertical, Pencil, KeyRound, Trash2, Users, UserPlus, X, ExternalLink } from 'lucide-react';
+import { Building2, Plus, AlertCircle, Shield, MoreVertical, Pencil, KeyRound, Trash2, Users, UserPlus, X, ExternalLink, Lock, Mail } from 'lucide-react';
 
 interface Department {
   id: string;
@@ -43,7 +43,7 @@ export default function SuperAdminDepartments() {
   const [selectedDept, setSelectedDept] = useState<Department | null>(null);
 
   // Create form
-  const [createForm, setCreateForm] = useState({ name: '', domain: '', adminEmail: '', adminPassword: '' });
+  const [createForm, setCreateForm] = useState({ name: '', adminEmail: '', adminPassword: '' });
 
   // Edit name form
   const [editName, setEditName] = useState('');
@@ -98,7 +98,7 @@ export default function SuperAdminDepartments() {
     setSelectedDept(dept || null);
     if (type === 'edit' && dept) setEditName(dept.name);
     if (type === 'password') { setNewPassword(''); setConfirmPassword(''); }
-    if (type === 'create') setCreateForm({ name: '', domain: '', adminEmail: '', adminPassword: '' });
+    if (type === 'create') setCreateForm({ name: '', adminEmail: '', adminPassword: '' });
     if (type === 'admins' && dept) fetchAdmins(dept.id);
     setModalType(type);
   };
@@ -114,7 +114,7 @@ export default function SuperAdminDepartments() {
     try {
       const res = await apiRequest<{ status: string; message?: string }>('/superadmin/departments', 'POST', createForm);
       if (res.status === 'success') { closeModal(); fetchDepartments(); }
-      else throw new Error(res.message || 'Failed to create department');
+      else throw new Error(res.message || 'Failed to onboard organization');
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -286,26 +286,26 @@ export default function SuperAdminDepartments() {
     <div className="animate-page-enter flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl md:text-2xl font-extrabold tracking-tight m-0 text-slate-900 dark:text-white">Manage Departments</h2>
-          <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block">Provision and monitor isolated VaaS tenants.</span>
+          <h2 className="text-xl md:text-2xl font-extrabold tracking-tight m-0 text-slate-900 dark:text-white">Manage Organizations</h2>
+          <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block">Provision and monitor isolated organization tenants.</span>
         </div>
         <button
           onClick={() => openModal('create')}
           className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer transition-all active:scale-95 border-none"
         >
-          <Plus size={16} /> Provision Department
+          <Plus size={16} /> Onboard Organization
         </button>
       </header>
 
       {loading ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">Loading departments registry...</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Loading organization registry...</p>
       ) : (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm overflow-visible">
           <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
             <table className="w-full border-collapse text-sm text-left">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-wider">
-                  <th className="p-3.5 pl-5">Department Name</th>
+                  <th className="p-3.5 pl-5">Organization Name</th>
                   <th className="p-3.5">Tenant ID</th>
                   <th className="p-3.5">Admin Email</th>
                   <th className="p-3.5">Admins</th>
@@ -384,7 +384,7 @@ export default function SuperAdminDepartments() {
                 ))}
                 {departments.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center p-8 text-slate-400 dark:text-slate-500">No departments found.</td>
+                    <td colSpan={7} className="text-center p-8 text-slate-400 dark:text-slate-500">No organizations found.</td>
                   </tr>
                 )}
               </tbody>
@@ -409,19 +409,39 @@ export default function SuperAdminDepartments() {
               onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
             />
           </div>
+
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">EC Admin Google Auth Email</label>
-            <input
-              type="email"
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-              placeholder="admin@organization.org"
-              value={createForm.adminEmail}
-              onChange={e => setCreateForm({ ...createForm, adminEmail: e.target.value })}
-            />
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block leading-relaxed">
-              Passwordless Google Auth: When the administrator signs in with this Google email, they will automatically gain EC Admin access to manage their organization's elections.
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Admin Email Address</label>
+            <div className="relative">
+              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="email"
+                className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                placeholder="admin@organization.org"
+                value={createForm.adminEmail}
+                onChange={e => setCreateForm({ ...createForm, adminEmail: e.target.value })}
+              />
+            </div>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 block leading-relaxed">
+              If an account with this email already exists, their role will automatically be assigned as Organization Administrator.
             </span>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              Admin Password <span className="text-slate-400 font-normal">(Required for new users)</span>
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="password"
+                className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Set password for authentication"
+                value={createForm.adminPassword}
+                onChange={e => setCreateForm({ ...createForm, adminPassword: e.target.value })}
+              />
+            </div>
           </div>
         </div>,
         'Onboard Organization'
@@ -641,7 +661,7 @@ export default function SuperAdminDepartments() {
             onClick={() => openModal('edit', selectedDept)}
             className="w-full px-3 py-2 flex items-center gap-2.5 rounded-xl bg-none border-none cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
           >
-            <Pencil size={14} className="text-blue-500" /> Rename Department
+            <Pencil size={14} className="text-blue-500" /> Rename Organization
           </button>
           <button
             onClick={() => openModal('password', selectedDept)}
@@ -654,7 +674,7 @@ export default function SuperAdminDepartments() {
             onClick={() => openModal('delete', selectedDept)}
             className="w-full px-3 py-2 flex items-center gap-2.5 rounded-xl bg-none border-none cursor-pointer text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors text-left"
           >
-            <Trash2 size={14} /> Delete Department
+            <Trash2 size={14} /> Delete Organization
           </button>
         </div>,
         document.body
