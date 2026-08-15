@@ -30,7 +30,10 @@ exports.getDashboardFullStats = async (req, res) => {
     const tenantId = req.user?.tenantId || headerTenant || 'compssa';
 
     // Find all elections for tenant or if admin is superadmin/global
-    const whereClause = (req.user?.role === 'superadmin' || tenantId === 'global') ? {} : { tenantId };
+    let whereClause = {};
+    if (req.user?.role !== 'superadmin' && tenantId !== 'global') {
+      whereClause = { tenantId };
+    }
     const elections = await Election.findAll({ where: whereClause });
     const electionIds = elections.map(e => e.id);
 
