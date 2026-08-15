@@ -40,7 +40,7 @@ export default function RootLayout({
       <body>
         <ServiceWorkerRegistrar />
         <AuthProvider>
-          <LoadingScreen />
+          {/* <LoadingScreen /> */}
           {children}
         </AuthProvider>
       </body>
