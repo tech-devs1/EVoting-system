@@ -169,8 +169,8 @@ function PerElectionCandidatesContent() {
 
       if (posRes.status === 'success' && Array.isArray(posRes.data)) {
         setPositions(posRes.data);
-        if (posRes.data.length > 0 && !candPosition) {
-          setCandPosition(posRes.data[0].title);
+        if (posRes.data.length > 0) {
+          setCandPosition(prev => prev || posRes.data[0].title);
         }
       }
 
@@ -205,6 +205,7 @@ function PerElectionCandidatesContent() {
       const res = await apiRequest<{ status: string; data: Position }>(`/elections/${electionId}/positions`, 'POST', payload);
       if (res.status === 'success' && res.data) {
         setPositions(prev => [...prev, res.data]);
+        setCandPosition(prev => prev || res.data.title);
         setPosTitle('');
         setPosMaxChoices(1);
         setPosIsReferendum(false);
@@ -231,13 +232,21 @@ function PerElectionCandidatesContent() {
   // Create Candidate Submit
   const handleCreateCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!candName.trim() || !candPosition) return;
+    const targetPosition = candPosition || (positions.length > 0 ? positions[0].title : '');
+    if (!candName.trim()) {
+      alert('Please enter candidate name.');
+      return;
+    }
+    if (!targetPosition) {
+      alert('Please select or add a position type first.');
+      return;
+    }
     setCandSubmitting(true);
 
     try {
       const payload = {
         name: candName.trim(),
-        position: candPosition,
+        position: targetPosition,
         manifesto: candManifesto.trim(),
         photoUrl: candPhotoUrl.trim(),
         isIndependent: candIsIndependent,

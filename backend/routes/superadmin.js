@@ -13,4 +13,8 @@ router.get('/onboarding-requests', verifyAuth, superadminController.getOnboardin
 router.post('/onboarding-requests/:id/approve', verifyAuth, superadminController.approveOnboardingRequest);
 router.post('/onboarding-requests/:id/reject', verifyAuth, superadminController.rejectOnboardingRequest);
 
+router.get('/audit', verifyAuth, superadminController.getAuditLogs);
+router.get('/audit/pdf', verifyAuth, superadminController.downloadAuditPDF);
+router.get('/audit/pdf/:tenantId', verifyAuth, superadminController.downloadAuditPDF);
+
 module.exports = router;

@@ -255,3 +255,114 @@ exports.rejectOnboardingRequest = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to reject onboarding request' });
   }
 };
+
+exports.getAuditLogs = async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+    const { ActivityLog, Tenant } = require('../models');
+
+    const where = {};
+    if (tenantId && tenantId !== 'all') {
+      where.tenantId = tenantId;
+    }
+
+    const logs = await ActivityLog.findAll({
+      where,
+      order: [['timestamp', 'DESC']],
+      limit: 100
+    });
+
+    const tenants = await Tenant.findAll();
+    const tenantMap = new Map(tenants.map(t => [t.id, t.name]));
+
+    const formattedLogs = logs.map(l => {
+      const item = l.toJSON();
+      const ts = Number(item.timestamp) || Date.now();
+      return {
+        id: item.id || `act_${ts}`,
+        tenantId: item.tenantId || 'global',
+        tenantName: tenantMap.get(item.tenantId) || item.tenantId || 'Global System',
+        actorEmail: item.actorEmail || 'System Admin',
+        actorRole: item.actorRole || 'admin',
+        action: item.action || 'ACTION',
+        description: item.description || '',
+        status: item.status || 'success',
+        ip: item.ip || '127.0.0.1',
+        timestamp: ts,
+        createdAt: new Date(ts).toISOString()
+      };
+    });
+
+    res.status(200).json({ status: 'success', data: formattedLogs });
+  } catch (error) {
+    console.error('Error fetching superadmin audit logs:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch audit logs' });
+  }
+};
+
+exports.downloadAuditPDF = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const PDFDocument = require('pdfkit');
+    const { ActivityLog, Tenant } = require('../models');
+
+    const where = {};
+    if (tenantId && tenantId !== 'all') {
+      where.tenantId = tenantId;
+    }
+
+    const logs = await ActivityLog.findAll({ where, order: [['timestamp', 'DESC']], limit: 150 });
+    const tenantObj = tenantId ? await Tenant.findByPk(tenantId) : null;
+    const deptName = tenantObj ? tenantObj.name : 'All Departments (Global)';
+
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const filename = `${deptName.replace(/[^a-zA-Z0-9]/g, '_')}_Audit_Report.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    doc.pipe(res);
+
+    doc.fillColor('#1E3A8A').fontSize(16).font('Helvetica-Bold').text('HTU ELECT SYSTEM AUDIT REPORT', { align: 'center' });
+    doc.fillColor('#64748B').fontSize(9).font('Helvetica').text(`Department Scope: ${deptName}`, { align: 'center' });
+    doc.text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
+    doc.moveDown(0.5);
+    doc.strokeColor('#CBD5E1').lineWidth(1).moveTo(40, doc.y).lineTo(555, doc.y).stroke();
+    doc.moveDown(0.8);
+
+    if (logs.length === 0) {
+      doc.fillColor('#64748B').fontSize(10).font('Helvetica-Oblique').text('No activity logs recorded for this scope.', { align: 'center' });
+    } else {
+      let y = doc.y;
+      doc.rect(40, y, 515, 18).fill('#EFF6FF');
+      doc.fillColor('#1D4ED8').fontSize(9).font('Helvetica-Bold');
+      doc.text('Timestamp', 45, y + 4);
+      doc.text('Actor', 150, y + 4);
+      doc.text('Action', 270, y + 4);
+      doc.text('Description', 360, y + 4);
+
+      y += 20;
+
+      logs.forEach(log => {
+        if (y > 730) {
+          doc.addPage();
+          y = 50;
+        }
+
+        const logTs = Number(log.timestamp) || Date.now();
+        doc.rect(40, y, 515, 20).fillAndStroke(y % 40 === 0 ? '#FFFFFF' : '#F8FAFC', '#F1F5F9');
+        doc.fillColor('#0F172A').fontSize(8).font('Helvetica');
+        doc.text(new Date(logTs).toLocaleString('en-GB', { hour12: false }), 45, y + 5);
+        doc.text(log.actorEmail || 'System', 150, y + 5, { width: 110, height: 12 });
+        doc.font('Helvetica-Bold').text(log.action || 'ACTION', 270, y + 5);
+        doc.font('Helvetica').text(log.description || '', 360, y + 5, { width: 190, height: 12 });
+
+        y += 20;
+      });
+    }
+
+    doc.end();
+  } catch (error) {
+    console.error('Error generating superadmin audit PDF:', error);
+    if (!res.headersSent) res.status(500).send('Failed to generate audit PDF');
+  }
+};

@@ -856,7 +856,7 @@ export default function OrganizationElectionHub() {
                 placeholder="e.g. 2026 HTU SRC General Elections"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1.5px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#0F172A' }}
               />
             </div>
 
@@ -868,7 +868,7 @@ export default function OrganizationElectionHub() {
                 placeholder="e.g. Executive, Departmental, Faculty of Engineering"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1.5px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#0F172A' }}
               />
               <datalist id="category-suggestions">
                 <option value="Executive">SRC Executive Elections</option>
@@ -885,7 +885,7 @@ export default function OrganizationElectionHub() {
                 placeholder="Provide voter instructions or eligibility rules..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1.5px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#0F172A' }}
               />
             </div>
 
@@ -896,8 +896,8 @@ export default function OrganizationElectionHub() {
                   width: '120px',
                   height: '90px',
                   borderRadius: '12px',
-                  border: '1.5px dashed var(--border-color)',
-                  backgroundColor: 'var(--bg-input)',
+                  border: '1.5px dashed #CBD5E1',
+                  backgroundColor: '#F8FAFC',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -907,7 +907,7 @@ export default function OrganizationElectionHub() {
                   {previewImageUrl ? (
                     <img src={previewImageUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <ImageIcon size={28} style={{ color: 'var(--text-tertiary)' }} />
+                    <ImageIcon size={28} style={{ color: '#94A3B8' }} />
                   )}
                 </div>
 
@@ -950,7 +950,7 @@ export default function OrganizationElectionHub() {
                     placeholder="Or paste direct image URL (https://...)"
                     value={previewImageUrl.startsWith('data:image/') ? '' : previewImageUrl}
                     onChange={(e) => setPreviewImageUrl(e.target.value)}
-                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '12px' }}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#0F172A', fontSize: '12px' }}
                   />
                 </div>
               </div>
@@ -968,7 +968,7 @@ export default function OrganizationElectionHub() {
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1.5px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#0F172A' }}
               />
             </div>
 
@@ -979,11 +979,11 @@ export default function OrganizationElectionHub() {
                 required
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1.5px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#0F172A' }}
               />
             </div>
 
-            <div style={{ backgroundColor: 'var(--color-primary-50)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--color-primary-200)', color: 'var(--color-primary-700)', fontSize: '0.85rem' }}>
+            <div style={{ backgroundColor: '#EFF6FF', padding: '1rem', borderRadius: '12px', border: '1px solid #BFDBFE', color: '#1E40AF', fontSize: '0.85rem' }}>
               ℹ️ Once opened, polls operate automatically according to schedule. You can adjust times before launch.
             </div>
           </div>
@@ -992,11 +992,11 @@ export default function OrganizationElectionHub() {
         {/* STEP 3: Upload Roster */}
         {wizardStep === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+            <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0 }}>
               Upload an optional CSV roster of eligible voters (`IndexNumber, FullName, Email`):
             </p>
             
-            <div style={{ border: '2px dashed var(--border-color)', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', backgroundColor: 'var(--bg-input)' }}>
+            <div style={{ border: '2px dashed #CBD5E1', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', backgroundColor: '#F8FAFC' }}>
               <input
                 type="file"
                 accept=".csv"

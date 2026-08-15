@@ -996,16 +996,17 @@ exports.getVoters = async (req, res) => {
 exports.getPositions = async (req, res) => {
   try {
     const electionId = req.params.id;
-    const positions = await Position.findAll({ where: { electionId }, order: [['order', 'ASC']] });
+    let positions = await Position.findAll({ where: { electionId }, order: [['order', 'ASC']] });
     if (positions.length === 0) {
+      const now = Date.now();
       const defaults = [
-        { id: 'pos_1', title: 'President', maxChoices: 1, order: 1 },
-        { id: 'pos_2', title: 'Vice President', maxChoices: 1, order: 2 },
-        { id: 'pos_3', title: 'General Secretary', maxChoices: 1, order: 3 },
-        { id: 'pos_4', title: 'Financial Secretary', maxChoices: 1, order: 4 },
-        { id: 'pos_5', title: 'WOCOM', maxChoices: 1, order: 5 },
+        { id: `pos_${now}_1`, electionId, title: 'President', maxChoices: 1, order: 1 },
+        { id: `pos_${now}_2`, electionId, title: 'Vice President', maxChoices: 1, order: 2 },
+        { id: `pos_${now}_3`, electionId, title: 'General Secretary', maxChoices: 1, order: 3 },
+        { id: `pos_${now}_4`, electionId, title: 'Financial Secretary', maxChoices: 1, order: 4 },
+        { id: `pos_${now}_5`, electionId, title: 'WOCOM', maxChoices: 1, order: 5 },
       ];
-      return res.status(200).json({ status: 'success', data: defaults });
+      positions = await Position.bulkCreate(defaults);
     }
     res.status(200).json({ status: 'success', data: positions });
   } catch (error) {
@@ -1139,6 +1140,105 @@ exports.getBroadcastHistory = async (req, res) => {
   }
 };
 
+exports.sendInvitations = async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user?.tenantId || DEFAULT_TENANT_ID;
+    const { recipientFilter, selectedEmails, customEmails } = req.body;
+
+    const election = await Election.findByPk(electionId);
+    if (!election) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+
+    const allRosterVoters = await Voter.findAll({ where: { electionId } });
+    const votesCast = await VotedVoter.findAll({ where: { electionId } });
+    const votedIdSet = new Set(votesCast.map(v => v.voterId.toLowerCase()));
+
+    let targetRecipients = [];
+
+    if (recipientFilter === 'pending') {
+      targetRecipients = allRosterVoters.filter(v => {
+        const studentId = (v.studentId || v.indexNumber || v.id || '').toLowerCase();
+        return !votedIdSet.has(studentId) && !votedIdSet.has(v.id.toLowerCase());
+      });
+    } else if (recipientFilter === 'voted') {
+      targetRecipients = allRosterVoters.filter(v => {
+        const studentId = (v.studentId || v.indexNumber || v.id || '').toLowerCase();
+        return votedIdSet.has(studentId) || votedIdSet.has(v.id.toLowerCase());
+      });
+    } else if (recipientFilter === 'individual') {
+      const selectedSet = new Set((Array.isArray(selectedEmails) ? selectedEmails : []).map(e => e.toLowerCase()));
+      targetRecipients = allRosterVoters.filter(v => v.email && selectedSet.has(v.email.toLowerCase()));
+    } else if (recipientFilter === 'custom') {
+      const parsedEmails = (customEmails || '')
+        .split(/[,;\n\s]+/)
+        .map(e => e.trim().toLowerCase())
+        .filter(e => e.length > 0 && e.includes('@'));
+
+      targetRecipients = parsedEmails.map(email => ({
+        id: email,
+        name: 'Voter',
+        studentId: 'N/A',
+        email,
+        phone: ''
+      }));
+    } else {
+      targetRecipients = allRosterVoters;
+    }
+
+    let sentCount = 0;
+    const baseUrl = process.env.PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://htu-elect.vercel.app');
+    const votingLink = `${baseUrl}/voter/elections/detail?id=${electionId}`;
+
+    for (const recipient of targetRecipients) {
+      const voterName = recipient.name || recipient.email?.split('@')[0] || 'Voter';
+      const recipientEmail = recipient.email ? recipient.email.trim() : '';
+
+      if (recipientEmail) {
+        const emailSubject = `Official Voting Invitation: ${election.title}`;
+        const emailBody = `Hello ${voterName},\n\nYou are invited to cast your vote in the election: "${election.title}".\n\nPlease visit the voting portal to participate:\n${votingLink}\n\nThank you,\nHTU Elect Electoral Commission`;
+        const emailHtml = `
+          <div style="font-family: Arial, sans-serif; padding: 24px; background-color: #f8fafc; border-radius: 12px;">
+            <h2 style="color: #2563eb; margin-bottom: 12px;">Official Voting Invitation</h2>
+            <p>Hello <strong>${voterName}</strong>,</p>
+            <p>You have been registered as an eligible voter for <strong>${election.title}</strong>.</p>
+            <div style="margin: 24px 0;">
+              <a href="${votingLink}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
+                Cast Your Vote Now
+              </a>
+            </div>
+            <p style="font-size: 13px; color: #64748b;">If the button above does not work, copy and paste this link into your browser:<br/><a href="${votingLink}">${votingLink}</a></p>
+          </div>
+        `;
+
+        try {
+          const info = await sendEmailNotification(recipientEmail, emailSubject, emailBody, emailHtml);
+          if (info) sentCount++;
+        } catch (err) {
+          console.error(`[Send Invitation Error] ${recipientEmail}:`, err.message);
+        }
+      }
+    }
+
+    await logActivity({
+      tenantId,
+      actorEmail: req.user?.email || 'admin@htu.edu.gh',
+      actorRole: 'admin',
+      action: 'ELECTION_SEND_INVITATIONS',
+      description: `Dispatched voting invitations to ${sentCount} recipient(s) for election: ${election.title}`
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: `Successfully sent voting invitations to ${sentCount} recipient(s).`
+    });
+  } catch (error) {
+    console.error('Error sending invitations:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to send invitations.' });
+  }
+};
+
 exports.sendBroadcastMessage = async (req, res) => {
   try {
     const electionId = req.params.id;
@@ -1219,8 +1319,12 @@ exports.sendBroadcastMessage = async (req, res) => {
       // Send Email if channel is 'email' or 'both'
       if ((dispatchChannel === 'email' || dispatchChannel === 'both') && recipientEmail) {
         try {
-          await sendEmailNotification(recipientEmail, emailSubject, personalizedBody);
-          emailSentCount++;
+          const sentInfo = await sendEmailNotification(recipientEmail, emailSubject, personalizedBody);
+          if (sentInfo) {
+            emailSentCount++;
+          } else {
+            console.warn(`[Broadcast Email Dispatch Warning] Failed to send email to ${recipientEmail}`);
+          }
         } catch (err) {
           console.error(`[Broadcast Email Error] Failed to send to ${recipientEmail}:`, err.message);
         }
