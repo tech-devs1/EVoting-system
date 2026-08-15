@@ -69,9 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Safe navigation function with window.location fallback for mobile Safari
+  // Safe navigation function with window.location fallback for mobile Safari & PWA webviews
   const safeNavigate = (targetPath: string) => {
     if (typeof window === 'undefined') return;
+
     try {
       router.push(targetPath);
     } catch (e) {
@@ -80,13 +81,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Safety timeout: if URL hasn't updated after 400ms (common on older mobile browsers), force location navigation
+    // Asynchronous safety timeout: if URL hasn't updated after 250ms on mobile Safari/PWAs, force location navigation
     setTimeout(() => {
-      if (window.location.pathname !== targetPath && !window.location.pathname.startsWith(targetPath)) {
-        console.warn('[Navigation] router.push timeout, forcing window.location.href navigation to:', targetPath);
+      if (typeof window !== 'undefined' && window.location.pathname !== targetPath && !window.location.pathname.startsWith(targetPath)) {
+        console.warn('[Navigation] Enforcing location navigation to:', targetPath);
         window.location.href = targetPath;
       }
-    }, 400);
+    }, 250);
   };
 
   // Helper to save session tokens isolated by role & tab

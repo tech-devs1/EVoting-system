@@ -50,27 +50,33 @@ export default function LandingPage() {
 
         {/* Mobile Hamburger Button */}
         <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          type="button"
+          onClick={() => setMobileMenuOpen(prev => !prev)}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            setMobileMenuOpen(prev => !prev);
+          }}
           aria-label="Toggle navigation menu"
-          className="sm:hidden w-10 h-10 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center shadow-sm text-slate-700 dark:text-slate-200 active:scale-95"
+          aria-expanded={mobileMenuOpen}
+          className="sm:hidden relative z-50 w-11 h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center shadow-sm text-slate-700 dark:text-slate-200 active:scale-95 touch-manipulation cursor-pointer select-none"
         >
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
 
         {/* Mobile Menu Dropdown */}
         {mobileMenuOpen && (
-          <div className="sm:hidden absolute top-full left-4 right-4 mt-2 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col gap-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="sm:hidden absolute top-full left-4 right-4 mt-2 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col gap-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
             <Link
               href="/login"
               onClick={() => setMobileMenuOpen(false)}
-              className="w-full py-3 text-center text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-colors"
+              className="w-full py-3 text-center text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-colors touch-manipulation cursor-pointer"
             >
               Sign In
             </Link>
             <Link
               href="/register"
               onClick={() => setMobileMenuOpen(false)}
-              className="w-full py-3 text-center text-sm font-bold bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl shadow-sm transition-all active:scale-95"
+              className="w-full py-3 text-center text-sm font-bold bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl shadow-sm transition-all active:scale-95 touch-manipulation cursor-pointer"
             >
               Register
             </Link>

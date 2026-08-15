@@ -254,6 +254,21 @@ const UnlockedElection = sequelize.define('UnlockedElection', {
   verifiedAt: { type: DataTypes.BIGINT, allowNull: false }
 }, { tableName: 'unlocked_elections', timestamps: false });
 
+// 14. BroadcastLog Model (Broadcast Communicator Transmission History)
+const BroadcastLog = sequelize.define('BroadcastLog', {
+  id: { type: DataTypes.STRING(128), primaryKey: true },
+  tenantId: { type: DataTypes.STRING(128), allowNull: false },
+  electionId: { type: DataTypes.STRING(128), allowNull: false },
+  channel: { type: DataTypes.STRING(32), defaultValue: 'email' }, // email, sms, or both
+  recipientFilter: { type: DataTypes.STRING(64), defaultValue: 'all' }, // pending, all, voted, individual, custom
+  subject: { type: DataTypes.STRING(255) },
+  body: { type: DataTypes.TEXT, allowNull: false },
+  recipientCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+  emailSentCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+  smsSentCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+  senderEmail: { type: DataTypes.STRING(255) }
+}, { tableName: 'broadcast_logs', timestamps: true });
+
 
 // ---------------------- ASSOCIATIONS ----------------------
 
@@ -272,6 +287,10 @@ Candidate.belongsTo(Election, { foreignKey: 'electionId', as: 'election' });
 // Position has many Candidates
 Position.hasMany(Candidate, { foreignKey: 'positionId', as: 'candidates', onDelete: 'CASCADE' });
 Candidate.belongsTo(Position, { foreignKey: 'positionId', as: 'position' });
+
+// Election has many BroadcastLogs
+Election.hasMany(BroadcastLog, { foreignKey: 'electionId', as: 'broadcastLogs', onDelete: 'CASCADE' });
+BroadcastLog.belongsTo(Election, { foreignKey: 'electionId', as: 'election' });
 
 // Sync Function
 async function syncDatabase() {
@@ -332,5 +351,6 @@ module.exports = {
   FraudAlert,
   OnboardingRequest,
   UnlockedElection,
+  BroadcastLog,
   syncDatabase
 };
