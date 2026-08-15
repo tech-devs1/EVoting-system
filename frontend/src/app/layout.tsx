@@ -15,7 +15,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "HTU Elect ✓ - Secure Digital Elections & Cryptographic Verification",
+  title: "HTU Elect - Secure Digital Elections",
   description: "Secure, digital, and end-to-end verifiable e-voting for organizations. Audit-trail verified elections using SHA-256 with real-time AI security diagnostics.",
   manifest: "/manifest.json",
   icons: {
