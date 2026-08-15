@@ -7,7 +7,9 @@ router.get('/', candidateController.getCandidates);
 router.get('/election', candidateController.getCandidates);
 router.get('/election/:electionId', candidateController.getCandidates);
 router.post('/', verifyAuth, requireAdmin, candidateController.createCandidate);
+router.patch('/', verifyAuth, requireAdmin, candidateController.updateCandidate);
 router.patch('/:id', verifyAuth, requireAdmin, candidateController.updateCandidate);
+router.delete('/', verifyAuth, requireAdmin, candidateController.deleteCandidate);
 router.delete('/:id', verifyAuth, requireAdmin, candidateController.deleteCandidate);
 
 module.exports = router;

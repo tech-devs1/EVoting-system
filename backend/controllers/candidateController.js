@@ -93,7 +93,10 @@ exports.createCandidate = async (req, res) => {
 
 exports.updateCandidate = async (req, res) => {
   try {
-    const candId = req.params.id;
+    const candId = req.params.id || req.query.id;
+    if (!candId) {
+      return res.status(400).json({ status: 'error', message: 'Candidate ID is required' });
+    }
     const { name, position, manifesto, photoUrl, ballotNumber, isIndependent } = req.body;
 
     const candidate = await Candidate.findByPk(candId);
@@ -140,7 +143,10 @@ exports.updateCandidate = async (req, res) => {
 
 exports.deleteCandidate = async (req, res) => {
   try {
-    const candId = req.params.id;
+    const candId = req.params.id || req.query.id;
+    if (!candId) {
+      return res.status(400).json({ status: 'error', message: 'Candidate ID is required' });
+    }
     const candidate = await Candidate.findByPk(candId);
     if (!candidate) {
       return res.status(404).json({ status: 'error', message: 'Candidate not found' });

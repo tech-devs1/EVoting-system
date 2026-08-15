@@ -351,8 +351,14 @@ function PerElectionCandidatesContent() {
         ballotNumber: Number(editBallotNumber) || 1
       };
 
-      const res = await apiRequest<{ status: string }>(`/candidates/${editingCandidate.id}`, 'PATCH', payload);
-      if (res.status === 'success') {
+      let res: { status: string } | null = null;
+      try {
+        res = await apiRequest<{ status: string }>(`/candidates/${editingCandidate.id}`, 'PATCH', payload);
+      } catch (patchErr) {
+        res = await apiRequest<{ status: string }>(`/candidates?id=${editingCandidate.id}`, 'PATCH', payload);
+      }
+
+      if (res && res.status === 'success') {
         setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? { ...c, ...payload } : c));
         setEditingCandidate(null);
       }
@@ -370,7 +376,11 @@ function PerElectionCandidatesContent() {
     try {
       await apiRequest(`/candidates/${candId}`, 'PATCH', { ballotNumber: num });
     } catch (err: any) {
-      console.error('Failed to update ballot number:', err);
+      try {
+        await apiRequest(`/candidates?id=${candId}`, 'PATCH', { ballotNumber: num });
+      } catch (fallbackErr) {
+        console.error('Failed to update ballot number:', fallbackErr);
+      }
     }
   };
 
@@ -378,7 +388,11 @@ function PerElectionCandidatesContent() {
   const handleDeleteCandidate = async (candId: string) => {
     if (!confirm('Are you sure you want to remove this candidate?')) return;
     try {
-      await apiRequest(`/candidates/${candId}`, 'DELETE');
+      try {
+        await apiRequest(`/candidates/${candId}`, 'DELETE');
+      } catch (delErr) {
+        await apiRequest(`/candidates?id=${candId}`, 'DELETE');
+      }
       setCandidates(prev => prev.filter(c => c.id !== candId));
     } catch (err: any) {
       alert(err.message || 'Failed to remove candidate.');
