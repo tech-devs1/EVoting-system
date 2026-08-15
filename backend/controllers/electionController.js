@@ -416,7 +416,7 @@ exports.createElection = async (req, res) => {
     const autoDesc = `This is the ${title} scheduled for ${dateLabel}. Eligible voters are invited to vote for their preferred candidates across all positions.`;
     const finalDescription = (description && description.trim() && !description.includes('Student Representative Council (SRC) election')) ? description.trim() : autoDesc;
 
-    const tenantId = getTenantId(req);
+    const tenantId = req.user?.tenantId || getTenantId(req);
     const id = `el_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
     const newElection = await Election.create({
@@ -426,7 +426,7 @@ exports.createElection = async (req, res) => {
       description: finalDescription,
       startDate,
       endDate,
-      organizationId: organizationId || 'default',
+      organizationId: organizationId || tenantId || 'default',
       category: electionType,
       department: department || '',
       status: req.body.status || 'draft',

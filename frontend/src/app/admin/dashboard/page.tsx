@@ -278,6 +278,7 @@ export default function OrganizationElectionHub() {
 
         setIsWizardOpen(false);
         resetWizard();
+        await fetchHubData();
         router.push(`/admin/elections/dashboard?electionId=${electionId}`);
       }
     } catch (err: any) {
