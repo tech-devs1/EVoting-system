@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Election, Position, Candidate, Voter, Vote, VotedVoter, Tenant, UnlockedElection, ActivityLog } = require('../models');
+const { Election, Position, Candidate, Voter, Vote, VotedVoter, Tenant, UnlockedElection, ActivityLog, BroadcastLog } = require('../models');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
@@ -1121,5 +1121,152 @@ exports.getReport = async (req, res) => {
     }
     console.error('Error generating report:', error);
     res.status(500).json({ status: 'error', message: 'Failed to generate election report' });
+  }
+};
+
+exports.getBroadcastHistory = async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const history = await BroadcastLog.findAll({
+      where: { electionId },
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.status(200).json({ status: 'success', data: history });
+  } catch (error) {
+    console.error('Error fetching broadcast history:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch broadcast history.' });
+  }
+};
+
+exports.sendBroadcastMessage = async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user?.tenantId || DEFAULT_TENANT_ID;
+    const senderEmail = req.user?.email || 'admin@htu.edu.gh';
+
+    const { channel, recipientFilter, selectedEmails, customEmails, subject, body } = req.body;
+
+    if (!body || !body.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Message body cannot be empty.' });
+    }
+
+    const election = await Election.findByPk(electionId);
+    if (!election) {
+      return res.status(404).json({ status: 'error', message: 'Election not found.' });
+    }
+
+    // Retrieve all roster voters for this election
+    const allRosterVoters = await Voter.findAll({ where: { electionId } });
+    const votesCast = await VotedVoter.findAll({ where: { electionId } });
+    const votedIdSet = new Set(votesCast.map(v => v.voterId.toLowerCase()));
+
+    let targetRecipients = [];
+
+    if (recipientFilter === 'pending') {
+      targetRecipients = allRosterVoters.filter(v => {
+        const studentId = (v.studentId || v.indexNumber || v.id || '').toLowerCase();
+        return !votedIdSet.has(studentId) && !votedIdSet.has(v.id.toLowerCase());
+      });
+    } else if (recipientFilter === 'voted') {
+      targetRecipients = allRosterVoters.filter(v => {
+        const studentId = (v.studentId || v.indexNumber || v.id || '').toLowerCase();
+        return votedIdSet.has(studentId) || votedIdSet.has(v.id.toLowerCase());
+      });
+    } else if (recipientFilter === 'individual') {
+      const selectedSet = new Set((Array.isArray(selectedEmails) ? selectedEmails : []).map(e => e.toLowerCase()));
+      targetRecipients = allRosterVoters.filter(v => v.email && selectedSet.has(v.email.toLowerCase()));
+    } else if (recipientFilter === 'custom') {
+      const parsedEmails = (customEmails || '')
+        .split(/[,;\n\s]+/)
+        .map(e => e.trim().toLowerCase())
+        .filter(e => e.length > 0 && e.includes('@'));
+
+      targetRecipients = parsedEmails.map(email => ({
+        id: email,
+        name: 'Voter',
+        studentId: 'N/A',
+        email,
+        phone: ''
+      }));
+    } else {
+      // 'all' or fallback
+      targetRecipients = allRosterVoters;
+    }
+
+    let emailSentCount = 0;
+    let smsSentCount = 0;
+
+    const dispatchChannel = channel || 'email';
+    const baseUrl = process.env.PUBLIC_APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://htu-elect.vercel.app';
+    const votingLink = `${baseUrl}/voter/elections/detail?id=${electionId}`;
+
+    for (const recipient of targetRecipients) {
+      const voterName = recipient.name || recipient.email?.split('@')[0] || 'Voter';
+      const indexNumber = recipient.studentId || recipient.indexNumber || recipient.id || 'N/A';
+      const recipientEmail = recipient.email ? recipient.email.trim() : '';
+      const recipientPhone = recipient.phone ? recipient.phone.trim() : '';
+
+      // Personalized body interpolation
+      const personalizedBody = body
+        .replace(/{{voter_name}}/gi, voterName)
+        .replace(/{{index_number}}/gi, indexNumber)
+        .replace(/{{election_title}}/gi, election.title)
+        .replace(/{{voting_link}}/gi, votingLink);
+
+      const emailSubject = subject || `Important Notice: ${election.title}`;
+
+      // Send Email if channel is 'email' or 'both'
+      if ((dispatchChannel === 'email' || dispatchChannel === 'both') && recipientEmail) {
+        try {
+          await sendEmailNotification(recipientEmail, emailSubject, personalizedBody);
+          emailSentCount++;
+        } catch (err) {
+          console.error(`[Broadcast Email Error] Failed to send to ${recipientEmail}:`, err.message);
+        }
+      }
+
+      // Send SMS if channel is 'sms' or 'both'
+      if ((dispatchChannel === 'sms' || dispatchChannel === 'both') && recipientPhone) {
+        try {
+          await sendOtpViaBMS(recipientPhone, personalizedBody);
+          smsSentCount++;
+        } catch (err) {
+          console.error(`[Broadcast SMS Error] Failed to send to ${recipientPhone}:`, err.message);
+        }
+      }
+    }
+
+    const logId = `brd_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const broadcastLog = await BroadcastLog.create({
+      id: logId,
+      tenantId,
+      electionId,
+      channel: dispatchChannel,
+      recipientFilter: recipientFilter || 'all',
+      subject: subject || `Important Notice: ${election.title}`,
+      body,
+      recipientCount: targetRecipients.length,
+      emailSentCount,
+      smsSentCount,
+      senderEmail
+    });
+
+    await logActivity({
+      tenantId,
+      actorEmail: senderEmail,
+      actorRole: 'admin',
+      action: 'BROADCAST_MESSAGE_SENT',
+      description: `Dispatched ${dispatchChannel.toUpperCase()} broadcast to ${targetRecipients.length} recipients for election ${election.title}`
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: `Broadcast successfully dispatched to ${targetRecipients.length} recipients (${emailSentCount} emails, ${smsSentCount} SMS messages).`,
+      data: broadcastLog
+    });
+  } catch (error) {
+    console.error('Error sending broadcast message:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to send broadcast message.' });
   }
 };

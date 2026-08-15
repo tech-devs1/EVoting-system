@@ -264,7 +264,7 @@ export default function LoadingScreen() {
       >
         <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.85 }}
-          animate={{ opacity: 1, y: showButtons ? -30 : 0, scale: 1 }}
+          animate={{ opacity: 1, y: showButtons ? -20 : 0, scale: 1 }}
           transition={{
             opacity: { duration: 0.9, ease: 'easeOut' },
             scale: { duration: 0.9, ease: 'easeOut' },
@@ -280,34 +280,37 @@ export default function LoadingScreen() {
             width: '100%',
           }}
         >
-          <div
+          <motion.div
+            animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
+            transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
             style={{
               position: 'relative',
               width: '120px',
               height: '120px',
               borderRadius: '32px',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.03) 100%)',
-              border: '1.5px solid rgba(255,255,255,0.2)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%)',
+              border: '1.5px solid rgba(255,255,255,0.3)',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.4), 0 0 40px rgba(37,99,235,0.4)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'hidden',
               backdropFilter: 'blur(20px)',
+              padding: '12px'
             }}
           >
-            <span style={{ fontSize: '4rem', filter: 'drop-shadow(0 4px 12px rgba(37,99,235,0.3))' }}>✓</span>
-          </div>
+            <img src="/assets/logo.png" alt="HTU Elect Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' }} />
+          </motion.div>
 
           <h1
             style={{
               color: '#fff',
               fontSize: '2.5rem',
-              fontWeight: 800,
+              fontWeight: 900,
               letterSpacing: '1px',
               margin: '0.5rem 0 0',
               fontFamily: 'var(--font-display), sans-serif',
-              textShadow: '0 4px 12px rgba(0,0,0,0.2)',
+              textShadow: '0 4px 15px rgba(0,0,0,0.3)',
             }}
           >
             HTU ELECT <span style={{ color: '#60a5fa' }}>✓</span>

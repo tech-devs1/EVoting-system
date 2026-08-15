@@ -25,6 +25,10 @@ router.post('/:id/positions', verifyAuth, requireAdmin, electionController.creat
 router.delete('/:id/positions/:posId', verifyAuth, requireAdmin, electionController.deletePosition);
 router.get('/:id/report', verifyAuth, requireAdmin, electionController.getReport);
 
+// Broadcast Communicator routes
+router.get('/:id/broadcast-history', verifyAuth, requireAdmin, electionController.getBroadcastHistory);
+router.post('/:id/broadcast-message', verifyAuth, requireAdmin, electionController.sendBroadcastMessage);
+
 // Dynamic PDF letterheads generation and log auditing fallback mapping
 const path = require('path');
 const fs = require('fs');
