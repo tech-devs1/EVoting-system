@@ -63,14 +63,14 @@ const superadminRoutes = require('./routes/superadmin');
 const imagekitRoutes = require('./routes/imagekit');
 const tenantRoutes = require('./routes/tenants');
 
-app.use('/api/auth', authRoutes);
-app.use('/api/elections', electionRoutes);
-app.use('/api/candidates', candidateRoutes);
-app.use('/api/votes', voteLimiter, voteRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/superadmin', superadminRoutes);
-app.use('/api/imagekit', imagekitRoutes);
-app.use('/api/tenants', tenantRoutes);
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/elections', '/elections'], electionRoutes);
+app.use(['/api/candidates', '/candidates'], candidateRoutes);
+app.use(['/api/votes', '/votes'], voteLimiter, voteRoutes);
+app.use(['/api/admin', '/admin'], adminRoutes);
+app.use(['/api/superadmin', '/superadmin'], superadminRoutes);
+app.use(['/api/imagekit', '/imagekit'], imagekitRoutes);
+app.use(['/api/tenants', '/tenants'], tenantRoutes);
 
 // Basic Error Handler
 app.use((err, req, res, next) => {

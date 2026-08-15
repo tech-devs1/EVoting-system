@@ -251,6 +251,24 @@ function PerElectionCandidatesContent() {
     }
   };
 
+  // Upload photo to ImageKit helper
+  const uploadPhotoToImageKit = async (base64OrUrl: string, fileNameStr: string): Promise<string> => {
+    if (!base64OrUrl) return '';
+    if (base64OrUrl.startsWith('http://') || base64OrUrl.startsWith('https://')) return base64OrUrl;
+    try {
+      const res = await apiRequest<{ status: string; data: { url: string } }>('/imagekit/upload', 'POST', {
+        file: base64OrUrl,
+        fileName: fileNameStr || `cand_${Date.now()}.jpg`
+      });
+      if (res.status === 'success' && res.data?.url) {
+        return res.data.url;
+      }
+    } catch (err) {
+      console.warn('ImageKit upload warning (using fallback):', err);
+    }
+    return base64OrUrl;
+  };
+
   // Create Candidate Submit
   const handleCreateCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,11 +284,16 @@ function PerElectionCandidatesContent() {
     setCandSubmitting(true);
 
     try {
+      let finalPhotoUrl = candPhotoUrl.trim();
+      if (finalPhotoUrl && !finalPhotoUrl.startsWith('http')) {
+        finalPhotoUrl = await uploadPhotoToImageKit(finalPhotoUrl, `${candName.trim().replace(/\s+/g, '_')}.jpg`);
+      }
+
       const payload = {
         name: candName.trim(),
         position: targetPosition,
         manifesto: candManifesto.trim(),
-        photoUrl: candPhotoUrl.trim(),
+        photoUrl: finalPhotoUrl,
         isIndependent: candIsIndependent,
         ballotNumber: Number(candBallotNumber) || 1,
         electionId
@@ -278,7 +301,11 @@ function PerElectionCandidatesContent() {
 
       const res = await apiRequest<{ status: string; data: Candidate }>(`/candidates`, 'POST', payload);
       if (res.status === 'success' && res.data) {
-        setCandidates(prev => [...prev, res.data]);
+        const newCandObj: Candidate = {
+          ...res.data,
+          position: res.data.position || (res.data as any).positionTitle || targetPosition
+        };
+        setCandidates(prev => [...prev, newCandObj]);
         setCandName('');
         setCandManifesto('');
         setCandPhotoUrl('');
@@ -311,11 +338,16 @@ function PerElectionCandidatesContent() {
     setEditSubmitting(true);
 
     try {
+      let finalPhotoUrl = editPhotoUrl.trim();
+      if (finalPhotoUrl && !finalPhotoUrl.startsWith('http')) {
+        finalPhotoUrl = await uploadPhotoToImageKit(finalPhotoUrl, `${editName.trim().replace(/\s+/g, '_')}.jpg`);
+      }
+
       const payload = {
         name: editName.trim(),
         position: editPosition,
         manifesto: editManifesto.trim(),
-        photoUrl: editPhotoUrl.trim(),
+        photoUrl: finalPhotoUrl,
         ballotNumber: Number(editBallotNumber) || 1
       };
 
@@ -359,9 +391,13 @@ function PerElectionCandidatesContent() {
     candidatesByPosition[pos.title] = [];
   });
   candidates.forEach(cand => {
-    const posName = cand.position || 'General';
-    if (!candidatesByPosition[posName]) candidatesByPosition[posName] = [];
-    candidatesByPosition[posName].push(cand);
+    const rawPos = cand.position || (cand as any).positionTitle || 'General';
+    let matchedTitle = Object.keys(candidatesByPosition).find(
+      t => t.trim().toLowerCase() === rawPos.trim().toLowerCase()
+    ) || rawPos;
+
+    if (!candidatesByPosition[matchedTitle]) candidatesByPosition[matchedTitle] = [];
+    candidatesByPosition[matchedTitle].push(cand);
   });
 
   // Sort candidates within each position strictly by ballotNumber (ascending)
