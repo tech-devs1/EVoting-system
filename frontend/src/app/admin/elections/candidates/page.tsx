@@ -161,23 +161,35 @@ function PerElectionCandidatesContent() {
     }
     try {
       setLoading(true);
-      
-      const [posRes, candRes] = await Promise.all([
+
+      const [posSettled, candSettled] = await Promise.allSettled([
         apiRequest<{ status: string; data: Position[] }>(`/elections/${electionId}/positions`),
         apiRequest<{ status: string; data: Candidate[] }>(`/candidates/election/${electionId}`)
+          .catch(() => apiRequest<{ status: string; data: Candidate[] }>(`/candidates?electionId=${electionId}`))
       ]);
 
-      if (posRes.status === 'success' && Array.isArray(posRes.data)) {
-        setPositions(posRes.data);
-        if (posRes.data.length > 0) {
-          setCandPosition(prev => (prev && posRes.data.some(p => p.title === prev)) ? prev : posRes.data[0].title);
+      if (posSettled.status === 'fulfilled' && posSettled.value?.status === 'success' && Array.isArray(posSettled.value.data)) {
+        // Deduplicate positions by title so position categories appear cleanly
+        const uniquePosMap = new Map<string, Position>();
+        posSettled.value.data.forEach(p => {
+          if (!uniquePosMap.has(p.title)) {
+            uniquePosMap.set(p.title, p);
+          }
+        });
+        const posList = Array.from(uniquePosMap.values());
+        setPositions(posList);
+
+        if (posList.length > 0) {
+          setCandPosition(prev => (prev && posList.some(p => p.title === prev)) ? prev : posList[0].title);
         } else {
           setCandPosition('');
         }
       }
 
-      if (candRes.status === 'success' && Array.isArray(candRes.data)) {
-        setCandidates(candRes.data);
+      if (candSettled.status === 'fulfilled' && candSettled.value?.status === 'success' && Array.isArray(candSettled.value.data)) {
+        setCandidates(candSettled.value.data);
+      } else {
+        setCandidates([]);
       }
     } catch (err) {
       console.error('Error fetching positions/candidates:', err);

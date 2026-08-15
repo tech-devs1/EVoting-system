@@ -1012,11 +1012,22 @@ exports.createPosition = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Position title is required.' });
     }
 
+    const cleanTitle = title.trim();
+    let existingPos = await Position.findOne({ where: { electionId, title: cleanTitle } });
+    if (existingPos) {
+      await existingPos.update({
+        maxChoices: Number(maxChoices) || existingPos.maxChoices,
+        isReferendum: isReferendum !== undefined ? Boolean(isReferendum) : existingPos.isReferendum,
+        order: Number(order) || existingPos.order
+      });
+      return res.status(200).json({ status: 'success', data: existingPos });
+    }
+
     const id = `pos_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const newPos = await Position.create({
       id,
       electionId,
-      title: title.trim(),
+      title: cleanTitle,
       maxChoices: Number(maxChoices) || 1,
       isReferendum: Boolean(isReferendum),
       order: Number(order) || 1
