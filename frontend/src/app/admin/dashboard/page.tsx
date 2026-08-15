@@ -140,18 +140,20 @@ export default function OrganizationElectionHub() {
       }>('/admin/dashboard-full');
 
       if (res.status === 'success' && res.data) {
-        // Map electionResults to elections list
-        const electionsList = res.data.electionResults.map(er => ({
+        const resultsArray = Array.isArray(res.data.electionResults) ? res.data.electionResults : [];
+        const electionsList = resultsArray.map(er => ({
           ...er.election,
           totalVotesCast: er.totalVotes,
-          candidateCount: er.candidates.length,
-          voterCount: er.election.voterCount || er.election.totalVoters
+          candidateCount: er.candidates ? er.candidates.length : 0,
+          voterCount: er.election ? (er.election.voterCount || er.election.totalVoters || 0) : 0
         }));
 
         setElections(electionsList);
-        setStats(res.data.stats);
-        if (res.data.stats.topCandidates) {
-          setTopCandidates(res.data.stats.topCandidates);
+        if (res.data.stats) {
+          setStats(res.data.stats);
+          if (res.data.stats.topCandidates) {
+            setTopCandidates(res.data.stats.topCandidates);
+          }
         }
       }
     } catch (err) {
