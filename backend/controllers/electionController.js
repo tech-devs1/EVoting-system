@@ -996,18 +996,7 @@ exports.getVoters = async (req, res) => {
 exports.getPositions = async (req, res) => {
   try {
     const electionId = req.params.id;
-    let positions = await Position.findAll({ where: { electionId }, order: [['order', 'ASC']] });
-    if (positions.length === 0) {
-      const now = Date.now();
-      const defaults = [
-        { id: `pos_${now}_1`, electionId, title: 'President', maxChoices: 1, order: 1 },
-        { id: `pos_${now}_2`, electionId, title: 'Vice President', maxChoices: 1, order: 2 },
-        { id: `pos_${now}_3`, electionId, title: 'General Secretary', maxChoices: 1, order: 3 },
-        { id: `pos_${now}_4`, electionId, title: 'Financial Secretary', maxChoices: 1, order: 4 },
-        { id: `pos_${now}_5`, electionId, title: 'WOCOM', maxChoices: 1, order: 5 },
-      ];
-      positions = await Position.bulkCreate(defaults);
-    }
+    const positions = await Position.findAll({ where: { electionId }, order: [['order', 'ASC']] });
     res.status(200).json({ status: 'success', data: positions });
   } catch (error) {
     console.error('Error getting positions:', error);
