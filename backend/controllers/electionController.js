@@ -874,13 +874,16 @@ exports.requestAccessOtp = async (req, res) => {
     let emailSent = false;
     let smsSent = false;
 
-    const targetEmail = (rosterEntry.email || req.user.email || '').toLowerCase().trim();
-    const targetName = rosterEntry.name || req.user.name || 'Voter';
-    const targetPhone = rosterEntry.phone || req.user.phone || '';
+    const userEmail = (req.user?.email || '').toLowerCase().trim();
+    const rosterEmail = (rosterEntry?.email || '').toLowerCase().trim();
+    const targetEmail = (userEmail && userEmail.includes('@')) ? userEmail : ((rosterEmail && rosterEmail.includes('@')) ? rosterEmail : '');
+
+    const targetName = rosterEntry?.name || req.user?.name || 'Voter';
+    const targetPhone = rosterEntry?.phone || req.user?.phone || '';
 
     console.log('[Access OTP] Prepared dispatch details:', { targetEmail, targetName, targetPhone, voterId, electionId });
 
-    if (targetEmail) {
+    if (targetEmail && targetEmail.includes('@')) {
       try {
         const info = await sendOtpViaEmail(targetEmail, targetName, otp);
         if (info) emailSent = true;
