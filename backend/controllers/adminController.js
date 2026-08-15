@@ -26,9 +26,12 @@ exports.getDashboardStats = async (req, res) => {
 
 exports.getDashboardFullStats = async (req, res) => {
   try {
-    const tenantId = req.user?.tenantId || 'compssa';
+    const headerTenant = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenantId || headerTenant || 'compssa';
 
-    const elections = await Election.findAll({ where: { tenantId } });
+    // Find all elections for tenant or if admin is superadmin/global
+    const whereClause = (req.user?.role === 'superadmin' || tenantId === 'global') ? {} : { tenantId };
+    const elections = await Election.findAll({ where: whereClause });
     const electionIds = elections.map(e => e.id);
 
     const totalElections = elections.length;
