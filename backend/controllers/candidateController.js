@@ -3,7 +3,7 @@ const cache = require('../services/cache');
 
 exports.getCandidates = async (req, res) => {
   try {
-    const { electionId } = req.query;
+    const electionId = req.params.electionId || req.query.electionId;
     if (!electionId) {
       return res.status(400).json({ status: 'error', message: 'electionId is required' });
     }
