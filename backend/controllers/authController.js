@@ -202,7 +202,8 @@ exports.verifyStudent = async (req, res) => {
 
 exports.register = async (req, res) => {
   try {
-    const { studentId, email, name, password, phone, faceImage } = req.body;
+    const { studentId, email: rawEmail, name, password, phone, faceImage } = req.body;
+    const email = String(rawEmail || '').trim().toLowerCase();
 
     if (!studentId || !email || !password) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields (studentId, email, password)' });
@@ -270,7 +271,8 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email: rawEmail, password } = req.body;
+    const email = String(rawEmail || '').trim().toLowerCase();
     if (!email || !password) {
       return res.status(400).json({ status: 'error', message: 'Email and password are required.' });
     }
@@ -530,7 +532,8 @@ exports.googleLogin = async (req, res) => {
 
 exports.verifyOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email: rawEmail, otp } = req.body;
+    const email = String(rawEmail || '').trim().toLowerCase();
     if (!email || !otp) {
       return res.status(400).json({ status: 'error', message: 'Email and OTP are required.' });
     }
@@ -580,7 +583,8 @@ exports.verifyOtp = async (req, res) => {
 
 exports.resendOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email: rawEmail } = req.body;
+    const email = String(rawEmail || '').trim().toLowerCase();
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required.' });
 
     const voter = await Voter.findOne({ where: { email } });
@@ -682,7 +686,8 @@ exports.verifyFace = async (req, res) => {
 
 exports.forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email: rawEmail } = req.body;
+    const email = String(rawEmail || '').trim().toLowerCase();
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required' });
 
     const voter = await Voter.findOne({ where: { email } });
@@ -691,7 +696,7 @@ exports.forgotPassword = async (req, res) => {
     }
 
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = Date.now() + 15 * 60 * 1000;
+    const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes (matches the emailed copy)
 
     voter.resetCode = resetCode;
     voter.resetCodeExpiry = expiry;
@@ -733,7 +738,8 @@ exports.forgotPassword = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   try {
-    const { email, code, newPassword } = req.body;
+    const { email: rawEmail, code, newPassword } = req.body;
+    const email = String(rawEmail || '').trim().toLowerCase();
     if (!email || !code || !newPassword) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
@@ -826,6 +832,27 @@ exports.testSms = async (req, res) => {
     const testOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const responseData = await sendOtpViaBMS(phone, testOtp);
     res.status(200).json({ status: 'success', bms_response: responseData });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
+exports.testEmail = async (req, res) => {
+  try {
+    const { to } = req.query;
+    if (!to || !String(to).includes('@')) {
+      return res.status(400).json({ status: 'error', message: 'Email query parameter is required (e.g. /api/auth/test-email?to=you@example.com).' });
+    }
+    const testOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const result = await sendOtpViaEmail(String(to).trim(), 'HTU Elect Test', testOtp);
+    if (result) {
+      res.status(200).json({ status: 'success', message: `Test email sent to ${to}. Check your inbox (and spam folder).` });
+    } else {
+      res.status(502).json({
+        status: 'error',
+        message: 'Email delivery failed — no provider succeeded. Check GMAIL_USER/GMAIL_APP_PASSWORD, RESEND_API_KEY, or ELASTICEMAIL_API_KEY and the server logs.'
+      });
+    }
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }

@@ -1201,7 +1201,14 @@ exports.sendInvitations = async (req, res) => {
     const baseUrl = process.env.PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://htu-elect.vercel.app');
     const votingLink = `${baseUrl}/voter/elections/detail?id=${electionId}`;
 
-    for (const recipient of targetRecipients) {
+    // Bounded-concurrency worker pool: large broadcasts (1,000+ recipients) would
+    // take 30+ minutes if sent sequentially. Per-recipient logic is unchanged;
+    // counters are incremented atomically per send.
+    const SEND_CONCURRENCY = 10;
+    let recipientCursor = 0;
+    const sendWorkers = Array.from({ length: Math.min(SEND_CONCURRENCY, targetRecipients.length) }, async () => {
+    while (recipientCursor < targetRecipients.length) {
+      const recipient = targetRecipients[recipientCursor++];
       const voterName = recipient.name || recipient.email?.split('@')[0] || 'Voter';
       const recipientEmail = recipient.email ? recipient.email.trim() : '';
 
@@ -1230,6 +1237,10 @@ exports.sendInvitations = async (req, res) => {
         }
       }
     }
+    }
+    );
+
+    await Promise.all(sendWorkers);
 
     await logActivity({
       tenantId,
@@ -1318,7 +1329,14 @@ exports.sendBroadcastMessage = async (req, res) => {
     const baseUrl = process.env.PUBLIC_APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://htu-elect.vercel.app';
     const votingLink = `${baseUrl}/voter/elections/detail?id=${electionId}`;
 
-    for (const recipient of targetRecipients) {
+    // Bounded-concurrency worker pool: large broadcasts (1,000+ recipients) would
+    // take 30+ minutes if sent sequentially. Per-recipient logic is unchanged;
+    // counters are incremented atomically per send.
+    const SEND_CONCURRENCY = 10;
+    let recipientCursor = 0;
+    const sendWorkers = Array.from({ length: Math.min(SEND_CONCURRENCY, targetRecipients.length) }, async () => {
+    while (recipientCursor < targetRecipients.length) {
+      const recipient = targetRecipients[recipientCursor++];
       const voterName = recipient.name || recipient.email?.split('@')[0] || 'Voter';
       const indexNumber = recipient.studentId || recipient.indexNumber || recipient.id || 'N/A';
       const recipientEmail = recipient.email ? recipient.email.trim() : '';
@@ -1357,6 +1375,10 @@ exports.sendBroadcastMessage = async (req, res) => {
         }
       }
     }
+    }
+    );
+
+    await Promise.all(sendWorkers);
 
     const logId = `brd_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const broadcastLog = await BroadcastLog.create({

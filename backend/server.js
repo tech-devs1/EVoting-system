@@ -1,7 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 
+// Load the monorepo root .env first (lower priority), then the backend/.env / cwd .env.
+// Root .env is a dev convenience (e.g. SMTP_* credentials); backend/.env wins on conflicts.
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config();
 
 const { syncDatabase } = require('./models');

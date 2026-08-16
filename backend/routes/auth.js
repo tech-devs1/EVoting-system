@@ -26,5 +26,6 @@ router.post('/reset-password', authController.resetPassword);
 router.post('/change-password', verifyAuth, authController.changePassword);
 router.delete('/cleanup-incomplete', authController.cleanupIncomplete);
 router.get('/test-sms', authController.testSms);
+router.get('/test-email', authController.testEmail);
 
 module.exports = router;

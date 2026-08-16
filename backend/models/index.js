@@ -1,3 +1,5 @@
+// Load the monorepo root .env first (lower priority), then backend/.env.
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
@@ -156,7 +158,9 @@ const Voter = sequelize.define('Voter', {
   studentId: { type: DataTypes.STRING(128) },
   indexNumber: { type: DataTypes.STRING(128) }, // Dual field compatibility
   name: { type: DataTypes.STRING(255) },
-  email: { type: DataTypes.STRING(255) },
+  // Email is the login credential for email/password auth — must be unique
+  // (MySQL unique indexes allow multiple NULLs for roster rows without email).
+  email: { type: DataTypes.STRING(255), unique: true },
   phone: { type: DataTypes.STRING(64) },
   password: { type: DataTypes.STRING(255) },
   isRegistered: { type: DataTypes.BOOLEAN, defaultValue: true },

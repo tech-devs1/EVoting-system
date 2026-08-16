@@ -32,7 +32,7 @@ A full-stack, PWA-ready electronic voting platform built for HTU. Features real-
 | **Database** | Firebase Firestore |
 | **Auth** | Firebase Auth + JWT |
 | **Image Uploads** | ImageKit |
-| **Email & SMS** | EmailJS + BMS Africa Quick SMS |
+| **Email & SMS** | Elastic Email (primary, 50k/month plan) + Gmail SMTP + EmailJS + Resend (quota/outage fallbacks) + BMS Africa Quick SMS |
 | **Deployment** | Vercel |
 
 ---

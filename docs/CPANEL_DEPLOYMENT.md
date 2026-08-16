@@ -68,13 +68,26 @@ In the **Setup Node.js App** configuration page, scroll to **Environment variabl
 | `NODE_ENV` | `production` |
 | `PORT` | `5000` |
 | `JWT_SECRET` | `your_secure_jwt_secret_key` |
+| `MYSQL_URL` (or `DATABASE_URL`) | Optional full connection string: `mysql://user:pass@host:3306/dbname` (overrides the individual vars) |
 | `MYSQL_HOST` | `127.0.0.1` (or your cPanel MySQL host) |
 | `MYSQL_PORT` | `3306` |
 | `MYSQL_USER` | `yourusername_dbuser` |
 | `MYSQL_PASSWORD` | `your_db_password` |
 | `MYSQL_DATABASE` | `yourusername_htu_elect` |
-| `EMAIL_USER` | `your-smtp-email@gmail.com` |
-| `EMAIL_PASS` | `your-smtp-app-password` |
+| `SMTP_HOST` | **Primary** — Elastic Email SMTP host: `smtp.elasticemail.com` |
+| `SMTP_PORT` | **Primary** — Elastic Email SMTP port: `2525` (use `465` for SSL) |
+| `SMTP_USER` | **Primary** — Elastic Email SMTP username (your Elastic account email) |
+| `SMTP_PASS` | **Primary** — Elastic Email SMTP password |
+| `ELASTICEMAIL_API_KEY` | Elastic Email REST API key (used as the primary REST path when SMTP is blocked; supports the paid 50k/month plan) |
+| `ELASTICEMAIL_QUOTA_COOLDOWN_MINUTES` | Optional — minutes to skip Elastic Email after a quota-exhaustion error (default `60`); the chain fails over to Gmail/EmailJS/Resend during that window |
+| `EMAIL_FROM` | Optional branded sender for REST providers, e.g. `"HTU Elect" <no-reply@htu.edu.gh>` |
+| `GMAIL_USER` | Optional Gmail SMTP fallback sender (e.g. `your-gmail-address@gmail.com`) |
+| `GMAIL_APP_PASSWORD` | Optional Gmail app password (enable 2FA + app password) — fallback only |
+| `EMAILJS_SERVICE_ID` | Optional EmailJS fallback (`service_id`) |
+| `EMAILJS_TEMPLATE_ID` | Optional EmailJS fallback (`template_id`) |
+| `EMAILJS_PUBLIC_KEY` | Optional EmailJS fallback (`user_id`/public key) |
+| `EMAILJS_PRIVATE_KEY` | Optional EmailJS fallback (`accessToken`/private key) |
+| `RESEND_API_KEY` | Optional `re_...` Resend API key (REST fallback) |
 | `BMS_API_KEY` | `your_mnotify_bms_api_key` |
 | `BMS_SENDER_ID` | `COMPSSA` (or approved sender ID) |
 | `IMAGEKIT_PUBLIC_KEY` | `your_imagekit_public_key` |
@@ -82,14 +95,25 @@ In the **Setup Node.js App** configuration page, scroll to **Environment variabl
 | `IMAGEKIT_URL_ENDPOINT` | `your_imagekit_url_endpoint` |
 
 3. Click **Save** and click **Restart Application**.
-4. Test the health endpoint: `https://yourdomain.edu.gh/api/health` — should return `{"status":"success","message":"HTU Elect Backend is running"}`.
+4. Test the health endpoint: `https://yourdomain.edu.gh/api/health` — should return `{"status":"success","message":"VoteTrust AI Backend is running"}`.
+5. Test email delivery (OTP / password-reset / invitation emails):
+   ```bash
+   curl "https://yourdomain.edu.gh/api/auth/test-email?to=you@example.com"
+   ```
+   The backend tries providers in order — **Elastic Email** (SMTP, then REST) → Gmail SMTP → EmailJS → Resend — and returns success as soon as one delivers. When Elastic Email reports its quota is exhausted, it is skipped automatically (circuit breaker, default 60 min) and delivery goes straight to the fallbacks, then Elastic is retried after the cooldown. If it fails, check the server logs for which provider errored.
+
+> **Email provider chain:** No email credentials are hardcoded in the code. **Elastic Email is the primary provider** (paid plan: 50,000 emails/month for $20). With only `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS` set (Elastic SMTP) or `ELASTICEMAIL_API_KEY`, everything routes through Elastic. Gmail SMTP, EmailJS and Resend are fallbacks that only engage when Elastic is down or over its quota. On cPanel, outbound SMTP ports are sometimes blocked — the REST path (`ELASTICEMAIL_API_KEY`) covers that case.
+
+> **Volume (2,000+ emails/day):** Covered by Elastic Email's paid plan (50,000 emails/month for $20 ≈ 1,600+ emails/day comfortably; a 2,000-email day is ~4% of the monthly quota). For comparison: Gmail SMTP caps at 500/day, Resend's free tier at 100/day, EmailJS at 200/month — those are only quota-overflow fallbacks. For inbox placement at this volume, verify your own sending domain (e.g. `no-reply@htu.edu.gh`) with Elastic Email (SPF/DKIM) and set `EMAIL_FROM` to it. Invitations/broadcasts send with 10-way concurrency, so a 2,000-recipient blast completes in minutes rather than hours.
+
+> **Email/password authentication:** Voters register and log in with their **email + password** (JWT). The `voters` table enforces a UNIQUE constraint on `email` (`uq_voter_email`), so one email can own exactly one account. On first boot the API auto-creates the `users` tables and seeds a default superadmin (`superadmin@htu.edu.gh`) and admin (`admin@htu.edu.gh`) — change these credentials before going live.
 
 ---
 
 ## 🌐 Step 4 — Set up the Frontend on cPanel
 
-### Option A: Standalone Next.js Node.js Deployment (SSR Support)
-1. In cPanel, create a new Node.js App for the frontend under the application root `frontend_app` pointing to the startup file `.next/standalone/server.js`.
+### Option A: Next.js Node.js Deployment (SSR Support)
+1. In cPanel, create a new Node.js App for the frontend under the application root `frontend_app` pointing to the startup file **`server.js`** (the repo's custom Next.js server — it serves the `next build` output; do **not** use `.next/standalone/server.js`, the repo is not built in standalone mode).
 2. Set `BACKEND_URL` = `http://127.0.0.1:5000` (pointing to your running backend app port).
 3. Under the frontend app environment variables, also set `PORT` (e.g., `3000`).
 
@@ -137,4 +161,5 @@ Electronic voting requires secure HTTPS connections for access OTP delivery and 
 - [ ] Admin dashboard functions.
 - [ ] Roster is imported correctly from CSV in phpMyAdmin.
 - [ ] Verification codes are correctly sent via SMS and Email.
+- [ ] `/api/auth/test-email?to=...` delivers a test email (via Elastic Email, with Gmail/EmailJS/Resend fallbacks).
 - [ ] SSL HTTPS padlock icon is active.
