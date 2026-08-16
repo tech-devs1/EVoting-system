@@ -407,114 +407,126 @@ export default function OrganizationElectionHub() {
         </div>
       </div>
 
-      {/* 4 KPI Stat Cards — snap-scroll tiles on mobile, grid on desktop */}
-      <div className="mobile-scroll-x grid gap-3 sm:grid-cols-2 lg:grid-cols-4 md:!gap-5">
+      {/* 4 KPI Stat Cards — compact stacked grid on mobile, row on desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-5">
         
         {/* Card 1: Primary Blue */}
         <div style={{
           backgroundColor: '#2563EB',
           color: '#FFFFFF',
-          borderRadius: '20px',
-          padding: '1.25rem',
+          borderRadius: '16px',
+          padding: '0.9rem',
           boxShadow: '0 8px 24px -4px rgba(37, 99, 235, 0.35)',
           display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem',
           justifyContent: 'space-between',
-          alignItems: 'flex-start'
+          minHeight: '96px'
         }}>
-          <div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.9, display: 'block', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>Live Elections</span>
-            <span style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.activeElectionsCount}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, opacity: 0.9, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Live Elections</span>
+            <div style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '9px',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#FFFFFF',
+              flexShrink: 0
+            }}>
+              <Zap size={15} />
+            </div>
           </div>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF'
-          }}>
-            <Zap size={22} />
-          </div>
+          <span style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.activeElectionsCount}</span>
         </div>
 
         {/* Card 2: Total Elections */}
         <div className="mobile-app-card" style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
+          borderRadius: '16px',
           display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem',
           justifyContent: 'space-between',
-          alignItems: 'flex-start'
+          minHeight: '96px'
         }}>
-          <div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>Total Elections</span>
-            <span style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.totalElections}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748B', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Total Elections</span>
+            <div style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '9px',
+              backgroundColor: '#EFF6FF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#2563EB',
+              flexShrink: 0
+            }}>
+              <Layers size={15} />
+            </div>
           </div>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            backgroundColor: '#EFF6FF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#2563EB'
-          }}>
-            <Layers size={22} />
-          </div>
+          <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.totalElections}</span>
         </div>
 
         {/* Card 3: Registered Voters */}
         <div className="mobile-app-card" style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
+          borderRadius: '16px',
           display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem',
           justifyContent: 'space-between',
-          alignItems: 'flex-start'
+          minHeight: '96px'
         }}>
-          <div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>Registered Voters</span>
-            <span style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{registeredVotersCount.toLocaleString()}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748B', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Registered Voters</span>
+            <div style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '9px',
+              backgroundColor: '#EFF6FF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#2563EB',
+              flexShrink: 0
+            }}>
+              <Users size={15} />
+            </div>
           </div>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            backgroundColor: '#EFF6FF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#2563EB'
-          }}>
-            <Users size={22} />
-          </div>
+          <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{registeredVotersCount.toLocaleString()}</span>
         </div>
 
         {/* Card 4: Total Votes Cast */}
         <div className="mobile-app-card" style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
+          borderRadius: '16px',
           display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem',
           justifyContent: 'space-between',
-          alignItems: 'flex-start'
+          minHeight: '96px'
         }}>
-          <div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>Total Votes Cast</span>
-            <span style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{totalVotesCastCount.toLocaleString()}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748B', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Total Votes Cast</span>
+            <div style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '9px',
+              backgroundColor: '#ECFDF5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#10B981',
+              flexShrink: 0
+            }}>
+              <Vote size={15} />
+            </div>
           </div>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            backgroundColor: '#ECFDF5',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#10B981'
-          }}>
-            <Vote size={22} />
-          </div>
+          <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{totalVotesCastCount.toLocaleString()}</span>
         </div>
 
       </div>

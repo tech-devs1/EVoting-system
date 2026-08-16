@@ -300,6 +300,16 @@ body {
   cursor: not-allowed;
 }
 
+.btn-outline {
+  background-color: transparent;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.btn-outline:hover {
+  background-color: #eff6ff;
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;

@@ -97,11 +97,11 @@ export default function SuperAdminDashboard() {
         </div>
       )}
 
-      {/* 4 KPI Stat Cards — snap-scroll tiles on mobile, grid on desktop */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mobile-scroll-x">
+      {/* 4 KPI Stat Cards — compact stacked grid on mobile, row on desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-5">
         
         {/* Card 1: Primary Blue */}
-        <div className="bg-blue-600 text-white rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-lg shadow-blue-500/20 flex justify-between items-start">
+        <div className="bg-blue-600 text-white rounded-2xl md:rounded-3xl p-3.5 md:p-6 shadow-lg shadow-blue-500/20 flex flex-col justify-between gap-2 min-h-[96px]">
           <div>
             <span className="text-xs font-semibold opacity-90 block mb-2">Active Departments</span>
             <span className="text-4xl font-extrabold tracking-tight leading-none">{departmentCount}</span>
@@ -112,7 +112,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Card 2: Total Elections */}
-        <div className="mobile-app-card flex justify-between items-start">
+        <div className="mobile-app-card flex flex-col justify-between gap-2 min-h-[96px]">
           <div>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">Total Elections</span>
             <span className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{electionCount}</span>
@@ -123,7 +123,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Card 3: Registered Voters */}
-        <div className="mobile-app-card flex justify-between items-start">
+        <div className="mobile-app-card flex flex-col justify-between gap-2 min-h-[96px]">
           <div>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">Registered Voters</span>
             <span className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{voterCount.toLocaleString()}</span>
@@ -134,7 +134,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Card 4: System Health */}
-        <div className="mobile-app-card flex justify-between items-start">
+        <div className="mobile-app-card flex flex-col justify-between gap-2 min-h-[96px]">
           <div>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">System Health</span>
             <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight leading-none block mt-1">100% Operational</span>

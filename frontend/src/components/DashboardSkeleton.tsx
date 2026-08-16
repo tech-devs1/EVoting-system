@@ -151,14 +151,14 @@ export default function DashboardSkeleton({ role }: { role: 'voter' | 'admin' | 
       {role === 'admin' && (
         <>
           <HeroBar wide />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mobile-scroll-x">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-5">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="mobile-app-card flex items-start justify-between">
-                <div className="flex-1">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-8 w-14 mt-2" />
+              <div key={i} className="mobile-app-card flex flex-col justify-between gap-2" style={{ minHeight: '96px' }}>
+                <div className="flex items-start justify-between">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="w-7 h-7 rounded-lg shrink-0" />
                 </div>
-                <Skeleton className="w-11 h-11 rounded-xl shrink-0" />
+                <Skeleton className="h-6 w-12" />
               </div>
             ))}
           </div>

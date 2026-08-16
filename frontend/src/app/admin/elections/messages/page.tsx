@@ -279,10 +279,10 @@ function ElectionMessagesContent() {
       )}
 
       {activeTab === 'compose' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', alignItems: 'start' }}>
+        <div className="lg:grid lg:grid-cols-[1.2fr_1fr] gap-4 lg:gap-8 items-start flex flex-col">
           
           {/* LEFT COLUMN: Premium Email/SMS Composer Controls */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             
             {/* Quick Presets Section */}
             <div className="card" style={{ padding: '1.5rem', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '20px' }}>
@@ -334,7 +334,7 @@ function ElectionMessagesContent() {
                   <label style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1E293B', display: 'block', marginBottom: '0.5rem' }}>
                     Select Dispatch Channel
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                     <button
                       type="button"
                       onClick={() => setChannel('email')}
@@ -678,7 +678,7 @@ function ElectionMessagesContent() {
           </div>
 
           {/* RIGHT COLUMN: High-Fidelity Live Preview Container */}
-          <div style={{ position: 'sticky', top: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ position: 'static', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="lg:sticky lg:top-6">
             <div className="card" style={{ padding: '2rem', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '24px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.02)' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1E293B' }}>
                 <Eye size={20} style={{ color: '#2563eb' }} /> High-Fidelity Live Preview Simulation
