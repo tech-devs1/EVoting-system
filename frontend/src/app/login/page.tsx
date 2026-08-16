@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, loginWithGoogle, verifyOtp } = useAuth();
@@ -80,7 +80,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4 sm:px-6 py-8 sm:py-12 transition-colors duration-200">
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4 sm:px-6 py-8 sm:py-12 transition-colors duration-200 relative">
+      {/* Hard-navigating back link (reliable on iOS Safari / static exports) */}
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- hard navigation is intentional for static cPanel exports */}
+      <a
+        href="/"
+        className="absolute top-5 left-5 sm:top-6 sm:left-6 inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors touch-manipulation"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to home
+      </a>
       <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 sm:p-8 md:p-10 shadow-lg shadow-slate-100 dark:shadow-none">
 
         {/* Header Logo & Title */}

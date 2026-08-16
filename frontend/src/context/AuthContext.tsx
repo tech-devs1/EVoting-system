@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
+import { hardNavigate } from '@/lib/navigation';
 
 export interface UserProfile {
   uid: string;
@@ -31,7 +31,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [mounted, setMounted] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -69,25 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Safe navigation function with window.location fallback for mobile Safari & PWA webviews
+  // Auth transitions always use a full page load. Client-side router.push is
+  // unreliable on iOS Safari for statically-exported (cPanel) sites: the URL can
+  // change while the new page never renders. Hard navigation through the SPA
+  // fallback (.htaccess) always lands on the correct page.
   const safeNavigate = (targetPath: string) => {
-    if (typeof window === 'undefined') return;
-
-    try {
-      router.push(targetPath);
-    } catch (e) {
-      console.warn('[Navigation] router.push failed, falling back to window.location.href:', e);
-      window.location.href = targetPath;
-      return;
-    }
-
-    // Asynchronous safety timeout: if URL hasn't updated after 250ms on mobile Safari/PWAs, force location navigation
-    setTimeout(() => {
-      if (typeof window !== 'undefined' && window.location.pathname !== targetPath && !window.location.pathname.startsWith(targetPath)) {
-        console.warn('[Navigation] Enforcing location navigation to:', targetPath);
-        window.location.href = targetPath;
-      }
-    }, 250);
+    hardNavigate(targetPath);
   };
 
   // Helper to save session tokens isolated by role & tab
@@ -202,6 +188,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     loadUser();
+
+    // iOS Safari bfcache guard: after a successful sign-in, Safari's swipe-back
+    // (or the back button) can restore the login page from the back-forward
+    // cache, making it look like the redirect never happened. On a persisted
+    // page restore, re-validate the session and bounce to the role dashboard.
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      const session = typeof window !== 'undefined' ? window.sessionStorage : null;
+      const local = typeof window !== 'undefined' ? window.localStorage : null;
+      const token =
+        safeGetItem(session, 'COMPSSA_tab_token') ||
+        safeGetItem(local, 'COMPSSA_token');
+      if (!token) return;
+
+      apiRequest<{ status: string; data?: UserProfile }>('/auth/me')
+        .then((res) => {
+          if (res.status === 'success' && res.data) {
+            const targetPath =
+              res.data.role === 'superadmin'
+                ? '/superadmin/dashboard'
+                : res.data.role === 'admin'
+                ? '/admin/dashboard'
+                : '/voter/elections';
+            if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
+              window.location.assign(targetPath);
+            }
+          }
+        })
+        .catch(() => {
+          // Token invalid — let the route guard send the user to /login.
+        });
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
   }, [mounted]);
 
   const login = async (email: string, password?: string, role: 'voter' | 'admin' | 'superadmin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }> => {

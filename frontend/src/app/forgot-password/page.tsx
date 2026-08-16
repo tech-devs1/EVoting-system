@@ -2,14 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
+import { hardNavigate } from '@/lib/navigation';
 import { KeyRound, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react';
 
 type ResetStep = 'request' | 'reset';
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
 
   const [step, setStep] = useState<ResetStep>('request');
   const [email, setEmail] = useState('');
@@ -75,7 +74,7 @@ export default function ForgotPasswordPage() {
         newPassword: password,
       });
       setMessage(res.message || 'Password reset successful.');
-      setTimeout(() => router.push('/login'), 1500);
+      setTimeout(() => hardNavigate('/login'), 1500);
     } catch (err: any) {
       setError(err?.message || 'Failed to reset your password. Please try again.');
     } finally {

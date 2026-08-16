@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────────────────────────────────
+# HTU Elect — Next.js static export (output: 'export') served from cPanel
+# ─────────────────────────────────────────────────────────────────────────
+# This file ships inside the build output (out/) and must end up at the root
+# of your cPanel public_html folder. It makes direct URL loads work — the
+# full-page navigations iOS Safari performs after sign-in rely on it.
+
+RewriteEngine On
+
+# 1) API requests → reverse proxy to the Express backend running on the same
+#    server. Adjust the port if your backend listens elsewhere, or delete
+#    this rule entirely if the API is served from a different domain.
+RewriteRule ^api/(.*)$ http://127.0.0.1:5000/api/$1 [P,L]
+
+# 2) Extensionless URLs → the matching exported .html file
+#    e.g. /voter/elections  →  voter/elections.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}.html -f
+RewriteRule ^(.+?)/?$ $1.html [L]
+
+# 3) SPA fallback — any other unknown path serves the app shell so client-side
+#    routing (and direct links like /voter/dashboard) work everywhere.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]

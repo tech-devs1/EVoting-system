@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
+import { hardNavigate } from '@/lib/navigation';
 import { AlertTriangle, ArrowLeft, ShieldCheck, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -23,7 +24,6 @@ interface Election {
 }
 
 function VoteConfirmationPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const electionId = searchParams.get('id') || searchParams.get('electionId') || '';
   const { user } = useAuth();
@@ -134,7 +134,9 @@ function VoteConfirmationPageContent() {
         localStorage.setItem('COMPSSA_voter_votes', JSON.stringify(parsed));
       }
 
-      router.push(`/voter/elections/success?id=${electionId}&verificationId=${verificationId}`);
+      // Hard navigation: the success page must render even when client-side
+      // navigation is unreliable (iOS Safari / static cPanel export).
+      hardNavigate(`/voter/elections/success?id=${electionId}&verificationId=${verificationId}`);
     } catch (err: any) {
       setError(err.message || 'Transmission failed. Ensure you are eligible and haven\'t already voted in these categories.');
     } finally {

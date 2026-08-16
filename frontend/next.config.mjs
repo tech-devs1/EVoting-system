@@ -7,6 +7,44 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const withPWA = withPWAInit({
   dest: 'public',
   disable: false,
+  // Activate a newly deployed service worker as soon as possible. iOS Safari is
+  // notoriously slow to pick up SW updates; without this a stale service worker
+  // can keep serving the old (pre-login) shell for days.
+  skipWaiting: true,
+  clientsClaim: true,
+  // Never precache HTML documents. If the login page HTML is precached, iOS
+  // Safari's service worker can serve it for ANY navigation — including the
+  // post-login dashboard — making it look like the redirect failed. Pages are
+  // handled at runtime with a network-first strategy instead (see below).
+  exclude: [/\.html$/, /\.txt$/, /\.map$/],
+  runtimeCaching: [
+    {
+      // Navigation requests (any non-asset URL): always try the network first
+      // so the fresh page from cPanel is served; fall back to cache when offline.
+      urlPattern: /^\/(?!.*\.(?:js|css|png|jpg|jpeg|svg|gif|ico|webp|woff2?|txt|json|map)$).*$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'pages-v1',
+        networkTimeoutSeconds: 5,
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60 * 24,
+        },
+      },
+    },
+    {
+      // Static assets are immutable — cache first is fine and fast.
+      urlPattern: /\.(?:js|css|png|jpg|jpeg|svg|gif|ico|webp|woff2?)$/,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'assets-v1',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 60 * 60 * 24 * 30,
+        },
+      },
+    },
+  ],
 });
 
 /** @type {import('next').NextConfig} */

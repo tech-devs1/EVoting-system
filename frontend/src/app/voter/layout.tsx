@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { hardNavigate } from '@/lib/navigation';
 import { 
   ShieldCheck, 
   LayoutDashboard, 
@@ -26,7 +27,6 @@ import {
 export default function VoterLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
-  const router = useRouter();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -79,21 +79,21 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
     setMounted(true);
   }, []);
 
-  // Auth Guard
+  // Auth Guard — hard navigation so iOS Safari / static cPanel exports always land.
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        const t = setTimeout(() => router.push('/login'), 100);
+        const t = setTimeout(() => hardNavigate('/login'), 100);
         return () => clearTimeout(t);
       } else if (user.role === 'admin') {
-        const t = setTimeout(() => router.push('/admin/dashboard'), 100);
+        const t = setTimeout(() => hardNavigate('/admin/dashboard'), 100);
         return () => clearTimeout(t);
       } else if (user.role === 'superadmin') {
-        const t = setTimeout(() => router.push('/superadmin/dashboard'), 100);
+        const t = setTimeout(() => hardNavigate('/superadmin/dashboard'), 100);
         return () => clearTimeout(t);
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   useEffect(() => {
     // Only run on client side after mount
