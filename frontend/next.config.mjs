@@ -24,7 +24,9 @@ const withPWA = withPWAInit({
       urlPattern: /^\/(?!.*\.(?:js|css|png|jpg|jpeg|svg|gif|ico|webp|woff2?|txt|json|map)$).*$/,
       handler: 'NetworkFirst',
       options: {
-        cacheName: 'pages-v1',
+        // v2: bumping this changes the generated sw.js bytes, which forces iOS
+        // Safari (slow to notice SW updates) to install the new build.
+        cacheName: 'pages-v2',
         networkTimeoutSeconds: 5,
         expiration: {
           maxEntries: 50,
@@ -37,7 +39,7 @@ const withPWA = withPWAInit({
       urlPattern: /\.(?:js|css|png|jpg|jpeg|svg|gif|ico|webp|woff2?)$/,
       handler: 'CacheFirst',
       options: {
-        cacheName: 'assets-v1',
+        cacheName: 'assets-v2',
         expiration: {
           maxEntries: 100,
           maxAgeSeconds: 60 * 60 * 24 * 30,

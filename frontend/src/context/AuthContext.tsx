@@ -57,6 +57,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // redirect, so we let the user tap a real link (native navigation) instead.
   const [authSuccess, setAuthSuccess] = useState<{ targetPath: string; subtitle: string } | null>(null);
 
+  // When the success banner appears, dismiss any open keyboard and make sure it
+  // is scrolled into view — iOS Safari can otherwise leave a fixed overlay
+  // mispositioned while the on-screen keyboard closes.
+  useEffect(() => {
+    if (!authSuccess) return;
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    const card = document.getElementById('auth-success-card');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [authSuccess]);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -369,64 +381,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, verifyOtp, logout }}>
-      {children}
-
-      {/* ── Signed-in success dialog ──────────────────────────────────
-          Rendered by the provider so it works from every auth page
-          (login, OTP step, register, Google). The button is a real
-          <a href> — native navigation, which is the only reliably
-          user-initiated page load on iOS Safari/static exports. No
-          backdrop-blur: it has a known iOS Safari hit-testing bug. */}
+      {/* ── Signed-in success banner ───────────────────────────────────
+          Rendered as an IN-FLOW element (no position:fixed) so it is always
+          visible on iOS Safari — fixed overlays can be mispositioned while the
+          on-screen keyboard closes. The button is a real <a href>: native
+          navigation is the only reliably user-initiated page load on iOS
+          Safari / static exports. No backdrop-blur (iOS hit-testing bug). */}
       {authSuccess && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Signed in successfully"
+          id="auth-success-card"
+          role="status"
+          aria-live="polite"
+          className="relative z-50 bg-emerald-50 border-b border-emerald-200 px-4 sm:px-6 py-4"
         >
-          {/* Click-outside to dismiss */}
-          <button
-            type="button"
-            aria-label="Close dialog"
-            onClick={() => setAuthSuccess(null)}
-            className="absolute inset-0 bg-slate-900/60 cursor-pointer"
-            tabIndex={-1}
-          />
-          <div className="relative w-full max-w-sm rounded-3xl bg-white p-6 sm:p-8 text-center shadow-2xl border border-slate-200">
-            <button
-              type="button"
-              onClick={() => setAuthSuccess(null)}
-              aria-label="Close dialog"
-              className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+          <div className="max-w-2xl mx-auto flex items-center gap-3 sm:gap-4">
+            <div className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
             </div>
-            <h2 className="text-xl font-extrabold text-slate-900 mb-1.5">Signed in successfully!</h2>
-            <p className="text-sm text-slate-500 font-medium leading-relaxed mb-7">{authSuccess.subtitle}</p>
-
-            {/* Native anchor navigation is intentional: user-initiated full page
-                loads are the most reliable navigation on iOS Safari. */}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm sm:text-base font-extrabold text-emerald-900 leading-tight">
+                Signed in successfully!
+              </h2>
+              <p className="text-xs sm:text-sm text-emerald-800 font-medium leading-snug mt-0.5">
+                {authSuccess.subtitle}
+              </p>
+            </div>
             <a
               href={authSuccess.targetPath}
-              className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-600/25 transition-all active:scale-[0.98] touch-manipulation"
+              className="shrink-0 inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/25 transition-all active:scale-[0.98] touch-manipulation"
             >
               Go to Dashboard
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 hidden sm:block" />
             </a>
             <button
               type="button"
               onClick={() => setAuthSuccess(null)}
-              className="mt-3 w-full py-2 text-xs font-semibold text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+              aria-label="Dismiss"
+              className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-emerald-700 hover:bg-emerald-100 cursor-pointer transition-colors"
             >
-              Stay on this page
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
+
+      {children}
     </AuthContext.Provider>
   );
 }

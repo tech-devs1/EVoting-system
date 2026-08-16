@@ -33,7 +33,6 @@ export default function LandingPage() {
   const navLinks = [
     { label: 'Features', href: '#features' },
     { label: 'How it works', href: '#how-it-works' },
-    { label: 'Security', href: '#security' },
   ];
 
   return (
@@ -167,8 +166,8 @@ export default function LandingPage() {
             one ballot, and a cryptographic audit trail behind every single vote.
           </p>
 
-          {/* Micro trust row */}
-          <div className="landing-reveal flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-9" style={{ animationDelay: '0.3s' }}>
+          {/* Micro trust row — desktop only; hidden on mobile for simplicity */}
+          <div className="landing-reveal hidden sm:flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-9" style={{ animationDelay: '0.3s' }}>
             {['OTP-verified identity', 'SHA-256 audit trail', 'Real-time results'].map((item) => (
               <span
                 key={item}
@@ -184,7 +183,7 @@ export default function LandingPage() {
           <div className="landing-reveal flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-xs sm:max-w-none" style={{ animationDelay: '0.35s' }}>
             <a
               href="/login"
-              className="w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm shadow-xl shadow-blue-600/25 hover:shadow-blue-600/40 flex items-center justify-center gap-2.5 transition-all active:scale-95"
+              className="w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm shadow-xl shadow-blue-600/25 hover:shadow-blue-600/40 flex items-center justify-center gap-2.5 transition-all active:scale-95"
             >
               <Vote className="w-4 h-4" />
               <span>Cast Your Vote</span>
@@ -192,7 +191,7 @@ export default function LandingPage() {
             </a>
             <a
               href="/register"
-              className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200/80 rounded-full font-bold text-sm shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95"
+              className="w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200/80 rounded-full font-bold text-sm shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95"
             >
               <UserPlus className="w-4 h-4" />
               Create Account
@@ -200,18 +199,18 @@ export default function LandingPage() {
           </div>
 
           {/* Hero visual — campus ballot deck */}
-          <div className="landing-reveal relative w-full max-w-4xl mt-14 md:mt-20 py-2 md:py-4 flex items-center justify-center" style={{ animationDelay: '0.45s' }}>
+          <div className="landing-reveal relative w-full max-w-4xl mt-10 md:mt-20 py-2 md:py-4 flex items-center justify-center" style={{ animationDelay: '0.45s' }}>
             {/* Glow behind deck */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-56 md:h-72 rounded-full bg-blue-500/15 blur-3xl pointer-events-none" />
 
-            {/* Floating verified chip */}
-            <div className="absolute top-0 left-[2%] sm:left-[6%] md:left-[16%] z-30 px-3 py-1.5 md:px-4 md:py-1.5 rounded-full bg-slate-900 text-white text-[10px] md:text-[11px] font-bold shadow-lg shadow-slate-900/20 flex items-center gap-1.5 -rotate-3">
+            {/* Floating chips — desktop only; hidden on mobile for simplicity */}
+            <div className="absolute top-0 left-[2%] sm:left-[6%] md:left-[16%] z-30 px-3 py-1.5 md:px-4 md:py-1.5 rounded-full bg-slate-900 text-white text-[10px] md:text-[11px] font-bold shadow-lg shadow-slate-900/20 items-center gap-1.5 -rotate-3 hidden sm:flex">
               <ShieldCheck className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-400" />
               <span>Audit-trail verified</span>
             </div>
 
             {/* Floating turnout chip */}
-            <div className="absolute top-1 right-[2%] sm:right-[6%] md:right-[16%] z-30 px-3 py-1.5 md:px-4 md:py-1.5 rounded-full bg-blue-600 text-white text-[10px] md:text-[11px] font-bold shadow-lg shadow-blue-600/25 flex items-center gap-1.5 rotate-3">
+            <div className="absolute top-1 right-[2%] sm:right-[6%] md:right-[16%] z-30 px-3 py-1.5 md:px-4 md:py-1.5 rounded-full bg-blue-600 text-white text-[10px] md:text-[11px] font-bold shadow-lg shadow-blue-600/25 items-center gap-1.5 rotate-3 hidden sm:flex">
               <BarChart3 className="w-3 h-3 md:w-3.5 md:h-3.5" />
               <span>Live turnout</span>
             </div>
@@ -243,7 +242,7 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {/* Mobile deck */}
+            {/* Mobile deck — three overlapping cards */}
             <div className="flex md:hidden items-center justify-center -space-x-5 py-4">
               {[
                 { src: '/assets/school.jpg', label: 'SRC Exec', rotate: '-rotate-12', tint: 'bg-slate-900/40' },
@@ -252,7 +251,7 @@ export default function LandingPage() {
               ].map((card, i) => (
                 <div
                   key={i}
-                  className={`w-28 h-40 sm:w-36 sm:h-52 rounded-2xl overflow-hidden shadow-md transform ${card.rotate} hover:rotate-0 transition-all duration-300 flex flex-col justify-end shrink-0 relative group border border-slate-200/60 ${
+                  className={`w-28 h-40 sm:w-36 sm:h-52 rounded-2xl overflow-hidden shadow-md transform ${card.rotate} flex flex-col justify-end shrink-0 relative group border border-slate-200/60 ${
                     card.center ? 'w-32 h-44 sm:w-40 sm:h-56 rounded-2xl shadow-xl z-20 border-slate-300/70' : ''
                   }`}
                 >
@@ -260,7 +259,7 @@ export default function LandingPage() {
                     <img src={card.src} alt={card.label} className="w-full h-full object-cover" />
                   </div>
                   <div className={`absolute inset-0 ${card.tint || 'bg-slate-900/50'} p-2.5 flex flex-col justify-end`}>
-                    <p className="text-[9px] font-bold text-white uppercase tracking-wide bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full w-fit truncate max-w-[90px]">
+                    <p className="text-[9px] font-bold text-white uppercase tracking-wide bg-black/40 px-2 py-0.5 rounded-full w-fit truncate max-w-[90px]">
                       {card.label}
                     </p>
                   </div>
@@ -415,62 +414,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Security ───────────────────────────────────────────────────── */}
-      <section id="security" className="relative scroll-mt-20 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 md:py-24">
-          <div className="landing-reveal relative rounded-[2rem] bg-slate-900 border border-slate-800 overflow-hidden p-8 md:p-14">
-            {/* Panel flair */}
-            <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-600/20 blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-emerald-600/15 blur-3xl pointer-events-none" />
-
-            <div className="relative grid md:grid-cols-2 gap-10 md:gap-14 items-center">
-              <div>
-                <span className="landing-reveal inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-[11px] font-bold uppercase tracking-wider mb-4 border border-emerald-500/20">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Security first
-                </span>
-                <h2 className="landing-reveal text-3xl sm:text-4xl font-black tracking-tight leading-tight text-white mb-4" style={{ animationDelay: '0.1s' }}>
-                  An election you can actually trust
-                </h2>
-                <p className="landing-reveal text-sm sm:text-base text-slate-400 font-medium leading-relaxed mb-7" style={{ animationDelay: '0.2s' }}>
-                  From the moment you sign in until the final tally is published, every interaction
-                  is authenticated, audited, and guarded against tampering.
-                </p>
-                <a
-                  href="/register"
-                  className="landing-reveal inline-flex items-center gap-2.5 px-7 py-3.5 bg-white hover:bg-slate-100 text-slate-900 rounded-full font-bold text-sm shadow-lg transition-all active:scale-95"
-                  style={{ animationDelay: '0.3s' }}
-                >
-                  Get started — it&apos;s free
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-              </div>
-
-              <ul className="flex flex-col gap-3.5">
-                {[
-                  { icon: Lock, text: 'JWT-secured APIs with per-route rate limiting against brute force and DDoS.' },
-                  { icon: BadgeCheck, text: 'One-time codes delivered by email so only you can unlock your ballot.' },
-                  { icon: ScrollText, text: 'Immutable SHA-256 audit ledger for every ballot cast — verifiable end to end.' },
-                  { icon: Fingerprint, text: 'Database-level uniqueness prevents double voting across every election.' },
-                  { icon: Users, text: 'Tenant isolation keeps SRC, hall, faculty and department polls fully separate.' },
-                ].map((item, i) => (
-                  <li
-                    key={item.text}
-                    className="landing-reveal flex items-start gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                    style={{ animationDelay: `${0.15 + i * 0.07}s` }}
-                  >
-                    <div className="w-9 h-9 shrink-0 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
-                      <item.icon className="w-4 h-4" />
-                    </div>
-                    <span className="text-[13px] sm:text-sm text-slate-300 font-medium leading-relaxed">{item.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── CTA band ───────────────────────────────────────────────────── */}
       <section className="pb-16 md:pb-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -525,7 +468,6 @@ export default function LandingPage() {
           <nav className="flex items-center gap-6 text-xs font-bold text-slate-500">
             <a href="#features" className="hover:text-blue-600 transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-blue-600 transition-colors">How it works</a>
-            <a href="#security" className="hover:text-blue-600 transition-colors">Security</a>
             <a href="/login" className="hover:text-blue-600 transition-colors">Sign In</a>
             <a href="/register" className="hover:text-blue-600 transition-colors">Register</a>
           </nav>
