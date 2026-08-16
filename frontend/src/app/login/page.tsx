@@ -30,7 +30,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await login(email.trim(), password);
-      // On success, AuthContext shows a slim "Signed in" banner and auto-redirects
+      // On success, AuthContext shows a brief "Signing you in" loading screen
+      // and auto-redirects
       // to the role dashboard after a short pause (with a "Go now" link).
       if (res.otpRequired) {
         setOtpStep(true);

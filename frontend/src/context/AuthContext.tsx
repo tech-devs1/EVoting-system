@@ -1,9 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ArrowRight, CheckCircle2, X } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { hardNavigate } from '@/lib/navigation';
+import AppLoading from '@/components/AppLoading';
 
 export interface UserProfile {
   uid: string;
@@ -28,51 +28,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Destination + copy for the post-auth success dialog, by role.
-function successInfoFor(data: UserProfile) {
-  if (data.role === 'superadmin') {
-    return {
-      targetPath: '/superadmin/dashboard',
-      subtitle: 'You are signed in to the platform administration console.',
-    };
-  }
-  if (data.role === 'admin') {
-    return {
-      targetPath: '/admin/dashboard',
-      subtitle: 'You are signed in to the election management dashboard.',
-    };
-  }
-  return {
-    targetPath: '/voter/elections',
-    subtitle: 'Your ballot is ready — head to the voting portal to cast your vote.',
-  };
+// Destination for the post-auth transition, by role.
+function targetPathFor(data: UserProfile) {
+  if (data.role === 'superadmin') return '/superadmin/dashboard';
+  if (data.role === 'admin') return '/admin/dashboard';
+  return '/voter/elections';
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [mounted, setMounted] = useState(false);
-  // Shown after a successful sign-in instead of auto-redirecting: iOS Safari on
-  // statically-exported cPanel sites can fail to render the page after a JS
-  // redirect, so we let the user tap a real link (native navigation) instead.
-  const [authSuccess, setAuthSuccess] = useState<{ targetPath: string; subtitle: string } | null>(null);
+  // Set after a successful sign-in: shows a brief branded loading screen
+  // ("Signing you in…") before a full page load to the role dashboard.
+  const [authTransition, setAuthTransition] = useState<string | null>(null);
 
-  // When the success banner appears, dismiss any open keyboard, make sure it is
-  // scrolled into view, and auto-redirect to the role dashboard shortly after
-  // (a real page load — reliable on iOS Safari now that the app runs there).
-  // Dismissing the banner cancels the pending redirect.
+  // Give the loading screen a moment to be visible, then hard-navigate.
   useEffect(() => {
-    if (!authSuccess) return;
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-    const card = document.getElementById('auth-success-card');
-    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!authTransition) return;
     const timer = setTimeout(() => {
-      window.location.assign(authSuccess.targetPath);
-    }, 2500);
+      window.location.assign(authTransition);
+    }, 1200);
     return () => clearTimeout(timer);
-  }, [authSuccess]);
+  }, [authTransition]);
 
   useEffect(() => {
     setMounted(true);
@@ -277,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.status === 'success' && res.token && res.data) {
         saveSession(res.data, res.token);
         setUser(res.data);
-        setAuthSuccess(successInfoFor(res.data));
+        setAuthTransition(targetPathFor(res.data));
         return {};
       }
       throw new Error('Unexpected response from server.');
@@ -322,7 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.status === 'success' && res.token && res.data) {
         saveSession(res.data, res.token);
         setUser(res.data);
-        setAuthSuccess(successInfoFor(res.data));
+        setAuthTransition(targetPathFor(res.data));
       } else {
         throw new Error('OTP verification failed.');
       }
@@ -341,7 +319,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.status === 'success' && res.token && res.data) {
         saveSession(res.data, res.token);
         setUser(res.data);
-        setAuthSuccess(successInfoFor(res.data));
+        setAuthTransition(targetPathFor(res.data));
         return res.data;
       }
       throw new Error('Google authentication failed.');
@@ -386,48 +364,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, verifyOtp, logout }}>
-      {/* ── Signed-in success banner ───────────────────────────────────
-          A slim IN-FLOW banner (no position:fixed — iOS keyboard/viewport
-          quirks), shown briefly after sign-in. It auto-redirects to the role
-          dashboard after a short pause; a native <a href> is included for an
-          instant jump, and dismissing cancels the redirect. */}
-      {authSuccess && (
-        <div
-          id="auth-success-card"
-          role="status"
-          aria-live="polite"
-          className="relative z-50 bg-emerald-50 border-b border-emerald-200 px-4 sm:px-6 py-3.5"
-        >
-          <div className="max-w-2xl mx-auto flex items-center gap-3">
-            <div className="shrink-0 w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-extrabold text-emerald-900 leading-tight">
-                Signed in successfully!
-              </h2>
-              <p className="text-xs text-emerald-800 font-medium leading-snug mt-0.5">
-                Redirecting you to your dashboard…
-              </p>
-            </div>
-            <a
-              href={authSuccess.targetPath}
-              className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow transition-all active:scale-[0.98] touch-manipulation"
-            >
-              Go now
-              <ArrowRight className="w-3.5 h-3.5" />
-            </a>
-            <button
-              type="button"
-              onClick={() => setAuthSuccess(null)}
-              aria-label="Dismiss"
-              className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-emerald-700 hover:bg-emerald-100 cursor-pointer transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Post-sign-in transition: show the branded loading screen briefly,
+          then hard-navigate to the role dashboard. */}
+      {authTransition && <AppLoading label="Signing you in…" />}
 
       {children}
     </AuthContext.Provider>

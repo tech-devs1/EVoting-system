@@ -97,8 +97,8 @@ export default function SuperAdminDashboard() {
         </div>
       )}
 
-      {/* 4 KPI Stat Cards — compact stacked grid on mobile, row on desktop */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-5">
+      {/* 4 KPI Stat Cards — clean vertical stack on mobile, row on desktop */}
+      <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-5">
         
         {/* Card 1: Primary Blue */}
         <div className="bg-blue-600 text-white rounded-2xl md:rounded-3xl p-3.5 md:p-6 shadow-lg shadow-blue-500/20 flex flex-col justify-between gap-2 min-h-[96px]">

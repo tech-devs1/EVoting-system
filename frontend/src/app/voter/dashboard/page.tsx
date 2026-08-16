@@ -13,9 +13,7 @@ import {
   Inbox,
   Award,
   Vote,
-  Bell,
   ChevronRight,
-  BarChart3,
   CalendarClock
 } from 'lucide-react';
 
@@ -205,82 +203,26 @@ export default function VoterDashboard() {
   }, [mounted]);
 
   const userName = user?.name || "Voter";
-  const firstName = userName.split(' ')[0] || 'Voter';
 
   if (loading) {
     return <DashboardSkeleton role="voter" />;
   }
 
   return (
-    <div className="flex flex-col gap-3 md:gap-6" suppressHydrationWarning>
+    <div className="flex flex-col gap-4 md:gap-6" suppressHydrationWarning>
 
-      {/* ── MOBILE ONLY: wallet-style dark hero (md+ hides it) ──────────────── */}
-      <div className="md:hidden -mx-3 -mt-3 sm:-mx-6 rounded-b-3xl bg-blue-700 px-5 pt-5 pb-6 text-white relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-blue-500/30 pointer-events-none" />
-        <div className="absolute -bottom-14 -left-8 w-44 h-44 rounded-full bg-blue-400/20 pointer-events-none" />
-
-        {/* Greeting row */}
-        <div className="relative flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-white/15 border border-white/25 flex items-center justify-center font-extrabold text-sm uppercase tracking-wide">
-              {firstName.substring(0, 2)}
-            </div>
-            <div>
-              <div className="text-[11px] text-blue-100/90 font-medium leading-tight">Hello,</div>
-              <div className="text-base font-extrabold leading-tight">{firstName}</div>
-            </div>
-          </div>
-          <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-white/15 border border-white/20 flex items-center justify-center">
-              <Bell size={18} className="text-blue-50" />
-            </div>
-            {elections.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-blue-700" />
-            )}
-          </div>
-        </div>
-
-        {/* Centered key stat */}
-        <div className="relative text-center mb-5">
-          <div className="text-[11px] text-blue-100/90 font-medium mb-1">Open Ballots</div>
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-4xl font-extrabold tracking-tight">{elections.length}</span>
-            <span className="text-sm font-bold text-blue-100/90">elections</span>
-          </div>
-          <div className="text-[11px] text-blue-100/80 mt-1">
-            {totalVotes > 0 ? `You have cast ${totalVotes} vote${totalVotes === 1 ? '' : 's'} so far` : 'Your ballot is ready when you are'}
-          </div>
-        </div>
-
-        {/* Action pills */}
-        <div className="relative flex gap-3">
-          <Link
-            href="/voter/elections"
-            className="flex-1 flex items-center justify-center gap-1.5 bg-white text-blue-700 font-bold text-sm rounded-full py-3 shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-transform"
-          >
-            <Vote size={17} /> Vote Now
-          </Link>
-          <Link
-            href="/voter/elections/results"
-            className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 border border-white/30 text-white font-bold text-sm rounded-full py-3 active:scale-[0.98] transition-transform"
-          >
-            <BarChart3 size={17} /> Results
-          </Link>
-        </div>
-      </div>
-
-      {/* ── DESKTOP: Top Welcome Card (hidden on mobile) ────────────────────── */}
-      <div className="hidden md:block relative overflow-hidden bg-blue-600 text-white p-8 rounded-3xl shadow-lg shadow-blue-600/20">
+      {/* Welcome Card — clean and simple on every screen size */}
+      <div className="relative overflow-hidden bg-blue-600 text-white p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-lg shadow-blue-600/20">
         <div className="hidden md:block absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/10 pointer-events-none" />
         <div className="hidden md:block absolute -bottom-20 -left-10 w-48 h-48 rounded-full bg-blue-400/20 pointer-events-none" />
-        <div className="relative flex items-center gap-4">
-          <div className="w-12 h-12 md:w-14 md:h-14 shrink-0 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
-            <ShieldCheck className="w-6 h-6 md:w-7 md:h-7" />
+        <div className="relative flex items-center gap-3 md:gap-4">
+          <div className="w-11 h-11 md:w-14 md:h-14 shrink-0 rounded-xl md:rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5 md:w-7 md:h-7" />
           </div>
           <div className="flex-1">
-            <h2 className="text-lg md:text-2xl font-extrabold mb-1 tracking-tight leading-snug">Welcome back, {userName}!</h2>
+            <h2 className="text-lg md:text-2xl font-extrabold mb-0.5 md:mb-1 tracking-tight leading-snug">Welcome back, {userName}!</h2>
             <p className="text-[13px] md:text-sm text-blue-100 leading-relaxed max-w-3xl font-medium">
-              Your voter account is verified and ready. Cast your vote below.
+              Your voter account is verified and ready to vote.
             </p>
           </div>
           <div className="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/15 border border-white/20 text-[11px] font-bold shrink-0">
@@ -293,34 +235,34 @@ export default function VoterDashboard() {
         </div>
       </div>
 
-      {/* Stats — KPI tiles grid on desktop only (mobile has the hero stat) */}
-      <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="mobile-app-card flex items-center justify-between hover:shadow-md transition-shadow">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Active Ballots</span>
-            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{elections.length}</span>
+      {/* Stats — compact 3-col row on mobile, same on desktop */}
+      <div className="grid grid-cols-3 gap-2 md:gap-4">
+        <div className="mobile-app-card flex flex-col items-start justify-center gap-1 md:flex-row md:items-center md:justify-between p-3 md:p-5">
+          <div className="min-w-0">
+            <span className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Active Ballots</span>
+            <span className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white">{elections.length}</span>
           </div>
-          <div className="p-3 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl">
+          <div className="hidden md:flex p-3 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl">
             <Vote size={20} />
           </div>
         </div>
 
-        <div className="mobile-app-card flex items-center justify-between hover:shadow-md transition-shadow">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Upcoming Elections</span>
-            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{upcomingElections.length}</span>
+        <div className="mobile-app-card flex flex-col items-start justify-center gap-1 md:flex-row md:items-center md:justify-between p-3 md:p-5">
+          <div className="min-w-0">
+            <span className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Upcoming</span>
+            <span className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white">{upcomingElections.length}</span>
           </div>
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-xl">
+          <div className="hidden md:flex p-3 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-xl">
             <Clock size={20} />
           </div>
         </div>
 
-        <div className="mobile-app-card flex items-center justify-between hover:shadow-md transition-shadow">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Total Votes Cast</span>
-            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{totalVotes}</span>
+        <div className="mobile-app-card flex flex-col items-start justify-center gap-1 md:flex-row md:items-center md:justify-between p-3 md:p-5">
+          <div className="min-w-0">
+            <span className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Votes Cast</span>
+            <span className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white">{totalVotes}</span>
           </div>
-          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
+          <div className="hidden md:flex p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
             <Award size={20} />
           </div>
         </div>
