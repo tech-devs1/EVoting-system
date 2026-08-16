@@ -298,9 +298,9 @@ BroadcastLog.belongsTo(Election, { foreignKey: 'electionId', as: 'election' });
 // Sync Function
 async function syncDatabase() {
   try {
-    // For local tests on SQLite, disable foreign keys checking or handle cascade safely
-    await sequelize.sync({ alter: true });
-    console.log('✅ Sequelize database synchronized and schema up to date.');
+    // Standard safe sync in production: preserve existing tables and data without alter/force drops
+    await sequelize.sync();
+    console.log('✅ Sequelize database synchronized (schema structure preserved).');
 
     // Seed default superadmin / admins if empty
     const adminCount = await User.count();
