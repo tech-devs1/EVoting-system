@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { hardNavigate } from '@/lib/navigation';
 import MobileTabBar from '@/components/MobileTabBar';
+import AppLoading from '@/components/AppLoading';
 import { 
   ShieldCheck, 
   LayoutDashboard, 
@@ -103,11 +104,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   ];
 
   if (loading || !user) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 font-medium">
-        <p className="text-sm">Loading Superadmin Console...</p>
-      </div>
-    );
+    return <AppLoading label="Loading root console…" />;
   }
 
   const currentTitle = navLinks.find(link => pathname.startsWith(link.href))?.label || 'Super Admin Console';

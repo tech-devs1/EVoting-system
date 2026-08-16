@@ -96,8 +96,8 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div style={{ maxWidth: '850px', margin: '0 auto', paddingTop: '1.5rem', paddingBottom: '3rem' }} className="animate-page-enter">
-      <div style={{ marginBottom: 'var(--space-6)' }}>
+    <div style={{ maxWidth: '850px', margin: '0 auto', paddingTop: '1rem', paddingBottom: '3rem' }} className="animate-page-enter">
+      <div style={{ marginBottom: '1.25rem' }}>
         <Link 
           href="/admin/dashboard"
           style={{
@@ -116,20 +116,20 @@ export default function AdminSettingsPage() {
         >
           <ArrowLeft size={16} /> Back to Dashboard
         </Link>
-        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Building size={28} style={{ color: '#2563eb' }} />
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }} className="md:text-3xl">
+          <Building size={22} style={{ color: '#2563eb' }} className="md:w-7 md:h-7" />
           Organization & Institutional Settings
         </h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: 'var(--space-1)' }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.5 }}>
           Configure comprehensive administrative parameters, helpdesk contact profiles, and passwordless authentication modes.
         </p>
       </div>
 
       {message && (
         <div style={{
-          padding: '14px 18px',
+          padding: '12px 14px',
           borderRadius: 'var(--radius-md)',
-          marginBottom: 'var(--space-6)',
+          marginBottom: '1.25rem',
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
@@ -144,16 +144,16 @@ export default function AdminSettingsPage() {
         </div>
       )}
 
-      <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
         {/* Core Institutional Info Card */}
-        <div className="card" style={{ padding: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
             <Building size={20} style={{ color: '#2563eb' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Institutional Profile</h3>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Institutional Profile</h3>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="form-group">
               <label className="form-label">Organization / Faculty Name</label>
               <input
@@ -178,7 +178,7 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '1rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Mail size={14} style={{ color: 'var(--text-tertiary)' }} /> Support Helpdesk Email
@@ -206,7 +206,7 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          <div className="form-group" style={{ marginTop: '1rem' }}>
+          <div className="form-group mt-4">
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <MapPin size={14} style={{ color: 'var(--text-tertiary)' }} /> Headquarters / Physical Address
             </label>
@@ -221,16 +221,16 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Electoral Commission Official Sign-Off Details Card */}
-        <div className="card" style={{ padding: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
             <User size={20} style={{ color: '#10B981' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Electoral Commission Sign-Off Details</h3>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Electoral Commission Sign-Off Details</h3>
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '-0.75rem', marginBottom: '1.25rem' }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '-0.5rem', marginBottom: '1rem', lineHeight: 1.5 }}>
             These parameters are dynamically printed on official certified election reports and results PDF certifications.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="form-group">
               <label className="form-label">Electoral Commissioner Name</label>
               <input
@@ -257,15 +257,15 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Security & Passwordless Gateways Card */}
-        <div className="card" style={{ padding: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
             <Sliders size={20} style={{ color: '#4F46E5' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Security Mode & OTP Gateways</h3>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Security Mode & OTP Gateways</h3>
           </div>
 
           <div className="form-group">
             <label className="form-label">System Authentication Mode</label>
-            <div style={{ padding: '1rem', backgroundColor: '#EFF6FF', borderRadius: '12px', border: '1px solid #DBEAFE', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            <div style={{ padding: '0.9rem', backgroundColor: '#EFF6FF', borderRadius: '12px', border: '1px solid #DBEAFE', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
               <ShieldCheck size={22} style={{ color: '#2563EB', flexShrink: 0, marginTop: '2px' }} />
               <div>
                 <p style={{ fontWeight: 700, margin: '0 0 4px 0', color: '#1E40AF', fontSize: 'var(--text-sm)' }}>Passwordless OTP Only (Biometrics Bypassed)</p>
@@ -276,7 +276,7 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.25rem', marginTop: '1.25rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Smartphone size={14} style={{ color: 'var(--text-tertiary)' }} /> mNotify / BMS Africa SMS Sender ID
@@ -292,8 +292,8 @@ export default function AdminSettingsPage() {
               <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>Max 11 alphanumeric characters (pre-approved ID recommended)</p>
             </div>
 
-            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
+            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: '0.5rem 0' }}>
                 <input
                   type="checkbox"
                   checked={enableSmsInvites}
@@ -307,14 +307,14 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Branding & Logo Customization Card */}
-        <div className="card" style={{ padding: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
             <Palette size={20} style={{ color: '#F59E0B' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Portal Custom Branding</h3>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Portal Custom Branding</h3>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1.5rem', alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 sm:gap-6 items-start">
+            <div className="sm:col-span-2" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <label className="form-label">Branding Preview</label>
               <div style={{
                 height: '140px',
@@ -340,7 +340,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div className="sm:col-span-3" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div className="form-group">
                 <label className="form-label">Organization Logo Image URL</label>
                 <input

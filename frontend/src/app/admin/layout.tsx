@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { hardNavigate } from '@/lib/navigation';
 import MobileTabBar from '@/components/MobileTabBar';
+import AppLoading from '@/components/AppLoading';
 import { 
   ShieldCheck, 
   LayoutDashboard, 
@@ -166,11 +167,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   if (loading || !user) {
-    return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#F4F6F9' }}>
-        <p style={{ color: '#64748B', fontWeight: 500 }}>Loading Justadmin terminal...</p>
-      </div>
-    );
+    return <AppLoading label="Loading admin console…" />;
   }
 
   const currentTitle = activeNavLinks.find(link => pathname === link.href || pathname.startsWith(link.href))?.label || 'Dashboard';

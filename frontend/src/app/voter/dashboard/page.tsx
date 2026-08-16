@@ -5,13 +5,18 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
 import { get, set } from 'idb-keyval';
+import DashboardSkeleton from '@/components/DashboardSkeleton';
 import { 
   ShieldCheck, 
   Key, 
   Clock, 
   Inbox,
   Award,
-  Vote
+  Vote,
+  Bell,
+  ChevronRight,
+  BarChart3,
+  CalendarClock
 } from 'lucide-react';
 
 interface Election {
@@ -200,12 +205,72 @@ export default function VoterDashboard() {
   }, [mounted]);
 
   const userName = user?.name || "Voter";
+  const firstName = userName.split(' ')[0] || 'Voter';
+
+  if (loading) {
+    return <DashboardSkeleton role="voter" />;
+  }
 
   return (
-    <div className="flex flex-col gap-6" suppressHydrationWarning>
+    <div className="flex flex-col gap-3 md:gap-6" suppressHydrationWarning>
 
-      {/* Top Welcome Card (solid color) — compact app-style hero on mobile */}
-      <div className="relative overflow-hidden bg-blue-600 text-white p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-lg shadow-blue-600/20">
+      {/* ── MOBILE ONLY: wallet-style dark hero (md+ hides it) ──────────────── */}
+      <div className="md:hidden -mx-3 -mt-3 sm:-mx-6 rounded-b-3xl bg-blue-700 px-5 pt-5 pb-6 text-white relative overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-blue-500/30 pointer-events-none" />
+        <div className="absolute -bottom-14 -left-8 w-44 h-44 rounded-full bg-blue-400/20 pointer-events-none" />
+
+        {/* Greeting row */}
+        <div className="relative flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-white/15 border border-white/25 flex items-center justify-center font-extrabold text-sm uppercase tracking-wide">
+              {firstName.substring(0, 2)}
+            </div>
+            <div>
+              <div className="text-[11px] text-blue-100/90 font-medium leading-tight">Hello,</div>
+              <div className="text-base font-extrabold leading-tight">{firstName}</div>
+            </div>
+          </div>
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-white/15 border border-white/20 flex items-center justify-center">
+              <Bell size={18} className="text-blue-50" />
+            </div>
+            {elections.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-blue-700" />
+            )}
+          </div>
+        </div>
+
+        {/* Centered key stat */}
+        <div className="relative text-center mb-5">
+          <div className="text-[11px] text-blue-100/90 font-medium mb-1">Open Ballots</div>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-4xl font-extrabold tracking-tight">{elections.length}</span>
+            <span className="text-sm font-bold text-blue-100/90">elections</span>
+          </div>
+          <div className="text-[11px] text-blue-100/80 mt-1">
+            {totalVotes > 0 ? `You have cast ${totalVotes} vote${totalVotes === 1 ? '' : 's'} so far` : 'Your ballot is ready when you are'}
+          </div>
+        </div>
+
+        {/* Action pills */}
+        <div className="relative flex gap-3">
+          <Link
+            href="/voter/elections"
+            className="flex-1 flex items-center justify-center gap-1.5 bg-white text-blue-700 font-bold text-sm rounded-full py-3 shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-transform"
+          >
+            <Vote size={17} /> Vote Now
+          </Link>
+          <Link
+            href="/voter/elections/results"
+            className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 border border-white/30 text-white font-bold text-sm rounded-full py-3 active:scale-[0.98] transition-transform"
+          >
+            <BarChart3 size={17} /> Results
+          </Link>
+        </div>
+      </div>
+
+      {/* ── DESKTOP: Top Welcome Card (hidden on mobile) ────────────────────── */}
+      <div className="hidden md:block relative overflow-hidden bg-blue-600 text-white p-8 rounded-3xl shadow-lg shadow-blue-600/20">
         <div className="hidden md:block absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/10 pointer-events-none" />
         <div className="hidden md:block absolute -bottom-20 -left-10 w-48 h-48 rounded-full bg-blue-400/20 pointer-events-none" />
         <div className="relative flex items-center gap-4">
@@ -228,8 +293,8 @@ export default function VoterDashboard() {
         </div>
       </div>
 
-      {/* Stats — app-style snap-scroll KPI tiles on mobile, grid on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mobile-scroll-x">
+      {/* Stats — KPI tiles grid on desktop only (mobile has the hero stat) */}
+      <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="mobile-app-card flex items-center justify-between hover:shadow-md transition-shadow">
           <div>
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Active Ballots</span>
@@ -268,18 +333,14 @@ export default function VoterDashboard() {
         <div className="lg:col-span-2 flex flex-col gap-8">
 
           <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm md:text-base font-bold text-slate-950 dark:text-white tracking-tight">Active Elections</h3>
+            <div className="flex justify-between items-center mb-3 md:mb-4">
+              <h3 className="text-sm md:text-base font-bold text-slate-950 dark:text-white tracking-tight">Recent Elections</h3>
               <Link href="/voter/elections" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline">
                 View All
               </Link>
             </div>
 
-            {loading ? (
-              <div className="p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800">
-                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Syncing active ballots...</p>
-              </div>
-            ) : elections.length === 0 ? (
+            {elections.length === 0 ? (
               <div className="text-center py-12 px-6 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800">
                 <Inbox size={40} className="text-slate-400 dark:text-slate-500 mx-auto mb-3" />
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No Active Elections</h4>
@@ -290,40 +351,45 @@ export default function VoterDashboard() {
                 {elections.map(el => {
                   const hasVoted = votedElectionIds.includes(el.id);
                   return (
-                    <div key={el.id} className="mobile-app-card flex flex-col gap-3 md:gap-4 hover:shadow-md transition-all">
-                      <div className="flex justify-between items-start gap-4">
-                        <div>
-                          <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-1">{el.title}</h4>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{el.description}</p>
-                        </div>
-                        <div className="shrink-0">
+                    <div key={el.id} className="mobile-app-card flex items-center gap-3 md:gap-4 hover:shadow-md transition-all">
+                      {/* Icon tile */}
+                      <div className={`w-11 h-11 md:w-12 md:h-12 shrink-0 rounded-2xl flex items-center justify-center ${
+                        hasVoted
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {hasVoted ? <Award size={20} /> : <Vote size={20} />}
+                      </div>
+
+                      {/* Title + meta */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">{el.title}</h4>
                           {hasVoted ? (
-                            <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-md font-bold border border-emerald-200 dark:border-emerald-900/30">✓ Voted</span>
+                            <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md font-bold shrink-0">✓ Voted</span>
                           ) : (
-                            <span className="text-[10px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-md font-bold border border-blue-200 dark:border-blue-900/30">Active</span>
+                            <span className="text-[10px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md font-bold shrink-0">Active</span>
                           )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                          <CalendarClock size={12} className="shrink-0" />
+                          <CountdownTimer endsAt={el.endDate} />
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-700 pt-4 mt-1">
-                        <CountdownTimer endsAt={el.endDate} />
-                        <div className="flex gap-2">
-                          {hasVoted ? (
-                            <button disabled className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 font-bold cursor-not-allowed">
-                              Already Voted
-                            </button>
-                          ) : (
-                            <Link href={`/voter/elections/detail?id=${el.id}`} className="px-3.5 py-2 text-xs rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">
-                              Vote Now
-                            </Link>
-                          )}
-                          {el.showResults && (
-                            <Link href={`/voter/elections/results?id=${el.id}`} className="px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 font-bold transition-all">
-                              View Results
-                            </Link>
-                          )}
-                        </div>
-                      </div>
+                      {/* Action */}
+                      {hasVoted ? (
+                        <span className="shrink-0 text-[11px] text-slate-400 dark:text-slate-500 font-bold">
+                          Done
+                        </span>
+                      ) : (
+                        <Link
+                          href={`/voter/elections/detail?id=${el.id}`}
+                          className="shrink-0 flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400"
+                        >
+                          Vote <ChevronRight size={14} />
+                        </Link>
+                      )}
                     </div>
                   );
                 })}

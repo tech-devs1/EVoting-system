@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
 import { hardNavigate } from '@/lib/navigation';
 import { useAuth } from '@/context/AuthContext';
+import DashboardSkeleton from '@/components/DashboardSkeleton';
 import { 
   Plus, 
   Clock, 
@@ -345,6 +346,10 @@ export default function OrganizationElectionHub() {
 
   const strokeDasharray = `${overallParticipationRate}, 100`;
 
+  if (loading) {
+    return <DashboardSkeleton role="admin" />;
+  }
+
   return (
     <div className="animate-page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       
@@ -377,7 +382,7 @@ export default function OrganizationElectionHub() {
               boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
             }}
           >
-            <Upload size={15} /> <span className="hidden sm:inline">Download Report</span><span className="sm:hidden">Report</span>
+            <Upload size={15} /> <span className="hidden sm:inline">Download Report</span>
           </button>
 
           <button
@@ -403,7 +408,7 @@ export default function OrganizationElectionHub() {
       </div>
 
       {/* 4 KPI Stat Cards — snap-scroll tiles on mobile, grid on desktop */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }} className="mobile-scroll-x md:!gap-5">
+      <div className="mobile-scroll-x grid gap-3 sm:grid-cols-2 lg:grid-cols-4 md:!gap-5">
         
         {/* Card 1: Primary Blue */}
         <div style={{
@@ -417,8 +422,8 @@ export default function OrganizationElectionHub() {
           alignItems: 'flex-start'
         }}>
           <div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, opacity: 0.9, display: 'block', marginBottom: '0.5rem' }}>Live Elections</span>
-            <span style={{ fontSize: '2.25rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.activeElectionsCount}</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.9, display: 'block', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>Live Elections</span>
+            <span style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.activeElectionsCount}</span>
           </div>
           <div style={{
             width: '42px',
@@ -443,8 +448,8 @@ export default function OrganizationElectionHub() {
           alignItems: 'flex-start'
         }}>
           <div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem' }}>Total Elections</span>
-            <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.totalElections}</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>Total Elections</span>
+            <span style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.totalElections}</span>
           </div>
           <div style={{
             width: '42px',
@@ -469,8 +474,8 @@ export default function OrganizationElectionHub() {
           alignItems: 'flex-start'
         }}>
           <div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem' }}>Registered Voters</span>
-            <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{registeredVotersCount.toLocaleString()}</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>Registered Voters</span>
+            <span style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{registeredVotersCount.toLocaleString()}</span>
           </div>
           <div style={{
             width: '42px',
@@ -495,8 +500,8 @@ export default function OrganizationElectionHub() {
           alignItems: 'flex-start'
         }}>
           <div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem' }}>Total Votes Cast</span>
-            <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{totalVotesCastCount.toLocaleString()}</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>Total Votes Cast</span>
+            <span style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{totalVotesCastCount.toLocaleString()}</span>
           </div>
           <div style={{
             width: '42px',
@@ -655,12 +660,7 @@ export default function OrganizationElectionHub() {
       </div>
 
       {/* Elections Cards Grid View */}
-      {loading ? (
-        <div style={{ padding: '3rem', textAlign: 'center', color: '#64748B' }}>
-          Loading organization elections...
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '0.75rem' }} className="md:!gap-5">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '0.75rem' }} className="md:!gap-5">
           
           {/* Create New Election Dashed Action Card */}
           <div 
@@ -806,8 +806,7 @@ export default function OrganizationElectionHub() {
               </div>
             );
           })}
-        </div>
-      )}
+      </div>
 
       {/* 4-Step Election Creation Wizard Modal */}
       <Modal

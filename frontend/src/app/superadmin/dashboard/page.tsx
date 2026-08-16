@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
+import DashboardSkeleton from '@/components/DashboardSkeleton';
 import { Building2, Activity, Users, ShieldCheck, Plus, Upload, Calendar } from 'lucide-react';
 
 interface SuperAdminStats {
@@ -54,6 +55,10 @@ export default function SuperAdminDashboard() {
   const departmentCount = stats.departments ?? stats.totalDepartments ?? 0;
   const electionCount = stats.elections ?? 0;
   const voterCount = stats.voters ?? stats.totalUsers ?? 0;
+
+  if (loading) {
+    return <DashboardSkeleton role="superadmin" />;
+  }
 
   return (
     <div className="animate-page-enter flex flex-col gap-6 md:gap-7">

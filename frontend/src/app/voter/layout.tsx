@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { hardNavigate } from '@/lib/navigation';
 import MobileTabBar from '@/components/MobileTabBar';
+import AppLoading from '@/components/AppLoading';
 import { 
   ShieldCheck, 
   LayoutDashboard, 
@@ -169,11 +170,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
   ];
 
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
-        <p className="font-medium text-sm">Loading voter terminal...</p>
-      </div>
-    );
+    return <AppLoading label="Restoring voter session…" />;
   }
 
   // Fallback profile details if user context properties are empty

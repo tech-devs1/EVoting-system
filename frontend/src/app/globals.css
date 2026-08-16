@@ -155,7 +155,7 @@ body {
 
 /* Horizontally scrollable, snap-scrolling strip for KPI tiles on phones.
    Mobile-scoped so desktop grid utilities always take over at md+. */
-@media (max-width: 767px) {
+@media (max-width: 639px) {
   .mobile-scroll-x {
     display: grid;
     grid-auto-flow: column;
@@ -192,6 +192,180 @@ body {
 [data-theme="dark"] .mobile-sticky-header {
   background: linear-gradient(#0f172a, rgba(15, 23, 42, 0.92));
   border-bottom-color: #1e293b;
+}
+
+/* ── Design-system tokens + form/card/button primitives ─────────────────── */
+:root {
+  --color-primary: #2563eb;
+  --color-danger: #dc2626;
+  --color-success: #10b981;
+  --bg-card: #ffffff;
+  --bg-input: #f8fafc;
+  --border-color: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --radius-md: 14px;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+}
+
+[data-theme="dark"] {
+  --bg-card: #0f172a;
+  --bg-input: #1e293b;
+  --border-color: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+}
+
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+@media (max-width: 767px) {
+  .card {
+    border-radius: 18px;
+    box-shadow: 0 6px 18px -6px rgba(15, 23, 42, 0.12);
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.form-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.65rem 0.875rem;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  border: 1.5px solid var(--border-color);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn:active {
+  transform: scale(0.99);
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s ease both;
+}
+
+/* ── Skeleton loading primitives ─────────────────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: #e2e8f0;
+  border-radius: 8px;
+}
+
+[data-theme="dark"] .skeleton {
+  background-color: #1e293b;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  background-size: 400px 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+[data-theme="dark"] .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(148, 163, 184, 0.12) 50%,
+    transparent 100%
+  );
+  background-size: 400px 100%;
+  background-repeat: no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
 }
 
 /* Dark-mode badge variants */
