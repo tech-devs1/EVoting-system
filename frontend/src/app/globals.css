@@ -26,6 +26,33 @@ body {
   color: #f8fafc;
 }
 
+/* ── Landing page reveals (CSS-only — no JS required) ────────────────────── */
+/* Framer Motion previously rendered inline `opacity: 0` styles into the static
+   HTML, which left the whole page invisible on iOS Safari whenever its
+   hydration/animation didn't run. CSS animations run without JavaScript, so
+   content is always visible. The resting state is opacity 1 — only the
+   animation itself starts from 0. */
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-reveal {
+  animation: landing-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal {
+    animation: none;
+  }
+}
+
 /* ── Status badge component (used across dashboards) ─────────────────────── */
 @layer components {
   .badge {
