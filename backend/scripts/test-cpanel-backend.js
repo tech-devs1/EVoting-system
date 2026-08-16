@@ -103,13 +103,13 @@ async function runTests() {
     assert(false, `POST /api/auth/login test failed: ${err.message}`);
   }
 
-  // Superadmin login test
+  // Non-registered email login test
   try {
     const res = await testRoute('/api/auth/login', 'POST', {
       email: 'issakasaddick14@gmail.com',
       password: 'any_password'
     });
-    assert(res.status === 200 && res.json.data.role === 'superadmin' && !!res.json.token, 'POST /api/auth/login authenticates Superadmin');
+    assert(res.status === 401 && res.json.status === 'error', 'POST /api/auth/login rejects unregistered superadmin email without DB account');
   } catch (err) {
     assert(false, `POST /api/auth/login Superadmin test failed: ${err.message}`);
   }
