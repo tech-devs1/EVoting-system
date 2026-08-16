@@ -74,13 +74,13 @@ In the **Setup Node.js App** configuration page, scroll to **Environment variabl
 | `MYSQL_USER` | `yourusername_dbuser` |
 | `MYSQL_PASSWORD` | `your_db_password` |
 | `MYSQL_DATABASE` | `yourusername_htu_elect` |
-| `SMTP_HOST` | **Primary** — Elastic Email SMTP host: `smtp.elasticemail.com` |
-| `SMTP_PORT` | **Primary** — Elastic Email SMTP port: `2525` (use `465` for SSL) |
-| `SMTP_USER` | **Primary** — Elastic Email SMTP username (your Elastic account email) |
-| `SMTP_PASS` | **Primary** — Elastic Email SMTP password |
-| `ELASTICEMAIL_API_KEY` | Elastic Email REST API key (used as the primary REST path when SMTP is blocked; supports the paid 50k/month plan) |
+| `SMTP_HOST` | **Primary** — cPanel mail server: `mail.yourdomain.edu.gh` (or `localhost`, since the backend runs on the same cPanel server) |
+| `SMTP_PORT` | **Primary** — cPanel mail port: `465` (SSL) or `587` (STARTTLS) |
+| `SMTP_USER` | **Primary** — cPanel email account address, e.g. `admin@e-voting.htu.edu.gh` |
+| `SMTP_PASS` | **Primary** — cPanel email account password |
+| `ELASTICEMAIL_API_KEY` | Optional fallback — Elastic Email REST API key (used if the cPanel mail server is unavailable; supports the paid 50k/month plan) |
 | `ELASTICEMAIL_QUOTA_COOLDOWN_MINUTES` | Optional — minutes to skip Elastic Email after a quota-exhaustion error (default `60`); the chain fails over to Gmail/EmailJS/Resend during that window |
-| `EMAIL_FROM` | Optional branded sender for REST providers, e.g. `"HTU Elect" <no-reply@htu.edu.gh>` |
+| `EMAIL_FROM` | Branded sender for REST fallbacks, e.g. `"HTU Elect" <admin@e-voting.htu.edu.gh>` (must be verified with the fallback provider) |
 | `GMAIL_USER` | Optional Gmail SMTP fallback sender (e.g. `your-gmail-address@gmail.com`) |
 | `GMAIL_APP_PASSWORD` | Optional Gmail app password (enable 2FA + app password) — fallback only |
 | `EMAILJS_SERVICE_ID` | Optional EmailJS fallback (`service_id`) |
@@ -100,11 +100,11 @@ In the **Setup Node.js App** configuration page, scroll to **Environment variabl
    ```bash
    curl "https://yourdomain.edu.gh/api/auth/test-email?to=you@example.com"
    ```
-   The backend tries providers in order — **Elastic Email** (SMTP, then REST) → Gmail SMTP → EmailJS → Resend — and returns success as soon as one delivers. When Elastic Email reports its quota is exhausted, it is skipped automatically (circuit breaker, default 60 min) and delivery goes straight to the fallbacks, then Elastic is retried after the cooldown. If it fails, check the server logs for which provider errored.
+   The backend tries providers in order — **cPanel mail SMTP** → Elastic Email (SMTP, then REST) → Gmail SMTP → EmailJS → Resend — and returns success as soon as one delivers. Because the backend runs on the same cPanel server, mail to the local cPanel mail server never crosses an external firewall, so outbound SMTP port blocks do not apply. When Elastic Email reports its quota is exhausted, it is skipped automatically (circuit breaker, default 60 min) and delivery goes straight to the fallbacks, then Elastic is retried after the cooldown. If it fails, check the server logs for which provider errored.
 
-> **Email provider chain:** No email credentials are hardcoded in the code. **Elastic Email is the primary provider** (paid plan: 50,000 emails/month for $20). With only `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS` set (Elastic SMTP) or `ELASTICEMAIL_API_KEY`, everything routes through Elastic. Gmail SMTP, EmailJS and Resend are fallbacks that only engage when Elastic is down or over its quota. On cPanel, outbound SMTP ports are sometimes blocked — the REST path (`ELASTICEMAIL_API_KEY`) covers that case.
+> **Email provider chain:** No email credentials are hardcoded in the code. **The cPanel mail server is the primary provider** — point `SMTP_HOST` at `mail.yourdomain.edu.gh` (or `localhost`), with `SMTP_USER`/`SMTP_PASS` set to a cPanel email account. Since the backend runs on the same server, delivery never depends on outbound SMTP ports being open, and mail to `@htu.edu.gh` inboxes is sent from your own domain (proper SPF/DKIM for best inbox placement — add the cPanel-suggested DNS records for the domain). Gmail SMTP, EmailJS, Resend and Elastic Email are fallbacks that only engage when the cPanel mail server is unavailable or over quota. Resend sends from `RESEND_FROM` (default `HTU Elect <onboarding@resend.dev>`, which only delivers to the account owner — verify a domain in Resend before relying on it for voter mail).
 
-> **Volume (2,000+ emails/day):** Covered by Elastic Email's paid plan (50,000 emails/month for $20 ≈ 1,600+ emails/day comfortably; a 2,000-email day is ~4% of the monthly quota). For comparison: Gmail SMTP caps at 500/day, Resend's free tier at 100/day, EmailJS at 200/month — those are only quota-overflow fallbacks. For inbox placement at this volume, verify your own sending domain (e.g. `no-reply@htu.edu.gh`) with Elastic Email (SPF/DKIM) and set `EMAIL_FROM` to it. Invitations/broadcasts send with 10-way concurrency, so a 2,000-recipient blast completes in minutes rather than hours.
+> **Volume (2,000+ emails/day):** cPanel mailboxes have no hard daily quota, so high-volume OTP blasts are fine. For comparison: Gmail SMTP caps at 500/day, Resend's free tier at 100/day (3,000/month), EmailJS at 200/month — those are only overflow fallbacks. Invitations/broadcasts send with 10-way concurrency, so a 2,000-recipient blast completes in minutes rather than hours.
 
 > **Email/password authentication:** Voters register and log in with their **email + password** (JWT). The `voters` table enforces a UNIQUE constraint on `email` (`uq_voter_email`), so one email can own exactly one account. On first boot the API auto-creates the `users` tables and seeds a default superadmin (`superadmin@htu.edu.gh`) and admin (`admin@htu.edu.gh`) — change these credentials before going live.
 
@@ -170,5 +170,5 @@ Electronic voting requires secure HTTPS connections for access OTP delivery and 
 - [ ] Admin dashboard functions.
 - [ ] Roster is imported correctly from CSV in phpMyAdmin.
 - [ ] Verification codes are correctly sent via SMS and Email.
-- [ ] `/api/auth/test-email?to=...` delivers a test email (via Elastic Email, with Gmail/EmailJS/Resend fallbacks).
+- [ ] `/api/auth/test-email?to=...` delivers a test email (via the cPanel mail server, with Elastic/Resend/Gmail/EmailJS fallbacks).
 - [ ] SSL HTTPS padlock icon is active.

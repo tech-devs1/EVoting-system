@@ -42,6 +42,14 @@ const EMAIL_FROM = process.env.EMAIL_FROM
   ? process.env.EMAIL_FROM.trim()
   : (gmailUser ? `"HTU ELECT" <${gmailUser}>` : null);
 
+// Resend only sends from addresses on a domain verified in the Resend dashboard
+// (Settings → Domains), or from its built-in onboarding@resend.dev test sender
+// (which only delivers to the account owner's inbox). It rejects arbitrary
+// addresses like the Elastic sender in EMAIL_FROM, so Resend gets its own sender.
+const RESEND_FROM = process.env.RESEND_FROM
+  ? process.env.RESEND_FROM.trim()
+  : 'HTU Elect <onboarding@resend.dev>';
+
 const smtpConfigured = !!(smtpHost && smtpUser && smtpPass);
 const gmailConfigured = !!(gmailUser && gmailPass);
 const restConfigured = !!(process.env.RESEND_API_KEY || process.env.ELASTICEMAIL_API_KEY || (process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && process.env.EMAILJS_PUBLIC_KEY));
@@ -286,7 +294,7 @@ async function sendEmailNotification(to, subject, text, html) {
           'Authorization': `Bearer ${resendApiKey}`
         },
         body: JSON.stringify({
-          from: EMAIL_FROM || 'HTU Elect <onboarding@resend.dev>',
+          from: RESEND_FROM,
           to,
           subject,
           text,
