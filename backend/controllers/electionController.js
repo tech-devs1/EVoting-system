@@ -723,7 +723,11 @@ exports.uploadCsv = async (req, res) => {
 
     let addedCount = 0;
     const bulkData = members.map(m => {
-      const docId = (m.email || m.indexNumber || m.studentId || Math.random().toString(36)).toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const rawEmail = (m.email || '').toLowerCase().trim();
+      const rawIndex = (m.indexNumber || m.studentId || '').trim().toLowerCase();
+      const rawKey = rawEmail || rawIndex || Math.random().toString(36).substring(2, 8);
+      const cleanKey = rawKey.replace(/[^a-z0-9]/g, '_');
+      const docId = `vtr_${cleanKey}_${electionId}`;
       addedCount++;
       return {
         id: docId,
@@ -733,13 +737,13 @@ exports.uploadCsv = async (req, res) => {
         indexNumber: (m.indexNumber || m.studentId || '').trim(),
         name: m.name || m.fullName || 'Student',
         phone: (m.phone || m.phoneNumber || m.phoneNo || '').trim(),
-        email: (m.email || '').toLowerCase().trim(),
+        email: rawEmail,
         isRegistered: true,
         role: 'voter'
       };
     });
 
-    // Bulk create or upsert voters
+    // Bulk create or upsert voters per election ID
     await Voter.bulkCreate(bulkData, { updateOnDuplicate: ['electionId', 'tenantId', 'name', 'phone', 'email', 'isRegistered'] });
 
     cache.invalidatePrefix('elections:');
@@ -780,7 +784,7 @@ exports.getAccessStatus = async (req, res) => {
     const voterEmail = (req.user.email || '').toLowerCase().trim();
     const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
 
-    let rosterEntry = await Voter.findOne({
+    const rosterEntry = await Voter.findOne({
       where: {
         electionId,
         [Op.or]: [
@@ -856,25 +860,6 @@ exports.requestAccessOtp = async (req, res) => {
         ]
       }
     });
-
-    if (!rosterEntry) {
-      // Fallback check if voter exists under tenant or global roster by email/index
-      const tenantIds = Array.from(new Set([tenantId, election.tenantId, DEFAULT_TENANT_ID].filter(Boolean)));
-      rosterEntry = await Voter.findOne({
-        where: {
-          tenantId: { [Op.in]: tenantIds },
-          [Op.or]: [
-            { email: voterEmail },
-            { studentId: voterIndex },
-            { indexNumber: voterIndex }
-          ]
-        }
-      });
-      if (rosterEntry) {
-        rosterEntry.electionId = electionId;
-        await rosterEntry.save();
-      }
-    }
 
     if (!rosterEntry) {
       return res.status(403).json({
@@ -1174,12 +1159,7 @@ exports.sendInvitations = async (req, res) => {
     }
 
     const allRosterVoters = await Voter.findAll({
-      where: {
-        [Op.or]: [
-          { electionId },
-          { tenantId: election.tenantId || DEFAULT_TENANT_ID }
-        ]
-      }
+      where: { electionId }
     });
     const votesCast = await VotedVoter.findAll({ where: { electionId } });
     const votedIdSet = new Set(votesCast.map(v => v.voterId.toLowerCase()));
@@ -1306,12 +1286,7 @@ exports.sendBroadcastMessage = async (req, res) => {
 
     // Retrieve all roster voters for this election
     const allRosterVoters = await Voter.findAll({
-      where: {
-        [Op.or]: [
-          { electionId },
-          { tenantId: election.tenantId || DEFAULT_TENANT_ID }
-        ]
-      }
+      where: { electionId }
     });
     const votesCast = await VotedVoter.findAll({ where: { electionId } });
     const votedIdSet = new Set(votesCast.map(v => v.voterId.toLowerCase()));

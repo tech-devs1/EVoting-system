@@ -158,9 +158,8 @@ const Voter = sequelize.define('Voter', {
   studentId: { type: DataTypes.STRING(128) },
   indexNumber: { type: DataTypes.STRING(128) }, // Dual field compatibility
   name: { type: DataTypes.STRING(255) },
-  // Email is the login credential for email/password auth — must be unique
-  // (MySQL unique indexes allow multiple NULLs for roster rows without email).
-  email: { type: DataTypes.STRING(255), unique: true },
+  // Email is used for voter accounts and roster lookup across elections
+  email: { type: DataTypes.STRING(255) },
   phone: { type: DataTypes.STRING(64) },
   password: { type: DataTypes.STRING(255) },
   isRegistered: { type: DataTypes.BOOLEAN, defaultValue: true },
