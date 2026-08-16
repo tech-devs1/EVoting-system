@@ -57,9 +57,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // redirect, so we let the user tap a real link (native navigation) instead.
   const [authSuccess, setAuthSuccess] = useState<{ targetPath: string; subtitle: string } | null>(null);
 
-  // When the success banner appears, dismiss any open keyboard and make sure it
-  // is scrolled into view — iOS Safari can otherwise leave a fixed overlay
-  // mispositioned while the on-screen keyboard closes.
+  // When the success banner appears, dismiss any open keyboard, make sure it is
+  // scrolled into view, and auto-redirect to the role dashboard shortly after
+  // (a real page load — reliable on iOS Safari now that the app runs there).
+  // Dismissing the banner cancels the pending redirect.
   useEffect(() => {
     if (!authSuccess) return;
     if (document.activeElement instanceof HTMLElement) {
@@ -67,6 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const card = document.getElementById('auth-success-card');
     if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const timer = setTimeout(() => {
+      window.location.assign(authSuccess.targetPath);
+    }, 2500);
+    return () => clearTimeout(timer);
   }, [authSuccess]);
 
   useEffect(() => {
@@ -382,36 +387,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, verifyOtp, logout }}>
       {/* ── Signed-in success banner ───────────────────────────────────
-          Rendered as an IN-FLOW element (no position:fixed) so it is always
-          visible on iOS Safari — fixed overlays can be mispositioned while the
-          on-screen keyboard closes. The button is a real <a href>: native
-          navigation is the only reliably user-initiated page load on iOS
-          Safari / static exports. No backdrop-blur (iOS hit-testing bug). */}
+          A slim IN-FLOW banner (no position:fixed — iOS keyboard/viewport
+          quirks), shown briefly after sign-in. It auto-redirects to the role
+          dashboard after a short pause; a native <a href> is included for an
+          instant jump, and dismissing cancels the redirect. */}
       {authSuccess && (
         <div
           id="auth-success-card"
           role="status"
           aria-live="polite"
-          className="relative z-50 bg-emerald-50 border-b border-emerald-200 px-4 sm:px-6 py-4"
+          className="relative z-50 bg-emerald-50 border-b border-emerald-200 px-4 sm:px-6 py-3.5"
         >
-          <div className="max-w-2xl mx-auto flex items-center gap-3 sm:gap-4">
-            <div className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
+          <div className="max-w-2xl mx-auto flex items-center gap-3">
+            <div className="shrink-0 w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-sm sm:text-base font-extrabold text-emerald-900 leading-tight">
+              <h2 className="text-sm font-extrabold text-emerald-900 leading-tight">
                 Signed in successfully!
               </h2>
-              <p className="text-xs sm:text-sm text-emerald-800 font-medium leading-snug mt-0.5">
-                {authSuccess.subtitle}
+              <p className="text-xs text-emerald-800 font-medium leading-snug mt-0.5">
+                Redirecting you to your dashboard…
               </p>
             </div>
             <a
               href={authSuccess.targetPath}
-              className="shrink-0 inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/25 transition-all active:scale-[0.98] touch-manipulation"
+              className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow transition-all active:scale-[0.98] touch-manipulation"
             >
-              Go to Dashboard
-              <ArrowRight className="w-4 h-4 hidden sm:block" />
+              Go now
+              <ArrowRight className="w-3.5 h-3.5" />
             </a>
             <button
               type="button"

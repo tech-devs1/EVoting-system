@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { hardNavigate } from '@/lib/navigation';
+import MobileTabBar from '@/components/MobileTabBar';
 import { 
   ShieldCheck, 
   LayoutDashboard, 
@@ -110,6 +111,13 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   }
 
   const currentTitle = navLinks.find(link => pathname.startsWith(link.href))?.label || 'Super Admin Console';
+
+  // Native-app style bottom tabs (mobile only).
+  const mobileTabs = [
+    { label: 'Overview', href: '/superadmin/dashboard', icon: LayoutDashboard },
+    { label: 'Departments', href: '/superadmin/departments', icon: Building2 },
+    { label: 'Audit Logs', href: '/superadmin/audit', icon: Activity },
+  ];
 
   const renderNavigationContent = () => (
     <>
@@ -344,10 +352,13 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         </header>
 
         {/* Content Container Frame */}
-        <main className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 flex-1 shadow-sm overflow-y-auto min-h-0">
+        <main className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 p-3 pb-24 sm:p-6 sm:pb-24 md:p-8 flex-1 shadow-sm overflow-y-auto min-h-0">
           {children}
         </main>
       </div>
+
+      {/* Mobile bottom tab bar (native-app style, hidden on md+) */}
+      <MobileTabBar tabs={mobileTabs} />
     </div>
   );
 }

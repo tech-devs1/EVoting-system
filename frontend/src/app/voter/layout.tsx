@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { hardNavigate } from '@/lib/navigation';
+import MobileTabBar from '@/components/MobileTabBar';
 import { 
   ShieldCheck, 
   LayoutDashboard, 
   Archive, 
+  BarChart3,
   Search, 
   LogOut, 
   Sun, 
@@ -159,6 +161,13 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
     { label: "Elections List", href: "/voter/elections", icon: Archive }
   ];
 
+  // Native-app style bottom tabs (mobile only).
+  const mobileTabs = [
+    { label: "Home", href: "/voter/dashboard", icon: LayoutDashboard },
+    { label: "Elections", href: "/voter/elections", icon: Archive },
+    { label: "Results", href: "/voter/elections/results", icon: BarChart3 },
+  ];
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
@@ -224,7 +233,7 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
           <div className="flex items-center gap-3">
             <button 
               type="button"
-              className="md:hidden p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer touch-manipulation menu-toggle-btn"
+              className="hidden md:flex p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer touch-manipulation menu-toggle-btn"
               aria-label="Toggle sidebar" 
               onClick={toggleSidebar}
             >
@@ -335,10 +344,13 @@ export default function VoterLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3 pb-24 sm:p-6 md:p-8 md:pb-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
       </div>
+
+      {/* Mobile bottom tab bar (native-app style, hidden on md+) */}
+      <MobileTabBar tabs={mobileTabs} />
 
       {/* Sidebar Overlay */}
       {sidebarOpen && (

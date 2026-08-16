@@ -204,18 +204,18 @@ export default function VoterDashboard() {
   return (
     <div className="flex flex-col gap-6" suppressHydrationWarning>
 
-      {/* Top Welcome Card (solid color) */}
-      <div className="relative overflow-hidden bg-blue-600 text-white p-6 md:p-8 rounded-3xl shadow-lg shadow-blue-600/20">
-        <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/10 pointer-events-none" />
-        <div className="absolute -bottom-20 -left-10 w-48 h-48 rounded-full bg-blue-400/20 pointer-events-none" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
-          <div className="w-14 h-14 shrink-0 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
-            <ShieldCheck className="w-7 h-7" />
+      {/* Top Welcome Card (solid color) — compact app-style hero on mobile */}
+      <div className="relative overflow-hidden bg-blue-600 text-white p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-lg shadow-blue-600/20">
+        <div className="hidden md:block absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/10 pointer-events-none" />
+        <div className="hidden md:block absolute -bottom-20 -left-10 w-48 h-48 rounded-full bg-blue-400/20 pointer-events-none" />
+        <div className="relative flex items-center gap-4">
+          <div className="w-12 h-12 md:w-14 md:h-14 shrink-0 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
+            <ShieldCheck className="w-6 h-6 md:w-7 md:h-7" />
           </div>
           <div className="flex-1">
-            <h2 className="text-xl md:text-2xl font-extrabold mb-1.5 tracking-tight">Welcome back, {userName}!</h2>
-            <p className="text-sm text-blue-100 leading-relaxed max-w-3xl font-medium">
-              Your student voter account is cryptographically verified and ready. Review the running e-ballots below to securely cast your vote.
+            <h2 className="text-lg md:text-2xl font-extrabold mb-1 tracking-tight leading-snug">Welcome back, {userName}!</h2>
+            <p className="text-[13px] md:text-sm text-blue-100 leading-relaxed max-w-3xl font-medium">
+              Your voter account is verified and ready. Cast your vote below.
             </p>
           </div>
           <div className="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/15 border border-white/20 text-[11px] font-bold shrink-0">
@@ -228,9 +228,9 @@ export default function VoterDashboard() {
         </div>
       </div>
 
-      {/* Stats Widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300">
+      {/* Stats — app-style snap-scroll KPI tiles on mobile, grid on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mobile-scroll-x">
+        <div className="mobile-app-card flex items-center justify-between hover:shadow-md transition-shadow">
           <div>
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Active Ballots</span>
             <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{elections.length}</span>
@@ -240,7 +240,7 @@ export default function VoterDashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300">
+        <div className="mobile-app-card flex items-center justify-between hover:shadow-md transition-shadow">
           <div>
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Upcoming Elections</span>
             <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{upcomingElections.length}</span>
@@ -250,7 +250,7 @@ export default function VoterDashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300">
+        <div className="mobile-app-card flex items-center justify-between hover:shadow-md transition-shadow">
           <div>
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Total Votes Cast</span>
             <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{totalVotes}</span>
@@ -269,7 +269,7 @@ export default function VoterDashboard() {
 
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-bold text-slate-950 dark:text-white tracking-tight">Active Elections</h3>
+              <h3 className="text-sm md:text-base font-bold text-slate-950 dark:text-white tracking-tight">Active Elections</h3>
               <Link href="/voter/elections" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline">
                 View All
               </Link>
@@ -286,11 +286,11 @@ export default function VoterDashboard() {
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal max-w-xs mx-auto">There are no running elections at the moment. Please check back later.</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3 md:gap-4">
                 {elections.map(el => {
                   const hasVoted = votedElectionIds.includes(el.id);
                   return (
-                    <div key={el.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col gap-4 shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-all">
+                    <div key={el.id} className="mobile-app-card flex flex-col gap-3 md:gap-4 hover:shadow-md transition-all">
                       <div className="flex justify-between items-start gap-4">
                         <div>
                           <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-1">{el.title}</h4>
@@ -334,10 +334,10 @@ export default function VoterDashboard() {
           {/* Upcoming Elections */}
           {upcomingElections.length > 0 && (
             <div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white tracking-tight mb-4">Upcoming Elections</h3>
-              <div className="flex flex-col gap-4">
+              <h3 className="text-sm md:text-base font-bold text-slate-950 dark:text-white tracking-tight mb-4">Upcoming Elections</h3>
+              <div className="flex flex-col gap-3 md:gap-4">
                 {upcomingElections.map(el => (
-                  <div key={el.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col gap-3 shadow-sm">
+                  <div key={el.id} className="mobile-app-card flex flex-col gap-3 shadow-sm">
                     <div className="flex justify-between items-center gap-4">
                       <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">{el.title}</h4>
                       <span className="text-[10px] bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-md font-bold border border-amber-200 dark:border-amber-900/30">Upcoming</span>
@@ -355,10 +355,10 @@ export default function VoterDashboard() {
           {/* Published Election Results */}
           {publishedResultsElections.length > 0 && (
             <div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white tracking-tight mb-4">📊 Published Results</h3>
-              <div className="flex flex-col gap-4">
+              <h3 className="text-sm md:text-base font-bold text-slate-950 dark:text-white tracking-tight mb-4">📊 Published Results</h3>
+              <div className="flex flex-col gap-3 md:gap-4">
                 {publishedResultsElections.map(el => (
-                  <div key={el.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex justify-between items-center shadow-sm">
+                  <div key={el.id} className="mobile-app-card flex justify-between items-center gap-3 shadow-sm">
                     <div>
                       <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-1">{el.title}</h4>
                       <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block">Ended</span>
@@ -378,7 +378,7 @@ export default function VoterDashboard() {
         <div className="flex flex-col gap-4">
 
           {/* Security Info Card */}
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
+          <div className="mobile-app-card flex flex-col gap-4 shadow-sm">
             <h4 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">Security Status</h4>
 
             <div className="flex gap-3 items-start">

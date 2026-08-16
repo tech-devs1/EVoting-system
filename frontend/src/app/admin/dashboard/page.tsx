@@ -348,36 +348,36 @@ export default function OrganizationElectionHub() {
   return (
     <div className="animate-page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       
-      {/* Justadmin Hero Header Row */}
+      {/* Hero Header Row — compact app-style header on mobile */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, color: '#0F172A', letterSpacing: '-0.025em' }}>
+          <h1 style={{ fontSize: '1.5rem', margin: 0, color: '#0F172A', letterSpacing: '-0.025em', fontWeight: 800 }}>
             Hi, {adminName}
           </h1>
-          <p style={{ fontSize: '0.95rem', color: '#64748B', margin: '0.25rem 0 0 0' }}>
+          <p style={{ fontSize: '0.85rem', color: '#64748B', margin: '0.25rem 0 0 0' }}>
             Welcome back to HTU Elect Dashboard!
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => window.print()}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem',
-              padding: '0.75rem 1.25rem',
+              padding: '0.6rem 1rem',
               backgroundColor: '#FFFFFF',
               color: '#475569',
               border: '1px solid #E2E8F0',
-              borderRadius: '14px',
-              fontSize: '0.9rem',
+              borderRadius: '12px',
+              fontSize: '0.85rem',
               fontWeight: 600,
               cursor: 'pointer',
               boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
             }}
           >
-            <Upload size={16} /> Download Report
+            <Upload size={15} /> <span className="hidden sm:inline">Download Report</span><span className="sm:hidden">Report</span>
           </button>
 
           <button
@@ -386,31 +386,31 @@ export default function OrganizationElectionHub() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem',
-              padding: '0.75rem 1.25rem',
+              padding: '0.6rem 1rem',
               backgroundColor: '#2563EB',
               color: '#FFFFFF',
               border: 'none',
-              borderRadius: '14px',
-              fontSize: '0.9rem',
+              borderRadius: '12px',
+              fontSize: '0.85rem',
               fontWeight: 700,
               cursor: 'pointer',
               boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)'
             }}
           >
-            <Plus size={18} /> + Add Election
+            <Plus size={17} /> Add Election
           </button>
         </div>
       </div>
 
-      {/* 4 KPI Stat Cards Row (Card 1 is Primary Blue) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+      {/* 4 KPI Stat Cards — snap-scroll tiles on mobile, grid on desktop */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }} className="mobile-scroll-x md:!gap-5">
         
         {/* Card 1: Primary Blue */}
         <div style={{
           backgroundColor: '#2563EB',
           color: '#FFFFFF',
           borderRadius: '20px',
-          padding: '1.5rem',
+          padding: '1.25rem',
           boxShadow: '0 8px 24px -4px rgba(37, 99, 235, 0.35)',
           display: 'flex',
           justifyContent: 'space-between',
@@ -435,12 +435,9 @@ export default function OrganizationElectionHub() {
         </div>
 
         {/* Card 2: Total Elections */}
-        <div style={{
+        <div className="mobile-app-card" style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '20px',
-          padding: '1.5rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start'
@@ -464,12 +461,9 @@ export default function OrganizationElectionHub() {
         </div>
 
         {/* Card 3: Registered Voters */}
-        <div style={{
+        <div className="mobile-app-card" style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '20px',
-          padding: '1.5rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start'
@@ -493,12 +487,9 @@ export default function OrganizationElectionHub() {
         </div>
 
         {/* Card 4: Total Votes Cast */}
-        <div style={{
+        <div className="mobile-app-card" style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '20px',
-          padding: '1.5rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start'
@@ -524,15 +515,12 @@ export default function OrganizationElectionHub() {
       </div>
 
       {/* Analytics Visual Grid Row (Bar Chart + Doughnut Breakdown) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-5">
         
         {/* Voting Activity Bar Chart Card */}
-        <div className="lg:col-span-2" style={{
+        <div className="lg:col-span-2 mobile-app-card" style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
-          padding: '1.5rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)'
+          borderRadius: '20px'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <div>
@@ -580,12 +568,9 @@ export default function OrganizationElectionHub() {
         </div>
 
         {/* Voter Turnout Doughnut Breakdown Card */}
-        <div className="lg:col-span-1" style={{
+        <div className="lg:col-span-1 mobile-app-card" style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '20px',
-          padding: '1.5rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between'
@@ -644,7 +629,7 @@ export default function OrganizationElectionHub() {
           ))}
         </div>
 
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 0 }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
           <input
             type="text"
@@ -661,7 +646,8 @@ export default function OrganizationElectionHub() {
               fontSize: '0.875rem',
               backgroundColor: '#FFFFFF',
               color: '#0F172A',
-              width: '240px',
+              width: '100%',
+              minWidth: '0',
               outline: 'none'
             }}
           />
@@ -674,7 +660,7 @@ export default function OrganizationElectionHub() {
           Loading organization elections...
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '0.75rem' }} className="md:!gap-5">
           
           {/* Create New Election Dashed Action Card */}
           <div 
@@ -725,16 +711,14 @@ export default function OrganizationElectionHub() {
             return (
               <div 
                 key={election.id}
+                className="mobile-app-card"
                 style={{ 
                   display: 'flex', 
                   flexDirection: 'column', 
                   justifyContent: 'space-between',
                   borderRadius: '20px',
-                  padding: '1.5rem',
-                  border: '1px solid #E2E8F0',
                   backgroundColor: '#FFFFFF',
-                  boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.04)',
-                  minHeight: '260px'
+                  minHeight: '240px'
                 }}
               >
                 <div>

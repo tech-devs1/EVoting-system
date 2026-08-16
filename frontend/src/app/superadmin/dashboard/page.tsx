@@ -58,10 +58,10 @@ export default function SuperAdminDashboard() {
   return (
     <div className="animate-page-enter flex flex-col gap-6 md:gap-7">
       
-      {/* Justadmin Hero Header Row */}
+      {/* Hero Header Row — compact app-style header on mobile */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight m-0">
+          <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight m-0">
             Hi, Superadmin
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 m-0">
@@ -72,16 +72,16 @@ export default function SuperAdminDashboard() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => window.print()}
-            className="px-5 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl text-sm font-semibold inline-flex items-center gap-2 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+            className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-semibold inline-flex items-center gap-2 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
           >
-            <Upload size={16} /> Download Report
+            <Upload size={15} /> <span className="hidden sm:inline">Download Report</span><span className="sm:hidden">Report</span>
           </button>
 
           <Link
             href="/superadmin/departments"
-            className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold inline-flex items-center gap-2 shadow-md shadow-blue-500/20 active:scale-[0.99] transition-all cursor-pointer no-underline"
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold inline-flex items-center gap-2 shadow-md shadow-blue-500/20 active:scale-[0.99] transition-all cursor-pointer no-underline"
           >
-            <Plus size={18} /> + Add Department
+            <Plus size={17} /> Add Department
           </Link>
         </div>
       </div>
@@ -92,11 +92,11 @@ export default function SuperAdminDashboard() {
         </div>
       )}
 
-      {/* 4 KPI Stat Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* 4 KPI Stat Cards — snap-scroll tiles on mobile, grid on desktop */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mobile-scroll-x">
         
         {/* Card 1: Primary Blue */}
-        <div className="bg-blue-600 text-white rounded-3xl p-6 shadow-lg shadow-blue-500/20 flex justify-between items-start">
+        <div className="bg-blue-600 text-white rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-lg shadow-blue-500/20 flex justify-between items-start">
           <div>
             <span className="text-xs font-semibold opacity-90 block mb-2">Active Departments</span>
             <span className="text-4xl font-extrabold tracking-tight leading-none">{departmentCount}</span>
@@ -107,7 +107,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Card 2: Total Elections */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex justify-between items-start">
+        <div className="mobile-app-card flex justify-between items-start">
           <div>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">Total Elections</span>
             <span className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{electionCount}</span>
@@ -118,7 +118,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Card 3: Registered Voters */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex justify-between items-start">
+        <div className="mobile-app-card flex justify-between items-start">
           <div>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">Registered Voters</span>
             <span className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{voterCount.toLocaleString()}</span>
@@ -129,7 +129,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Card 4: System Health */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex justify-between items-start">
+        <div className="mobile-app-card flex justify-between items-start">
           <div>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">System Health</span>
             <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight leading-none block mt-1">100% Operational</span>
@@ -142,10 +142,10 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Analytics Visual Grid Row (Bar Chart + Donut Breakdown) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-5">
         
         {/* Voting Activity Bar Chart Card */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+        <div className="lg:col-span-2 mobile-app-card">
           <div className="flex justify-between items-center mb-5">
             <div>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Global System Activity</span>
@@ -182,7 +182,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* System Uptime Donut Breakdown Card */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="mobile-app-card flex flex-col justify-between">
           <div className="flex justify-between items-center">
             <h4 className="text-sm font-bold text-slate-900 dark:text-white m-0">System SLA</h4>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Railway Cluster</span>

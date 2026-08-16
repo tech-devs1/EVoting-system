@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { hardNavigate } from '@/lib/navigation';
+import MobileTabBar from '@/components/MobileTabBar';
 import { 
   ShieldCheck, 
   LayoutDashboard, 
@@ -24,6 +25,7 @@ import {
   UserCheck,
   Menu,
   Send,
+  Vote,
   X,
   History
 } from 'lucide-react';
@@ -153,6 +155,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ] : defaultNavLinks;
 
   const activeNavLinks = isElectionWorkspace ? electionNavLinks : defaultNavLinks;
+
+  // Native-app style bottom tabs (mobile only). Election workspace pages stay
+  // reachable through the drawer; tabs cover the global admin sections.
+  const mobileTabs = [
+    { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Elections', href: '/admin/elections', icon: Vote },
+    { label: 'Broadcast', href: '/admin/messages', icon: Send },
+    { label: 'Settings', href: '/admin/settings', icon: Settings },
+  ];
 
   if (loading || !user) {
     return (
@@ -465,10 +476,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Content Container Frame */}
-        <main className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 md:p-8 flex-1 min-h-0 shadow-sm overflow-y-auto">
+        <main className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 p-3 pb-24 sm:p-6 sm:pb-24 md:p-8 flex-1 min-h-0 shadow-sm overflow-y-auto">
           {children}
         </main>
       </div>
+
+      {/* Mobile bottom tab bar (native-app style, hidden on md+) */}
+      <MobileTabBar tabs={mobileTabs} />
     </div>
   );
 }

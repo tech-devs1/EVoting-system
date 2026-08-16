@@ -127,6 +127,73 @@ body {
   }
 }
 
+/* ── Mobile app-style dashboard primitives (mobile only, desktop untouched) ── */
+
+/* A native-app style card: no border on mobile, soft shadow, tight padding.
+   Desktop keeps the bordered web-card look. */
+.mobile-app-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="dark"] .mobile-app-card {
+  background-color: #0f172a;
+  border-color: #1e293b;
+}
+
+@media (max-width: 767px) {
+  .mobile-app-card {
+    border: none;
+    border-radius: 18px;
+    padding: 1rem;
+    box-shadow: 0 6px 18px -6px rgba(15, 23, 42, 0.12);
+  }
+}
+
+/* Horizontally scrollable, snap-scrolling strip for KPI tiles on phones.
+   Mobile-scoped so desktop grid utilities always take over at md+. */
+@media (max-width: 767px) {
+  .mobile-scroll-x {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(78%, 1fr);
+    gap: 0.75rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+  }
+
+  .mobile-scroll-x > * {
+    scroll-snap-align: start;
+  }
+}
+
+/* Sticky section header pill for mobile app-style sections. */
+.mobile-sticky-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: linear-gradient(#f8fafc, rgba(248, 250, 252, 0.92));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 0.5rem 0.25rem 0.5rem;
+  margin: 0 -0.25rem 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+[data-theme="dark"] .mobile-sticky-header {
+  background: linear-gradient(#0f172a, rgba(15, 23, 42, 0.92));
+  border-bottom-color: #1e293b;
+}
+
 /* Dark-mode badge variants */
 [data-theme="dark"] .badge-success {
   background-color: rgba(16, 185, 129, 0.15);
