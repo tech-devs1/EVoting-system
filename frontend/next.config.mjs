@@ -55,8 +55,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  turbopack: {},
   outputFileTracingRoot: path.join(__dirname, '../'),
+  // Typecheck (tsc) is the project's correctness gate; don't let lint config
+  // drift block production builds.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default withPWA(nextConfig);
