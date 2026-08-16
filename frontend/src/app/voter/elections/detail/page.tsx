@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Check, ShieldCheck, Lock, CheckCircle2, Sparkles, User, AlertCircle, Calendar, Trophy, Info } from 'lucide-react';
+import { ArrowLeft, Check, ShieldCheck, Lock, CheckCircle2, Sparkles, User, AlertCircle, Calendar, Trophy, Info, BarChart2 } from 'lucide-react';
 
 interface Candidate {
   id: string;
   name: string;
   position: string;
+  positionTitle?: string;
   manifesto: string;
   photoUrl: string;
   isIndependent?: boolean;
@@ -57,11 +58,10 @@ function VoterElectionDetailContent() {
   // Map of position -> selected candidateId
   const [selections, setSelections] = useState<Record<string, string>>({});
 
-  // Map of position -> auditTxId for positions already voted in this session
+  // Map of position -> auditTxId for positions already voted
   const [votedPositions, setVotedPositions] = useState<Record<string, { candidateId: string; auditTxId: string }>>({});
   const [castingPosition, setCastingPosition] = useState<string | null>(null);
   const [notOnRoster, setNotOnRoster] = useState(false);
-  const [hasVoted, setHasVoted] = useState(false);
 
   useEffect(() => {
     if (!electionId) {
@@ -86,12 +86,21 @@ function VoterElectionDetailContent() {
           }
         }
 
+        // Fetch existing position votes for current voter in this election
         try {
-          const votedRes = await apiRequest<{ status: string; data: string[] }>('/votes/voted-elections');
-          if (votedRes.status === 'success' && Array.isArray(votedRes.data)) {
-            if (votedRes.data.includes(electionId)) {
-              setHasVoted(true);
-            }
+          const userVotesRes = await apiRequest<{ status: string; data: any[] }>(`/votes/user-votes?electionId=${electionId}`);
+          if (userVotesRes.status === 'success' && Array.isArray(userVotesRes.data)) {
+            const votedMap: Record<string, { candidateId: string; auditTxId: string }> = {};
+            userVotesRes.data.forEach((vote: any) => {
+              const posKey = vote.positionTitle || vote.positionId;
+              if (posKey) {
+                votedMap[posKey] = {
+                  candidateId: vote.candidateId,
+                  auditTxId: vote.verificationId || vote.encryptedHash || 'VERIFIED'
+                };
+              }
+            });
+            setVotedPositions(votedMap);
           }
         } catch (_) {}
       } catch (err) {
@@ -234,8 +243,9 @@ function VoterElectionDetailContent() {
   // Group candidates by position and sort strictly by ballot number ascending
   const positionGroups: Record<string, Candidate[]> = {};
   candidates.forEach(c => {
-    if (!positionGroups[c.position]) positionGroups[c.position] = [];
-    positionGroups[c.position].push(c);
+    const posName = c.positionTitle || c.position;
+    if (!positionGroups[posName]) positionGroups[posName] = [];
+    positionGroups[posName].push(c);
   });
   Object.keys(positionGroups).forEach(pos => {
     positionGroups[pos].sort((a, b) => {
@@ -304,6 +314,11 @@ function VoterElectionDetailContent() {
                 }`}>
                   {election.status === 'active' ? '🟢 Active' : '🏁 Ended'}
                 </span>
+                {votedCount > 0 && (
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
+                    ✓ {votedCount}/{totalPositionsCount} Positions Voted
+                  </span>
+                )}
               </div>
 
               <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2">{election.title}</h2>
@@ -329,7 +344,7 @@ function VoterElectionDetailContent() {
               <div>
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-1">Voting Guidelines</h4>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Ensure you are listed on the official roster. Have your 6-digit voting access code ready. Double voting attempts are cryptographically flagged.
+                  Ensure you are listed on the official roster. You will verify via a 6-digit access OTP to cast your vote. Once cast for a position, your choice is automatically locked.
                 </p>
               </div>
             </div>
@@ -347,36 +362,55 @@ function VoterElectionDetailContent() {
               <div className="flex flex-col gap-6">
                 {positions.map((pos, posIdx) => (
                   <div key={pos} className={`${posIdx === positions.length - 1 ? '' : 'border-b border-slate-100 dark:border-slate-700/60 pb-5'}`}>
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-3">
-                      {pos}
-                    </h4>
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                        {pos}
+                      </h4>
+                      {votedPositions[pos] && (
+                        <span className="text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-900/30">
+                          ✓ Vote Locked
+                        </span>
+                      )}
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {positionGroups[pos].map((cand) => (
-                        <div key={cand.id} className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/80">
-                          {cand.photoUrl ? (
-                            <img src={cand.photoUrl} alt={cand.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
-                          ) : (
-                            <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 shrink-0">
-                              <User size={20} />
-                            </div>
-                          )}
+                      {positionGroups[pos].map((cand) => {
+                        const isVotedCand = votedPositions[pos]?.candidateId === cand.id;
+                        return (
+                          <div key={cand.id} className={`flex items-start gap-3 p-3 rounded-2xl border ${
+                            isVotedCand
+                              ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-500'
+                              : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-700/80'
+                          }`}>
+                            {cand.photoUrl ? (
+                              <img src={cand.photoUrl} alt={cand.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 shrink-0">
+                                <User size={20} />
+                              </div>
+                            )}
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              {cand.ballotNumber && (
-                                <span className="text-[9px] font-extrabold bg-blue-600 text-white px-1.5 py-0.5 rounded">
-                                  #{cand.ballotNumber}
-                                </span>
-                              )}
-                              <span className="text-xs font-bold text-slate-900 dark:text-white truncate">{cand.name}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                {cand.ballotNumber && (
+                                  <span className="text-[9px] font-extrabold bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                                    #{cand.ballotNumber}
+                                  </span>
+                                )}
+                                <span className="text-xs font-bold text-slate-900 dark:text-white truncate">{cand.name}</span>
+                                {isVotedCand && (
+                                  <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 ml-auto">
+                                    (Your Vote)
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
+                                {cand.manifesto || 'No manifesto provided.'}
+                              </p>
                             </div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
-                              {cand.manifesto || 'No manifesto provided.'}
-                            </p>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -385,47 +419,38 @@ function VoterElectionDetailContent() {
           </div>
 
           {/* Action CTA Trigger */}
-          <div className="flex justify-center mt-2 w-full">
+          <div className="flex flex-col items-center gap-4 mt-2 w-full">
             {election.status === 'active' ? (
-              hasVoted ? (
-                <div className="p-6 text-center border-2 border-emerald-500 rounded-3xl bg-white dark:bg-slate-800 w-full shadow-lg shadow-emerald-500/10">
-                  <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-3">
-                    <Check size={24} />
-                  </div>
-                  <h3 className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mb-1">Ballot Successfully Cast</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-5 leading-relaxed">
-                    You have successfully cast your ballot in this election. Your choices are securely saved and locked.
-                  </p>
-                  <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto text-left">
-                    <div className="flex justify-between text-xs font-bold text-slate-900 dark:text-white mb-2">
-                      <span>Live Turnout Progress</span>
-                      <span>{turnout}% ({election.totalVotesCast || 0} / {election.totalVoters || 0} voters)</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${turnout}%` }} />
-                    </div>
-                  </div>
-                </div>
-              ) : (
+              <div className="flex flex-col items-center gap-3 w-full">
                 <button
                   onClick={() => setProceedToBallot(true)}
                   className="px-8 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm transition-colors shadow-lg shadow-blue-500/25 flex items-center gap-2"
                 >
-                  <ShieldCheck size={18} /> Request to Cast Vote
+                  <ShieldCheck size={18} /> {isAllPositionsVoted ? 'View Your Locked Ballot' : 'Proceed to Cast Vote'}
                 </button>
-              )
+                {election.showResults && (
+                  <Link
+                    href={`/voter/elections/results?id=${election.id}`}
+                    className="px-6 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors flex items-center gap-2"
+                  >
+                    <BarChart2 size={16} /> View Live Results
+                  </Link>
+                )}
+              </div>
             ) : (
               <div className="flex flex-col gap-3 items-center">
                 <div className="px-8 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 font-bold text-xs border border-slate-200 dark:border-slate-700">
                   Polls Closed
                 </div>
-                {election.showResults && (
+                {election.showResults ? (
                   <Link 
                     href={`/voter/elections/results?id=${election.id}`}
                     className="px-8 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-2"
                   >
-                    View Results
+                    <BarChart2 size={16} /> View Results
                   </Link>
+                ) : (
+                  <p className="text-xs text-slate-400 font-medium">Results are not made public yet.</p>
                 )}
               </div>
             )}
@@ -558,7 +583,7 @@ function VoterElectionDetailContent() {
                   <Sparkles size={36} className="text-emerald-500 mx-auto mb-3" />
                   <h3 className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mb-1">All Ballots Cast Successfully!</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">
-                    Your choices have been securely locked and sequentialized with cryptographic signatures. You may now safely leave this portal.
+                    Your choices have been securely locked and sequentialized with cryptographic signatures.
                   </p>
                   <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto text-left mb-6">
                     <div className="flex justify-between text-xs font-bold text-slate-900 dark:text-white mb-2">
@@ -569,10 +594,15 @@ function VoterElectionDetailContent() {
                       <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${turnout}%` }} />
                     </div>
                   </div>
-                  <div>
-                    <Link href="/voter/elections" className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors inline-block">
+                  <div className="flex gap-3 justify-center">
+                    <Link href="/voter/elections" className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 transition-colors">
                       Return to Elections List
                     </Link>
+                    {election.showResults && (
+                      <Link href={`/voter/elections/results?id=${election.id}`} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5">
+                        <BarChart2 size={16} /> View Results
+                      </Link>
+                    )}
                   </div>
                 </div>
               )}
@@ -595,7 +625,7 @@ function VoterElectionDetailContent() {
 
                       {isPosVoted ? (
                         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
-                          <CheckCircle2 size={14} /> Vote Logged
+                          <CheckCircle2 size={14} /> Vote Logged & Locked
                         </span>
                       ) : (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">Select 1</span>
@@ -605,16 +635,22 @@ function VoterElectionDetailContent() {
                     {/* Candidate Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {posCandidates.map((cand) => {
-                        const isSelected = selectedCandId === cand.id;
+                        const isVotedCand = isPosVoted && posAudit.candidateId === cand.id;
+                        const isSelected = selectedCandId === cand.id || isVotedCand;
+
                         return (
                           <div
                             key={cand.id}
                             onClick={() => handleCardClick(pos, cand.id)}
-                            className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center gap-3 relative ${
-                              isSelected 
-                                ? 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-600 dark:border-blue-500 shadow-sm' 
-                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600'
-                            } ${isPosVoted && !isSelected ? 'opacity-50 cursor-default' : ''}`}
+                            className={`p-4 rounded-2xl border transition-all flex items-center gap-3 relative ${
+                              isPosVoted
+                                ? isVotedCand
+                                  ? 'bg-emerald-50/60 dark:bg-emerald-950/40 border-emerald-500 shadow-sm cursor-default'
+                                  : 'bg-slate-50/50 dark:bg-slate-900/30 border-slate-200/50 dark:border-slate-800 opacity-50 cursor-default'
+                                : isSelected
+                                  ? 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-600 dark:border-blue-500 shadow-sm cursor-pointer'
+                                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer'
+                            }`}
                           >
                             <div className="w-14 h-14 rounded-xl bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center shrink-0">
                               {cand.photoUrl ? (
@@ -639,7 +675,11 @@ function VoterElectionDetailContent() {
                             </div>
 
                             <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${
-                              isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600'
+                              isVotedCand
+                                ? 'bg-emerald-600 border-emerald-600 text-white'
+                                : isSelected
+                                  ? 'bg-blue-600 border-blue-600 text-white'
+                                  : 'border-slate-300 dark:border-slate-600'
                             }`}>
                               {isSelected && <Check size={12} />}
                             </div>
@@ -651,8 +691,8 @@ function VoterElectionDetailContent() {
                     {/* Submit Action Panel */}
                     {isPosVoted ? (
                       <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium flex justify-between items-center border border-emerald-200 dark:border-emerald-900/30">
-                        <span>Your vote has been securely submitted.</span>
-                        <span className="font-mono text-[10px] font-bold">ID: {posAudit.auditTxId.substring(0, 12)}...</span>
+                        <span>Vote cast and locked automatically.</span>
+                        <span className="font-mono text-[10px] font-bold">Receipt ID: {posAudit.auditTxId.substring(0, 12)}...</span>
                       </div>
                     ) : (
                       <div className="flex justify-end">
@@ -661,7 +701,7 @@ function VoterElectionDetailContent() {
                           disabled={!selectedCandId || castingPosition === pos}
                           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white disabled:text-slate-400 text-xs font-bold rounded-xl transition-colors disabled:cursor-not-allowed"
                         >
-                          {castingPosition === pos ? 'Casting...' : `Submit Vote for ${pos}`}
+                          {castingPosition === pos ? 'Casting...' : `Cast Vote for ${pos}`}
                         </button>
                       </div>
                     )}
