@@ -25,3 +25,114 @@ body {
   background-color: #0f172a;
   color: #f8fafc;
 }
+
+/* ── Status badge component (used across dashboards) ─────────────────────── */
+@layer components {
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+
+  .badge-success {
+    background-color: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+  }
+
+  .badge-info {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+  }
+
+  .badge-warning {
+    background-color: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+  }
+
+  .badge-danger {
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+  }
+
+  .badge-secondary {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+  }
+
+  .badge-primary {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+  }
+
+  .pulse-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background-color: #10b981;
+    animation: pulse-dot 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
+/* Dark-mode badge variants */
+[data-theme="dark"] .badge-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+[data-theme="dark"] .badge-info {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+[data-theme="dark"] .badge-warning {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+[data-theme="dark"] .badge-danger {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+[data-theme="dark"] .badge-secondary {
+  background-color: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+  border-color: rgba(100, 116, 139, 0.35);
+}
+
+[data-theme="dark"] .badge-primary {
+  background-color: rgba(37, 99, 235, 0.18);
+  color: #60a5fa;
+  border-color: rgba(37, 99, 235, 0.4);
+}

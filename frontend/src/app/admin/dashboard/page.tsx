@@ -482,11 +482,11 @@ export default function OrganizationElectionHub() {
             width: '42px',
             height: '42px',
             borderRadius: '12px',
-            backgroundColor: '#F5F3FF',
+            backgroundColor: '#EFF6FF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#7C3AED'
+            color: '#2563EB'
           }}>
             <Users size={22} />
           </div>
