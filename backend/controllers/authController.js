@@ -269,6 +269,19 @@ exports.register = async (req, res) => {
   }
 };
 
+// Helper for safe password comparison (handles both bcrypt hashes and legacy plaintext)
+async function comparePassword(candidatePassword, storedPassword) {
+  if (!storedPassword) return false;
+  if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$') || storedPassword.startsWith('$2y$')) {
+    try {
+      return await bcrypt.compare(candidatePassword, storedPassword);
+    } catch (e) {
+      return false;
+    }
+  }
+  return candidatePassword === storedPassword;
+}
+
 exports.login = async (req, res) => {
   try {
     const { email: rawEmail, password } = req.body;
@@ -281,8 +294,12 @@ exports.login = async (req, res) => {
     // password — no hardcoded password-less bypass.
     const user = await User.findOne({ where: { email } });
     if (user && (user.role === 'superadmin' || user.role === 'admin') && user.password) {
-      const isMatch = await bcrypt.compare(password, user.password);
+      const isMatch = await comparePassword(password, user.password);
       if (isMatch) {
+        if (!user.password.startsWith('$2')) {
+          user.password = await bcrypt.hash(password, 10);
+          await user.save().catch(() => {});
+        }
         const role = user.role;
         const tenantId = role === 'superadmin' ? 'global' : (user.tenantId || 'global');
         const uid = user.id;
@@ -297,7 +314,7 @@ exports.login = async (req, res) => {
           actorRole: role,
           action: role === 'superadmin' ? 'SUPERADMIN_LOGIN' : 'ADMIN_LOGIN',
           description: `${user.name || (role === 'superadmin' ? 'Super Administrator' : 'Administrator')} logged in`,
-          ip: req.ip || req.headers['x-forwarded-for'] || 'unknown'
+          ip: req.ip || req.headers?.['x-forwarded-for'] || 'unknown'
         });
         return res.status(200).json({
           status: 'success',
@@ -310,8 +327,12 @@ exports.login = async (req, res) => {
     // Check primary department admin from Tenants
     const tenant = await Tenant.findOne({ where: { adminEmail: email } });
     if (tenant && tenant.adminPassword) {
-      const isMatch = await bcrypt.compare(password, tenant.adminPassword);
+      const isMatch = await comparePassword(password, tenant.adminPassword);
       if (isMatch) {
+        if (!tenant.adminPassword.startsWith('$2')) {
+          tenant.adminPassword = await bcrypt.hash(password, 10);
+          await tenant.save().catch(() => {});
+        }
         const uid = `admin_${tenant.id}`;
         const token = jwt.sign(
           { uid, email, role: 'admin', name: `${tenant.name} Administrator`, tenantId: tenant.id },
@@ -324,7 +345,7 @@ exports.login = async (req, res) => {
           actorRole: 'admin',
           action: 'ADMIN_LOGIN',
           description: `${tenant.name} Administrator logged in`,
-          ip: req.ip || req.headers['x-forwarded-for'] || 'unknown'
+          ip: req.ip || req.headers?.['x-forwarded-for'] || 'unknown'
         });
         return res.status(200).json({
           status: 'success',
@@ -340,7 +361,7 @@ exports.login = async (req, res) => {
       if (t.admins && Array.isArray(t.admins)) {
         const matched = t.admins.find(a => a.email === email);
         if (matched) {
-          const isMatch = await bcrypt.compare(password, matched.passwordHash);
+          const isMatch = await comparePassword(password, matched.passwordHash || matched.password);
           if (isMatch) {
             const uid = `admin_${t.id}_${matched.id}`;
             const token = jwt.sign(
@@ -354,7 +375,7 @@ exports.login = async (req, res) => {
               actorRole: 'admin',
               action: 'ADMIN_LOGIN',
               description: `${matched.name || 'Admin'} logged in`,
-              ip: req.ip || req.headers['x-forwarded-for'] || 'unknown'
+              ip: req.ip || req.headers?.['x-forwarded-for'] || 'unknown'
             });
             return res.status(200).json({
               status: 'success',
@@ -372,7 +393,11 @@ exports.login = async (req, res) => {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password. You may not be registered.' });
     }
 
-    const isMatch = await bcrypt.compare(password, voter.password);
+    const isMatch = await comparePassword(password, voter.password);
+    if (isMatch && !voter.password.startsWith('$2')) {
+      voter.password = await bcrypt.hash(password, 10);
+      await voter.save().catch(() => {});
+    }
     if (!isMatch) {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
     }
@@ -396,7 +421,7 @@ exports.login = async (req, res) => {
       actorRole: 'voter',
       action: 'VOTER_LOGIN',
       description: `Voter ${voter.name} logged in successfully`,
-      ip: req.ip || req.headers['x-forwarded-for'] || 'unknown'
+      ip: req.ip || req.headers?.['x-forwarded-for'] || 'unknown'
     });
 
     res.status(200).json({
