@@ -102,6 +102,7 @@ exports.castVote = async (req, res) => {
       status: 'success',
       message: 'Vote cast successfully',
       data: {
+        verificationId: voteId,
         voterId,
         candidateId,
         position: candidate.positionTitle,
@@ -112,5 +113,60 @@ exports.castVote = async (req, res) => {
     if (transaction) await transaction.rollback().catch(() => {});
     console.error('Error casting vote:', error);
     res.status(500).json({ status: 'error', message: 'Failed to cast vote' });
+  }
+};
+
+exports.getVotedElections = async (req, res) => {
+  try {
+    const voterId = req.user.uid;
+    const votedList = await VotedVoter.findAll({ where: { voterId } });
+    const votesList = await Vote.findAll({ where: { voterId } });
+
+    const electionIds = Array.from(new Set([
+      ...votedList.map(v => v.electionId),
+      ...votesList.map(v => v.electionId)
+    ]));
+
+    res.status(200).json({ status: 'success', data: electionIds });
+  } catch (error) {
+    console.error('Error fetching voted elections:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch voted elections' });
+  }
+};
+
+exports.getUserVotes = async (req, res) => {
+  try {
+    const voterId = req.user.uid;
+    const { electionId } = req.query;
+
+    const whereClause = { voterId };
+    if (electionId) {
+      whereClause.electionId = electionId;
+    }
+
+    const votes = await Vote.findAll({ where: whereClause });
+
+    const candidateIds = votes.map(v => v.candidateId);
+    const candidates = candidateIds.length > 0 ? await Candidate.findAll({ where: { id: candidateIds } }) : [];
+    const candidateMap = new Map(candidates.map(c => [c.id, c]));
+
+    const data = votes.map(v => {
+      const cand = candidateMap.get(v.candidateId);
+      return {
+        id: v.id,
+        electionId: v.electionId,
+        positionId: v.positionId,
+        positionTitle: cand ? cand.positionTitle : null,
+        candidateId: v.candidateId,
+        verificationId: v.id || v.encryptedHash,
+        encryptedHash: v.encryptedHash,
+        timestamp: v.timestamp
+      };
+    });
+
+    res.status(200).json({ status: 'success', data });
+  } catch (error) {
+    console.error('Error fetching user votes:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch user votes' });
   }
 };

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest, apiRequestCached } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Search, FolderOpen, Clock, Lock, ArrowLeft } from 'lucide-react';
+import { Search, FolderOpen, Clock, Lock, ArrowLeft, ChevronRight } from 'lucide-react';
 
 interface Election {
   id: string;
@@ -12,7 +12,7 @@ interface Election {
   description: string;
   startDate: string;
   endDate: string;
-  status: 'draft' | 'active' | 'completed';
+  status: 'draft' | 'scheduled' | 'active' | 'completed';
   category?: string;
   hasVoted?: boolean;
   showResults?: boolean;
@@ -114,7 +114,7 @@ export default function VoterElectionsPage() {
     let result = elections;
 
     if (selectedFilter !== 'all') {
-      result = result.filter(el => el.status === selectedFilter);
+      result = result.filter(el => el.status === selectedFilter || (selectedFilter === 'draft' && el.status === 'scheduled'));
     }
 
     if (searchQuery.trim() !== '') {
@@ -129,16 +129,9 @@ export default function VoterElectionsPage() {
   }, [selectedFilter, searchQuery, elections]);
 
   const mapStatusLabel = (status: string) => {
-    if (status === 'draft') return 'upcoming';
+    if (status === 'draft' || status === 'scheduled') return 'upcoming';
     if (status === 'completed') return 'closed';
     return status;
-  };
-
-  const mapStatusBadgeClass = (status: string) => {
-    if (status === 'active') return 'badge-success';
-    if (status === 'completed') return 'badge-danger';
-    if (status === 'draft') return 'badge-warning';
-    return 'badge-info';
   };
 
   return (
@@ -222,24 +215,28 @@ export default function VoterElectionsPage() {
 
             return (
               <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow" key={el.id}>
-                {el.previewImageUrl ? (
-                  <img
-                    src={el.previewImageUrl}
-                    alt={el.title}
-                    className="w-full h-36 object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-36 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                    <FolderOpen size={40} />
-                  </div>
-                )}
+                <Link href={`/voter/elections/detail?id=${el.id}`} className="block">
+                  {el.previewImageUrl ? (
+                    <img
+                      src={el.previewImageUrl}
+                      alt={el.title}
+                      className="w-full h-36 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-36 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                      <FolderOpen size={40} />
+                    </div>
+                  )}
+                </Link>
 
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start gap-2 mb-2">
-                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white line-clamp-1">{el.title}</h4>
+                      <Link href={`/voter/elections/detail?id=${el.id}`} className="hover:underline">
+                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-white line-clamp-1">{el.title}</h4>
+                      </Link>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {hasVoted && el.status === 'active' && (
+                        {hasVoted && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">✓ Voted</span>
                         )}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold capitalize ${
@@ -257,20 +254,12 @@ export default function VoterElectionsPage() {
                   <div className="pt-4 border-t border-slate-100 dark:border-slate-700/60 flex justify-between items-center mt-auto">
                     <CountdownTimer endsAt={el.endDate} status={el.status} />
                     <div className="flex items-center gap-2">
-                      {el.status === 'active' ? (
-                        <Link href={`/voter/elections/detail?id=${el.id}`} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
-                          View Votes
-                        </Link>
-                      ) : el.status === 'completed' ? (
-                        null
-                      ) : (
-                        <button disabled className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-400 text-xs font-bold flex items-center gap-1 cursor-not-allowed">
-                          <Lock size={12} /> Locked
-                        </button>
-                      )}
+                      <Link href={`/voter/elections/detail?id=${el.id}`} className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-bold transition-colors">
+                        Details
+                      </Link>
                       {el.status === 'completed' && el.showResults && (
                         <Link href={`/voter/elections/results?id=${el.id}`} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
-                          View Results
+                          Results
                         </Link>
                       )}
                     </div>
