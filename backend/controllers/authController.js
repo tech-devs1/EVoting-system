@@ -277,27 +277,34 @@ exports.login = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and password are required.' });
     }
 
-    // Superadmin direct bypass or checks
-    if (email === 'issakasaddick14@gmail.com' || email === 'supertech@admin.com') {
-      const uid = `superadmin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      const token = jwt.sign(
-        { uid, email, role: 'superadmin', name: 'Super Administrator', tenantId: 'global' },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      await logActivity({
-        tenantId: 'global',
-        actorEmail: email,
-        actorRole: 'superadmin',
-        action: 'SUPERADMIN_LOGIN',
-        description: 'Super Administrator logged into the superadmin dashboard',
-        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown'
-      });
-      return res.status(200).json({
-        status: 'success',
-        data: { uid, email, role: 'superadmin', name: 'Super Administrator', tenantId: 'global' },
-        token
-      });
+    // Superadmin / admin accounts live in the users table and must verify their
+    // password — no hardcoded password-less bypass.
+    const user = await User.findOne({ where: { email } });
+    if (user && (user.role === 'superadmin' || user.role === 'admin') && user.password) {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (isMatch) {
+        const role = user.role;
+        const tenantId = role === 'superadmin' ? 'global' : (user.tenantId || 'global');
+        const uid = user.id;
+        const token = jwt.sign(
+          { uid, email, role, name: user.name, tenantId },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+        await logActivity({
+          tenantId,
+          actorEmail: email,
+          actorRole: role,
+          action: role === 'superadmin' ? 'SUPERADMIN_LOGIN' : 'ADMIN_LOGIN',
+          description: `${user.name || (role === 'superadmin' ? 'Super Administrator' : 'Administrator')} logged in`,
+          ip: req.ip || req.headers['x-forwarded-for'] || 'unknown'
+        });
+        return res.status(200).json({
+          status: 'success',
+          data: { uid, email, role, name: user.name, tenantId },
+          token
+        });
+      }
     }
 
     // Check primary department admin from Tenants
