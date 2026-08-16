@@ -152,7 +152,6 @@ CREATE TABLE IF NOT EXISTS voters (
   updatedAt DATETIME NOT NULL,
   INDEX idx_voter_tenant_student (tenantId, studentId),
   INDEX idx_voter_email (email),
-  UNIQUE KEY uq_voter_email (email),  -- Email is the login credential: one account per email
   INDEX idx_voter_election (electionId),
   CONSTRAINT fk_voter_tenant FOREIGN KEY (tenantId) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
