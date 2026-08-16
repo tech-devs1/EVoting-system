@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { ArrowRight, CheckCircle2, X } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { hardNavigate } from '@/lib/navigation';
 
@@ -27,10 +28,34 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Destination + copy for the post-auth success dialog, by role.
+function successInfoFor(data: UserProfile) {
+  if (data.role === 'superadmin') {
+    return {
+      targetPath: '/superadmin/dashboard',
+      subtitle: 'You are signed in to the platform administration console.',
+    };
+  }
+  if (data.role === 'admin') {
+    return {
+      targetPath: '/admin/dashboard',
+      subtitle: 'You are signed in to the election management dashboard.',
+    };
+  }
+  return {
+    targetPath: '/voter/elections',
+    subtitle: 'Your ballot is ready — head to the voting portal to cast your vote.',
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [mounted, setMounted] = useState(false);
+  // Shown after a successful sign-in instead of auto-redirecting: iOS Safari on
+  // statically-exported cPanel sites can fail to render the page after a JS
+  // redirect, so we let the user tap a real link (native navigation) instead.
+  const [authSuccess, setAuthSuccess] = useState<{ targetPath: string; subtitle: string } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -235,14 +260,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.status === 'success' && res.token && res.data) {
         saveSession(res.data, res.token);
         setUser(res.data);
-        
-        const targetPath = res.data.role === 'superadmin'
-          ? '/superadmin/dashboard'
-          : res.data.role === 'admin'
-          ? '/admin/dashboard'
-          : '/voter/elections';
-
-        safeNavigate(targetPath);
+        setAuthSuccess(successInfoFor(res.data));
         return {};
       }
       throw new Error('Unexpected response from server.');
@@ -287,7 +305,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.status === 'success' && res.token && res.data) {
         saveSession(res.data, res.token);
         setUser(res.data);
-        safeNavigate('/voter/dashboard');
+        setAuthSuccess(successInfoFor(res.data));
       } else {
         throw new Error('OTP verification failed.');
       }
@@ -306,14 +324,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.status === 'success' && res.token && res.data) {
         saveSession(res.data, res.token);
         setUser(res.data);
-
-        const targetPath = res.data.role === 'superadmin'
-          ? '/superadmin/dashboard'
-          : res.data.role === 'admin'
-          ? '/admin/dashboard'
-          : '/voter/elections';
-
-        safeNavigate(targetPath);
+        setAuthSuccess(successInfoFor(res.data));
         return res.data;
       }
       throw new Error('Google authentication failed.');
@@ -359,6 +370,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, verifyOtp, logout }}>
       {children}
+
+      {/* ── Signed-in success dialog ──────────────────────────────────
+          Rendered by the provider so it works from every auth page
+          (login, OTP step, register, Google). The button is a real
+          <a href> — native navigation, which is the only reliably
+          user-initiated page load on iOS Safari/static exports. No
+          backdrop-blur: it has a known iOS Safari hit-testing bug. */}
+      {authSuccess && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Signed in successfully"
+        >
+          {/* Click-outside to dismiss */}
+          <button
+            type="button"
+            aria-label="Close dialog"
+            onClick={() => setAuthSuccess(null)}
+            className="absolute inset-0 bg-slate-900/60 cursor-pointer"
+            tabIndex={-1}
+          />
+          <div className="relative w-full max-w-sm rounded-3xl bg-white p-6 sm:p-8 text-center shadow-2xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setAuthSuccess(null)}
+              aria-label="Close dialog"
+              className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+            </div>
+            <h2 className="text-xl font-extrabold text-slate-900 mb-1.5">Signed in successfully!</h2>
+            <p className="text-sm text-slate-500 font-medium leading-relaxed mb-7">{authSuccess.subtitle}</p>
+
+            {/* Native anchor navigation is intentional: user-initiated full page
+                loads are the most reliable navigation on iOS Safari. */}
+            <a
+              href={authSuccess.targetPath}
+              className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-600/25 transition-all active:scale-[0.98] touch-manipulation"
+            >
+              Go to Dashboard
+              <ArrowRight className="w-4 h-4" />
+            </a>
+            <button
+              type="button"
+              onClick={() => setAuthSuccess(null)}
+              className="mt-3 w-full py-2 text-xs font-semibold text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+            >
+              Stay on this page
+            </button>
+          </div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 }

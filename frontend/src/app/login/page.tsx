@@ -30,7 +30,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await login(email.trim(), password);
-      // On success, AuthContext redirects to the role dashboard automatically.
+      // On success, AuthContext shows a "Signed in" dialog with a Go-to-Dashboard
+      // button (native link) instead of auto-redirecting — reliable on iOS Safari.
       if (res.otpRequired) {
         setOtpStep(true);
       }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ArrowRight,
   ShieldCheck,
@@ -23,7 +23,12 @@ import {
 } from 'lucide-react';
 
 export default function LandingPage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Close the native <details> menu after tapping a link (progressive
+  // enhancement — the menu works even if React never hydrates on old devices).
+  const closeMobileMenu = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const details = (e.currentTarget as HTMLElement).closest('details');
+    if (details) details.open = false;
+  };
 
   const navLinks = [
     { label: 'Features', href: '#features' },
@@ -40,7 +45,7 @@ export default function LandingPage() {
       {/* No backdrop-blur here: backdrop-filter on sticky elements has an iOS
           Safari hit-testing bug that swallows taps on the hamburger menu. */}
       <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 bg-slate-50">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-[72px] flex items-center justify-between">
+        <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-[72px] flex items-center justify-between">
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- hard navigation is intentional for static cPanel exports */}
           <a href="/" className="flex items-center gap-3 group">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-sm border border-slate-200/80 group-hover:scale-105 transition-transform">
@@ -85,27 +90,27 @@ export default function LandingPage() {
             </a>
           </div>
 
-          {/* Mobile hamburger */}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen((prev) => !prev)}
-            aria-label="Toggle navigation menu"
-            aria-expanded={mobileMenuOpen}
-            className="md:hidden relative z-50 w-11 h-11 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm text-slate-700 active:scale-95 touch-manipulation cursor-pointer select-none"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
+          {/* Mobile hamburger — native <details>/<summary> disclosure.
+              No JS or React state required to open/close: the browser
+              handles the toggle natively, so it works even on old iOS
+              Safari (iPhone 6s) where the onClick handler can fail to
+              attach. Icon swaps via the CSS `open` state (group-open). */}
+          <details className="md:hidden group relative">
+            <summary
+              aria-label="Toggle navigation menu"
+              className="w-11 h-11 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm text-slate-700 active:scale-95 touch-manipulation cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden"
+            >
+              <Menu className="w-5 h-5 group-open:hidden" />
+              <X className="w-5 h-5 hidden group-open:block" />
+            </summary>
 
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden px-4 pb-4 sm:px-6">
-            <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col gap-1">
+            {/* Mobile menu dropdown */}
+            <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-[19rem] p-2 bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col gap-1 z-50">
               {navLinks.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={closeMobileMenu}
                   className="w-full py-3 px-3 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors touch-manipulation cursor-pointer"
                 >
                   {link.label}
@@ -114,21 +119,21 @@ export default function LandingPage() {
               <div className="h-px bg-slate-100 my-1" />
               <a
                 href="/login"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={closeMobileMenu}
                 className="w-full py-3 text-center text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors touch-manipulation cursor-pointer"
               >
                 Sign In
               </a>
               <a
                 href="/register"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={closeMobileMenu}
                 className="w-full py-3 text-center text-sm font-bold bg-slate-900 text-white rounded-xl shadow-sm transition-all active:scale-95 touch-manipulation cursor-pointer"
               >
                 Register
               </a>
             </div>
-          </div>
-        )}
+          </details>
+        </div>
       </header>
 
       {/* ── Hero ───────────────────────────────────────────────────────── */}
