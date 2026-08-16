@@ -740,7 +740,7 @@ exports.uploadCsv = async (req, res) => {
     });
 
     // Bulk create or upsert voters
-    await Voter.bulkCreate(bulkData, { updateOnDuplicate: ['name', 'phone', 'email', 'isRegistered'] });
+    await Voter.bulkCreate(bulkData, { updateOnDuplicate: ['electionId', 'tenantId', 'name', 'phone', 'email', 'isRegistered'] });
 
     cache.invalidatePrefix('elections:');
 
@@ -780,7 +780,7 @@ exports.getAccessStatus = async (req, res) => {
     const voterEmail = (req.user.email || '').toLowerCase().trim();
     const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
 
-    const rosterEntry = await Voter.findOne({
+    let rosterEntry = await Voter.findOne({
       where: {
         electionId,
         [Op.or]: [
@@ -846,7 +846,7 @@ exports.requestAccessOtp = async (req, res) => {
     const voterEmail = (req.user.email || '').toLowerCase().trim();
     const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
 
-    const rosterEntry = await Voter.findOne({
+    let rosterEntry = await Voter.findOne({
       where: {
         electionId,
         [Op.or]: [
@@ -856,6 +856,25 @@ exports.requestAccessOtp = async (req, res) => {
         ]
       }
     });
+
+    if (!rosterEntry) {
+      // Fallback check if voter exists under tenant or global roster by email/index
+      const tenantIds = Array.from(new Set([tenantId, election.tenantId, DEFAULT_TENANT_ID].filter(Boolean)));
+      rosterEntry = await Voter.findOne({
+        where: {
+          tenantId: { [Op.in]: tenantIds },
+          [Op.or]: [
+            { email: voterEmail },
+            { studentId: voterIndex },
+            { indexNumber: voterIndex }
+          ]
+        }
+      });
+      if (rosterEntry) {
+        rosterEntry.electionId = electionId;
+        await rosterEntry.save();
+      }
+    }
 
     if (!rosterEntry) {
       return res.status(403).json({
@@ -1197,6 +1216,14 @@ exports.sendInvitations = async (req, res) => {
       targetRecipients = allRosterVoters;
     }
 
+    if (targetRecipients.length === 0) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'No eligible recipients matched the selected filter criteria or voter roster is empty.',
+        sentCount: 0
+      });
+    }
+
     let sentCount = 0;
     const baseUrl = process.env.PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://htu-elect.vercel.app');
     const votingLink = `${baseUrl}/voter/elections/detail?id=${electionId}`;
@@ -1320,6 +1347,16 @@ exports.sendBroadcastMessage = async (req, res) => {
     } else {
       // 'all' or fallback
       targetRecipients = allRosterVoters;
+    }
+
+    if (targetRecipients.length === 0) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'No eligible recipients matched the selected filter criteria or voter roster is empty.',
+        recipientCount: 0,
+        emailSentCount: 0,
+        smsSentCount: 0
+      });
     }
 
     let emailSentCount = 0;
