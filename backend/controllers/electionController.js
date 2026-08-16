@@ -723,7 +723,11 @@ exports.uploadCsv = async (req, res) => {
 
     let addedCount = 0;
     const bulkData = members.map(m => {
-      const docId = (m.email || m.indexNumber || m.studentId || Math.random().toString(36)).toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const rawEmail = (m.email || '').toLowerCase().trim();
+      const rawIndex = (m.indexNumber || m.studentId || '').trim().toLowerCase();
+      const rawKey = rawEmail || rawIndex || Math.random().toString(36).substring(2, 8);
+      const cleanKey = rawKey.replace(/[^a-z0-9]/g, '_');
+      const docId = `vtr_${cleanKey}_${electionId}`;
       addedCount++;
       return {
         id: docId,
@@ -733,14 +737,14 @@ exports.uploadCsv = async (req, res) => {
         indexNumber: (m.indexNumber || m.studentId || '').trim(),
         name: m.name || m.fullName || 'Student',
         phone: (m.phone || m.phoneNumber || m.phoneNo || '').trim(),
-        email: (m.email || '').toLowerCase().trim(),
+        email: rawEmail,
         isRegistered: true,
         role: 'voter'
       };
     });
 
-    // Bulk create or upsert voters
-    await Voter.bulkCreate(bulkData, { updateOnDuplicate: ['name', 'phone', 'email', 'isRegistered'] });
+    // Bulk create or upsert voters per election ID
+    await Voter.bulkCreate(bulkData, { updateOnDuplicate: ['electionId', 'tenantId', 'name', 'phone', 'email', 'isRegistered'] });
 
     cache.invalidatePrefix('elections:');
 
@@ -846,7 +850,7 @@ exports.requestAccessOtp = async (req, res) => {
     const voterEmail = (req.user.email || '').toLowerCase().trim();
     const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
 
-    const rosterEntry = await Voter.findOne({
+    let rosterEntry = await Voter.findOne({
       where: {
         electionId,
         [Op.or]: [
@@ -1155,12 +1159,7 @@ exports.sendInvitations = async (req, res) => {
     }
 
     const allRosterVoters = await Voter.findAll({
-      where: {
-        [Op.or]: [
-          { electionId },
-          { tenantId: election.tenantId || DEFAULT_TENANT_ID }
-        ]
-      }
+      where: { electionId }
     });
     const votesCast = await VotedVoter.findAll({ where: { electionId } });
     const votedIdSet = new Set(votesCast.map(v => v.voterId.toLowerCase()));
@@ -1195,6 +1194,14 @@ exports.sendInvitations = async (req, res) => {
       }));
     } else {
       targetRecipients = allRosterVoters;
+    }
+
+    if (targetRecipients.length === 0) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'No eligible recipients matched the selected filter criteria or voter roster is empty.',
+        sentCount: 0
+      });
     }
 
     let sentCount = 0;
@@ -1279,12 +1286,7 @@ exports.sendBroadcastMessage = async (req, res) => {
 
     // Retrieve all roster voters for this election
     const allRosterVoters = await Voter.findAll({
-      where: {
-        [Op.or]: [
-          { electionId },
-          { tenantId: election.tenantId || DEFAULT_TENANT_ID }
-        ]
-      }
+      where: { electionId }
     });
     const votesCast = await VotedVoter.findAll({ where: { electionId } });
     const votedIdSet = new Set(votesCast.map(v => v.voterId.toLowerCase()));
@@ -1320,6 +1322,16 @@ exports.sendBroadcastMessage = async (req, res) => {
     } else {
       // 'all' or fallback
       targetRecipients = allRosterVoters;
+    }
+
+    if (targetRecipients.length === 0) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'No eligible recipients matched the selected filter criteria or voter roster is empty.',
+        recipientCount: 0,
+        emailSentCount: 0,
+        smsSentCount: 0
+      });
     }
 
     let emailSentCount = 0;
