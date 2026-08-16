@@ -204,17 +204,33 @@ export default function VoterDashboard() {
   return (
     <div className="flex flex-col gap-6" suppressHydrationWarning>
 
-      {/* Top Welcome Card */}
-      <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6 md:p-8 rounded-3xl shadow-md shadow-blue-500/10">
-        <h2 className="text-xl md:text-2xl font-extrabold mb-2 tracking-tight">Welcome back, {userName}!</h2>
-        <p className="text-sm text-blue-100 leading-relaxed max-w-3xl font-medium">
-          Your student voter account is cryptographically verified and ready. Review the running e-ballots below to securely cast your vote.
-        </p>
+      {/* Top Welcome Card (solid color) */}
+      <div className="relative overflow-hidden bg-blue-600 text-white p-6 md:p-8 rounded-3xl shadow-lg shadow-blue-600/20">
+        <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/10 pointer-events-none" />
+        <div className="absolute -bottom-20 -left-10 w-48 h-48 rounded-full bg-blue-400/20 pointer-events-none" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
+          <div className="w-14 h-14 shrink-0 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
+            <ShieldCheck className="w-7 h-7" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl md:text-2xl font-extrabold mb-1.5 tracking-tight">Welcome back, {userName}!</h2>
+            <p className="text-sm text-blue-100 leading-relaxed max-w-3xl font-medium">
+              Your student voter account is cryptographically verified and ready. Review the running e-ballots below to securely cast your vote.
+            </p>
+          </div>
+          <div className="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/15 border border-white/20 text-[11px] font-bold shrink-0">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+            </span>
+            Verified voter
+          </div>
+        </div>
       </div>
 
       {/* Stats Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300">
           <div>
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Active Ballots</span>
             <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{elections.length}</span>
@@ -224,7 +240,7 @@ export default function VoterDashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300">
           <div>
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Upcoming Elections</span>
             <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{upcomingElections.length}</span>
@@ -234,7 +250,7 @@ export default function VoterDashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300">
           <div>
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Total Votes Cast</span>
             <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{totalVotes}</span>
