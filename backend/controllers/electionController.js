@@ -1254,8 +1254,16 @@ exports.sendInvitations = async (req, res) => {
       actorEmail: req.user?.email || 'admin@htu.edu.gh',
       actorRole: 'admin',
       action: 'ELECTION_SEND_INVITATIONS',
-      description: `Dispatched voting invitations to ${sentCount} recipient(s) for election: ${election.title}`
+      description: `Dispatched voting invitations to ${sentCount} recipient(s) out of ${targetRecipients.length} target(s) for election: ${election.title}`
     });
+
+    if (sentCount === 0 && targetRecipients.length > 0) {
+      return res.status(200).json({
+        status: 'warning',
+        message: `Matched ${targetRecipients.length} recipient(s), but 0 invitations could be delivered. Please verify that recipients have valid email addresses and that the email service is configured correctly.`,
+        sentCount: 0
+      });
+    }
 
     res.status(200).json({
       status: 'success',
@@ -1415,9 +1423,17 @@ exports.sendBroadcastMessage = async (req, res) => {
       description: `Dispatched ${dispatchChannel.toUpperCase()} broadcast to ${targetRecipients.length} recipients for election ${election.title}`
     });
 
+    if (emailSentCount === 0 && smsSentCount === 0 && targetRecipients.length > 0) {
+      return res.status(200).json({
+        status: 'warning',
+        message: `Broadcast attempted for ${targetRecipients.length} recipient(s), but 0 emails or SMS messages were delivered. Please verify recipient email/phone numbers and email provider configuration.`,
+        data: broadcastLog
+      });
+    }
+
     res.status(200).json({
       status: 'success',
-      message: `Broadcast successfully dispatched to ${targetRecipients.length} recipients (${emailSentCount} emails, ${smsSentCount} SMS messages).`,
+      message: `Broadcast successfully dispatched to ${targetRecipients.length} recipient(s) (${emailSentCount} emails, ${smsSentCount} SMS messages).`,
       data: broadcastLog
     });
   } catch (error) {
