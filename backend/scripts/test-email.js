@@ -5,7 +5,7 @@ const { sendEmailNotification } = require('../services/emailService');
 
 const to = process.argv[2] || process.env.TEST_EMAIL_TO || 'issakasaddick14@gmail.com';
 
-console.log('Testing email delivery chain (Elastic Email primary → Gmail / EmailJS / Resend fallbacks)');
+console.log('Testing email delivery via cPanel SMTP');
 console.log('Recipient:', to);
 
 async function run() {

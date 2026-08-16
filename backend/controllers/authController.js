@@ -857,7 +857,7 @@ exports.testEmail = async (req, res) => {
     } else {
       res.status(502).json({
         status: 'error',
-        message: 'Email delivery failed — no provider succeeded. Check GMAIL_USER/GMAIL_APP_PASSWORD, RESEND_API_KEY, or ELASTICEMAIL_API_KEY and the server logs.'
+        message: 'Email delivery failed — cPanel SMTP provider did not succeed. Check SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS and the server logs.'
       });
     }
   } catch (error) {

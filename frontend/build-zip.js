@@ -2,7 +2,18 @@ const fs = require('fs');
 const path = require('path');
 
 const archiverModule = require('archiver');
-const archiver = typeof archiverModule === 'function' ? archiverModule : archiverModule.default;
+const createArchive = (format, options) => {
+  if (typeof archiverModule === 'function') {
+    return archiverModule(format, options);
+  }
+  if (archiverModule.default && typeof archiverModule.default === 'function') {
+    return archiverModule.default(format, options);
+  }
+  if (format === 'zip' && archiverModule.ZipArchive) {
+    return new archiverModule.ZipArchive(options);
+  }
+  throw new Error('Unsupported archiver module structure');
+};
 
 const BUILD_DIR = fs.existsSync(path.join(__dirname, 'out')) 
   ? path.join(__dirname, 'out') 
@@ -24,7 +35,7 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 }
 
 const output = fs.createWriteStream(OUTPUT_FILE);
-const archive = archiver('zip', {
+const archive = createArchive('zip', {
   zlib: { level: 9 }
 });
 
@@ -48,13 +59,6 @@ if (fs.existsSync(path.join(__dirname, 'public'))) {
   archive.directory(path.join(__dirname, 'public'), 'public');
 }
 
-// Include the cPanel .htaccess at the zip ROOT (it must sit in public_html),
-// so static uploads work out of the box — direct URL loads, SPA routing and
-// the /api reverse proxy all depend on it.
-const htaccessPath = path.join(__dirname, 'public', '.htaccess');
-if (fs.existsSync(htaccessPath)) {
-  archive.file(htaccessPath, { name: '.htaccess' });
-}
 if (fs.existsSync(path.join(__dirname, 'package.json'))) {
   archive.file(path.join(__dirname, 'package.json'), { name: 'package.json' });
 }

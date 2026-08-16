@@ -127,9 +127,7 @@ This executes `backend/scripts/test-cpanel-backend.js` to verify database connec
 ### Option B: Apache Reverse Proxy and SPA Routing (`.htaccess`)
 If you build Next.js as a single-page application (using `output: 'export'` or a static export build), upload the contents of the `out` or build directory to `public_html/`.
 
-**The repo ships a ready-made `.htaccess`** at `frontend/public/.htaccess`. Next.js copies it into the build output (`out/.htaccess`), and `npm run package:zip` also places it at the zip root — so uploading the build and extracting it into `public_html/` is all you need. It handles extensionless URLs (`/voter/elections` → `voter/elections.html`), the SPA fallback (any unknown path → `index.html`), and the `/api` reverse proxy. This is what makes direct, full-page navigations work — including the redirect after sign-in on iOS Safari, which performs a hard navigation instead of client-side routing.
-
-If you prefer to manage it by hand, create/update your `.htaccess` inside `public_html/` to reverse proxy to the backend API:
+If custom routing or API reverse proxying is required, create/update your `.htaccess` inside `public_html/` to reverse proxy to the backend API:
 
 ```apache
 <IfModule mod_rewrite.c>

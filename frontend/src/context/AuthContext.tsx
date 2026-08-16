@@ -90,8 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Auth transitions always use a full page load. Client-side router.push is
   // unreliable on iOS Safari for statically-exported (cPanel) sites: the URL can
-  // change while the new page never renders. Hard navigation through the SPA
-  // fallback (.htaccess) always lands on the correct page.
+  // change while the new page never renders. Hard navigation
+  // always lands on the correct page.
   const safeNavigate = (targetPath: string) => {
     hardNavigate(targetPath);
   };

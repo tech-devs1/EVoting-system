@@ -6,8 +6,8 @@
  * Client-side `router.push` is unreliable on iOS Safari for statically-exported
  * (cPanel) deployments: the URL can change while the new page never renders
  * (Next.js client navigation fetches RSC payloads that aren't served), and the
- * PWA service worker can restore a stale cached page. A full page load through
- * the SPA fallback (see public/.htaccess) always lands on the correct page.
+ * PWA service worker can restore a stale cached page. A full page load
+ * always lands on the correct page.
  */
 export function hardNavigate(targetPath: string): void {
   if (typeof window === 'undefined') return;
