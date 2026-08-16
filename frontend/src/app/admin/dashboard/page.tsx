@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Modal from '@/components/Modal';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
+import { hardNavigate } from '@/lib/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Plus, 
@@ -89,7 +89,6 @@ interface TopCandidate {
 }
 
 export default function OrganizationElectionHub() {
-  const router = useRouter();
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
 
@@ -279,7 +278,9 @@ export default function OrganizationElectionHub() {
         setIsWizardOpen(false);
         resetWizard();
         await fetchHubData();
-        router.push(`/admin/elections/dashboard?electionId=${electionId}`);
+        // Hard navigation so the election dashboard always renders after creation
+        // (client-side navigation can silently fail on iOS Safari / static exports).
+        hardNavigate(`/admin/elections/dashboard?electionId=${electionId}`);
       }
     } catch (err: any) {
       setWizardError(err.message || 'Failed to create election.');

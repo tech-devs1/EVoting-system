@@ -47,6 +47,14 @@ archive.directory(BUILD_DIR, false);
 if (fs.existsSync(path.join(__dirname, 'public'))) {
   archive.directory(path.join(__dirname, 'public'), 'public');
 }
+
+// Include the cPanel .htaccess at the zip ROOT (it must sit in public_html),
+// so static uploads work out of the box — direct URL loads, SPA routing and
+// the /api reverse proxy all depend on it.
+const htaccessPath = path.join(__dirname, 'public', '.htaccess');
+if (fs.existsSync(htaccessPath)) {
+  archive.file(htaccessPath, { name: '.htaccess' });
+}
 if (fs.existsSync(path.join(__dirname, 'package.json'))) {
   archive.file(path.join(__dirname, 'package.json'), { name: 'package.json' });
 }

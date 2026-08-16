@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { hardNavigate } from '@/lib/navigation';
 import { 
   ShieldCheck, 
   LayoutDashboard, 
@@ -72,18 +73,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   };
 
-  // Auth Guard
+  // Auth Guard — hard navigation so iOS Safari / static cPanel exports always land.
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        const t = setTimeout(() => router.push('/login'), 100);
+        const t = setTimeout(() => hardNavigate('/login'), 100);
         return () => clearTimeout(t);
       } else if (user.role === 'voter') {
-        const t = setTimeout(() => router.push('/voter/dashboard'), 100);
+        const t = setTimeout(() => hardNavigate('/voter/dashboard'), 100);
         return () => clearTimeout(t);
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   // Profile Dropdown Outside Click
   useEffect(() => {
