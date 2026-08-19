@@ -87,7 +87,7 @@ router.get('/departments', async (req, res) => {
         const electionsSnap = await db.collection('tenants').doc(doc.id).collection('elections').count().get();
         electionsCount = electionsSnap.data().count;
         
-        const votersSnap = await db.collection('tenants').doc(doc.id).collection('voter_rolls').count().get();
+        const votersSnap = await db.collection('users').doc(doc.id).collection('voter_rolls').count().get();
         votersCount = votersSnap.data().count;
       } catch (err) {
         console.warn(`Could not fetch counts for tenant ${doc.id}:`, err.message);
@@ -137,7 +137,7 @@ router.get('/stats', async (req, res) => {
         const elSnap = await db.collection('tenants').doc(doc.id).collection('elections').count().get();
         totalElections += elSnap.data().count;
         
-        const voterSnap = await db.collection('tenants').doc(doc.id).collection('voter_rolls').count().get();
+        const voterSnap = await db.collection('users').doc(doc.id).collection('voter_rolls').count().get();
         totalVoters += voterSnap.data().count;
       } catch (err) {
         // ignore

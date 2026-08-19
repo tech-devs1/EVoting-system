@@ -34,8 +34,9 @@ export default function AdminElectionsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
-  const [formType, setFormType] = useState('src');
-  const [formDepartment, setFormDepartment] = useState('');
+  const [tenantName, setTenantName] = useState('Departmental');
+  const [customType, setCustomType] = useState(false);
+  const [customTypeText, setCustomTypeText] = useState('');
   const [formShowResults, setFormShowResults] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -66,7 +67,18 @@ export default function AdminElectionsPage() {
         setLoading(false);
       }
     }
+    async function fetchTenantInfo() {
+      try {
+        const res = await apiRequest<{ status: string; data: { id: string; name: string } }>('/admin/tenant-info');
+        if (res.status === 'success') {
+          setTenantName(res.data.name);
+        }
+      } catch (err) {
+        console.error('Error fetching tenant info:', err);
+      }
+    }
     fetchElections();
+    fetchTenantInfo();
 
     // One-time migration: fix existing elections with generic descriptions
     apiRequest('/elections/migrate-descriptions', 'POST')
@@ -78,23 +90,20 @@ export default function AdminElectionsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const deptLabel = formDepartment.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      const typeLabel = formType === 'src' ? 'SRC Election' : `${deptLabel} Departmental Election`;
+      const selectedType = customType ? (customTypeText || 'Custom') : tenantName;
+      const typeLabel = `${selectedType} Election`;
       const dateLabel = formStartDate ? new Date(formStartDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString();
       const generatedTitle = `${typeLabel} (${dateLabel})`;
 
-      // Type-specific description
-      const generatedDesc = formType === 'src'
-        ? `This is the Student Representative Council (SRC) election scheduled for ${dateLabel}. Eligible students are invited to vote for their preferred candidates across all SRC positions.`
-        : `This is the ${deptLabel} Departmental election scheduled for ${dateLabel}. Students in the ${deptLabel} department are invited to elect their departmental representatives.`;
+      const generatedDesc = `This is the ${selectedType} election scheduled for ${dateLabel}. Students/voters are invited to elect their representatives.`;
 
-      console.log('[Create Election] Submitting auto-generated form data:', {
+      console.log('[Create Election] Submitting form data:', {
         title: generatedTitle,
         description: generatedDesc,
         startDate: formStartDate,
         endDate: formEndDate,
-        type: formType,
-        department: formType === 'departmental' ? formDepartment : '',
+        type: selectedType,
+        department: '',
         showResults: formShowResults,
       });
       
@@ -103,8 +112,8 @@ export default function AdminElectionsPage() {
         description: generatedDesc,
         startDate: formStartDate,
         endDate: formEndDate,
-        type: formType,
-        department: formType === 'departmental' ? formDepartment : '',
+        type: selectedType,
+        department: '',
         showResults: formShowResults,
       });
       
@@ -113,7 +122,7 @@ export default function AdminElectionsPage() {
       if (res.status === 'success') {
         setElections(prev => [...prev, res.data]);
         setIsModalOpen(false);
-        setFormStartDate(''); setFormEndDate(''); setFormType('src'); setFormDepartment(''); setFormShowResults(false);
+        setFormStartDate(''); setFormEndDate(''); setCustomType(false); setCustomTypeText(''); setFormShowResults(false);
         alert('Election created successfully!');
       } else {
         alert('Failed to create election: ' + (res as any).message || 'Unknown error');
@@ -374,26 +383,50 @@ export default function AdminElectionsPage() {
             </div>
             <form onSubmit={handleCreateElection} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="el-type">Election Type</label>
-                  <select id="el-type" className="form-input" value={formType} onChange={e => setFormType(e.target.value)}>
-                    <option value="src">SRC / University Wide</option>
-                    <option value="departmental">Departmental</option>
-                  </select>
-                </div>
-                {formType === 'departmental' && (
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="el-dept">Department</label>
-                    <select id="el-dept" className="form-input" required value={formDepartment} onChange={e => setFormDepartment(e.target.value)}>
-                      <option value="">Select a Department</option>
-                      <option value="computer_science">Computer Science</option>
-                      <option value="engineering">Engineering</option>
-                      <option value="business_administration">Business Administration</option>
-                     
-                     
-                    </select>
-                  </div>
-                )}
+                 <div className="form-group">
+                   <label className="form-label">Election Type</label>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                       <input 
+                         type="radio" 
+                         id="type-default" 
+                         name="election-type-opt" 
+                         checked={!customType} 
+                         onChange={() => setCustomType(false)} 
+                       />
+                       <label htmlFor="type-default" style={{ fontSize: 'var(--text-sm)', fontWeight: 500, cursor: 'pointer' }}>
+                         Default ({tenantName})
+                       </label>
+                     </div>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                       <input 
+                         type="radio" 
+                         id="type-custom" 
+                         name="election-type-opt" 
+                         checked={customType} 
+                         onChange={() => setCustomType(true)} 
+                       />
+                       <label htmlFor="type-custom" style={{ fontSize: 'var(--text-sm)', fontWeight: 500, cursor: 'pointer' }}>
+                         Custom Election Type
+                       </label>
+                     </div>
+                   </div>
+                 </div>
+
+                 {customType && (
+                   <div className="form-group animate-fade-in">
+                     <label className="form-label" htmlFor="el-custom-type">Enter Custom Election Type</label>
+                     <input 
+                       type="text" 
+                       id="el-custom-type" 
+                       className="form-input" 
+                       required 
+                       placeholder="e.g. General Assembly, Executive" 
+                       value={customTypeText} 
+                       onChange={e => setCustomTypeText(e.target.value)} 
+                     />
+                   </div>
+                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
                   <div className="form-group">
                     <label className="form-label" htmlFor="el-start">Start Date</label>

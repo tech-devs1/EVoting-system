@@ -8,7 +8,7 @@ const getCandidatesRef = (req) => db.collection('tenants').doc(getTenantId(req))
 const getVotedVotersRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('voted_voters');
 const getVotesRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('votes');
 const getAuditLogsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('audit_logs');
-const getUsersRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls');
+const getUsersRef = (req) => db.collection('users').doc(getTenantId(req)).collection('voter_rolls');
 const getFraudAlertsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('fraud_alerts');
 const getUploadsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('uploads');
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
@@ -949,6 +949,22 @@ router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
 // Writes the new bcrypt hash directly to the tenant doc so the superadmin
 // portal always stays in sync.
 const bcrypt = require('bcryptjs');
+
+router.get('/tenant-info', verifyAuth, requireAdmin, async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const tenantRef = db.collection('tenants').doc(tenantId);
+    const tenantSnap = await tenantRef.get();
+    if (!tenantSnap.exists) {
+      return res.status(404).json({ status: 'error', message: 'Tenant not found' });
+    }
+    const data = tenantSnap.data();
+    return res.status(200).json({ status: 'success', data: { id: tenantId, name: data.name } });
+  } catch (err) {
+    console.error('Error fetching tenant info:', err);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch tenant info' });
+  }
+});
 
 router.post('/change-password', verifyAuth, requireAdmin, async (req, res) => {
   try {

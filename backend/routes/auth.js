@@ -172,40 +172,99 @@ router.get('/departments', async (req, res) => {
   }
 });
 
-// Verify student ID and fetch details before login
+// Verify student ID or email, check if they are admin or student
 router.post('/verify-student', async (req, res) => {
   try {
-    const { studentId } = req.body;
-    if (!studentId) {
-      return res.status(400).json({ status: 'error', message: 'Student ID is required' });
+    const { identifier } = req.body;
+    if (!identifier) {
+      return res.status(400).json({ status: 'error', message: 'Index number or Email is required' });
     }
 
-    const studentDocRef = db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(studentId);
-    const studentDoc = await studentDocRef.get();
+    const tenantId = getTenantId(req);
+    const cleanIdentifier = identifier.trim();
 
-    if (!studentDoc.exists) {
-      // Log flagged user — student ID not in the database
-      await logFraudAlert('UNRECOGNIZED_STUDENT', `Unrecognized student ID attempted login: ${studentId}`, {
-        studentId,
+    // 1. Check if the identifier is an Admin email
+    const isAdminEmail = cleanIdentifier.includes('@');
+    if (isAdminEmail) {
+      let isGlobalAdmin = cleanIdentifier === 'supertech@admin.com' || cleanIdentifier === 'admin@htu.edu.gh';
+      let isTenantAdmin = false;
+
+      // Check tenant primary admin
+      const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+      if (tenantDoc.exists) {
+        const tenantData = tenantDoc.data();
+        if (tenantData.adminEmail && tenantData.adminEmail.trim().toLowerCase() === cleanIdentifier.toLowerCase()) {
+          isTenantAdmin = true;
+        }
+        // Check secondary admins
+        if (tenantData.admins && Array.isArray(tenantData.admins)) {
+          const matched = tenantData.admins.find(a => a.email.trim().toLowerCase() === cleanIdentifier.toLowerCase());
+          if (matched) {
+            isTenantAdmin = true;
+          }
+        }
+      }
+
+      if (isGlobalAdmin || isTenantAdmin) {
+        return res.status(200).json({
+          status: 'success',
+          isVoter: false,
+          isAdmin: true,
+          message: 'Admin account recognized. Password verification required.'
+        });
+      }
+    }
+
+    // 2. Check if student in voter_rolls by student ID (Index Number) or by Email
+    const voterRollsRef = db.collection('users').doc(tenantId).collection('voter_rolls');
+    let studentDoc = null;
+    let studentData = null;
+
+    if (cleanIdentifier.includes('@')) {
+      // Lookup by email
+      const snap = await voterRollsRef.where('email', '==', cleanIdentifier).get();
+      if (!snap.empty) {
+        studentDoc = snap.docs[0];
+        studentData = studentDoc.data();
+      }
+    } else {
+      // Auto-prefix with 0 if it's purely numeric and doesn't start with 0
+      let formattedId = cleanIdentifier;
+      if (!formattedId.startsWith('0') && /^\d+$/.test(formattedId)) {
+        formattedId = '0' + formattedId;
+      }
+      // Lookup by document ID (studentId)
+      const doc = await voterRollsRef.doc(formattedId).get();
+      if (doc.exists) {
+        studentDoc = doc;
+        studentData = studentDoc.data();
+      }
+    }
+
+    if (!studentDoc) {
+      // Log flagged user — unrecognized student attempted login
+      await logFraudAlert('UNRECOGNIZED_STUDENT', `Unrecognized student/admin attempted login: ${cleanIdentifier}`, {
+        identifier: cleanIdentifier,
         attemptedAt: new Date().toISOString(),
         ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-        tenantId: getTenantId(req)
-      }, getTenantId(req));
-      return res.status(404).json({ status: 'error', message: 'Student ID not found in school records.' });
+        tenantId
+      }, tenantId);
+      return res.status(404).json({ status: 'error', message: 'Identifier not found in school records or admin accounts.' });
     }
-
-    const studentData = studentDoc.data();
 
     return res.status(200).json({
       status: 'success',
+      isVoter: true,
+      isAdmin: false,
       data: {
+        studentId: studentDoc.id,
         name: studentData.name,
         email: studentData.email
       }
     });
   } catch (error) {
     console.error('Error verifying student:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to verify student' });
+    res.status(500).json({ status: 'error', message: 'Failed to verify identifier.' });
   }
 });
 
@@ -219,7 +278,7 @@ router.post('/request-otp', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Student ID is required' });
     }
 
-    const studentDocRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(studentId);
+    const studentDocRef = db.collection('users').doc(tenantId).collection('voter_rolls').doc(studentId);
     const studentDoc = await studentDocRef.get();
 
     if (!studentDoc.exists) {
@@ -392,7 +451,7 @@ router.post('/login', async (req, res) => {
     let foundTenantId = null;
 
     for (const tenantDoc of allTenantsSnapshot.docs) {
-      const usersSnapshot = await db.collection('tenants').doc(tenantDoc.id).collection('voter_rolls').where('email', '==', email).get();
+      const usersSnapshot = await db.collection('users').doc(tenantDoc.id).collection('voter_rolls').where('email', '==', email).get();
       if (!usersSnapshot.empty) {
         foundVoterDoc = usersSnapshot.docs[0];
         foundTenantId = tenantDoc.id;
@@ -570,11 +629,11 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and OTP are required.' });
     }
 
-    const usersSnapshot = await db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').where('email', '==', email).get();
+    const usersSnapshot = await db.collection('users').doc(getTenantId(req)).collection('voter_rolls').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(400).json({ status: 'error', message: 'Invalid request.' });
     }
- const userDoc = usersSnapshot.docs[0];
+    const userDoc = usersSnapshot.docs[0];
     const userData = userDoc.data();
 
     if (!userData.otp || userData.otp !== otp) {
@@ -586,7 +645,7 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     // Verify OTP and issue JWT token; mark user as registered
-    const userRef = db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(userDoc.id);
+    const userRef = db.collection('users').doc(getTenantId(req)).collection('voter_rolls').doc(userDoc.id);
     await userRef.update({ otp: null, otpExpiry: null, isRegistered: true });
 
     const token = jwt.sign(
@@ -619,7 +678,7 @@ router.post('/resend-otp', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required.' });
 
-    const usersSnapshot = await db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').where('email', '==', email).get();
+    const usersSnapshot = await db.collection('users').doc(getTenantId(req)).collection('voter_rolls').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a new OTP was sent.' });
     }
@@ -628,7 +687,7 @@ router.post('/resend-otp', async (req, res) => {
     const userData = userDoc.data();
 
     const { otp, emailSent, smsSent } = await generateAndSendOtp(
-      db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(userDoc.id), userData.email, userData.name
+      db.collection('users').doc(getTenantId(req)).collection('voter_rolls').doc(userDoc.id), userData.email, userData.name
     );
 
     const dispatchSuccess = emailSent || smsSent;
@@ -665,7 +724,7 @@ router.get('/me', verifyAuth, async (req, res) => {
     }
 
     const uid = req.user.uid;
-    const doc = await db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(uid).get();
+    const doc = await db.collection('users').doc(getTenantId(req)).collection('voter_rolls').doc(uid).get();
 
     if (!doc.exists) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
@@ -700,7 +759,7 @@ router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required' });
 
-    const usersSnapshot = await db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').where('email', '==', email).get();
+    const usersSnapshot = await db.collection('users').doc(getTenantId(req)).collection('voter_rolls').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
     }
@@ -712,7 +771,7 @@ router.post('/forgot-password', async (req, res) => {
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = Date.now() + 15 * 60 * 1000; // 15 minutes
 
-    await db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(userDoc.id).update({
+    await db.collection('users').doc(getTenantId(req)).collection('voter_rolls').doc(userDoc.id).update({
       resetCode,
       resetCodeExpiry: expiry
     });
@@ -769,7 +828,7 @@ router.post('/reset-password', async (req, res) => {
       });
     }
 
-    const usersSnapshot = await db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').where('email', '==', email).get();
+    const usersSnapshot = await db.collection('users').doc(getTenantId(req)).collection('voter_rolls').where('email', '==', email).get();
     if (usersSnapshot.empty) {
       return res.status(400).json({ status: 'error', message: 'Invalid or expired code.' });
     }
@@ -784,7 +843,7 @@ router.post('/reset-password', async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
     // Update password and invalidate code
-    await db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(userDoc.id).update({
+    await db.collection('users').doc(getTenantId(req)).collection('voter_rolls').doc(userDoc.id).update({
       password: hashedPassword,
       resetCode: null,
       resetCodeExpiry: null
@@ -833,7 +892,7 @@ router.post('/change-password', verifyAuth, async (req, res) => {
     }
 
     const uid = req.user.uid;
-    const userDoc = await db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(uid).get();
+    const userDoc = await db.collection('users').doc(getTenantId(req)).collection('voter_rolls').doc(uid).get();
 
     if (!userDoc.exists) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
@@ -859,7 +918,7 @@ router.post('/change-password', verifyAuth, async (req, res) => {
 
     // Hash and update the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(uid).update({ password: hashedPassword });
+    await db.collection('users').doc(getTenantId(req)).collection('voter_rolls').doc(uid).update({ password: hashedPassword });
 
     // Audit log
     try {
@@ -884,7 +943,7 @@ router.post('/change-password', verifyAuth, async (req, res) => {
 router.delete('/cleanup-incomplete', async (req, res) => {
   try {
     // Find users marked as registered but still have pending OTP (registration not completed)
-    const usersSnap = await db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls')
+    const usersSnap = await db.collection('users').doc(getTenantId(req)).collection('voter_rolls')
       .where('isRegistered', '==', true)
       .where('otp', '!=', null)
       .get();
