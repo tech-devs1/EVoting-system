@@ -141,14 +141,14 @@ async function sendOtpViaBMS(phoneNumber, otp) {
 }
 
 // Helper: Generate & dispatch OTP code
-async function generateAndSendOtp(voterRecord, email, name, phoneNumber = null) {
+async function generateAndSendOtp(userRecord, email, name, phoneNumber = null) {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-  voterRecord.accessOtp = otp;
-  voterRecord.accessOtpExpiry = expiry;
-  voterRecord.otpAttempts = 0; // reset failed-attempt counter for the new code
-  await voterRecord.save();
+  userRecord.accessOtp = otp;
+  userRecord.accessOtpExpiry = expiry;
+  userRecord.otpAttempts = 0; // reset failed-attempt counter for the new code
+  await userRecord.save();
 
   let emailSent = false;
   let smsSent = false;
@@ -199,7 +199,18 @@ exports.verifyStudent = async (req, res) => {
       });
     }
 
-    if (voter.password && voter.isRegistered) {
+    // Check if user account is already created in User table
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [
+          { studentId: cleanStudentId },
+          { indexNo: cleanStudentId },
+          ...(voter.email ? [{ email: voter.email.toLowerCase().trim() }] : [])
+        ]
+      }
+    });
+
+    if (existingUser && existingUser.password) {
       return res.status(403).json({ status: 'error', message: 'This student ID or email has already been registered.' });
     }
 
@@ -248,35 +259,65 @@ exports.register = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
     const cleanStudentId = studentId.trim();
 
-    let voter = await Voter.findOne({
+    // Verify eligibility on Voter roster
+    const voterRosterEntry = await Voter.findOne({
       where: {
         [Op.or]: [
           { studentId: cleanStudentId },
+          { indexNumber: cleanStudentId },
           { email: normalizedEmail }
         ]
       }
     });
 
-    if (voter && voter.isRegistered && voter.password) {
-      return res.status(403).json({ status: 'error', message: 'This student ID or email has already been registered.' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    if (!voter) {
+    if (!voterRosterEntry) {
       return res.status(403).json({
         status: 'error',
         message: 'Your index number was not found on the official voter roster. Please contact your election administrator to be added before registering.'
       });
     }
 
-    {
-      voter.password = hashedPassword;
-      voter.isRegistered = true;
-      if (name) voter.name = name;
-      if (phone) voter.phone = phone.replace(/\s+/g, '');
-      if (faceImage) voter.faceImage = faceImage;
-      await voter.save();
+    // Check if account already registered in User table
+    let user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { email: normalizedEmail },
+          { studentId: cleanStudentId },
+          { indexNo: cleanStudentId }
+        ]
+      }
+    });
+
+    if (user && user.password) {
+      return res.status(403).json({ status: 'error', message: 'This student ID or email has already been registered.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    if (!user) {
+      user = await User.create({
+        id: `usr_${cleanStudentId.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        tenantId: voterRosterEntry.tenantId || DEFAULT_TENANT_ID,
+        name: name || voterRosterEntry.name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        phone: phone ? phone.replace(/\s+/g, '') : (voterRosterEntry.phone || ''),
+        password: hashedPassword,
+        role: 'voter',
+        studentId: cleanStudentId,
+        indexNo: cleanStudentId,
+        status: 'active',
+        isVerified: true,
+        faceImage: faceImage || null
+      });
+    } else {
+      user.password = hashedPassword;
+      user.isVerified = true;
+      if (name) user.name = name;
+      if (phone) user.phone = phone.replace(/\s+/g, '');
+      if (faceImage) user.faceImage = faceImage;
+      user.studentId = cleanStudentId;
+      user.indexNo = cleanStudentId;
+      await user.save();
     }
 
     res.status(201).json({
@@ -407,16 +448,16 @@ exports.login = async (req, res) => {
       }
     }
 
-    // Lookup voter
-    const voter = await Voter.findOne({ where: { email, isRegistered: true } });
-    if (!voter || !voter.password) {
+    // Lookup registered voter in User table
+    const voterUser = await User.findOne({ where: { email } });
+    if (!voterUser || !voterUser.password) {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password. You may not be registered.' });
     }
 
-    const isMatch = await comparePassword(password, voter.password);
-    if (isMatch && !voter.password.startsWith('$2')) {
-      voter.password = await bcrypt.hash(password, 10);
-      await voter.save().catch(() => {});
+    const isMatch = await comparePassword(password, voterUser.password);
+    if (isMatch && !voterUser.password.startsWith('$2')) {
+      voterUser.password = await bcrypt.hash(password, 10);
+      await voterUser.save().catch(() => {});
     }
     if (!isMatch) {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
@@ -424,35 +465,35 @@ exports.login = async (req, res) => {
 
     const token = jwt.sign(
       {
-        uid: voter.id,
-        email: voter.email,
-        role: voter.role || 'voter',
-        name: voter.name,
-        tenantId: voter.tenantId || DEFAULT_TENANT_ID,
-        indexNumber: voter.indexNumber || voter.studentId || voter.id
+        uid: voterUser.id,
+        email: voterUser.email,
+        role: voterUser.role || 'voter',
+        name: voterUser.name,
+        tenantId: voterUser.tenantId || DEFAULT_TENANT_ID,
+        indexNumber: voterUser.indexNo || voterUser.studentId || voterUser.id
       },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     await logActivity({
-      tenantId: voter.tenantId || DEFAULT_TENANT_ID,
-      actorEmail: voter.email,
-      actorRole: 'voter',
+      tenantId: voterUser.tenantId || DEFAULT_TENANT_ID,
+      actorEmail: voterUser.email,
+      actorRole: voterUser.role || 'voter',
       action: 'VOTER_LOGIN',
-      description: `Voter ${voter.name} logged in successfully`,
+      description: `Voter ${voterUser.name} logged in successfully`,
       ip: req.ip || req.headers?.['x-forwarded-for'] || 'unknown'
     });
 
     res.status(200).json({
       status: 'success',
       data: {
-        uid: voter.id,
-        email: voter.email,
-        role: voter.role || 'voter',
-        name: voter.name,
-        tenantId: voter.tenantId || DEFAULT_TENANT_ID,
-        faceImage: voter.faceImage || ''
+        uid: voterUser.id,
+        email: voterUser.email,
+        role: voterUser.role || 'voter',
+        name: voterUser.name,
+        tenantId: voterUser.tenantId || DEFAULT_TENANT_ID,
+        faceImage: voterUser.faceImage || ''
       },
       token
     });
@@ -548,45 +589,45 @@ exports.googleLogin = async (req, res) => {
       });
     }
 
-    // Look for voter by email
-    let voter = await Voter.findOne({ where: { email } });
+    // Look for voter in User table
+    let voterUser = await User.findOne({ where: { email } });
     let targetTenantId = DEFAULT_TENANT_ID;
 
-    if (!voter) {
-      // Domain restriction: only @htu.edu.gh may register via Google sign-in
-      if (!isAllowedDomain(email)) {
+    if (!voterUser) {
+      // Check if email is on any roster
+      const rosterEntry = await Voter.findOne({ where: { email } });
+      if (!rosterEntry && !isAllowedDomain(email)) {
         return res.status(403).json({
           status: 'error',
           message: `Registration is restricted to ${ALLOWED_EMAIL_DOMAIN} email addresses. Please use your institutional email.`
         });
       }
-      const finalUid = `voter_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      voter = await Voter.create({
+      if (rosterEntry && rosterEntry.tenantId) {
+        targetTenantId = rosterEntry.tenantId;
+      }
+      const finalUid = `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      voterUser = await User.create({
         id: finalUid,
         email,
-        name: name || email.split('@')[0],
+        name: name || (rosterEntry ? rosterEntry.name : email.split('@')[0]),
         role: 'voter',
         tenantId: targetTenantId,
-        isRegistered: true,
-        studentId: finalUid,
-        indexNumber: finalUid
+        studentId: rosterEntry ? (rosterEntry.studentId || rosterEntry.indexNumber) : finalUid,
+        indexNo: rosterEntry ? (rosterEntry.indexNumber || rosterEntry.studentId) : finalUid,
+        isVerified: true
       });
     } else {
-      targetTenantId = voter.tenantId;
-      if (!voter.isRegistered) {
-        voter.isRegistered = true;
-        await voter.save();
-      }
+      targetTenantId = voterUser.tenantId || DEFAULT_TENANT_ID;
     }
 
     const token = jwt.sign(
       {
-        uid: voter.id,
-        email: voter.email,
-        role: voter.role || 'voter',
-        name: voter.name,
+        uid: voterUser.id,
+        email: voterUser.email,
+        role: voterUser.role || 'voter',
+        name: voterUser.name,
         tenantId: targetTenantId,
-        indexNumber: voter.indexNumber || voter.studentId || voter.id
+        indexNumber: voterUser.indexNo || voterUser.studentId || voterUser.id
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -595,10 +636,10 @@ exports.googleLogin = async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        uid: voter.id,
-        email: voter.email,
-        role: voter.role || 'voter',
-        name: voter.name,
+        uid: voterUser.id,
+        email: voterUser.email,
+        role: voterUser.role || 'voter',
+        name: voterUser.name,
         tenantId: targetTenantId
       },
       token
@@ -617,46 +658,46 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and OTP are required.' });
     }
 
-    const voter = await Voter.findOne({ where: { email } });
-    if (!voter || !voter.accessOtp) {
+    const user = await User.findOne({ where: { email } });
+    if (!user || !user.accessOtp) {
       return res.status(400).json({ status: 'error', message: 'Invalid OTP code.' });
     }
 
-    if (Date.now() > Number(voter.accessOtpExpiry)) {
-      voter.accessOtp = null;
-      voter.accessOtpExpiry = null;
-      voter.otpAttempts = 0;
-      await voter.save();
+    if (Date.now() > Number(user.accessOtpExpiry)) {
+      user.accessOtp = null;
+      user.accessOtpExpiry = null;
+      user.otpAttempts = 0;
+      await user.save();
       return res.status(400).json({ status: 'error', message: 'OTP has expired. Please request a new one.' });
     }
 
-    if (String(voter.accessOtp) !== String(otp).trim()) {
-      const attempts = Number(voter.otpAttempts || 0) + 1;
+    if (String(user.accessOtp) !== String(otp).trim()) {
+      const attempts = Number(user.otpAttempts || 0) + 1;
       if (attempts >= 5) {
-        voter.accessOtp = null;
-        voter.accessOtpExpiry = null;
-        voter.otpAttempts = 0;
-        await voter.save();
+        user.accessOtp = null;
+        user.accessOtpExpiry = null;
+        user.otpAttempts = 0;
+        await user.save();
         return res.status(429).json({ status: 'error', message: 'Too many incorrect attempts. Please request a new code.' });
       }
-      voter.otpAttempts = attempts;
-      await voter.save();
+      user.otpAttempts = attempts;
+      await user.save();
       return res.status(400).json({ status: 'error', message: 'Invalid OTP code.' });
     }
 
-    voter.accessOtp = null;
-    voter.accessOtpExpiry = null;
-    voter.otpAttempts = 0;
-    voter.isRegistered = true;
-    await voter.save();
+    user.accessOtp = null;
+    user.accessOtpExpiry = null;
+    user.otpAttempts = 0;
+    user.isVerified = true;
+    await user.save();
 
     const token = jwt.sign(
       {
-        uid: voter.id,
-        email: voter.email,
-        role: voter.role || 'voter',
-        name: voter.name,
-        indexNumber: voter.indexNumber || voter.studentId || voter.id
+        uid: user.id,
+        email: user.email,
+        role: user.role || 'voter',
+        name: user.name,
+        indexNumber: user.indexNo || user.studentId || user.id
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -665,11 +706,11 @@ exports.verifyOtp = async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        uid: voter.id,
-        email: voter.email,
-        role: voter.role || 'voter',
-        name: voter.name,
-        faceImage: voter.faceImage || ''
+        uid: user.id,
+        email: user.email,
+        role: user.role || 'voter',
+        name: user.name,
+        faceImage: user.faceImage || ''
       },
       token
     });
@@ -685,12 +726,12 @@ exports.resendOtp = async (req, res) => {
     const email = String(rawEmail || '').trim().toLowerCase();
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required.' });
 
-    const voter = await Voter.findOne({ where: { email } });
-    if (!voter) {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a new OTP was sent.' });
     }
 
-    const { otp, emailSent, smsSent } = await generateAndSendOtp(voter, voter.email, voter.name, voter.phone || null);
+    const { otp, emailSent, smsSent } = await generateAndSendOtp(user, user.email, user.name, user.phone || null);
     const dispatchSuccess = emailSent || smsSent;
 
     // The plaintext OTP is only ever returned when delivery failed AND we are
@@ -701,7 +742,7 @@ exports.resendOtp = async (req, res) => {
       status: 'success',
       fallbackOtp: devFallback ? otp : undefined,
       message: dispatchSuccess
-        ? `A new OTP has been sent to your email (${voter.email})${smsSent ? ' and SMS' : ''}.`
+        ? `A new OTP has been sent to your email (${user.email})${smsSent ? ' and SMS' : ''}.`
         : 'A new OTP has been generated. If you did not receive it, please contact support.'
     });
   } catch (error) {
@@ -744,20 +785,20 @@ exports.me = async (req, res) => {
       });
     }
 
-    const voter = await Voter.findByPk(uid);
-    if (voter) {
-      const d = voter.toJSON();
+    const userAcc = await User.findByPk(uid);
+    if (userAcc) {
+      const d = userAcc.toJSON();
       delete d.password;
-      return res.status(200).json({ status: 'success', data: { ...d, id: voter.id } });
+      return res.status(200).json({ status: 'success', data: { ...d, id: userAcc.id } });
     }
 
-    // Fallback search by email
+    // Fallback search by email in User
     if (email) {
-      const vEmail = await Voter.findOne({ where: { email } });
-      if (vEmail) {
-        const d = vEmail.toJSON();
+      const uEmail = await User.findOne({ where: { email } });
+      if (uEmail) {
+        const d = uEmail.toJSON();
         delete d.password;
-        return res.status(200).json({ status: 'success', data: { ...d, id: vEmail.id } });
+        return res.status(200).json({ status: 'success', data: { ...d, id: uEmail.id } });
       }
     }
 
@@ -796,31 +837,31 @@ exports.forgotPassword = async (req, res) => {
     if (!isAllowedDomain(email)) {
       return res.status(403).json({ status: 'error', message: 'Password reset is restricted to institutional email addresses.' });
     }
-    const voter = await Voter.findOne({ where: { email } });
-    if (!voter) {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
     }
 
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes (matches the emailed copy)
 
-    voter.resetCode = resetCode;
-    voter.resetCodeExpiry = expiry;
-    await voter.save();
+    user.resetCode = resetCode;
+    user.resetCodeExpiry = expiry;
+    await user.save();
 
     let emailSent = false;
     let smsSent = false;
 
     try {
-      const emailResult = await sendOtpViaEmail(email, voter.name || 'Student', resetCode);
+      const emailResult = await sendOtpViaEmail(email, user.name || 'Student', resetCode);
       if (emailResult) emailSent = true;
     } catch (err) {
       console.error('Email failed inside forgot-password:', err.message);
     }
 
-    if (voter.phone) {
+    if (user.phone) {
       try {
-        await sendOtpViaBMS(voter.phone, resetCode);
+        await sendOtpViaBMS(user.phone, resetCode);
         smsSent = true;
       } catch (err) {
         console.error('SMS failed inside forgot-password:', err.message);
@@ -861,15 +902,15 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    const voter = await Voter.findOne({ where: { email, resetCode: code } });
-    if (!voter || Date.now() > Number(voter.resetCodeExpiry)) {
+    const user = await User.findOne({ where: { email, resetCode: code } });
+    if (!user || Date.now() > Number(user.resetCodeExpiry)) {
       return res.status(400).json({ status: 'error', message: 'Invalid or expired code.' });
     }
 
-    voter.password = await bcrypt.hash(newPassword, 10);
-    voter.resetCode = null;
-    voter.resetCodeExpiry = null;
-    await voter.save();
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetCode = null;
+    user.resetCodeExpiry = null;
+    await user.save();
 
     res.status(200).json({ status: 'success', message: 'Password has been reset successfully.' });
   } catch (error) {
@@ -897,18 +938,18 @@ exports.changePassword = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Admin accounts cannot change password via this endpoint.' });
     }
 
-    const voter = await Voter.findByPk(req.user.uid);
-    if (!voter || !voter.password) {
+    const user = await User.findByPk(req.user.uid);
+    if (!user || !user.password) {
       return res.status(404).json({ status: 'error', message: 'Voter account not found.' });
     }
 
-    const isMatch = await bcrypt.compare(currentPassword, voter.password);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       return res.status(401).json({ status: 'error', message: 'Current password is incorrect.' });
     }
 
-    voter.password = await bcrypt.hash(newPassword, 10);
-    await voter.save();
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
 
     res.status(200).json({ status: 'success', message: 'Password changed successfully.' });
   } catch (error) {
