@@ -90,7 +90,7 @@ const Organization = sequelize.define('Organization', {
   status: { type: DataTypes.STRING(32), defaultValue: 'active' }
 }, { tableName: 'organizations', timestamps: true });
 
-// 3. User Model
+// 3. User Model (Global Registered User Accounts)
 const User = sequelize.define('User', {
   id: { type: DataTypes.STRING(128), primaryKey: true },
   tenantId: { type: DataTypes.STRING(128) },
@@ -103,7 +103,24 @@ const User = sequelize.define('User', {
   indexNo: { type: DataTypes.STRING(128) },
   accessPin: { type: DataTypes.STRING(64) },
   status: { type: DataTypes.STRING(32), defaultValue: 'active' },
-  isVerified: { type: DataTypes.BOOLEAN, defaultValue: false }
+  isVerified: { type: DataTypes.BOOLEAN, defaultValue: false },
+  faceImage: { type: DataTypes.TEXT },
+  faceEmbedding: {
+    type: DataTypes.TEXT,
+    get() {
+      const raw = this.getDataValue('faceEmbedding');
+      return raw ? JSON.parse(raw) : null;
+    },
+    set(val) {
+      this.setDataValue('faceEmbedding', val ? JSON.stringify(val) : null);
+    }
+  },
+  // OTP codes & password reset attributes
+  accessOtp: { type: DataTypes.STRING(64) },
+  accessOtpExpiry: { type: DataTypes.BIGINT },
+  resetCode: { type: DataTypes.STRING(64) },
+  resetCodeExpiry: { type: DataTypes.BIGINT },
+  otpAttempts: { type: DataTypes.INTEGER, defaultValue: 0 }
 }, { tableName: 'users', timestamps: true });
 
 // 4. Election Model
@@ -153,40 +170,19 @@ const Candidate = sequelize.define('Candidate', {
   ballotNumber: { type: DataTypes.STRING(32) }
 }, { tableName: 'candidates', timestamps: true });
 
-// 7. Voter Model (Combined Voter Roster & Eligible Voters)
+// 7. Voter Model (Election-Scoped Roster Entries for Eligibility Lookup)
 const Voter = sequelize.define('Voter', {
   id: { type: DataTypes.STRING(128), primaryKey: true },
   tenantId: { type: DataTypes.STRING(128), allowNull: false },
-  electionId: { type: DataTypes.STRING(128) },
+  electionId: { type: DataTypes.STRING(128), allowNull: false },
   studentId: { type: DataTypes.STRING(128) },
   indexNumber: { type: DataTypes.STRING(128) }, // Dual field compatibility
   name: { type: DataTypes.STRING(255) },
-  // Email is used for voter accounts and roster lookup across elections
   email: { type: DataTypes.STRING(255) },
   phone: { type: DataTypes.STRING(64) },
   program: { type: DataTypes.STRING(255) },
   level: { type: DataTypes.STRING(64) },
-  password: { type: DataTypes.STRING(255) },
-  isRegistered: { type: DataTypes.BOOLEAN, defaultValue: true },
-  role: { type: DataTypes.STRING(32), defaultValue: 'voter' },
-  faceImage: { type: DataTypes.TEXT },
-  faceEmbedding: {
-    type: DataTypes.TEXT,
-    get() {
-      const raw = this.getDataValue('faceEmbedding');
-      return raw ? JSON.parse(raw) : null;
-    },
-    set(val) {
-      this.setDataValue('faceEmbedding', val ? JSON.stringify(val) : null);
-    }
-  },
-  // OTP codes & access codes
-  accessOtp: { type: DataTypes.STRING(64) },
-  accessOtpExpiry: { type: DataTypes.BIGINT },
-  resetCode: { type: DataTypes.STRING(64) },
-  resetCodeExpiry: { type: DataTypes.BIGINT },
-  // Failed-OTP-attempt counter (brute-force protection); reset on issue/success
-  otpAttempts: { type: DataTypes.INTEGER, defaultValue: 0 }
+  role: { type: DataTypes.STRING(32), defaultValue: 'voter' }
 }, { tableName: 'voters', timestamps: true });
 
 // 8. Vote Model (Cryptographic Ballot Ledger)
