@@ -12,9 +12,22 @@ const { sequelize, User, Tenant, Election, Position, Candidate, Voter, Vote, Vot
 async function runTests() {
   console.log('🏁 Starting complete Sequelize E2E integration test cycle...');
 
-  // Reset database completely for a clean state
-  await sequelize.sync({ force: true });
-  console.log('✅ Database synchronized with forced schema reset.');
+  // Non-destructive database sync (preserves existing data)
+  await sequelize.sync();
+  console.log('✅ Database synchronized safely without data wipe.');
+
+  const testTenantId = 'compssa_test';
+  const electionId = 'test_el_' + Date.now();
+
+  // Cleanup any leftover artifacts from prior test runs
+  await Vote.destroy({ where: { electionId } });
+  await VotedVoter.destroy({ where: { electionId } });
+  await Candidate.destroy({ where: { electionId } });
+  await Position.destroy({ where: { electionId } });
+  await Election.destroy({ where: { id: electionId } });
+  await Voter.destroy({ where: { electionId } });
+  await User.destroy({ where: { email: 'admin_test_cycle@htu.edu.gh' } });
+  await Tenant.destroy({ where: { id: testTenantId } });
 
   const now = Date.now();
   const bcrypt = require('bcryptjs');
@@ -23,22 +36,22 @@ async function runTests() {
   // 1. Seed Tenant
   console.log('\n--- PHASE 1: SEEDING TENANT AND ADMIN ---');
   const tenant = await Tenant.create({
-    id: 'compssa',
-    name: 'COMPSSA',
-    acronym: 'COMPSSA',
-    adminEmail: 'admin@htu.edu.gh',
+    id: testTenantId,
+    name: 'COMPSSA Test',
+    acronym: 'COMPSSA Test',
+    adminEmail: 'admin_test_cycle@htu.edu.gh',
     adminPassword: hashedAdminPassword,
-    orgName: 'COMPSSA',
+    orgName: 'COMPSSA Test',
     portalTitle: 'COMPSSA Portal',
-    supportEmail: 'admin@htu.edu.gh'
+    supportEmail: 'admin_test_cycle@htu.edu.gh'
   });
   console.log('✅ Tenant seeded successfully.');
 
   const admin = await User.create({
-    id: 'usr_admin',
-    tenantId: 'compssa',
-    name: 'EC Administrator',
-    email: 'admin@htu.edu.gh',
+    id: 'usr_admin_test_cycle',
+    tenantId: testTenantId,
+    name: 'EC Administrator Test',
+    email: 'admin_test_cycle@htu.edu.gh',
     password: hashedAdminPassword,
     role: 'admin',
     status: 'active',
@@ -48,31 +61,28 @@ async function runTests() {
 
   // 2. Prepare mock voter rolls for this election
   console.log('\n--- PHASE 2: SEEDING ELIGIBLE VOTERS ---');
-  const electionId = 'phdtnaat06s';
 
   const voter1 = await Voter.create({
-    id: 'voter-001',
-    tenantId: 'compssa',
+    id: 'voter-001-' + electionId,
+    tenantId: testTenantId,
     electionId,
-    studentId: 'voter-001',
-    indexNumber: 'voter-001',
+    studentId: 'voter-001-' + electionId,
+    indexNumber: 'voter-001-' + electionId,
     name: 'Voter One',
-    email: 'voter1@htu.edu.gh',
+    email: 'voter1_' + electionId + '@htu.edu.gh',
     phone: '0241111111',
-    isRegistered: true,
     role: 'voter'
   });
 
   const voter2 = await Voter.create({
-    id: 'voter-002',
-    tenantId: 'compssa',
+    id: 'voter-002-' + electionId,
+    tenantId: testTenantId,
     electionId,
-    studentId: 'voter-002',
-    indexNumber: 'voter-002',
+    studentId: 'voter-002-' + electionId,
+    indexNumber: 'voter-002-' + electionId,
     name: 'Voter Two',
-    email: 'voter2@htu.edu.gh',
+    email: 'voter2_' + electionId + '@htu.edu.gh',
     phone: '0242222222',
-    isRegistered: true,
     role: 'voter'
   });
   console.log('✅ Mock voters registered on the roster.');
@@ -81,9 +91,9 @@ async function runTests() {
   console.log('\n--- PHASE 3: CREATE ACTIVE ELECTION ---');
   const election = await Election.create({
     id: electionId,
-    tenantId: 'compssa',
-    title: 'SRC Executive Elections',
-    description: 'This is the election',
+    tenantId: testTenantId,
+    title: 'SRC Executive Elections Test',
+    description: 'This is the test election',
     startDate: new Date(now - 3600000).toISOString(), // 1hr ago
     endDate: new Date(now + 3600000).toISOString(), // 1hr future
     status: 'active',
@@ -97,7 +107,7 @@ async function runTests() {
   // 4. Create positions and candidates
   console.log('\n--- PHASE 4: REGISTER CANDIDATES ---');
   const presPos = await Position.create({
-    id: 'pos_pres',
+    id: 'pos_pres_' + electionId,
     electionId,
     title: 'President',
     maxChoices: 1,
@@ -105,7 +115,7 @@ async function runTests() {
   });
 
   const finPos = await Position.create({
-    id: 'pos_fin',
+    id: 'pos_fin_' + electionId,
     electionId,
     title: 'Financial Secretary',
     maxChoices: 1,
@@ -113,7 +123,7 @@ async function runTests() {
   });
 
   const candJane = await Candidate.create({
-    id: 'dfqurzagqya',
+    id: 'cand_jane_' + electionId,
     electionId,
     positionId: presPos.id,
     positionTitle: 'President',
@@ -122,7 +132,7 @@ async function runTests() {
   });
 
   const candBob = await Candidate.create({
-    id: 'obqn06czscm',
+    id: 'cand_bob_' + electionId,
     electionId,
     positionId: finPos.id,
     positionTitle: 'Financial Secretary',
@@ -138,7 +148,7 @@ async function runTests() {
   // Voter 1 casts YES ballot for President Jane Smith
   console.log('Voter 1 casting vote for Jane Smith...');
   await Vote.create({
-    id: 'v_v1_pres',
+    id: 'v_v1_pres_' + electionId,
     electionId,
     voterId: voter1.id,
     positionId: presPos.id,
@@ -148,7 +158,7 @@ async function runTests() {
     prevHash: '0000000000000000000000000000000000000000000000000000000000000000',
     timestamp: Date.now()
   });
-  await VotedVoter.create({ id: 'vv_1', electionId, voterId: voter1.id, timestamp: Date.now() });
+  await VotedVoter.create({ id: 'vv_1_' + electionId, electionId, voterId: voter1.id, timestamp: Date.now() });
   candJane.votes = (candJane.votes || 0) + 1;
   await candJane.save();
   console.log('✅ Voter 1 ballot cast successfully.');
@@ -172,7 +182,7 @@ async function runTests() {
   // Voter 2 casts YES ballot for Bob Johnson
   console.log('Voter 2 casting vote for Bob Johnson...');
   await Vote.create({
-    id: 'v_v2_fin',
+    id: 'v_v2_fin_' + electionId,
     electionId,
     voterId: voter2.id,
     positionId: finPos.id,
@@ -182,7 +192,7 @@ async function runTests() {
     prevHash: 'mock-hash-1',
     timestamp: Date.now()
   });
-  await VotedVoter.findOrCreate({ where: { electionId, voterId: voter2.id }, defaults: { id: 'vv_2', timestamp: Date.now() } });
+  await VotedVoter.findOrCreate({ where: { electionId, voterId: voter2.id }, defaults: { id: 'vv_2_' + electionId, timestamp: Date.now() } });
   candBob.votes = (candBob.votes || 0) + 1;
   await candBob.save();
   console.log('✅ Voter 2 ballot cast successfully.');
@@ -200,6 +210,16 @@ async function runTests() {
   } else {
     throw new Error('Vote tally assertion failed!');
   }
+
+  // Cleanup test artifacts after run
+  await Vote.destroy({ where: { electionId } });
+  await VotedVoter.destroy({ where: { electionId } });
+  await Candidate.destroy({ where: { electionId } });
+  await Position.destroy({ where: { electionId } });
+  await Election.destroy({ where: { id: electionId } });
+  await Voter.destroy({ where: { electionId } });
+  await User.destroy({ where: { email: 'admin_test_cycle@htu.edu.gh' } });
+  await Tenant.destroy({ where: { id: testTenantId } });
 
   console.log('\n================================================================');
   console.log('🎉 ALL INTEGRATION TESTS PASSED SUCCESSFULLY! FULL CYCLE TEST COMPLETE.');
