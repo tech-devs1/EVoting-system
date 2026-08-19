@@ -294,29 +294,37 @@ router.post('/google-login', async (req, res) => {
     if (googleCredential && typeof googleCredential === 'string' && googleCredential.startsWith('MOCK_GOOGLE_')) {
       emailFromGoogle = googleCredential.replace('MOCK_GOOGLE_', '').trim();
     } else if (googleCredential) {
+      // 1. First try Firebase Admin SDK verifyIdToken (handles Firebase Auth signInWithPopup)
       try {
-        const { OAuth2Client } = require('google-auth-library');
-        const client = new OAuth2Client();
-        const ticket = await client.verifyIdToken({
-          idToken: googleCredential,
-          audience: process.env.GOOGLE_CLIENT_ID
-        });
-        const payload = ticket.getPayload();
-        emailFromGoogle = payload.email;
-      } catch (idErr) {
-        // Fallback: verify via Google tokeninfo endpoint
+        const { getAuth } = require('firebase-admin/auth');
+        const decoded = await getAuth().verifyIdToken(googleCredential);
+        emailFromGoogle = decoded.email;
+      } catch (firebaseErr) {
+        // 2. Try Google OAuth2Client verifyIdToken (handles Google Identity Services GIS)
         try {
-          const fetch = global.fetch || require('node-fetch');
-          const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${googleCredential}`);
-          if (tokenInfoRes.ok) {
-            const tokenInfo = await tokenInfoRes.json();
-            emailFromGoogle = tokenInfo.email;
-          } else {
-            throw new Error('Google tokeninfo rejected ID token');
+          const { OAuth2Client } = require('google-auth-library');
+          const client = new OAuth2Client();
+          const ticket = await client.verifyIdToken({
+            idToken: googleCredential,
+            audience: process.env.GOOGLE_CLIENT_ID
+          });
+          const payload = ticket.getPayload();
+          emailFromGoogle = payload.email;
+        } catch (idErr) {
+          // 3. Fallback: Google tokeninfo endpoint
+          try {
+            const fetch = global.fetch || require('node-fetch');
+            const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${googleCredential}`);
+            if (tokenInfoRes.ok) {
+              const tokenInfo = await tokenInfoRes.json();
+              emailFromGoogle = tokenInfo.email;
+            } else {
+              throw new Error('Google tokeninfo rejected ID token');
+            }
+          } catch (fetchErr) {
+            console.error('All ID token verifications failed:', firebaseErr.message, idErr?.message, fetchErr?.message);
+            return res.status(401).json({ status: 'error', message: 'Could not verify Google authentication token.' });
           }
-        } catch (fetchErr) {
-          console.error('Failed to verify Google ID token:', idErr, fetchErr);
-          return res.status(401).json({ status: 'error', message: 'Could not verify Google ID token.' });
         }
       }
     } else if (accessToken) {

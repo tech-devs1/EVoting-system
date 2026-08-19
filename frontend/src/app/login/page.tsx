@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
-import { ShieldCheck, Mail, Lock, Eye, EyeOff, Building2, ArrowRight, User, CheckCircle2, AlertCircle } from 'lucide-react';
-import Script from 'next/script';
+import { auth } from '@/lib/firebase';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { ShieldCheck, Mail, Lock, Eye, EyeOff, Building2, ArrowRight, User, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, googleLogin } = useAuth();
@@ -28,10 +29,6 @@ export default function LoginPage() {
   // Messages & Loading
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Demo account chooser modal (when NEXT_PUBLIC_GOOGLE_CLIENT_ID is not configured)
-  const [showDemoChooser, setShowDemoChooser] = useState(false);
-  const [demoEmailInput, setDemoEmailInput] = useState('');
 
   // Fetch departments on mount
   useEffect(() => {
@@ -85,7 +82,6 @@ export default function LoginPage() {
           setStudentId(res.data.studentId);
           setStudentName(res.data.name);
           setStudentEmail(res.data.email);
-          setDemoEmailInput(res.data.email);
           setStep('voter-verify');
         }
       }
@@ -96,80 +92,30 @@ export default function LoginPage() {
     }
   };
 
-  // ── Step 2 Student: Google Sign-In (Select Google Account) ──
-  const handleGoogleSignInClick = () => {
-    setError('');
-    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-    // Check if real Google Identity Services is available and configured
-    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2 && googleClientId) {
-      setLoading(true);
-      try {
-        const client = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
-          scope: 'email profile openid',
-          prompt: 'select_account', // Forces Google Account Selector on mobile & desktop
-          callback: async (response: any) => {
-            if (response.error) {
-              setLoading(false);
-              setError('Google Sign-In was cancelled or failed.');
-              return;
-            }
-            if (response.access_token) {
-              try {
-                await googleLogin(studentId, undefined, response.access_token);
-              } catch (err: any) {
-                setError(err.message || 'Google account verification failed.');
-              } finally {
-                setLoading(false);
-              }
-            }
-          }
-        });
-        client.requestAccessToken({ prompt: 'select_account' });
-      } catch (err: any) {
-        setLoading(false);
-        setError('Failed to launch Google Sign-In: ' + err.message);
-      }
-    } else if (typeof window !== 'undefined' && (window as any).google?.accounts?.id && googleClientId) {
-      setLoading(true);
-      try {
-        (window as any).google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: async (response: any) => {
-            try {
-              await googleLogin(studentId, response.credential, undefined);
-            } catch (err: any) {
-              setError(err.message || 'Google account verification failed.');
-            } finally {
-              setLoading(false);
-            }
-          }
-        });
-        (window as any).google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
-            setLoading(false);
-          }
-        });
-      } catch (err: any) {
-        setLoading(false);
-        setError('Failed to launch Google Sign-In.');
-      }
-    } else {
-      // Demo / Local development without NEXT_PUBLIC_GOOGLE_CLIENT_ID
-      // Open account selector simulation to test matching/mismatching Google accounts
-      setShowDemoChooser(true);
-    }
-  };
-
-  const handleExecuteDemoGoogleLogin = async (selectedEmail: string) => {
-    setShowDemoChooser(false);
+  // ── Step 2 Student: Google Native Sign-In via Firebase Auth ──
+  const handleGoogleSignInClick = async () => {
     setError('');
     setLoading(true);
     try {
-      await googleLogin(studentId, `MOCK_GOOGLE_${selectedEmail.trim()}`, undefined);
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account' // Forces Google's native account chooser modal on mobile and desktop
+      });
+      
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+      
+      // Backend validates that the chosen Google account matches the student's email
+      await googleLogin(studentId, idToken, undefined);
     } catch (err: any) {
-      setError(err.message || 'Google Sign-In failed.');
+      console.error('Google sign-in error:', err);
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        setError('Google Sign-In popup was closed before completing.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('Google Sign-In popup was blocked by your browser. Please allow popups for this site.');
+      } else {
+        setError(err.message || 'Google Sign-In failed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -216,7 +162,7 @@ export default function LoginPage() {
           <p className="auth-subtitle">
             {step === 'identifier' && 'Select your department and enter your index number or admin email.'}
             {step === 'admin-password' && `Enter the administrator password for ${identifier}.`}
-            {step === 'voter-verify' && 'Confirm your student details and sign in with your Google account.'}
+            {step === 'voter-verify' && 'Confirm your student details and sign in with Google.'}
           </p>
         </div>
 
@@ -332,7 +278,7 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* STEP 2 STUDENT: Confirm Details & Sign in with Google Account (Direct, no OTP) */}
+        {/* STEP 2 STUDENT: Confirm Details & Sign in with Google (Google handles popup & account selection) */}
         {step === 'voter-verify' && (
           <div>
             <div style={{
@@ -363,7 +309,7 @@ export default function LoginPage() {
             </div>
 
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)', textAlign: 'center' }}>
-              Sign in with the Google account on your device matching <strong style={{ color: 'var(--text-primary)' }}>{studentEmail}</strong>:
+              Click below to authenticate with your Google account matching <strong style={{ color: 'var(--text-primary)' }}>{studentEmail}</strong>:
             </p>
 
             {/* Google Sign-In Button */}
@@ -384,7 +330,8 @@ export default function LoginPage() {
                 gap: '12px',
                 padding: '14px 20px',
                 borderRadius: 'var(--radius-md)',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                cursor: 'pointer'
               }}
             >
               <svg width="20" height="20" viewBox="0 0 48 48">
@@ -393,7 +340,7 @@ export default function LoginPage() {
                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
               </svg>
-              {loading ? 'Verifying Google Account...' : 'Sign in with Google'}
+              {loading ? 'Connecting to Google...' : 'Sign in with Google'}
             </button>
 
             <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
@@ -405,98 +352,11 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Demo Account Chooser Modal (when in local dev / without Client ID configured) */}
-        {showDemoChooser && (
-          <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px'
-          }}>
-            <div className="glass-card-strong" style={{ maxWidth: '420px', width: '100%', padding: '24px', borderRadius: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <svg width="24" height="24" viewBox="0 0 48 48">
-                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                </svg>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Choose Google Account</h3>
-              </div>
-
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                Select the Google account on your device to sign in:
-              </p>
-
-              {/* Option 1: Registered Student Email (Matching) */}
-              <button
-                onClick={() => handleExecuteDemoGoogleLogin(studentEmail)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '12px',
-                  textAlign: 'left'
-                }}
-              >
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#4285F4', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                  {studentName.charAt(0)}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{studentName}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{studentEmail}</div>
-                </div>
-                <CheckCircle2 size={18} style={{ color: 'var(--color-primary)' }} />
-              </button>
-
-              {/* Option 2: Custom / Different Google Account to test mismatch check */}
-              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', display: 'block', marginBottom: '6px' }}>
-                  Or test with another Google email:
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="email"
-                    className="form-input"
-                    placeholder="different@gmail.com"
-                    value={demoEmailInput}
-                    onChange={(e) => setDemoEmailInput(e.target.value)}
-                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleExecuteDemoGoogleLogin(demoEmailInput)}
-                    className="btn btn-secondary"
-                    style={{ padding: '8px 14px', fontSize: '0.85rem' }}
-                  >
-                    Select
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '16px', textAlign: 'right' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowDemoChooser(false)}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="auth-security-badge" style={{ marginTop: 'var(--space-6)' }}>
           <ShieldCheck size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
           Protected by TECHDEVS ✓ Security
         </div>
       </div>
-      <Script src="https://accounts.google.com/gsi/client" strategy="lazyOnload" />
     </div>
   );
 }
