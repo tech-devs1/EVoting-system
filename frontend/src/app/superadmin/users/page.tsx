@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
 import {
-  ArrowLeft, Users, ShieldCheck, ShieldAlert, UserCheck, UserX,
+  ArrowLeft, Users, ShieldCheck, ShieldAlert, UserCheck, UserX, UserPlus,
   Pencil, Trash2, X, Search, Activity, CheckCircle2, AlertTriangle
 } from 'lucide-react';
 import DataTable, { type ColumnDef, type FilterDef } from '@/components/DataTable';
@@ -25,6 +25,12 @@ interface SystemUser {
 function UserManagementContent() {
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Add User modal state
+  const [showAddModal, setShowEditModalAdd] = useState(false);
+  const [addForm, setAddForm] = useState({ name: '', email: '', password: '', phone: '', role: 'voter', tenantId: 'global', studentId: '' });
+  const [addLoading, setAddLoading] = useState(false);
+  const [addMessage, setAddMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -53,6 +59,27 @@ function UserManagementContent() {
   }
 
   useEffect(() => { fetchUsers(); }, []);
+
+  // Add handler
+  const handleCreateUser = async () => {
+    if (!addForm.name || !addForm.email || !addForm.password) {
+      setAddMessage({ type: 'error', text: 'Name, email, and password are required.' });
+      return;
+    }
+    setAddLoading(true);
+    setAddMessage(null);
+    try {
+      await apiRequest('/superadmin/users', 'POST', addForm);
+      setAddMessage({ type: 'success', text: 'User account created successfully.' });
+      fetchUsers();
+      setAddForm({ name: '', email: '', password: '', phone: '', role: 'voter', tenantId: 'global', studentId: '' });
+      setTimeout(() => setShowEditModalAdd(false), 1200);
+    } catch (err: any) {
+      setAddMessage({ type: 'error', text: err.message || 'Failed to create user.' });
+    } finally {
+      setAddLoading(false);
+    }
+  };
 
   // Edit handlers
   const openEditModal = (user: SystemUser) => {
@@ -263,6 +290,12 @@ function UserManagementContent() {
             <h3 className="text-base font-extrabold text-slate-900 dark:text-white">System Users Directory</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Total: {users.length} users</p>
           </div>
+          <button
+            onClick={() => { setAddMessage(null); setShowEditModalAdd(true); }}
+            className="px-4 py-2.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-colors flex items-center gap-1.5"
+          >
+            <UserPlus size={16} /> Add New User
+          </button>
         </div>
 
         {loading ? (
@@ -280,6 +313,115 @@ function UserManagementContent() {
           />
         )}
       </div>
+
+      {/* Add User Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <UserPlus size={18} className="text-blue-600" /> Add System User
+              </h3>
+              <button onClick={() => setShowEditModalAdd(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <X size={18} className="text-slate-500" />
+              </button>
+            </div>
+
+            {addMessage && (
+              <div className={`p-3 rounded-xl text-xs font-semibold mb-4 ${
+                addMessage.type === 'success'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30'
+                  : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30'
+              }`}>
+                {addMessage.text}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. John Doe"
+                  value={addForm.name}
+                  onChange={e => setAddForm({ ...addForm, name: e.target.value })}
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Email Address *</label>
+                <input
+                  type="email"
+                  placeholder="e.g. user@htu.edu.gh"
+                  value={addForm.email}
+                  onChange={e => setAddForm({ ...addForm, email: e.target.value })}
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Password *</label>
+                <input
+                  type="password"
+                  placeholder="Set initial account password"
+                  value={addForm.password}
+                  onChange={e => setAddForm({ ...addForm, password: e.target.value })}
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    placeholder="0240000000"
+                    value={addForm.phone}
+                    onChange={e => setAddForm({ ...addForm, phone: e.target.value })}
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Student / Index ID</label>
+                  <input
+                    type="text"
+                    placeholder="03250000"
+                    value={addForm.studentId}
+                    onChange={e => setAddForm({ ...addForm, studentId: e.target.value })}
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Role</label>
+                <select
+                  value={addForm.role}
+                  onChange={e => setAddForm({ ...addForm, role: e.target.value })}
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="voter">Voter</option>
+                  <option value="admin">Admin</option>
+                  <option value="superadmin">Super Admin</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setShowEditModalAdd(false)}
+                className="flex-1 px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateUser}
+                disabled={addLoading}
+                className="flex-1 px-4 py-2.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white shadow-md shadow-blue-500/20 transition-colors"
+              >
+                {addLoading ? 'Creating...' : 'Create User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit User Modal */}
       {showEditModal && editingUser && (
