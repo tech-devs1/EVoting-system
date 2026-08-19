@@ -137,52 +137,53 @@ async function sendOtpViaBMS(phoneNumber, otp) {
   }
 }
 
+// Helper to compute dynamic election status based on current time
+function computeElectionStatus(election) {
+  if (!election || election.status === 'draft') return election?.status || 'draft';
+  const now = Date.now();
+  const startTime = election.startDate ? new Date(election.startDate).getTime() : 0;
+  const endTime = election.endDate ? new Date(election.endDate).getTime() : Infinity;
+
+  if (now < startTime) {
+    return 'scheduled';
+  } else if (now >= startTime && now <= endTime) {
+    return 'active';
+  } else {
+    return 'completed';
+  }
+}
+
 exports.getElections = async (req, res) => {
   try {
     const { status } = req.query;
-    const cacheKey = `elections:list:${status || 'all'}`;
+    const tenantId = getTenantId(req);
+    const where = { tenantId };
 
-    const elections = await cache.getOrSet(cacheKey, async () => {
-      const tenantId = getTenantId(req);
-      const where = { tenantId };
-      if (status) {
-        where.status = status;
+    const list = await Election.findAll({ where });
+    const dbUpdates = [];
+
+    const result = list.map(e => {
+      const item = e.toJSON();
+      const currentComputedStatus = computeElectionStatus(item);
+
+      if (e.status !== 'draft' && e.status !== currentComputedStatus) {
+        dbUpdates.push(e.update({ status: currentComputedStatus }));
       }
 
-      const list = await Election.findAll({ where });
-      const now = Date.now();
-      const dbUpdates = [];
+      return { ...item, status: currentComputedStatus };
+    });
 
-      const result = list.map(e => {
-        const item = e.toJSON();
-        let updatedStatus = item.status;
-        const endTime = item.endDate ? new Date(item.endDate).getTime() : Infinity;
-        const startTime = item.startDate ? new Date(item.startDate).getTime() : 0;
+    if (dbUpdates.length > 0) {
+      Promise.all(dbUpdates)
+        .then(() => {
+          cache.invalidatePrefix('elections:');
+          cache.invalidatePrefix('admin:');
+        })
+        .catch(err => console.error('Error updating election status in background:', err));
+    }
 
-        if (item.status === 'active' && item.endDate && endTime < now) {
-          updatedStatus = 'completed';
-          dbUpdates.push(e.update({ status: 'completed' }));
-        } else if (item.status === 'draft' && item.startDate && startTime <= now) {
-          updatedStatus = 'active';
-          dbUpdates.push(e.update({ status: 'active' }));
-        }
-
-        return { ...item, status: updatedStatus };
-      });
-
-      if (dbUpdates.length > 0) {
-        Promise.all(dbUpdates)
-          .then(() => {
-            cache.invalidatePrefix('elections:');
-            cache.invalidatePrefix('admin:');
-          })
-          .catch(err => console.error('Error updating election status in background:', err));
-      }
-
-      return result;
-    }, 10000);
-
-    res.status(200).json({ status: 'success', data: elections });
+    const filteredResult = status ? result.filter(r => r.status === status) : result;
+    res.status(200).json({ status: 'success', data: filteredResult });
   } catch (error) {
     console.error('Error fetching elections:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch elections' });
@@ -224,27 +225,10 @@ exports.getEligibleElections = async (req, res) => {
 
       if (isEligible) {
         const item = election.toJSON();
-        let updatedStatus = item.status || 'draft';
-        const endTime = item.endDate ? new Date(item.endDate).getTime() : Infinity;
-        const startTime = item.startDate ? new Date(item.startDate).getTime() : 0;
+        const updatedStatus = computeElectionStatus(item);
 
-        if (item.status && item.status !== 'draft') {
-          if (now >= startTime && now <= endTime) {
-            if (item.status !== 'active') {
-              updatedStatus = 'active';
-              dbUpdates.push(election.update({ status: 'active' }));
-            }
-          } else if (now < startTime) {
-            if (item.status !== 'scheduled') {
-              updatedStatus = 'scheduled';
-              dbUpdates.push(election.update({ status: 'scheduled' }));
-            }
-          } else if (now > endTime) {
-            if (item.status !== 'completed' && item.status !== 'ended') {
-              updatedStatus = 'completed';
-              dbUpdates.push(election.update({ status: 'completed' }));
-            }
-          }
+        if (election.status !== 'draft' && election.status !== updatedStatus) {
+          dbUpdates.push(election.update({ status: updatedStatus }));
         }
 
         // Check voted voters
@@ -286,34 +270,12 @@ exports.getElectionById = async (req, res) => {
       }
 
       const item = electionRecord.toJSON();
-      const now = Date.now();
-      let updatedStatus = item.status || 'draft';
-      const endTime = item.endDate ? new Date(item.endDate).getTime() : Infinity;
-      const startTime = item.startDate ? new Date(item.startDate).getTime() : 0;
+      const updatedStatus = computeElectionStatus(item);
 
-      if (item.status && item.status !== 'draft') {
-        if (now >= startTime && now <= endTime) {
-          if (item.status !== 'active') {
-            updatedStatus = 'active';
-            await electionRecord.update({ status: 'active' });
-            cache.invalidatePrefix('elections:');
-            cache.invalidatePrefix('admin:');
-          }
-        } else if (now < startTime) {
-          if (item.status !== 'scheduled') {
-            updatedStatus = 'scheduled';
-            await electionRecord.update({ status: 'scheduled' });
-            cache.invalidatePrefix('elections:');
-            cache.invalidatePrefix('admin:');
-          }
-        } else if (now > endTime) {
-          if (item.status !== 'completed' && item.status !== 'ended') {
-            updatedStatus = 'completed';
-            await electionRecord.update({ status: 'completed' });
-            cache.invalidatePrefix('elections:');
-            cache.invalidatePrefix('admin:');
-          }
-        }
+      if (item.status !== 'draft' && item.status !== updatedStatus) {
+        await electionRecord.update({ status: updatedStatus });
+        cache.invalidatePrefix('elections:');
+        cache.invalidatePrefix('admin:');
       }
 
       // Compute stats
@@ -455,47 +417,75 @@ exports.createElection = async (req, res) => {
 exports.updateElection = async (req, res) => {
   try {
     const electionId = req.params.id;
-    const { title, description, category, startDate, endDate, status, showResults, otpRequired, previewImageUrl } = req.body;
+    const { title, description, category, startDate, endDate, showResults, otpRequired, previewImageUrl } = req.body;
 
     const election = await Election.findByPk(electionId);
     if (!election) {
       return res.status(404).json({ status: 'error', message: 'Election not found.' });
     }
 
+    const now = Date.now();
+    const currentStartMs = new Date(election.startDate).getTime();
+    const currentEndMs = new Date(election.endDate).getTime();
+    const hasStarted = now >= currentStartMs;
+    const hasEnded = now > currentEndMs;
+
     const updateFields = {};
     if (title !== undefined) updateFields.title = title.trim();
     if (description !== undefined) updateFields.description = description.trim();
     if (category !== undefined) updateFields.category = category.trim();
-    if (startDate !== undefined) updateFields.startDate = startDate;
-    if (endDate !== undefined) updateFields.endDate = endDate;
-    if (status !== undefined) updateFields.status = status;
     if (showResults !== undefined) updateFields.showResults = Boolean(showResults);
     if (otpRequired !== undefined) updateFields.otpRequired = Boolean(otpRequired);
     if (previewImageUrl !== undefined) updateFields.previewImageUrl = previewImageUrl.trim();
 
-    const now = Date.now();
-    if (status === 'active') {
-      const currentStart = startDate !== undefined ? startDate : election.startDate;
-      const currentEnd = endDate !== undefined ? endDate : election.endDate;
-      if (!currentStart || new Date(currentStart).getTime() > now) {
-        updateFields.startDate = new Date(now - 1000).toISOString();
+    // Time edit validation rules
+    if (!hasStarted) {
+      // Election hasn't started yet — Admin can freely edit startDate and endDate
+      if (startDate !== undefined) updateFields.startDate = startDate;
+      if (endDate !== undefined) updateFields.endDate = endDate;
+    } else if (!hasEnded) {
+      // Election is currently ongoing — Admin CANNOT change startDate, and can only extend endDate
+      if (startDate !== undefined && new Date(startDate).getTime() !== currentStartMs) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'An election that has already started cannot have its start date modified.'
+        });
       }
-      if (!currentEnd || new Date(currentEnd).getTime() <= now) {
-        updateFields.endDate = new Date(now + 2 * 60 * 60 * 1000).toISOString();
+      if (endDate !== undefined) {
+        const newEndMs = new Date(endDate).getTime();
+        if (newEndMs <= now) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Ongoing election end date can only be extended to a future time.'
+          });
+        }
+        updateFields.endDate = endDate;
+      }
+    } else {
+      // Election has ended — Admin can extend the end date to reactivate the poll
+      if (endDate !== undefined) {
+        const newEndMs = new Date(endDate).getTime();
+        if (newEndMs <= now) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'To extend an ended election, the new end date must be in the future.'
+          });
+        }
+        updateFields.endDate = endDate;
       }
     }
 
-    const targetStatus = updateFields.status !== undefined ? updateFields.status : election.status;
-    const targetStart = updateFields.startDate !== undefined ? updateFields.startDate : election.startDate;
-    const targetEnd = updateFields.endDate !== undefined ? updateFields.endDate : election.endDate;
+    // Automatically recompute status based on updated time window
+    const targetStart = updateFields.startDate || election.startDate;
+    const targetEnd = updateFields.endDate || election.endDate;
+    const targetStartMs = new Date(targetStart).getTime();
+    const targetEndMs = new Date(targetEnd).getTime();
 
-    if (targetStatus && targetStatus !== 'draft') {
-      const startMs = targetStart ? new Date(targetStart).getTime() : 0;
-      const endMs = targetEnd ? new Date(targetEnd).getTime() : Infinity;
-      if (now >= startMs && now <= endMs) {
-        updateFields.status = 'active';
-      } else if (now < startMs) {
+    if (election.status !== 'draft') {
+      if (now < targetStartMs) {
         updateFields.status = 'scheduled';
+      } else if (now >= targetStartMs && now <= targetEndMs) {
+        updateFields.status = 'active';
       } else {
         updateFields.status = 'completed';
       }
@@ -1067,7 +1057,9 @@ exports.getVoters = async (req, res) => {
         name: item.name || 'Student Voter',
         email: item.email || 'N/A',
         phone: item.phone || 'N/A',
-        department: item.department || '',
+        program: item.program || '',
+        level: item.level || '',
+        department: item.program || item.department || '',
         isRegistered: true,
         hasVoted
       };

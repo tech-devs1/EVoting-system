@@ -7,7 +7,7 @@ import { apiRequest, getAuthHeaders } from '@/lib/api';
 import {
   ArrowLeft, BarChart3, Users, Vote, TrendingUp, Download,
   Filter, Calendar, CheckCircle2, Clock, AlertTriangle,
-  PieChart, Activity, FileText, Printer, RefreshCw
+  PieChart, Activity, FileText, Printer, RefreshCw, EyeOff
 } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -272,6 +272,44 @@ function AnalyticsContent() {
     return (
       <div className="p-12 text-center text-slate-500 dark:text-slate-400 text-xs font-medium">
         Loading election analytics...
+      </div>
+    );
+  }
+
+  const isOngoing = election && election.status !== 'ended' && election.status !== 'completed';
+
+  if (isOngoing) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <Link
+            href={`/admin/elections/dashboard?electionId=${electionId}`}
+            className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-3"
+          >
+            <ArrowLeft size={14} /> Back to Election Command Center
+          </Link>
+          <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <BarChart3 size={24} className="text-blue-600" />
+            Election Analytics & Report
+          </h2>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/30 rounded-3xl p-12 text-center">
+          <EyeOff size={48} className="text-amber-500 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Analytics & Reports Locked</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-2">
+            This election poll is currently active ({election?.title}). Deep analytical queries and PDF report exports will be unlocked when the polls close.
+          </p>
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mb-4">
+            ⏳ Current status: <span className="uppercase font-bold">{election?.status}</span>
+          </p>
+          <button
+            disabled={true}
+            className="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 font-bold text-xs rounded-xl cursor-not-allowed flex items-center gap-1.5 mx-auto"
+          >
+            <Download size={16} /> Export Locked (Election Ongoing)
+          </button>
+        </div>
       </div>
     );
   }

@@ -161,19 +161,18 @@ function PerElectionResultsContent() {
       {election && election.status !== 'ended' && election.status !== 'completed' ? (
         <div className="bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/30 rounded-3xl p-12 text-center">
           <EyeOff size={48} className="text-amber-500 mx-auto mb-4" />
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Results Locked</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Results & PDF Download Locked</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-2">
-            Election polls are still active. Results will be visible once the polling period ends and the election status is finalized.
+            Election polls are currently active. Full candidate results and PDF exports will unlock automatically when polling ends.
           </p>
-          <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
-            ⏳ Current status: <span className="uppercase">{election.status}</span>
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mb-4">
+            ⏳ Current status: <span className="uppercase font-bold">{election.status}</span>
           </p>
           <button
-            onClick={handleDownloadPDF}
-            disabled={pdfLoading}
-            className="mt-6 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors shadow-md shadow-blue-500/20 flex items-center gap-1.5 mx-auto"
+            disabled={true}
+            className="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 font-bold text-xs rounded-xl cursor-not-allowed flex items-center gap-1.5 mx-auto"
           >
-            <Download size={16} /> {pdfLoading ? 'Generating...' : 'Download PDF Report'}
+            <Download size={16} /> PDF Download Locked (Election Ongoing)
           </button>
         </div>
       ) : (

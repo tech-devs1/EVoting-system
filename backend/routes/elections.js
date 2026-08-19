@@ -331,9 +331,21 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
 router.get('/:id/export-audit', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
-    const { ActivityLog, VotedVoter } = require('../models');
+    const { ActivityLog, VotedVoter, Election, Op } = require('../models');
 
-    const activityLogs = await ActivityLog.findAll({ order: [['timestamp', 'DESC']], limit: 100 });
+    const election = await Election.findByPk(electionId);
+    const electionTitle = election ? election.title : '';
+
+    const activityLogs = await ActivityLog.findAll({
+      where: {
+        [Op.or]: [
+          { description: { [Op.like]: `%${electionId}%` } },
+          ...(electionTitle ? [{ description: { [Op.like]: `%${electionTitle}%` } }] : [])
+        ]
+      },
+      order: [['timestamp', 'DESC']],
+      limit: 100
+    });
     const votes = await VotedVoter.findAll({ where: { electionId }, order: [['timestamp', 'DESC']] });
 
     const combined = [
@@ -376,9 +388,21 @@ router.get('/:id/export-audit', verifyAuth, requireAdmin, async (req, res) => {
 router.get('/:id/audit-records', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
-    const { ActivityLog, VotedVoter } = require('../models');
+    const { ActivityLog, VotedVoter, Election, Op } = require('../models');
 
-    const activityLogs = await ActivityLog.findAll({ order: [['timestamp', 'DESC']], limit: 50 });
+    const election = await Election.findByPk(electionId);
+    const electionTitle = election ? election.title : '';
+
+    const activityLogs = await ActivityLog.findAll({
+      where: {
+        [Op.or]: [
+          { description: { [Op.like]: `%${electionId}%` } },
+          ...(electionTitle ? [{ description: { [Op.like]: `%${electionTitle}%` } }] : [])
+        ]
+      },
+      order: [['timestamp', 'DESC']],
+      limit: 50
+    });
     const votes = await VotedVoter.findAll({ where: { electionId }, order: [['timestamp', 'DESC']], limit: 50 });
 
     const combined = [
