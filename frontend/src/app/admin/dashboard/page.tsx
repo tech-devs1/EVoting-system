@@ -18,7 +18,6 @@ import {
   Search,
   Zap,
   Edit,
-  Trophy,
   Image as ImageIcon
 } from 'lucide-react';
 import { compressImageFile } from '@/lib/image';
@@ -326,21 +325,6 @@ export default function OrganizationElectionHub() {
   // Calculations for real-time dashboard analytics
   const totalVotesCastCount = stats.totalVotesCast || 0;
   const registeredVotersCount = stats.totalVoters || 0;
-  const uniqueVotersCast = stats.uniqueVotersCount || 0;
-
-  const overallParticipationRate = registeredVotersCount > 0
-    ? Math.min(100, Math.round((uniqueVotersCast / registeredVotersCount) * 100))
-    : 0;
-
-  // Max votes calculation for leaderboard bar chart
-  const maxVotes = topCandidates.length > 0 ? Math.max(...topCandidates.map(c => c.votes)) : 1;
-  const displayCandidates = topCandidates.length > 0
-    ? topCandidates.slice(0, 6)
-    : [
-        { name: 'No Live Votes Yet', votes: 0 }
-      ];
-
-  const strokeDasharray = `${overallParticipationRate}, 100`;
 
   if (loading) {
     return <DashboardSkeleton role="admin" />;
@@ -523,91 +507,6 @@ export default function OrganizationElectionHub() {
             </div>
           </div>
           <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1 }}>{totalVotesCastCount.toLocaleString()}</span>
-        </div>
-
-      </div>
-
-      {/* Analytics Visual Grid Row (Bar Chart + Doughnut Breakdown) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-5">
-        
-        {/* Voting Activity Bar Chart Card */}
-        <div className="lg:col-span-2 mobile-app-card" style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '20px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <div>
-              <span style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 600 }}>Top Contending Candidates</span>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                Live Standings
-              </h3>
-            </div>
-            <div style={{ padding: '0.35rem 0.85rem', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Trophy size={14} style={{ color: '#F59E0B' }} /> Leaderboard
-            </div>
-          </div>
-
-          {/* Dynamic Candidates standings bar chart */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '140px', paddingTop: '1rem', borderBottom: '1px solid #F1F5F9' }}>
-            {displayCandidates.map((cand, idx) => {
-              const pct = maxVotes > 0 ? (cand.votes / maxVotes) * 100 : 0;
-              const hStyle = maxVotes > 0 && cand.votes > 0 ? `${Math.max(12, pct)}%` : '10%';
-              const isLeader = idx === 0 && cand.votes > 0;
-
-              return (
-                <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-                  <div
-                    title={`${cand.name}: ${cand.votes} votes`}
-                    style={{
-                      width: '36px',
-                      height: hStyle,
-                      backgroundColor: isLeader ? '#F59E0B' : '#2563EB',
-                      borderRadius: '10px',
-                      transition: 'height 0.3s ease',
-                      boxShadow: isLeader ? '0 4px 12px rgba(245, 158, 11, 0.3)' : 'none'
-                    }}
-                  />
-                  <span
-                    style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', maxWidth: '50px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                    title={cand.name}
-                  >
-                    {cand.name.split(' ')[0]}
-                  </span>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94A3B8' }}>{cand.votes}v</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Voter Turnout Doughnut Breakdown Card */}
-        <div className="lg:col-span-1 mobile-app-card" style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>Voter Turnout</h4>
-            <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>Participation</span>
-          </div>
-
-          {/* Dynamic Turnout Donut Graphic */}
-          <div style={{ position: 'relative', width: '130px', height: '130px', margin: '1rem auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="130" height="130" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
-              <path stroke="#E2E8F0" strokeWidth="4" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              <path stroke="#2563EB" strokeWidth="4.5" strokeDasharray={strokeDasharray} strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-            </svg>
-            <div style={{ position: 'absolute', textAlign: 'center' }}>
-              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', display: 'block', lineHeight: 1 }}>{overallParticipationRate}%</span>
-              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>Turnout</span>
-            </div>
-          </div>
-
-          <div style={{ fontSize: '0.8rem', color: '#64748B', textAlign: 'center', fontWeight: 500 }}>
-            {uniqueVotersCast} out of {registeredVotersCount} registered members voted
-          </div>
         </div>
 
       </div>
