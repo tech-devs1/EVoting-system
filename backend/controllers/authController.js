@@ -177,25 +177,30 @@ async function generateAndSendOtp(voterRecord, email, name, phoneNumber = null) 
 exports.verifyStudent = async (req, res) => {
   try {
     const { studentId } = req.body;
-    if (!studentId) {
+    if (!studentId || !String(studentId).trim()) {
       return res.status(400).json({ status: 'error', message: 'Student ID is required' });
     }
 
-    const voter = await Voter.findOne({ where: { studentId } });
+    const cleanStudentId = String(studentId).trim();
+
+    const voter = await Voter.findOne({
+      where: {
+        [Op.or]: [
+          { studentId: cleanStudentId },
+          { indexNumber: cleanStudentId }
+        ]
+      }
+    });
 
     if (!voter) {
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          name: '',
-          email: '',
-          hasPhone: false
-        }
+      return res.status(404).json({
+        status: 'error',
+        message: 'Your index number was not found on any election roster. Please contact your election administrator.'
       });
     }
 
     if (voter.password && voter.isRegistered) {
-      return res.status(403).json({ status: 'error', message: 'This student ID has already been registered.' });
+      return res.status(403).json({ status: 'error', message: 'This student ID or email has already been registered.' });
     }
 
     return res.status(200).json({

@@ -70,21 +70,17 @@ export default function RegisterPage() {
     try {
       const res = await apiRequest<any>('/auth/verify-student', 'POST', { studentId: studentId.trim() });
       if (res.status === 'success' && res.data) {
-        if (res.data.name || res.data.email) {
-          if (res.data.name) setName(res.data.name);
-          if (res.data.email) setEmail(res.data.email);
-          if (res.data.phone) setPhone(res.data.phone);
-          if (res.data.program) setProgram(res.data.program);
-          if (res.data.level) setLevel(res.data.level);
-          setVerified(true);
-        } else {
-          setError('Your index number was not found on the official voter roster. Please contact your election administrator to be added before registering.');
-        }
+        if (res.data.name) setName(res.data.name);
+        if (res.data.email) setEmail(res.data.email);
+        if (res.data.phone) setPhone(res.data.phone);
+        if (res.data.program) setProgram(res.data.program);
+        if (res.data.level) setLevel(res.data.level);
+        setVerified(true);
       } else {
         setError(res.message || 'This student ID has already been registered.');
       }
     } catch (err: any) {
-      setError(err.message || 'Student not found on roster. Please contact your administrator.');
+      setError(err.message || 'Your index number was not found on any election roster. Please contact your election administrator.');
     } finally {
       setVerifying(false);
     }
