@@ -254,7 +254,7 @@ function AnalyticsContent() {
   const handleDownloadReport = async () => {
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`/api/elections/${electionId}/results/pdf`, { headers });
+      const res = await fetch(`/api/elections/${electionId}/report/pdf`, { headers });
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
