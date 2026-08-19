@@ -156,6 +156,22 @@ async function generateAndSendOtp(userDocRef, email, name, phoneNumber = null) {
   return { otp, emailSent, smsSent };
 }
 
+// Public: list active departments for registration/login dropdown
+router.get('/departments', async (req, res) => {
+  try {
+    const snapshot = await db.collection('tenants').where('status', '==', 'active').get();
+    const departments = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      departments.push({ id: doc.id, name: data.name });
+    });
+    res.status(200).json({ status: 'success', data: departments });
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch departments' });
+  }
+});
+
 // Verify student ID and fetch details before registration
 router.post('/verify-student', async (req, res) => {
   try {

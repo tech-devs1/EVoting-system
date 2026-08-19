@@ -17,7 +17,8 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
-  Phone
+  Phone,
+  Building2
 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -39,6 +40,35 @@ export default function RegisterPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendMsg, setResendMsg] = useState('');
   const [hasPhone, setHasPhone] = useState(false);
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState('');
+
+  // Fetch departments on mount
+  useEffect(() => {
+    async function loadDepts() {
+      try {
+        const res = await apiRequest<{ status: string; data: { id: string; name: string }[] }>('/auth/departments');
+        if (res.status === 'success') {
+          setDepartments(res.data);
+          if (res.data.length > 0) {
+            // Check if there is already a tenantId in localStorage or default to compssa
+            const stored = localStorage.getItem('COMPSSA_tenantId');
+            const defaultDept = res.data.find(d => d.id === stored) || res.data.find(d => d.id === 'compssa') || res.data[0];
+            setSelectedTenant(defaultDept.id);
+            localStorage.setItem('COMPSSA_tenantId', defaultDept.id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load departments', err);
+      }
+    }
+    loadDepts();
+  }, []);
+
+  const handleTenantChange = (tenantId: string) => {
+    setSelectedTenant(tenantId);
+    localStorage.setItem('COMPSSA_tenantId', tenantId);
+  };
 
   // Countdown effect for resend button
   useEffect(() => {
@@ -232,8 +262,8 @@ export default function RegisterPage() {
           </div>
           <div className="auth-logo" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={28} style={{ color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: 600, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
-              COMPSSA <span style={{ color: 'var(--color-primary)' }}>✓</span>
+            <span style={{ fontWeight: 600, fontSize: 'var(--text-xl)', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
+              {departments.find(d => d.id === selectedTenant)?.name || 'VoteTrust'} <span style={{ color: 'var(--color-primary)' }}>✓</span>
             </span>
           </div>
           <h2 className="auth-title" style={{ marginTop: 'var(--space-4)' }}>Voter Registration</h2>
@@ -292,6 +322,29 @@ export default function RegisterPage() {
         <div id="register-card-body">
           {currentStep === 1 && (
             <form onSubmit={handleStep1Submit}>
+              {departments.length > 0 && (
+                <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+                  <label className="form-label" htmlFor="reg-tenant">Department / School</label>
+                  <div className="form-input-container">
+                    <Building2 size={18} className="form-input-icon" />
+                    <select
+                      id="reg-tenant"
+                      className="form-input form-input-with-icon"
+                      required
+                      value={selectedTenant}
+                      onChange={(e) => handleTenantChange(e.target.value)}
+                      style={{ appearance: 'auto', paddingRight: '24px' }}
+                    >
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               <div className="form-group">
                 <label className="form-label" htmlFor="reg-id">Student Index Number</label>
                 <div className="form-input-container">
