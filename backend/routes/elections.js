@@ -39,7 +39,7 @@ const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const { Election, Candidate, Voter, VotedVoter, Tenant, Vote, UnlockedElection, ActivityLog, FraudAlert } = require('../models');
 
-const generateElectionPDF = async (electionId, res, isReport = false) => {
+const generateElectionResultsPDF = async (electionId, res) => {
   const { Position } = require('../models');
   const election = await Election.findByPk(electionId);
   if (!election) return res.status(404).json({ status: 'error', message: 'Election not found' });
@@ -51,7 +51,7 @@ const generateElectionPDF = async (electionId, res, isReport = false) => {
   const totalVoted = await VotedVoter.count({ where: { electionId } });
 
   const doc = new PDFDocument({ margin: 40, size: 'A4' });
-  const filename = `${election.title.replace(/[^a-zA-Z0-9]/g, '_')}_${isReport ? 'report' : 'results'}.pdf`;
+  const filename = `${election.title.replace(/[^a-zA-Z0-9]/g, '_')}_results.pdf`;
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -63,7 +63,7 @@ const generateElectionPDF = async (electionId, res, isReport = false) => {
 
   doc.fillColor('#1E3A8A').fontSize(18).font('Helvetica-Bold').text(orgName, { align: 'center' });
   doc.fillColor('#2563EB').fontSize(13).font('Helvetica-Bold').text(ecTitle, { align: 'center' });
-  doc.fillColor('#64748B').fontSize(9).font('Helvetica').text(`Official Certified ${isReport ? 'Audit & Election Report' : 'Election Results Certificate'}`, { align: 'center' });
+  doc.fillColor('#64748B').fontSize(9).font('Helvetica').text('Official Certified Election Results Certificate', { align: 'center' });
   doc.moveDown(0.5);
 
   doc.strokeColor('#CBD5E1').lineWidth(1).moveTo(40, doc.y).lineTo(555, doc.y).stroke();
@@ -176,9 +176,143 @@ const generateElectionPDF = async (electionId, res, isReport = false) => {
   doc.end();
 };
 
+const generateElectionReportPDF = async (electionId, res) => {
+  const { Position } = require('../models');
+  const election = await Election.findByPk(electionId);
+  if (!election) return res.status(404).json({ status: 'error', message: 'Election not found' });
+
+  const tenant = await Tenant.findByPk(election.tenantId || 'default');
+  const positions = await Position.findAll({ where: { electionId }, order: [['order', 'ASC']] });
+  const voters = await Voter.findAll({ where: { electionId } });
+  const totalRegistered = voters.length;
+  const totalVoted = await VotedVoter.count({ where: { electionId } });
+  const auditLogs = await ActivityLog.findAll({ order: [['timestamp', 'DESC']], limit: 15 });
+
+  const doc = new PDFDocument({ margin: 40, size: 'A4' });
+  const filename = `${election.title.replace(/[^a-zA-Z0-9]/g, '_')}_analytics_report.pdf`;
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  doc.pipe(res);
+
+  // Header Letterhead
+  const orgName = (tenant?.name || 'HO TECHNICAL UNIVERSITY').toUpperCase();
+  const ecTitle = (tenant?.ecName || 'ELECTORAL COMMISSION').toUpperCase();
+
+  doc.fillColor('#1E3A8A').fontSize(18).font('Helvetica-Bold').text(orgName, { align: 'center' });
+  doc.fillColor('#2563EB').fontSize(13).font('Helvetica-Bold').text(ecTitle, { align: 'center' });
+  doc.fillColor('#64748B').fontSize(9).font('Helvetica').text('Official Election Analytics & Participation Report', { align: 'center' });
+  doc.moveDown(0.5);
+
+  doc.strokeColor('#CBD5E1').lineWidth(1).moveTo(40, doc.y).lineTo(555, doc.y).stroke();
+  doc.moveDown(0.8);
+
+  // Election Title
+  doc.fillColor('#0F172A').fontSize(15).font('Helvetica-Bold').text(election.title, { align: 'center' });
+  doc.moveDown(0.5);
+
+  // Analytics Overview Card
+  const boxTop = doc.y;
+  doc.rect(40, boxTop, 515, 65).fillAndStroke('#F8FAFC', '#E2E8F0');
+
+  doc.fillColor('#334155').fontSize(9).font('Helvetica-Bold');
+  doc.text(`Status: ${(election.status || 'ACTIVE').toUpperCase()}`, 55, boxTop + 10);
+  doc.text(`Eligible Voters: ${totalRegistered}`, 220, boxTop + 10);
+  doc.text(`Total Ballots Cast: ${totalVoted}`, 380, boxTop + 10);
+
+  const turnout = totalRegistered > 0 ? ((totalVoted / totalRegistered) * 100).toFixed(1) : '0.0';
+  doc.text(`Turnout Rate: ${turnout}%`, 55, boxTop + 30);
+  doc.text(`Positions Contested: ${positions.length}`, 220, boxTop + 30);
+  doc.text(`Category: ${election.category || 'General'}`, 380, boxTop + 30);
+
+  doc.fillColor('#64748B').fontSize(8).font('Helvetica');
+  doc.text(`Report Generated: ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}`, 55, boxTop + 48);
+
+  doc.y = boxTop + 80;
+
+  // Program Participation Breakdown
+  const programMap = {};
+  voters.forEach(v => {
+    const prog = v.program || 'General / Unspecified';
+    if (!programMap[prog]) programMap[prog] = 0;
+    programMap[prog]++;
+  });
+
+  doc.fillColor('#1E3A8A').fontSize(11).font('Helvetica-Bold').text('VOTER ROSTER BREAKDOWN BY PROGRAM', 40, doc.y);
+  doc.moveDown(0.3);
+
+  const progTableTop = doc.y;
+  doc.rect(40, progTableTop, 515, 18).fill('#EFF6FF');
+  doc.fillColor('#1D4ED8').fontSize(9).font('Helvetica-Bold');
+  doc.text('Program / Department', 50, progTableTop + 4);
+  doc.text('Roster Count', 380, progTableTop + 4);
+  doc.text('Share', 485, progTableTop + 4);
+
+  let curY = progTableTop + 20;
+  Object.entries(programMap).slice(0, 10).forEach(([prog, count]) => {
+    if (curY > 720) { doc.addPage(); curY = 50; }
+    const share = totalRegistered > 0 ? ((count / totalRegistered) * 100).toFixed(1) : '0.0';
+    doc.rect(40, curY, 515, 20).fillAndStroke(curY % 40 === 0 ? '#FFFFFF' : '#F8FAFC', '#F1F5F9');
+    doc.fillColor('#0F172A').fontSize(9).font('Helvetica');
+    doc.text(prog, 50, curY + 5, { width: 300 });
+    doc.font('Helvetica-Bold').text(`${count}`, 380, curY + 5);
+    doc.text(`${share}%`, 485, curY + 5);
+    curY += 20;
+  });
+
+  doc.y = curY + 15;
+
+  // Recent System Activity Logs Summary
+  if (doc.y > 660) doc.addPage();
+  doc.fillColor('#1E3A8A').fontSize(11).font('Helvetica-Bold').text('ELECTION AUDIT TRAIL SUMMARY', 40, doc.y);
+  doc.moveDown(0.3);
+
+  const auditTableTop = doc.y;
+  doc.rect(40, auditTableTop, 515, 18).fill('#EFF6FF');
+  doc.fillColor('#1D4ED8').fontSize(9).font('Helvetica-Bold');
+  doc.text('Timestamp', 50, auditTableTop + 4);
+  doc.text('Action', 200, auditTableTop + 4);
+  doc.text('Actor', 380, auditTableTop + 4);
+
+  curY = auditTableTop + 20;
+  auditLogs.forEach(log => {
+    if (curY > 720) { doc.addPage(); curY = 50; }
+    const ts = log.timestamp ? new Date(Number(log.timestamp)).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : 'N/A';
+    doc.rect(40, curY, 515, 20).fillAndStroke(curY % 40 === 0 ? '#FFFFFF' : '#F8FAFC', '#F1F5F9');
+    doc.fillColor('#0F172A').fontSize(8).font('Helvetica');
+    doc.text(ts, 50, curY + 5);
+    doc.font('Helvetica-Bold').text(log.action || 'ACTIVITY', 200, curY + 5, { width: 170 });
+    doc.font('Helvetica').text(log.actorEmail || 'System', 380, curY + 5, { width: 160 });
+    curY += 20;
+  });
+
+  // Certification Sign-off
+  if (doc.y > 660) doc.addPage();
+  doc.moveDown(1);
+  doc.strokeColor('#CBD5E1').lineWidth(0.5).moveTo(40, doc.y).lineTo(555, doc.y).stroke();
+  doc.moveDown(0.8);
+
+  doc.fillColor('#0F172A').fontSize(10).font('Helvetica-Bold').text('ELECTORAL COMMISSION ANALYTICS CERTIFICATION', 40, doc.y);
+  doc.fillColor('#475569').fontSize(8).font('Helvetica').text(
+    'This analytical report provides an official, audited summary of voter turnout, roster metrics, and system activity logs recorded for this election.',
+    40, doc.y + 4, { width: 515 }
+  );
+
+  const signTop = doc.y + 35;
+  doc.strokeColor('#94A3B8').lineWidth(1);
+  doc.moveTo(60, signTop).lineTo(220, signTop).stroke();
+  doc.moveTo(335, signTop).lineTo(495, signTop).stroke();
+
+  doc.fillColor('#334155').fontSize(8).font('Helvetica-Bold');
+  doc.text('Chief Electoral Officer', 60, signTop + 6);
+  doc.text('Electoral Commissioner', 335, signTop + 6);
+
+  doc.end();
+};
+
 router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    await generateElectionPDF(req.params.id, res, true);
+    await generateElectionReportPDF(req.params.id, res);
   } catch (err) {
     console.error('Error generating report PDF:', err);
     if (!res.headersSent) res.status(500).send(err.message);
@@ -187,7 +321,7 @@ router.get('/:id/report/pdf', verifyAuth, requireAdmin, async (req, res) => {
 
 router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    await generateElectionPDF(req.params.id, res, false);
+    await generateElectionResultsPDF(req.params.id, res);
   } catch (err) {
     console.error('Error generating results PDF:', err);
     if (!res.headersSent) res.status(500).send(err.message);
