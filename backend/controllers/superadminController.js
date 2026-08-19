@@ -440,7 +440,8 @@ exports.getAuditLogs = async (req, res) => {
         status: item.status || 'success',
         ip: item.ip || '127.0.0.1',
         timestamp: ts,
-        createdAt: new Date(ts).toISOString()
+        createdAt: new Date(ts).toISOString(),
+        fullRecord: item
       };
     });
 

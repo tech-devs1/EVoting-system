@@ -13,7 +13,12 @@ import {
   Search,
   Activity,
   User,
-  ShieldCheck
+  ShieldCheck,
+  Eye,
+  X,
+  Globe,
+  Terminal,
+  ShieldAlert
 } from 'lucide-react';
 import DataTable, { type ColumnDef, type FilterDef } from '@/components/DataTable';
 
@@ -21,11 +26,15 @@ interface AuditRecord {
   id: string;
   type: 'admin' | 'voter';
   actor: string;
+  role?: string;
   action: string;
+  ip?: string;
+  tenantId?: string;
   timestamp: number;
   details?: string;
   selections?: Record<string, string>;
   hash?: string;
+  fullRecord?: any;
 }
 
 function ElectionSystemAuditContent() {
@@ -34,6 +43,9 @@ function ElectionSystemAuditContent() {
 
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Detail Modal State
+  const [selectedRecord, setSelectedRecord] = useState<AuditRecord | null>(null);
 
   async function fetchAuditData() {
     if (!electionId) {
@@ -122,6 +134,18 @@ function ElectionSystemAuditContent() {
         </span>
       ),
     },
+    {
+      key: 'id',
+      label: 'Details',
+      render: (r) => (
+        <button
+          onClick={() => setSelectedRecord(r)}
+          className="px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors flex items-center gap-1"
+        >
+          <Eye size={12} /> View
+        </button>
+      ),
+    },
   ];
 
   return (
@@ -167,6 +191,70 @@ function ElectionSystemAuditContent() {
           />
         )}
       </div>
+
+      {/* Log Details Modal */}
+      {selectedRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <Terminal size={18} className="text-blue-600" /> Audit Log Event Details
+              </h3>
+              <button onClick={() => setSelectedRecord(null)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <X size={18} className="text-slate-500" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50 flex justify-between items-center">
+                <span className="font-bold text-slate-400 uppercase text-[10px]">Log Record ID</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">{selectedRecord.id}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50">
+                  <span className="block font-bold text-slate-400 uppercase text-[10px] mb-1">Actor Email / ID</span>
+                  <span className="font-bold text-slate-900 dark:text-white truncate block">{selectedRecord.actor}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50">
+                  <span className="block font-bold text-slate-400 uppercase text-[10px] mb-1">Actor Role</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400 uppercase">{selectedRecord.role || selectedRecord.type}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50">
+                  <span className="block font-bold text-slate-400 uppercase text-[10px] mb-1">Action Code</span>
+                  <span className="font-extrabold text-slate-900 dark:text-white">{selectedRecord.action}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50">
+                  <span className="block font-bold text-slate-400 uppercase text-[10px] mb-1">IP Address</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{selectedRecord.ip || '127.0.0.1'}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50">
+                <span className="block font-bold text-slate-400 uppercase text-[10px] mb-1">Event Timestamp</span>
+                <span className="font-bold text-slate-900 dark:text-white">{new Date(selectedRecord.timestamp).toString()}</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-900 text-slate-200 font-mono text-[11px] overflow-x-auto max-h-40 border border-slate-800">
+                <span className="block font-bold text-blue-400 text-[10px] uppercase mb-1">Event Payload / Description</span>
+                {selectedRecord.details || JSON.stringify(selectedRecord.fullRecord, null, 2)}
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <button
+                onClick={() => setSelectedRecord(null)}
+                className="w-full py-2.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-md shadow-blue-500/20"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
