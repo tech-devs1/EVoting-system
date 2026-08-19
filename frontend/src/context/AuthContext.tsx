@@ -19,7 +19,7 @@ interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   login: (email: string, password?: string, role?: 'voter' | 'admin' | 'superadmin') => Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>;
-  register: (studentId: string, email: string, name: string, password?: string, phone?: string, faceImage?: string) => Promise<{ otpRequired?: boolean; email?: string; phone?: string }>;
+  requestOtp: (studentId: string, googleCredential?: string) => Promise<{ otpRequired?: boolean; email?: string; fallbackOtp?: string }>;
 
   verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
@@ -119,26 +119,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (studentId: string, email: string, name: string, password?: string, phone?: string, faceImage?: string): Promise<{ otpRequired?: boolean; email?: string; phone?: string }> => {
+  const requestOtp = async (studentId: string, googleCredential?: string): Promise<{ otpRequired?: boolean; email?: string; fallbackOtp?: string }> => {
     setLoading(true);
     try {
-      const res = await apiRequest<{ status: string; email?: string; phone?: string; token?: string; data?: UserProfile }>('/auth/register', 'POST', {
+      const res = await apiRequest<{ status: string; email?: string; fallbackOtp?: string; message?: string }>('/auth/request-otp', 'POST', {
         studentId,
-        email,
-        name,
-        password,
-        phone,
-        faceImage
+        googleCredential
       });
-      if (res.status === 'otp_required') {
-        return { otpRequired: true, email: res.email, phone: res.phone };
-      }
       if (res.status === 'success') {
-        return {};
+        return { otpRequired: true, email: res.email, fallbackOtp: res.fallbackOtp };
       }
-      throw new Error('Registration failed due to server error.');
+      throw new Error(res.message || 'OTP request failed.');
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('Request OTP error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -173,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, verifyOtp, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, requestOtp, verifyOtp, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -353,7 +353,7 @@ export default function LoadingScreen() {
             margin: '-1.5rem 0 0',
           }}
         >
-          Welcome
+          E-VOTE
         </motion.p>
 
         <AnimatePresence>

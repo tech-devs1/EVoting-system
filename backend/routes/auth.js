@@ -172,7 +172,7 @@ router.get('/departments', async (req, res) => {
   }
 });
 
-// Verify student ID and fetch details before registration
+// Verify student ID and fetch details before login
 router.post('/verify-student', async (req, res) => {
   try {
     const { studentId } = req.body;
@@ -185,7 +185,7 @@ router.post('/verify-student', async (req, res) => {
 
     if (!studentDoc.exists) {
       // Log flagged user — student ID not in the database
-      await logFraudAlert('UNRECOGNIZED_STUDENT', `Unrecognized student ID attempted registration: ${studentId}`, {
+      await logFraudAlert('UNRECOGNIZED_STUDENT', `Unrecognized student ID attempted login: ${studentId}`, {
         studentId,
         attemptedAt: new Date().toISOString(),
         ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
@@ -196,36 +196,11 @@ router.post('/verify-student', async (req, res) => {
 
     const studentData = studentDoc.data();
 
-    // Case 1: Fully registered (OTP verified) — reject
-    if (studentData.isRegistered) {
-      return res.status(403).json({ status: 'error', message: 'This student ID has already been registered.' });
-    }
-
-    // Case 2: Partial registration (has password but hasn't verified OTP yet)
-    if (studentData.password) {
-      // Try to send a new OTP so they can complete verification
-      try {
-        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
-      } catch (otpErr) {
-        console.error('OTP delivery failed for incomplete registration (user can resend):', otpErr.message || otpErr);
-      }
-      return res.status(200).json({
-        status: 'incomplete_registration',
-        data: {
-          name: studentData.name,
-          email: studentData.email
-        },
-        message: 'You have an incomplete registration. A verification code has been sent to your email.'
-      });
-    }
-
-    // Case 3: Fresh student — proceed to registration
     return res.status(200).json({
       status: 'success',
       data: {
         name: studentData.name,
-        email: studentData.email,
-        hasPhone: !!(studentData.phone)
+        email: studentData.email
       }
     });
   } catch (error) {
@@ -233,67 +208,72 @@ router.post('/verify-student', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to verify student' });
   }
 });
-// Register a user securely
-router.post('/register', async (req, res) => {
+
+// Request OTP for voter login (supports optional Google verification)
+router.post('/request-otp', async (req, res) => {
   try {
-    const { studentId, email, name, password, faceImage } = req.body;
+    const { studentId, googleCredential } = req.body;
+    const tenantId = getTenantId(req);
 
-    if (!studentId || !email || !password) {
-      return res.status(400).json({ status: 'error', message: 'Missing required fields (studentId, email, password)' });
+    if (!studentId) {
+      return res.status(400).json({ status: 'error', message: 'Student ID is required' });
     }
 
-    // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
-    if (!passwordRegex.test(password)) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one special character.' 
-      });
-    }
-
-    const studentDocRef = db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(studentId);
+    const studentDocRef = db.collection('tenants').doc(tenantId).collection('voter_rolls').doc(studentId);
     const studentDoc = await studentDocRef.get();
 
     if (!studentDoc.exists) {
-      return res.status(403).json({ status: 'error', message: 'You are not a valid student in this school records.' });
+      return res.status(404).json({ status: 'error', message: 'Student ID not found in school records.' });
     }
 
     const studentData = studentDoc.data();
+
+    // Verify Google ID token if provided
+    if (googleCredential) {
+      try {
+        let emailFromGoogle;
+        if (googleCredential.startsWith('MOCK_GOOGLE_')) {
+          emailFromGoogle = googleCredential.replace('MOCK_GOOGLE_', '');
+        } else {
+          const { OAuth2Client } = require('google-auth-library');
+          const client = new OAuth2Client();
+          const ticket = await client.verifyIdToken({
+              idToken: googleCredential,
+              audience: process.env.GOOGLE_CLIENT_ID
+          });
+          const payload = ticket.getPayload();
+          emailFromGoogle = payload.email;
+        }
+
+        if (!emailFromGoogle) {
+          return res.status(400).json({ status: 'error', message: 'Could not retrieve email from Google Account.' });
+        }
+
+        if (emailFromGoogle.trim().toLowerCase() !== studentData.email.trim().toLowerCase()) {
+          return res.status(403).json({ 
+            status: 'error', 
+            message: `Authentication failed. The Google account (${emailFromGoogle}) does not match your registered institutional email (${studentData.email}).` 
+          });
+        }
+      } catch (authErr) {
+        console.error('Google verification failed:', authErr);
+        return res.status(401).json({ status: 'error', message: 'Google authentication verification failed: ' + authErr.message });
+      }
+    }
+
+    // Generate and send OTP via email
+    const { otp, emailSent } = await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
     
-    if (studentData.email !== email) {
-      return res.status(403).json({ status: 'error', message: 'Email does not match our school records.' });
-    }
-
-    if (studentData.isRegistered) {
-      return res.status(403).json({ status: 'error', message: 'This student ID has already registered an account to prevent cheating.' });
-    }
-
-    let faceEmbedding = null;
-
-    // Store credentials
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await studentDocRef.set({
-      isRegistered: false, // will be marked true upon verify-otp
-      password: hashedPassword,
-      name: name || studentData.name,
-      uid: studentId,
-      role: 'voter',
-      faceImage: faceImage || '',
-      faceEmbedding: faceEmbedding || null,
-    }, { merge: true });
-
-    // Send OTP via Email
-    await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
-
-    res.status(201).json({
-      status: 'otp_required',
+    return res.status(200).json({
+      status: 'success',
       email: studentData.email,
-      message: 'OTP sent to your school email. Please verify.'
+      fallbackOtp: emailSent ? undefined : otp, // For offline/demo mode
+      message: 'Verification code (OTP) sent to your email.'
     });
+
   } catch (error) {
-    console.error('Error registering user:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to register user' });
+    console.error('Error requesting OTP:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to send OTP.' });
   }
 });
 
@@ -610,7 +590,7 @@ router.post('/verify-otp', async (req, res) => {
     await userRef.update({ otp: null, otpExpiry: null, isRegistered: true });
 
     const token = jwt.sign(
-      { uid: userDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name },
+      { uid: userDoc.id, email: userData.email, role: userData.role || 'voter', name: userData.name, tenantId: getTenantId(req) },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -622,6 +602,7 @@ router.post('/verify-otp', async (req, res) => {
         email: userData.email,
         role: userData.role || 'voter',
         name: userData.name,
+        tenantId: getTenantId(req),
         faceImage: userData.faceImage || ''
       },
       token
