@@ -7,13 +7,9 @@ import { apiRequest } from '@/lib/api';
 import { 
   ArrowLeft, 
   ShieldAlert, 
-  AlertTriangle, 
-  Clock, 
-  CheckCircle2, 
   ShieldCheck, 
-  Search, 
-  Lock 
 } from 'lucide-react';
+import DataTable, { type ColumnDef, type FilterDef } from '@/components/DataTable';
 
 interface SecurityAlert {
   id: string;
@@ -32,7 +28,6 @@ function PerElectionSecurityContent() {
 
   const [alerts, setAlerts] = useState<SecurityAlert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
 
   async function fetchSecurityAlerts() {
     if (!electionId) {
@@ -56,11 +51,51 @@ function PerElectionSecurityContent() {
     if (electionId) fetchSecurityAlerts();
   }, [electionId]);
 
-  const filteredAlerts = alerts.filter(a => 
-    a.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (a.studentId && a.studentId.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (a.actorEmail && a.actorEmail.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const statusFilters: FilterDef[] = [{
+    key: 'status',
+    label: 'All Status',
+    options: [
+      { value: 'unresolved', label: 'Unresolved' },
+      { value: 'resolved', label: 'Resolved' },
+    ],
+  }];
+
+  const columns: ColumnDef<SecurityAlert>[] = [
+    {
+      key: 'timestamp',
+      label: 'Timestamp',
+      render: (a) => (
+        <span className="font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
+          {new Date(a.timestamp).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      key: 'studentId',
+      label: 'Target ID / Email',
+      render: (a) => <span className="font-semibold">{a.studentId || a.actorEmail || 'N/A'}</span>,
+    },
+    {
+      key: 'description',
+      label: 'Security Event',
+      render: (a) => <span className="text-slate-700 dark:text-slate-300">{a.description}</span>,
+    },
+    {
+      key: 'ip',
+      label: 'IP Address',
+      render: (a) => <span className="font-mono text-sm text-slate-500 dark:text-slate-400">{a.ip || '127.0.0.1'}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      filterable: true,
+      render: (a) => (
+        <span className={`badge ${a.status === 'resolved' ? 'badge-success' : 'badge-danger'}`}>
+          {a.status || 'flagged'}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="animate-page-enter">
@@ -100,63 +135,24 @@ function PerElectionSecurityContent() {
 
       {/* Security Alerts Log */}
       <div className="card" style={{ padding: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Access Security Audit Log</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Real-time verification security events</p>
-          </div>
-
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-            <input
-              type="text"
-              placeholder="Search security log..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: '32px', paddingRight: '12px', paddingTop: '6px', paddingBottom: '6px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem', backgroundColor: 'var(--bg-input)' }}
-            />
-          </div>
+        <div style={{ marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Access Security Audit Log</h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Real-time verification security events</p>
         </div>
 
         {loading ? (
           <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading security logs...</p>
-        ) : filteredAlerts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-            <ShieldCheck size={36} style={{ color: 'var(--color-success)' }} />
-            <p style={{ color: 'var(--text-secondary)', margin: 0, fontWeight: 600 }}>All Access Attempts Nominal</p>
-            <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem', margin: 0 }}>No unauthorized access attempts or duplicate code requests detected for this election.</p>
-          </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--bg-input)', textAlign: 'left' }}>
-                  <th style={{ padding: '10px 12px' }}>Timestamp</th>
-                  <th style={{ padding: '10px 12px' }}>Target ID / Email</th>
-                  <th style={{ padding: '10px 12px' }}>Security Event Description</th>
-                  <th style={{ padding: '10px 12px' }}>IP Address</th>
-                  <th style={{ padding: '10px 12px' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAlerts.map((a, i) => (
-                  <tr key={a.id || i} style={{ borderTop: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
-                      {new Date(a.timestamp).toLocaleString()}
-                    </td>
-                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>{a.studentId || a.actorEmail || 'N/A'}</td>
-                    <td style={{ padding: '10px 12px', color: 'var(--text-primary)' }}>{a.description}</td>
-                    <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{a.ip || '127.0.0.1'}</td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <span className={`badge ${a.status === 'resolved' ? 'badge-success' : 'badge-danger'}`}>
-                        {a.status || 'flagged'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            data={alerts}
+            columns={columns}
+            searchPlaceholder="Search security log…"
+            searchKeys={['description', 'studentId', 'actorEmail', 'ip']}
+            dateField="timestamp"
+            filters={statusFilters}
+            emptyMessage="All Access Attempts Nominal — No unauthorized access attempts or duplicate code requests detected."
+            pageSize={10}
+          />
         )}
       </div>
     </div>

@@ -19,6 +19,7 @@ import {
   Download 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import DataTable, { type ColumnDef, type FilterDef } from '@/components/DataTable';
 
 interface Voter {
   id: string;
@@ -36,8 +37,6 @@ function PerElectionVotersContent() {
 
   const [voters, setVoters] = useState<Voter[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
 
   // CSV Upload State
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -216,15 +215,32 @@ function PerElectionVotersContent() {
     }
   };
 
-  const filteredVoters = voters.filter(v => {
-    const matchesSearch = v.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          v.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (statusFilter === 'voted') return matchesSearch && v.hasVoted;
-    if (statusFilter === 'pending') return matchesSearch && !v.hasVoted;
-    return matchesSearch;
-  });
+  const voterFilters: FilterDef[] = [{
+    key: 'hasVoted',
+    label: 'All Status',
+    options: [
+      { value: 'true', label: 'Voted' },
+      { value: 'false', label: 'Pending' },
+    ],
+  }];
+
+  const voterColumns: ColumnDef<Voter>[] = [
+    { key: 'studentId', label: 'Index Number', render: (v) => <span className="font-mono font-bold text-slate-900 dark:text-white">{v.studentId}</span> },
+    { key: 'name', label: 'Full Name', render: (v) => <span className="font-bold text-slate-900 dark:text-white">{v.name}</span> },
+    { key: 'email', label: 'Email Address', render: (v) => <span className="text-slate-600 dark:text-slate-300">{v.email}</span> },
+    { key: 'phone', label: 'Phone', render: (v) => <span className="text-slate-500 dark:text-slate-400">{v.phone || 'N/A'}</span> },
+    {
+      key: 'hasVoted',
+      label: 'Status',
+      filterable: true,
+      filterKey: 'hasVoted',
+      render: (v) => v.hasVoted ? (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30"><Check size={12} /> Ballot Cast</span>
+      ) : (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30"><Clock size={12} /> Pending</span>
+      ),
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -343,86 +359,20 @@ function PerElectionVotersContent() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search voter..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-700 rounded-xl">
-              <button
-                onClick={() => setStatusFilter('all')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                  statusFilter === 'all' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setStatusFilter('voted')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                  statusFilter === 'voted' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                Voted
-              </button>
-              <button
-                onClick={() => setStatusFilter('pending')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                  statusFilter === 'pending' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                Pending
-              </button>
-            </div>
-          </div>
         </div>
 
         {loading ? (
           <p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Loading eligible voters...</p>
-        ) : filteredVoters.length === 0 ? (
-          <p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">No voters found for this election.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-100 dark:border-slate-700/60">
-                <tr>
-                  <th className="px-4 py-3">Index Number</th>
-                  <th className="px-4 py-3">Full Name</th>
-                  <th className="px-4 py-3">Email Address</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3">Voting Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
-                {filteredVoters.map((v, i) => (
-                  <tr key={v.id || i} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="px-4 py-3 font-mono font-bold text-slate-900 dark:text-white">{v.studentId}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{v.name}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{v.email}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{v.phone || 'N/A'}</td>
-                    <td className="px-4 py-3">
-                      {v.hasVoted ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
-                          <Check size={12} /> Ballot Cast
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">
-                          <Clock size={12} /> Pending
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            data={voters}
+            columns={voterColumns}
+            searchPlaceholder="Search by name, index, or email…"
+            searchKeys={['studentId', 'name', 'email']}
+            filters={voterFilters}
+            emptyMessage="No voters found for this election."
+            pageSize={10}
+          />
         )}
       </div>
     </div>

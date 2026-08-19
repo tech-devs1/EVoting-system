@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
 import { Activity, Download, RefreshCw, Building2, Globe, Shield, ChevronDown } from 'lucide-react';
+import DataTable, { type ColumnDef, type FilterDef } from '@/components/DataTable';
 
 interface AuditEntry {
   id: string;
@@ -214,62 +215,97 @@ export default function SuperAdminAudit() {
             <Activity className="opacity-30 mx-auto mb-3 animate-spin" size={32} />
             <p className="text-sm font-medium">Loading audit logs...</p>
           </div>
-        ) : logs.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 dark:text-slate-500">
-            <Activity className="opacity-20 mx-auto mb-3" size={40} />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No Activity Yet</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Audit entries will appear here as users interact with the platform.</p>
-          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm text-left">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/40 border-b-2 border-slate-200 dark:border-slate-800">
-                  <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Timestamp</th>
-                  <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Action</th>
-                  <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Actor</th>
-                  <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role</th>
-                  <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Department</th>
-                  <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Description</th>
-                  <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((log, idx) => (
-                  <tr key={log.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 last:border-none transition-colors">
-                    <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap text-xs font-medium">
+          <div className="p-5">
+            <DataTable
+              data={logs}
+              columns={[
+                {
+                  key: 'timestamp',
+                  label: 'Timestamp',
+                  render: (log: AuditEntry) => (
+                    <span className="text-slate-500 dark:text-slate-400 whitespace-nowrap text-xs font-medium">
                       {new Date(log.timestamp).toLocaleString('en-GB', { hour12: false })}
-                    </td>
-                    <td className="px-4 py-3.5"><ActionBadge action={log.action} /></td>
-                    <td className="px-4 py-3.5 font-semibold text-slate-900 dark:text-slate-100 max-w-[180px] truncate" title={log.actorEmail}>
+                    </span>
+                  ),
+                },
+                {
+                  key: 'action',
+                  label: 'Action',
+                  render: (log: AuditEntry) => <ActionBadge action={log.action} />,
+                },
+                {
+                  key: 'actorEmail',
+                  label: 'Actor',
+                  render: (log: AuditEntry) => (
+                    <span className="font-semibold text-slate-900 dark:text-slate-100 max-w-[180px] truncate" title={log.actorEmail}>
                       {log.actorEmail}
-                    </td>
-                    <td className="px-4 py-3.5"><RoleBadge role={log.actorRole} /></td>
-                    <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400 text-xs">
-                      {log.tenantName || log.tenantId}
-                    </td>
-                    <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400 max-w-[250px] truncate" title={log.description}>
+                    </span>
+                  ),
+                },
+                {
+                  key: 'actorRole',
+                  label: 'Role',
+                  render: (log: AuditEntry) => <RoleBadge role={log.actorRole} />,
+                },
+                {
+                  key: 'tenantName',
+                  label: 'Department',
+                  render: (log: AuditEntry) => (
+                    <span className="text-slate-500 dark:text-slate-400 text-xs">{log.tenantName || log.tenantId}</span>
+                  ),
+                },
+                {
+                  key: 'description',
+                  label: 'Description',
+                  render: (log: AuditEntry) => (
+                    <span className="text-slate-500 dark:text-slate-400 max-w-[250px] truncate inline-block" title={log.description}>
                       {log.description}
-                    </td>
-                    <td className="px-5 py-3.5 text-center">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                        log.status === 'success'
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
-                          : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
-                      }`}>
-                        {log.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {logs.length > 0 && (
-          <div className="px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500 flex justify-between items-center">
-            <span>Showing {logs.length} most recent entries for <strong>{currentDeptName}</strong></span>
-            <span>Auto-refreshing every 15 seconds</span>
+                    </span>
+                  ),
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: (log: AuditEntry) => (
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                      log.status === 'success'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+                    }`}>
+                      {log.status}
+                    </span>
+                  ),
+                },
+              ]}
+              searchPlaceholder="Search by actor, action, or description…"
+              searchKeys={['actorEmail', 'action', 'description', 'tenantName']}
+              dateField="timestamp"
+              filters={[{
+                key: 'actorRole',
+                label: 'All Roles',
+                options: [
+                  { value: 'admin', label: 'Admin' },
+                  { value: 'voter', label: 'Voter' },
+                  { value: 'superadmin', label: 'Superadmin' },
+                ],
+              }, {
+                key: 'status',
+                label: 'All Status',
+                options: [
+                  { value: 'success', label: 'Success' },
+                  { value: 'error', label: 'Error' },
+                ],
+              }]}
+              emptyMessage="No activity yet — audit entries will appear here as users interact with the platform."
+              pageSize={15}
+            />
+            {logs.length > 0 && (
+              <div className="mt-3 text-xs text-slate-400 dark:text-slate-500 flex justify-between items-center">
+                <span>Entries for <strong>{currentDeptName}</strong></span>
+                <span>Auto-refreshing every 15 seconds</span>
+              </div>
+            )}
           </div>
         )}
       </div>

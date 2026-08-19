@@ -23,6 +23,7 @@ import {
   ChevronRight,
   Info
 } from 'lucide-react';
+import DataTable, { type ColumnDef, type FilterDef } from '@/components/DataTable';
 
 interface Election {
   id: string;
@@ -779,76 +780,83 @@ function ElectionMessagesContent() {
             </div>
           </div>
 
-          {history.length === 0 ? (
-            <div style={{ padding: '4rem 1.5rem', textAlign: 'center', color: '#64748B' }}>
-              <FileText size={48} style={{ color: '#CBD5E1', marginBottom: '1rem' }} />
-              <h4 style={{ fontWeight: 800, color: '#475569', margin: '0 0 0.25rem 0' }}>No Dispatches Recorded</h4>
-              <p style={{ fontSize: '0.85rem' }}>No broadcast history was found for this election setup yet.</p>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#F8FAFC', textAlign: 'left', borderBottom: '1.5px solid #E2E8F0' }}>
-                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Date & Time</th>
-                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Channel</th>
-                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Recipients Pool</th>
-                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Content Snapshot</th>
-                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Operator</th>
-                    <th style={{ padding: '12px 16px', fontWeight: 800, color: '#475569' }}>Transmission Health</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((log) => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background-color 0.15s' }} className="hover-row">
-                      <td style={{ padding: '14px 16px', whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>
-                        {new Date(log.createdAt).toLocaleString()}
-                      </td>
-                      <td style={{ padding: '14px 16px' }}>
-                        <span style={{
-                          padding: '4px 10px',
-                          borderRadius: '8px',
-                          fontSize: '0.75rem',
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          backgroundColor: log.channel === 'both' ? '#EFF6FF' : log.channel === 'email' ? '#ECFDF5' : '#FFF7ED',
-                          color: log.channel === 'both' ? '#2563eb' : log.channel === 'email' ? '#047857' : '#C2410C',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem'
-                        }}>
-                          {log.channel === 'both' ? <Zap size={12} /> : log.channel === 'email' ? <Mail size={12} /> : <Smartphone size={12} />}
-                          {log.channel}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 16px', fontWeight: 800, color: '#1E293B' }}>
-                        {log.recipientCount} Voters
-                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748B', marginTop: '2px' }}>
-                          Filter: <span style={{ textTransform: 'capitalize' }}>{log.recipientFilter}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '14px 16px', maxWidth: '320px' }}>
-                        <div style={{ fontWeight: 800, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {log.subject || 'Announcement'}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
-                          {log.body}
-                        </div>
-                      </td>
-                      <td style={{ padding: '14px 16px', fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>
-                        {log.senderEmail}
-                      </td>
-                      <td style={{ padding: '14px 16px' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#047857', fontWeight: 700, padding: '4px 10px', borderRadius: '8px', backgroundColor: '#ECFDF5' }}>
-                          <CheckCircle2 size={14} /> Dispatched ({log.emailSentCount} email, {log.smsSentCount} SMS)
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            data={history}
+            columns={[
+              {
+                key: 'createdAt',
+                label: 'Date & Time',
+                render: (log: BroadcastLog) => (
+                  <span style={{ whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>
+                    {new Date(log.createdAt).toLocaleString()}
+                  </span>
+                ),
+              },
+              {
+                key: 'channel',
+                label: 'Channel',
+                render: (log: BroadcastLog) => (
+                  <span style={{
+                    padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
+                    textTransform: 'uppercase',
+                    backgroundColor: log.channel === 'both' ? '#EFF6FF' : log.channel === 'email' ? '#ECFDF5' : '#FFF7ED',
+                    color: log.channel === 'both' ? '#2563eb' : log.channel === 'email' ? '#047857' : '#C2410C',
+                    display: 'inline-flex', alignItems: 'center', gap: '0.25rem'
+                  }}>
+                    {log.channel === 'both' ? <Zap size={12} /> : log.channel === 'email' ? <Mail size={12} /> : <Smartphone size={12} />}
+                    {log.channel}
+                  </span>
+                ),
+              },
+              {
+                key: 'recipientCount',
+                label: 'Recipients',
+                render: (log: BroadcastLog) => (
+                  <span style={{ fontWeight: 800, color: '#1E293B' }}>
+                    {log.recipientCount} Voters
+                    <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748B', marginTop: '2px' }}>
+                      Filter: <span style={{ textTransform: 'capitalize' }}>{log.recipientFilter}</span>
+                    </div>
+                  </span>
+                ),
+              },
+              {
+                key: 'subject',
+                label: 'Content',
+                render: (log: BroadcastLog) => (
+                  <div style={{ maxWidth: '280px' }}>
+                    <div style={{ fontWeight: 800, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {log.subject || 'Announcement'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                      {log.body}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: 'senderEmail',
+                label: 'Operator',
+                render: (log: BroadcastLog) => (
+                  <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>{log.senderEmail}</span>
+                ),
+              },
+              {
+                key: 'emailSentCount',
+                label: 'Health',
+                render: (log: BroadcastLog) => (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#047857', fontWeight: 700, padding: '4px 10px', borderRadius: '8px', backgroundColor: '#ECFDF5' }}>
+                    <CheckCircle2 size={14} /> {log.emailSentCount} email, {log.smsSentCount} SMS
+                  </span>
+                ),
+              },
+            ]}
+            searchPlaceholder="Search broadcasts…"
+            searchKeys={['subject', 'body', 'senderEmail', 'recipientFilter']}
+            dateField="createdAt"
+            emptyMessage="No broadcast history was found for this election setup yet."
+            pageSize={10}
+          />
         </div>
       )}
     </div>

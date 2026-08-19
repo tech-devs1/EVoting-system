@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
-import { Building2, Plus, AlertCircle, Shield, MoreVertical, Pencil, KeyRound, Trash2, Users, UserPlus, X, ExternalLink, Lock, Mail } from 'lucide-react';
+import { Building2, Plus, AlertCircle, Shield, MoreVertical, Pencil, KeyRound, Trash2, Users, UserPlus, X, ExternalLink, Lock, Mail, Search, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Department {
   id: string;
@@ -32,6 +32,14 @@ export default function SuperAdminDepartments() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+
+  // Search, filter, pagination state
+  const [deptSearch, setDeptSearch] = useState('');
+  const [deptStatusFilter, setDeptStatusFilter] = useState('all');
+  const [deptDateFrom, setDeptDateFrom] = useState('');
+  const [deptDateTo, setDeptDateTo] = useState('');
+  const [deptPage, setDeptPage] = useState(1);
+  const [deptPerPage, setDeptPerPage] = useState(10);
 
   // Active dropdown
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -301,95 +309,159 @@ export default function SuperAdminDepartments() {
         <p className="text-sm text-slate-500 dark:text-slate-400">Loading organization registry...</p>
       ) : (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm overflow-visible">
-          <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
-            <table className="w-full border-collapse text-sm text-left">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-wider">
-                  <th className="p-3.5 pl-5">Organization Name</th>
-                  <th className="p-3.5">Tenant ID</th>
-                  <th className="p-3.5">Admin Email</th>
-                  <th className="p-3.5">Admins</th>
-                  <th className="p-3.5">Stats</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5 text-center pr-5">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {departments.map((dept, idx) => (
-                  <tr key={dept.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 last:border-none">
-                    <td className="p-3.5 pl-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
-                          <Building2 size={20} />
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900 dark:text-white">{dept.name}</div>
-                          {dept.domain && <div className="text-xs text-slate-400 dark:text-slate-500">{dept.domain}</div>}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-3.5">
-                      <code className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-2.5 py-1 rounded-md font-mono">
-                        {dept.id}
-                      </code>
-                    </td>
-                    <td className="p-3.5 text-slate-600 dark:text-slate-300">{dept.adminEmail}</td>
-                    <td className="p-3.5">
-                      <span
-                        className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold cursor-pointer border border-blue-100/30"
-                        onClick={() => openModal('admins', dept)}
-                      >
-                        {dept.adminsCount || 1} {(dept.adminsCount || 1) === 1 ? 'admin' : 'admins'}
-                      </span>
-                    </td>
-                    <td className="p-3.5">
-                      <div className="text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
-                        <div><strong className="text-slate-800 dark:text-slate-200 font-bold">{dept.electionsCount}</strong> Elections</div>
-                        <div><strong className="text-slate-800 dark:text-slate-200 font-bold">{dept.votersCount}</strong> Voters</div>
-                      </div>
-                    </td>
-                    <td className="p-3.5">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                        dept.status === 'active'
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
-                          : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
-                      }`}>
-                        {dept.status === 'active' ? 'Active' : 'Disabled'}
-                      </span>
-                    </td>
-                    <td className="p-3.5 text-center pr-5">
-                      <button
-                        className="p-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer text-slate-500 dark:text-slate-400"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (openMenuId === dept.id) {
-                            setOpenMenuId(null);
-                            setMenuCoords(null);
-                          } else {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setOpenMenuId(dept.id);
-                            setSelectedDept(dept);
-                            setMenuCoords({
-                              x: rect.right + window.scrollX,
-                              y: rect.bottom + window.scrollY
-                            });
-                          }
-                        }}
-                        aria-label="Department actions"
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {departments.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="text-center p-8 text-slate-400 dark:text-slate-500">No organizations found.</td>
-                  </tr>
+          {/* Search, filter, and pagination controls */}
+          {(() => {
+            // Filtering logic
+            let filtered = departments.filter(d => {
+              const q = deptSearch.toLowerCase();
+              const matchesSearch = !q || d.name.toLowerCase().includes(q) || d.id.toLowerCase().includes(q) || (d.adminEmail || '').toLowerCase().includes(q);
+              const matchesStatus = deptStatusFilter === 'all' || d.status === deptStatusFilter;
+              return matchesSearch && matchesStatus;
+            });
+            const totalFiltered = filtered.length;
+            const totalPages = Math.max(1, Math.ceil(totalFiltered / deptPerPage));
+            const safePage = Math.min(deptPage, totalPages);
+            const paged = filtered.slice((safePage - 1) * deptPerPage, safePage * deptPerPage);
+            return (
+              <>
+                {/* Toolbar */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div style={{ position: 'relative', flex: '1 1 200px', minWidth: '180px' }}>
+                    <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      value={deptSearch}
+                      onChange={e => { setDeptSearch(e.target.value); setDeptPage(1); }}
+                      placeholder="Search organizations…"
+                      style={{ width: '100%', padding: '0.55rem 0.75rem 0.55rem 2.25rem', borderRadius: '10px', border: '1.5px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#0f172a', fontSize: '0.8rem', outline: 'none' }}
+                    />
+                  </div>
+                  <select
+                    value={deptStatusFilter}
+                    onChange={e => { setDeptStatusFilter(e.target.value); setDeptPage(1); }}
+                    style={{ padding: '0.55rem 0.65rem', borderRadius: '10px', border: '1.5px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#0f172a', fontSize: '0.78rem', outline: 'none', minWidth: '120px' }}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="disabled">Disabled</option>
+                  </select>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Calendar size={14} style={{ color: '#94a3b8' }} />
+                    <input type="date" value={deptDateFrom} onChange={e => { setDeptDateFrom(e.target.value); setDeptPage(1); }} style={{ padding: '0.5rem 0.55rem', borderRadius: '10px', border: '1.5px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.78rem', outline: 'none' }} />
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>to</span>
+                    <input type="date" value={deptDateTo} onChange={e => { setDeptDateTo(e.target.value); setDeptPage(1); }} style={{ padding: '0.5rem 0.55rem', borderRadius: '10px', border: '1.5px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.78rem', outline: 'none' }} />
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                    {totalFiltered === departments.length ? `${departments.length} record${departments.length !== 1 ? 's' : ''}` : `${totalFiltered} of ${departments.length} records`}
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
+                  <table className="w-full border-collapse text-sm text-left">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-wider">
+                        <th className="p-3.5 pl-5">Organization Name</th>
+                        <th className="p-3.5">Tenant ID</th>
+                        <th className="p-3.5">Admin Email</th>
+                        <th className="p-3.5">Admins</th>
+                        <th className="p-3.5">Stats</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5 text-center pr-5">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paged.map((dept) => (
+                        <tr key={dept.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 last:border-none">
+                          <td className="p-3.5 pl-5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
+                                <Building2 size={20} />
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900 dark:text-white">{dept.name}</div>
+                                {dept.domain && <div className="text-xs text-slate-400 dark:text-slate-500">{dept.domain}</div>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-3.5">
+                            <code className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-2.5 py-1 rounded-md font-mono">
+                              {dept.id}
+                            </code>
+                          </td>
+                          <td className="p-3.5 text-slate-600 dark:text-slate-300">{dept.adminEmail}</td>
+                          <td className="p-3.5">
+                            <span
+                              className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold cursor-pointer border border-blue-100/30"
+                              onClick={() => openModal('admins', dept)}
+                            >
+                              {dept.adminsCount || 1} {(dept.adminsCount || 1) === 1 ? 'admin' : 'admins'}
+                            </span>
+                          </td>
+                          <td className="p-3.5">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
+                              <div><strong className="text-slate-800 dark:text-slate-200 font-bold">{dept.electionsCount}</strong> Elections</div>
+                              <div><strong className="text-slate-800 dark:text-slate-200 font-bold">{dept.votersCount}</strong> Voters</div>
+                            </div>
+                          </td>
+                          <td className="p-3.5">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                              dept.status === 'active'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
+                            }`}>
+                              {dept.status === 'active' ? 'Active' : 'Disabled'}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center pr-5">
+                            <button
+                              className="p-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer text-slate-500 dark:text-slate-400"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (openMenuId === dept.id) {
+                                  setOpenMenuId(null);
+                                  setMenuCoords(null);
+                                } else {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setOpenMenuId(dept.id);
+                                  setSelectedDept(dept);
+                                  setMenuCoords({
+                                    x: rect.right + window.scrollX,
+                                    y: rect.bottom + window.scrollY
+                                  });
+                                }
+                              }}
+                              aria-label="Department actions"
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {paged.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="text-center p-8 text-slate-400 dark:text-slate-500">No organizations found.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Page {safePage} of {totalPages}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <button disabled={safePage <= 1} onClick={() => setDeptPage(p => Math.max(1, p - 1))} style={{ padding: '0.4rem 0.6rem', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: safePage <= 1 ? 'transparent' : '#fff', color: safePage <= 1 ? '#cbd5e1' : '#0f172a', fontSize: '0.75rem', fontWeight: 600, cursor: safePage <= 1 ? 'not-allowed' : 'pointer' }}><ChevronLeft size={14} /></button>
+                      {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => { const page = totalPages <= 7 ? i + 1 : safePage <= 4 ? i + 1 : safePage >= totalPages - 3 ? totalPages - 6 + i : safePage - 3 + i; return (
+                        <button key={page} onClick={() => setDeptPage(page)} style={{ padding: '0.4rem 0.65rem', borderRadius: '8px', border: page === safePage ? '1.5px solid #2563EB' : '1px solid #e2e8f0', backgroundColor: page === safePage ? '#2563EB' : '#fff', color: page === safePage ? '#fff' : '#0f172a', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>{page}</button>
+                      ); })}
+                      <button disabled={safePage >= totalPages} onClick={() => setDeptPage(p => Math.min(totalPages, p + 1))} style={{ padding: '0.4rem 0.6rem', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: safePage >= totalPages ? 'transparent' : '#fff', color: safePage >= totalPages ? '#cbd5e1' : '#0f172a', fontSize: '0.75rem', fontWeight: 600, cursor: safePage >= totalPages ? 'not-allowed' : 'pointer' }}><ChevronRight size={14} /></button>
+                    </div>
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </>
+            );
+          })()}
         </div>
       )}
 

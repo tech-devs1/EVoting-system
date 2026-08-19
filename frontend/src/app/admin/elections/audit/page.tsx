@@ -15,6 +15,7 @@ import {
   User,
   ShieldCheck
 } from 'lucide-react';
+import DataTable, { type ColumnDef, type FilterDef } from '@/components/DataTable';
 
 interface AuditRecord {
   id: string;
@@ -33,8 +34,6 @@ function ElectionSystemAuditContent() {
 
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'admin' | 'voter'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
 
   async function fetchAuditData() {
     if (!electionId) {
@@ -58,13 +57,10 @@ function ElectionSystemAuditContent() {
     if (electionId) fetchAuditData();
   }, [electionId]);
 
-  // Export CSV Action
   const handleExportCSV = async () => {
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`/api/elections/${electionId}/export-audit`, {
-        headers
-      });
+      const res = await fetch(`/api/elections/${electionId}/export-audit`, { headers });
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -78,13 +74,55 @@ function ElectionSystemAuditContent() {
     }
   };
 
-  const filteredRecords = records.filter(r => {
-    const matchesTab = activeTab === 'all' || r.type === activeTab;
-    const matchesSearch = r.actor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          r.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (r.details && r.details.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesTab && matchesSearch;
-  });
+  const typeFilters: FilterDef[] = [{
+    key: 'type',
+    label: 'All Types',
+    options: [
+      { value: 'admin', label: 'Admin Activities' },
+      { value: 'voter', label: 'Voter Ballots' },
+    ],
+  }];
+
+  const columns: ColumnDef<AuditRecord>[] = [
+    {
+      key: 'timestamp',
+      label: 'Timestamp',
+      render: (r) => (
+        <span className="font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
+          {new Date(r.timestamp).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      key: 'actor',
+      label: 'Actor',
+      render: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.actor}</span>,
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      filterable: true,
+      render: (r) => (
+        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+          r.type === 'admin'
+            ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30'
+            : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30'
+        }`}>
+          {r.type === 'admin' ? <Activity size={12} /> : <User size={12} />}
+          {r.type === 'admin' ? 'Admin' : 'Voter'}
+        </span>
+      ),
+    },
+    {
+      key: 'details',
+      label: 'Activity / Details',
+      render: (r) => (
+        <span className="text-slate-700 dark:text-slate-300 font-medium">
+          {r.details || (r.selections ? `Casted vote: ${JSON.stringify(r.selections)}` : 'Ballot Cast')}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -114,90 +152,19 @@ function ElectionSystemAuditContent() {
 
       {/* Audit Log Card */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm">
-        <div className="flex justify-between items-center mb-5 flex-wrap gap-4">
-          {/* Tab Filter */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-700 rounded-xl">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                activeTab === 'all' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
-              }`}
-            >
-              All Activities ({records.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('admin')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                activeTab === 'admin' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
-              }`}
-            >
-              Admin Activities
-            </button>
-            <button
-              onClick={() => setActiveTab('voter')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                activeTab === 'voter' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'
-              }`}
-            >
-              Voter Ballots & Timestamps
-            </button>
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search activities..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
         {loading ? (
           <p className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">Loading system audit log...</p>
-        ) : filteredRecords.length === 0 ? (
-          <div className="text-center p-12 text-xs text-slate-500 dark:text-slate-400 font-medium">
-            No matching activities recorded for this election yet.
-          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-100 dark:border-slate-700/60">
-                <tr>
-                  <th className="px-4 py-3">Timestamp</th>
-                  <th className="px-4 py-3">Actor</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Activity / Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
-                {filteredRecords.map((r, i) => (
-                  <tr key={r.id || i} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="px-4 py-3 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                      {new Date(r.timestamp).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{r.actor}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                        r.type === 'admin'
-                          ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30'
-                          : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30'
-                      }`}>
-                        {r.type === 'admin' ? <Activity size={12} /> : <User size={12} />}
-                        {r.type === 'admin' ? 'Admin Activity' : 'Voter Cast'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-medium">
-                      {r.details || (r.selections ? `Casted vote on ballot: ${JSON.stringify(r.selections)}` : 'Ballot Cast')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            data={records}
+            columns={columns}
+            searchPlaceholder="Search by actor, action, or details…"
+            searchKeys={['actor', 'action', 'details']}
+            dateField="timestamp"
+            filters={typeFilters}
+            emptyMessage="No matching activities recorded for this election yet."
+            pageSize={15}
+          />
         )}
       </div>
     </div>
