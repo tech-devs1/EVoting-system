@@ -205,7 +205,7 @@ router.post('/verify-student', async (req, res) => {
     if (studentData.password) {
       // Try to send a new OTP so they can complete verification
       try {
-        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name, studentData.phone || null);
+        await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
       } catch (otpErr) {
         console.error('OTP delivery failed for incomplete registration (user can resend):', otpErr.message || otpErr);
       }
@@ -213,8 +213,7 @@ router.post('/verify-student', async (req, res) => {
         status: 'incomplete_registration',
         data: {
           name: studentData.name,
-          email: studentData.email,
-          phone: studentData.phone || ''
+          email: studentData.email
         },
         message: 'You have an incomplete registration. A verification code has been sent to your email.'
       });
@@ -237,15 +236,10 @@ router.post('/verify-student', async (req, res) => {
 // Register a user securely
 router.post('/register', async (req, res) => {
   try {
-    const { studentId, email, name, password, phone, faceImage } = req.body;
+    const { studentId, email, name, password, faceImage } = req.body;
 
     if (!studentId || !email || !password) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields (studentId, email, password)' });
-    }
-
-    let phoneClean = null;
-    if (phone) {
-      phoneClean = phone.replace(/\s+/g, '');
     }
 
     // Password validation: minimum 8 chars, 1 uppercase, 1 lowercase, 1 special character
@@ -270,23 +264,6 @@ router.post('/register', async (req, res) => {
       return res.status(403).json({ status: 'error', message: 'Email does not match our school records.' });
     }
 
-    // Phone verification: if the CSV record has a phone on file, the student's input must match
-    if (studentData.phone) {
-      const normalize = (p) => p.replace(/[\s\-().+]/g, '');
-      const recordPhone = normalize(studentData.phone);
-      const inputPhone  = phone ? normalize(phone) : '';
-
-      // Also allow matching with leading country code (e.g., 233 prefix vs 0 prefix)
-      const toLocal = (p) => p.replace(/^233/, '0');
-
-      if (!inputPhone) {
-        return res.status(400).json({ status: 'error', message: 'A phone number is required for registration. Please provide your registered phone number.' });
-      }
-      if (toLocal(recordPhone) !== toLocal(inputPhone)) {
-        return res.status(403).json({ status: 'error', message: 'The phone number provided does not match the one on school records. Please use the phone number registered with the school.' });
-      }
-    }
-
     if (studentData.isRegistered) {
       return res.status(403).json({ status: 'error', message: 'This student ID has already registered an account to prevent cheating.' });
     }
@@ -297,19 +274,22 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await studentDocRef.set({
-      isRegistered: true,
+      isRegistered: false, // will be marked true upon verify-otp
       password: hashedPassword,
       name: name || studentData.name,
-      phone: phoneClean || studentData.phone || '',
       uid: studentId,
       role: 'voter',
       faceImage: faceImage || '',
       faceEmbedding: faceEmbedding || null,
     }, { merge: true });
 
+    // Send OTP via Email
+    await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
+
     res.status(201).json({
-      status: 'success',
-      message: 'Registration successful. You can now log in.'
+      status: 'otp_required',
+      email: studentData.email,
+      message: 'OTP sent to your school email. Please verify.'
     });
   } catch (error) {
     console.error('Error registering user:', error);
@@ -667,7 +647,7 @@ router.post('/resend-otp', async (req, res) => {
     const userData = userDoc.data();
 
     const { otp, emailSent, smsSent } = await generateAndSendOtp(
-      db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(userDoc.id), userData.email, userData.name, userData.phone || null
+      db.collection('tenants').doc(getTenantId(req)).collection('voter_rolls').doc(userDoc.id), userData.email, userData.name
     );
 
     const dispatchSuccess = emailSent || smsSent;
