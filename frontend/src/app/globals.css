@@ -413,3 +413,55 @@ body {
   color: #60a5fa;
   border-color: rgba(37, 99, 235, 0.4);
 }
+
+/* Screenshot & print protection for admin pages */
+.screenshot-protected {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.screenshot-protected img,
+.screenshot-protected video {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+}
+
+@media print {
+  body::before {
+    content: "";
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: white;
+    z-index: 999999;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+}
+
+/* Deter screen recording overlays */
+@supports (mix-blend-mode: difference) {
+  .screenshot-protected::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999998;
+    mix-blend-mode: difference;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+}

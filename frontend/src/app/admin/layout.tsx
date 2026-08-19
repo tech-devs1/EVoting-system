@@ -105,6 +105,65 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
+  // Screenshot / screen recording protection for admin pages
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Block PrintScreen key
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'PrintScreen') {
+        e.preventDefault();
+        // Clear clipboard to prevent screenshot paste
+        navigator.clipboard?.writeText('').catch(() => {});
+      }
+      // Block Ctrl+Shift+S (screenshot shortcuts)
+      if (e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+        e.preventDefault();
+      }
+      // Block Ctrl+P (print)
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+      }
+      // Block Ctrl+U (view source)
+      if (e.ctrlKey && e.key === 'u') {
+        e.preventDefault();
+      }
+      // Block F12 (dev tools)
+      if (e.key === 'F12') {
+        e.preventDefault();
+      }
+      // Block Ctrl+Shift+I (dev tools)
+      if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+        e.preventDefault();
+      }
+      // Block Ctrl+Shift+J (console)
+      if (e.ctrlKey && e.shiftKey && e.key === 'J') {
+        e.preventDefault();
+      }
+      // Block Ctrl+Shift+C (inspect element)
+      if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+      }
+    };
+
+    // Block right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('contextmenu', handleContextMenu);
+
+    // Add screenshot-deterrent CSS class
+    document.documentElement.classList.add('screenshot-protected');
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.documentElement.classList.remove('screenshot-protected');
+    };
+  }, []);
+
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(nextTheme);

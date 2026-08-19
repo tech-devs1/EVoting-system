@@ -56,15 +56,47 @@ function VoterElectionDetailContent() {
   const [fallbackOtp, setFallbackOtp] = useState('');
 
   // Step-by-step wizard state
-  const [currentStep, setCurrentStep] = useState(0);
+  // Restore voting progress from sessionStorage on mount
+  const sessionKey = electionId ? `vote_progress_${electionId}` : '';
+  const loadSavedProgress = () => {
+    try {
+      if (sessionKey && typeof window !== 'undefined') {
+        const saved = sessionStorage.getItem(sessionKey);
+        if (saved) return JSON.parse(saved);
+      }
+    } catch {}
+    return null;
+  };
+  const savedProgress = loadSavedProgress();
+
+  const [currentStep, setCurrentStep] = useState(savedProgress?.currentStep ?? 0);
 
   // Map of position -> { candidateId, choice: 'yes' | 'no' }
-  const [selections, setSelections] = useState<Record<string, { candidateId: string; choice: 'yes' | 'no' }>>({});
+  const [selections, setSelections] = useState<Record<string, { candidateId: string; choice: 'yes' | 'no' }>>(savedProgress?.selections ?? {});
 
   // Map of position -> auditTxId for positions already voted
-  const [votedPositions, setVotedPositions] = useState<Record<string, { candidateId: string; auditTxId: string }>>({});
+  const [votedPositions, setVotedPositions] = useState<Record<string, { candidateId: string; auditTxId: string }>>(savedProgress?.votedPositions ?? {});
   const [castingPosition, setCastingPosition] = useState<string | null>(null);
   const [notOnRoster, setNotOnRoster] = useState(false);
+
+  // Persist voting progress to sessionStorage on every change
+  useEffect(() => {
+    if (!sessionKey) return;
+    try {
+      const state = JSON.stringify({ currentStep, selections, votedPositions });
+      sessionStorage.setItem(sessionKey, state);
+    } catch {}
+  }, [sessionKey, currentStep, selections, votedPositions]);
+
+  // Clear saved progress when all positions are voted
+  useEffect(() => {
+    if (!sessionKey || candidates.length === 0) return;
+    const uniquePositions = new Set(candidates.map((c: any) => c.positionTitle || c.position));
+    const votedCount = Object.keys(votedPositions).length;
+    if (votedCount > 0 && votedCount >= uniquePositions.size) {
+      try { sessionStorage.removeItem(sessionKey); } catch {}
+    }
+  }, [sessionKey, votedPositions, candidates]);
 
   useEffect(() => {
     if (!electionId) {
