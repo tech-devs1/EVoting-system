@@ -341,7 +341,12 @@ function ElectionChart({
         </div>
       </div>
 
-      {candidates.length === 0 ? (
+      {election.status === 'active' || election.status === 'ongoing' ? (
+        <div style={{ textAlign: 'center', padding: 'var(--space-8) 0', color: 'var(--text-tertiary)' }}>
+          <p>Live results are hidden while the election is active.</p>
+          <p style={{ fontSize: 'var(--text-sm)', marginTop: 'var(--space-2)' }}>Results will be available once the election ends.</p>
+        </div>
+      ) : candidates.length === 0 ? (
         <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 'var(--space-8) 0' }}>
           No candidates registered for this election.
         </p>
