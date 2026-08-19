@@ -1285,7 +1285,7 @@ exports.sendInvitations = async (req, res) => {
     }
 
     let sentCount = 0;
-    const baseUrl = process.env.PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://htu-elect.vercel.app');
+    const baseUrl = process.env.PUBLIC_APP_URL || process.env.APP_URL || 'https://e-voting.htu.edu.gh';
     const votingLink = `${baseUrl}/voter/elections/detail?id=${electionId}`;
 
     // Bounded-concurrency worker pool: large broadcasts (1,000+ recipients) would
@@ -1426,7 +1426,7 @@ exports.sendBroadcastMessage = async (req, res) => {
     let smsSentCount = 0;
 
     const dispatchChannel = channel || 'email';
-    const baseUrl = process.env.PUBLIC_APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://htu-elect.vercel.app';
+    const baseUrl = process.env.PUBLIC_APP_URL || process.env.APP_URL || 'https://e-voting.htu.edu.gh';
     const votingLink = `${baseUrl}/voter/elections/detail?id=${electionId}`;
 
     // Bounded-concurrency worker pool: large broadcasts (1,000+ recipients) would

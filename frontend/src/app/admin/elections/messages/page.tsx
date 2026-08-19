@@ -713,7 +713,7 @@ function ElectionMessagesContent() {
                           .replace(/{{voter_name}}/gi, 'Kwame Mensah')
                           .replace(/{{index_number}}/gi, '0123456789')
                           .replace(/{{election_title}}/gi, election.title)
-                          .replace(/{{voting_link}}/gi, `https://htu-elect-aov2.vercel.app/voter/elections/detail?id=${election.id}`)}
+                          .replace(/{{voting_link}}/gi, `${typeof window !== 'undefined' ? window.location.origin : ''}/voter/elections/detail?id=${election.id}`)}
                       </div>
 
                       <div style={{ marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: '#94A3B8' }}>
@@ -753,7 +753,7 @@ function ElectionMessagesContent() {
                           .replace(/{{voter_name}}/gi, 'Kwame Mensah')
                           .replace(/{{index_number}}/gi, '0123456789')
                           .replace(/{{election_title}}/gi, election.title)
-                          .replace(/{{voting_link}}/gi, `https://htu-elect-aov2.vercel.app/voter/elections/detail?id=${election.id}`)}
+                          .replace(/{{voting_link}}/gi, `${typeof window !== 'undefined' ? window.location.origin : ''}/voter/elections/detail?id=${election.id}`)}
                       </div>
                     </div>
                   </div>
