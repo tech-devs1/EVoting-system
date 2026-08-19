@@ -24,7 +24,9 @@ import {
   Eye,
   EyeOff,
   Image as ImageIcon,
-  Upload
+  Upload,
+  Timer,
+  Plus
 } from 'lucide-react';
 import Modal from '@/components/Modal';
 import { compressImageFile } from '@/lib/image';
@@ -65,6 +67,8 @@ function PerElectionDashboardContent() {
   const [editShowResults, setEditShowResults] = useState(false);
   const [editPreviewImageUrl, setEditPreviewImageUrl] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [extendDate, setExtendDate] = useState('');
+  const [extending, setExtending] = useState(false);
 
   // Send Invitations Modal States
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -201,6 +205,33 @@ function PerElectionDashboardContent() {
       setMessage({ type: 'error', text: err.message || 'Failed to update election status.' });
     } finally {
       setActionLoading(false);
+    }
+  };
+  // Extend Time Action
+  const handleExtendTime = async () => {
+    if (!extendDate) {
+      setMessage({ type: 'error', text: 'Please select a new end date and time.' });
+      return;
+    }
+    setExtending(true);
+    setMessage(null);
+    try {
+      const res = await apiRequest<{ status: string; message: string; data?: any }>(
+        `/elections/${electionId}/extend-time`,
+        'PATCH',
+        { newEndDate: extendDate }
+      );
+      if (res.status === 'success') {
+        setMessage({ type: 'success', text: res.message || 'Election end time extended successfully!' });
+        setExtendDate('');
+        fetchElectionData();
+      } else {
+        throw new Error(res.message || 'Failed to extend time');
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Failed to extend election time.' });
+    } finally {
+      setExtending(false);
     }
   };
 
@@ -342,24 +373,25 @@ function PerElectionDashboardContent() {
             >
               <Edit size={14} /> Edit Election Details
             </button>
-            {election.status !== 'active' && (
-              <button
-                disabled={actionLoading || isElectionEnded}
-                onClick={() => handleStatusChange('active')}
-                className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed"
-                title={isElectionEnded ? "Election has ended. Extend the closing date to a future time in order to start it." : "Start Election"}
-              >
-                <Play size={14} /> Start Election
-              </button>
-            )}
-            {election.status === 'active' && (
-              <button 
-                disabled={actionLoading} 
-                onClick={() => handleStatusChange('ended')} 
-                className="px-3.5 py-2 text-xs font-bold rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors flex items-center gap-1.5"
-              >
-                <Square size={14} /> End Election
-              </button>
+            {/* Auto-managed: polls start/end based on schedule */}
+            {}
+            {/* Extend Time for ended elections */}
+            {isElectionEnded && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="datetime-local"
+                  value={extendDate}
+                  onChange={(e) => setExtendDate(e.target.value)}
+                  className="px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
+                <button
+                  disabled={extending || !extendDate}
+                  onClick={handleExtendTime}
+                  className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed"
+                >
+                  <Timer size={14} /> {extending ? 'Extending...' : 'Extend Time'}
+                </button>
+              </div>
             )}
             <button 
               disabled={actionLoading} 

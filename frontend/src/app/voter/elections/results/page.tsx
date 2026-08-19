@@ -281,13 +281,13 @@ function VoterResultsContent() {
     );
   }
 
-  if (!election.showResults) {
+  if (!election.showResults || (election.status !== 'ended' && election.status !== 'completed')) {
     return (
       <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 max-w-lg mx-auto">
         <EyeOff size={48} className="text-amber-500 mx-auto mb-4" />
         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Results View Disabled</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-          Live results for "{election.title}" are currently hidden. The administrator has disabled public charts prior to the official declaration of results.
+          Results for "{election.title}" are not available yet. Results will be visible once the election polling period has ended.
         </p>
         <Link href="/voter/elections" className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors">
           Return to Elections List

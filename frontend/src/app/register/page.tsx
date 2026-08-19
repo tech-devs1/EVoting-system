@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { apiRequest } from '@/lib/api';
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail, User, UserPlus } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -19,14 +20,50 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [verifying, setVerifying] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const [verifyMsg, setVerifyMsg] = useState('');
+
   // OTP verification step (used when the backend requires one)
   const [otpStep, setOtpStep] = useState(false);
   const [otp, setOtp] = useState('');
 
+
+  const handleVerifyStudent = async () => {
+    if (!studentId.trim()) return;
+    setVerifying(true);
+    setVerifyMsg('');
+    setVerified(false);
+    try {
+      const res = await apiRequest<any>('/auth/verify-student', 'POST', { studentId: studentId.trim() });
+      if (res.status === 'success' && res.data) {
+        if (res.data.name || res.data.email) {
+          if (res.data.name) setName(res.data.name);
+          if (res.data.email) setEmail(res.data.email);
+          if (res.data.phone) setPhone(res.data.phone);
+          setVerified(true);
+          setVerifyMsg('Student found on roster! Set your password below to complete registration.');
+        } else {
+          setVerifyMsg('');
+          setError('Your index number was not found on the official voter roster. Please contact your election administrator to be added.');
+        }
+      } else {
+        setError(res.message || 'This student ID has already been registered.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Student not found on roster. Please contact your administrator.');
+    } finally {
+      setVerifying(false);
+    }
+  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    if (!verified) {
+      setError('Please enter and verify your index number first.');
+      return;
+    }
     if (!studentId.trim() || !email.trim() || !password) {
       setError('Student ID, email address and password are required.');
       return;
@@ -180,14 +217,28 @@ export default function RegisterPage() {
                   autoComplete="off"
                   placeholder="e.g. HTU/CS/2022/001"
                   value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
+                  onChange={(e) => { setStudentId(e.target.value); setVerified(false); setVerifyMsg(''); }}
+                  onBlur={() => { if (studentId.trim().length >= 3) handleVerifyStudent(); }}
                   className={inputClass}
                   required
                 />
               </div>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 leading-relaxed">
-                Your index number must be on the official voters&apos; roll.
-              </p>
+              {verifying && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <Loader2 size={12} className="animate-spin text-blue-500" />
+                  <span className="text-[11px] text-blue-500 font-medium">Looking up index number...</span>
+                </div>
+              )}
+              {verifyMsg && (
+                <p className={("text-[11px] mt-1.5 font-medium " + (verified ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"))}>
+                  {verifyMsg}
+                </p>
+              )}
+              {!verifying && !verifyMsg && (
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 leading-relaxed">
+                  Enter your index number and we&apos;ll auto-fill your details from the roster.
+                </p>
+              )}
             </div>
 
             <div>

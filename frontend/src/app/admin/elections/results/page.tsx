@@ -150,6 +150,12 @@ function PerElectionResultsContent() {
             </p>
           </div>
 
+          {election && election.status !== 'ended' && election.status !== 'completed' && (
+            <div className="w-full mt-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-semibold">
+              ⏳ Election polls are still active. Final results will be available once the polling period ends.
+            </div>
+          )}
+
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Auto-Refresh:</span>
             <select

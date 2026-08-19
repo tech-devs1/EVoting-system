@@ -15,8 +15,10 @@ import {
   Mail, 
   Check, 
   Clock, 
-  FileText 
+  FileText, 
+  Download 
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface Voter {
   id: string;
@@ -45,21 +47,18 @@ function PerElectionVotersContent() {
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Download Official Voter CSV Template
-  const handleDownloadSampleCsv = () => {
-    const csvContent = `IndexNumber,FullName,EmailAddress,PhoneNumber,Department
-0123456789,Kwame Mensah,kwame.mensah@htu.edu.gh,+233240001122,Computer Science
-0123456790,Abena Osei,abena.osei@htu.edu.gh,+233501112233,Electrical Engineering
-0123456791,Kofi Annan,kofi.annan@htu.edu.gh,+233273334455,Business Administration`;
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'htu_elect_voter_roster_template.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Download Official Voter Excel Template
+  const handleDownloadSampleExcel = () => {
+    const headers = ['IndexNumber', 'FullName', 'EmailAddress', 'PhoneNumber', 'Program', 'Level'];
+    const sampleData = [
+      ['0123456789', 'Kwame Mensah', 'kwame.mensah@htu.edu.gh', '+233240001122', 'Computer Science', 'Level 300'],
+      ['0123456790', 'Abena Osei', 'abena.osei@htu.edu.gh', '+233501112233', 'Electrical Engineering', 'Level 200'],
+      ['0123456791', 'Kofi Annan', 'kofi.annan@htu.edu.gh', '+233273334455', 'Business Administration', 'Level 400'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Voter Roster');
+    XLSX.writeFile(wb, 'htu_elect_voter_roster_template.xlsx');
   };
 
   async function fetchRosterVoters() {
@@ -84,7 +83,7 @@ function PerElectionVotersContent() {
     if (electionId) fetchRosterVoters();
   }, [electionId]);
 
-  // Handle File Change & Pre-Validation
+  // Handle Excel File Change & Pre-Validation
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -92,28 +91,54 @@ function PerElectionVotersContent() {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target?.result as string;
-      if (!text) return;
+      try {
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-      if (lines.length === 0) return;
+        if (rows.length < 2) return; // header + at least 1 data row
 
-      const rows = lines.slice(1);
-      let validCount = 0;
-      let duplicateCount = 0;
-      let invalidCount = 0;
-      const seen = new Set<string>();
-      const parsedPreview: any[] = [];
-      const membersPayload: any[] = [];
+        const headerRow = rows[0].map((h: any) => String(h || '').toLowerCase().trim());
+        const dataRows = rows.slice(1).filter((r: any[]) => r.some((c: any) => c !== undefined && c !== ''));
 
-      rows.forEach((row, idx) => {
-        const cols = row.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
-        if (cols.length >= 2) {
-          const indexNum = cols[0] || '';
-          const name = cols[1] || '';
-          const email = cols[2] || '';
-          const phone = cols[3] || '';
-          const department = cols[4] || '';
+        let validCount = 0;
+        let duplicateCount = 0;
+        let invalidCount = 0;
+        const seen = new Set<string>();
+        const parsedPreview: any[] = [];
+        const membersPayload: any[] = [];
+
+        dataRows.forEach((row: any[], idx: number) => {
+          const get = (field: string) => {
+            const aliases: Record<string, string[]> = {
+              indexnumber: ['indexnumber', 'index number', 'indexno', 'index_no', 'studentid', 'student id', 'regno', 'reg no'],
+              fullname: ['fullname', 'full name', 'name', 'studentname'],
+              emailaddress: ['emailaddress', 'email address', 'email', 'emailaddr'],
+              phonenumber: ['phonenumber', 'phone number', 'phone', 'phoneNo', 'phone_no', 'mobile'],
+              program: ['program', 'programme', 'department', 'dept'],
+              level: ['level', 'year', 'yearofstudy']
+            };
+            const al = aliases[field] || [field];
+            for (const a of al) {
+              const idx = headerRow.indexOf(a);
+              if (idx >= 0 && row[idx] !== undefined && row[idx] !== '') return String(row[idx]).trim();
+            }
+            return '';
+          };
+
+          const indexNum = get('indexnumber');
+          const name = get('fullname');
+          let email = get('emailaddress');
+          const phone = get('phonenumber');
+          const program = get('program');
+          const level = get('level');
+
+          // Auto-assign @htu.edu.gh if email is missing but index number exists
+          if (!email && indexNum) {
+            email = indexNum.toLowerCase().trim() + '@htu.edu.gh';
+          }
 
           const isValidEmail = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -127,30 +152,35 @@ function PerElectionVotersContent() {
             membersPayload.push({
               indexNumber: indexNum,
               studentId: indexNum,
-              name,
+              name: name || 'Student',
               email,
               phone,
               phoneNumber: phone,
-              department
+              program,
+              level,
+              department: program
             });
           }
 
           if (idx < 10) {
-            parsedPreview.push({ indexNum, name, email, phone });
+            parsedPreview.push({ indexNum, name, email, phone, program, level });
           }
-        }
-      });
+        });
 
-      setCsvStats({
-        total: rows.length,
-        valid: validCount,
-        duplicates: duplicateCount,
-        invalid: invalidCount
-      });
-      setCsvPreview(parsedPreview);
-      setCsvParsedMembers(membersPayload);
+        setCsvStats({
+          total: dataRows.length,
+          valid: validCount,
+          duplicates: duplicateCount,
+          invalid: invalidCount
+        });
+        setCsvPreview(parsedPreview);
+        setCsvParsedMembers(membersPayload);
+      } catch (err) {
+        console.error('Error parsing Excel file:', err);
+        setCsvStats({ total: 0, valid: 0, duplicates: 0, invalid: 0 });
+      }
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
 
   // Submit CSV Roster to Server
@@ -217,19 +247,19 @@ function PerElectionVotersContent() {
           <div>
             <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
               <Upload size={18} className="text-blue-600 dark:text-blue-400" />
-              Upload Election Voter Roster (CSV)
+              Upload Election Voter Roster (Excel)
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Upload a CSV roster of eligible voters. Required columns: <strong className="text-slate-700 dark:text-slate-300">IndexNumber, FullName, EmailAddress, PhoneNumber, Department</strong>.
+              Upload an Excel (.xlsx) roster. Required: <strong className="text-slate-700 dark:text-slate-300">IndexNumber, FullName</strong>. Optional: EmailAddress, PhoneNumber, Program, Level. Emails without an address auto-assign @htu.edu.gh.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={handleDownloadSampleCsv}
+            onClick={handleDownloadSampleExcel}
             className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors flex items-center gap-1.5"
           >
-            <FileText size={16} /> Download Sample Voter CSV Template
+            <FileText size={16} /> Download Excel Template
           </button>
         </div>
 
@@ -270,7 +300,7 @@ function PerElectionVotersContent() {
                     <th className="px-3 py-2">Index No</th>
                     <th className="px-3 py-2">Name</th>
                     <th className="px-3 py-2">Email</th>
-                    <th className="px-3 py-2">Phone</th>
+                    <th className="px-3 py-2">Phone</th>\n                    <th className="px-3 py-2">Program</th>\n                    <th className="px-3 py-2">Level</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -279,7 +309,7 @@ function PerElectionVotersContent() {
                       <td className="px-3 py-2 font-mono font-bold">{row.indexNum}</td>
                       <td className="px-3 py-2">{row.name}</td>
                       <td className="px-3 py-2">{row.email}</td>
-                      <td className="px-3 py-2">{row.phone || 'N/A'}</td>
+                      <td className="px-3 py-2">{row.phone || 'N/A'}</td>\n                    <td className="px-3 py-2">{row.program || 'N/A'}</td>\n                    <td className="px-3 py-2">{row.level || 'N/A'}</td>
                     </tr>
                   ))}
                 </tbody>

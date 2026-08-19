@@ -22,6 +22,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { compressImageFile } from '@/lib/image';
+import * as XLSX from 'xlsx';
 
 interface Election {
   id: string;
@@ -131,7 +132,7 @@ export default function OrganizationElectionHub() {
     fetchHubData();
   }, []);
 
-  // Handle CSV File Selection and Live Pre-Validation
+  // Handle Excel File Selection and Live Pre-Validation
   const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -139,28 +140,54 @@ export default function OrganizationElectionHub() {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target?.result as string;
-      if (!text) return;
+      try {
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-      if (lines.length === 0) return;
+        if (rows.length < 2) return;
 
-      const rows = lines.slice(1);
-      let validCount = 0;
-      let duplicateCount = 0;
-      let invalidCount = 0;
-      const seen = new Set<string>();
-      const parsedPreview: any[] = [];
+        const headerRow = rows[0].map((h: any) => String(h || '').toLowerCase().trim());
+        const dataRows = rows.slice(1).filter((r: any[]) => r.some((c: any) => c !== undefined && c !== ''));
 
-      const membersPayload: any[] = [];
-      rows.forEach((row, idx) => {
-        const cols = row.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
-        if (cols.length >= 2) {
-          const indexNum = cols[0] || '';
-          const name = cols[1] || '';
-          const email = cols[2] || '';
-          const phone = cols[3] || '';
-          const department = cols[4] || '';
+        let validCount = 0;
+        let duplicateCount = 0;
+        let invalidCount = 0;
+        const seen = new Set<string>();
+        const parsedPreview: any[] = [];
+        const membersPayload: any[] = [];
+
+        const get = (row: any[], field: string) => {
+          const aliases: Record<string, string[]> = {
+            indexnumber: ['indexnumber', 'index number', 'indexno', 'studentid', 'student id', 'regno'],
+            fullname: ['fullname', 'full name', 'name', 'studentname'],
+            emailaddress: ['emailaddress', 'email address', 'email'],
+            phonenumber: ['phonenumber', 'phone number', 'phone', 'phoneNo', 'mobile'],
+            program: ['program', 'programme', 'department', 'dept'],
+            level: ['level', 'year', 'yearofstudy']
+          };
+          const al = aliases[field] || [field];
+          for (const a of al) {
+            const idx = headerRow.indexOf(a);
+            if (idx >= 0 && row[idx] !== undefined && row[idx] !== '') return String(row[idx]).trim();
+          }
+          return '';
+        };
+
+        dataRows.forEach((row: any[], idx: number) => {
+          const indexNum = get(row, 'indexnumber');
+          const name = get(row, 'fullname');
+          let email = get(row, 'emailaddress');
+          const phone = get(row, 'phonenumber');
+          const program = get(row, 'program');
+          const level = get(row, 'level');
+
+          // Auto-assign @htu.edu.gh
+          if (!email && indexNum) {
+            email = indexNum.toLowerCase().trim() + '@htu.edu.gh';
+          }
 
           const isValidEmail = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -174,30 +201,35 @@ export default function OrganizationElectionHub() {
             membersPayload.push({
               indexNumber: indexNum,
               studentId: indexNum,
-              name,
+              name: name || 'Student',
               email,
               phone,
               phoneNumber: phone,
-              department
+              program,
+              level,
+              department: program
             });
           }
 
           if (idx < 10) {
-            parsedPreview.push({ indexNum, name, email, phone });
+            parsedPreview.push({ indexNum, name, email, phone, program, level });
           }
-        }
-      });
+        });
 
       setCsvStats({
-        total: rows.length,
-        valid: validCount,
-        duplicates: duplicateCount,
-        invalid: invalidCount
-      });
-      setCsvPreview(parsedPreview);
-      setCsvParsedMembers(membersPayload);
+          total: dataRows.length,
+          valid: validCount,
+          duplicates: duplicateCount,
+          invalid: invalidCount
+        });
+        setCsvPreview(parsedPreview);
+        setCsvParsedMembers(membersPayload);
+      } catch (err) {
+        console.error('Error parsing Excel file:', err);
+        setCsvStats({ total: 0, valid: 0, duplicates: 0, invalid: 0 });
+      }
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
 
   // Submit Wizard Form
@@ -953,7 +985,7 @@ export default function OrganizationElectionHub() {
         {wizardStep === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0 }}>
-              Upload an optional CSV roster of eligible voters (`IndexNumber, FullName, Email`):
+              Upload an optional Excel roster of eligible voters (`IndexNumber, FullName, Email`):
             </p>
             
             <div style={{ border: '2px dashed #CBD5E1', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', backgroundColor: '#F8FAFC' }}>
@@ -969,7 +1001,7 @@ export default function OrganizationElectionHub() {
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                   {csvFile ? csvFile.name : 'Click to select CSV File'}
                 </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Format: IndexNumber, FullName, Email</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Format: IndexNumber, FullName, Email, Program, Level</span>
               </label>
             </div>
 

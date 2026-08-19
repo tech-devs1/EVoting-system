@@ -203,6 +203,9 @@ exports.verifyStudent = async (req, res) => {
       data: {
         name: voter.name,
         email: voter.email,
+        phone: voter.phone || '',
+        program: voter.program || '',
+        level: voter.level || '',
         hasPhone: !!voter.phone
       }
     });
@@ -256,21 +259,13 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     if (!voter) {
-      const newUid = `voter_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      voter = await Voter.create({
-        id: newUid,
-        studentId: cleanStudentId,
-        indexNumber: cleanStudentId,
-        email: normalizedEmail,
-        name: name || normalizedEmail.split('@')[0],
-        phone: phone ? phone.replace(/\s+/g, '') : '',
-        role: 'voter',
-        tenantId: DEFAULT_TENANT_ID,
-        isRegistered: true,
-        password: hashedPassword,
-        faceImage: faceImage || ''
+      return res.status(403).json({
+        status: 'error',
+        message: 'Your index number was not found on the official voter roster. Please contact your election administrator to be added before registering.'
       });
-    } else {
+    }
+
+    {
       voter.password = hashedPassword;
       voter.isRegistered = true;
       if (name) voter.name = name;

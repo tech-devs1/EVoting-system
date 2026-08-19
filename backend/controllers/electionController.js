@@ -623,7 +623,7 @@ exports.reactivateElection = async (req, res) => {
 exports.updateElectionStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    if (!['draft', 'active', 'completed'].includes(status)) {
+    if (!['draft', 'active', 'ended', 'completed'].includes(status)) {
       return res.status(400).json({ status: 'error', message: 'Invalid status' });
     }
 
@@ -706,7 +706,62 @@ exports.deleteElection = async (req, res) => {
     console.error('Error deleting election:', error);
     res.status(500).json({ status: 'error', message: 'Failed to delete election' });
   }
+}
+
+/**
+ * Extend the closing time of an ended/completed election.
+ * Admins cannot manually start polls - they auto-activate at startDate.
+ * But they CAN extend the end time after a poll has ended.
+ */
+exports.extendEndTime = async (req, res) => {
+  try {
+    const { newEndDate } = req.body;
+    if (!newEndDate) {
+      return res.status(400).json({ status: 'error', message: 'newEndDate is required (ISO string).' });
+    }
+
+    const election = await Election.findByPk(req.params.id);
+    if (!election) return res.status(404).json({ status: 'error', message: 'Election not found' });
+
+    const newEndMs = new Date(newEndDate).getTime();
+    if (isNaN(newEndMs)) {
+      return res.status(400).json({ status: 'error', message: 'Invalid date format for newEndDate.' });
+    }
+
+    const now = Date.now();
+    if (newEndMs <= now) {
+      return res.status(400).json({ status: 'error', message: 'New end date must be in the future.' });
+    }
+
+    const updateFields = { endDate: newEndDate };
+    if (election.status === 'ended' || election.status === 'completed') {
+      updateFields.status = 'active';
+    }
+
+    await election.update(updateFields);
+
+    cache.invalidatePrefix('elections:');
+    cache.invalidatePrefix('admin:');
+
+    await logActivity({
+      tenantId: getTenantId(req),
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'ELECTION_EXTEND_TIME',
+      description: 'Extended end time of election "' + election.title + '" to ' + new Date(newEndDate).toLocaleString()
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Election end time extended. Status: ' + (updateFields.status || election.status),
+      data: { endDate: newEndDate, status: updateFields.status || election.status }
+    });
+  } catch (error) {
+    console.error('Error extending election time:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to extend election time.' });
+  }
 };
+;
 
 exports.uploadCsv = async (req, res) => {
   try {
@@ -737,14 +792,16 @@ exports.uploadCsv = async (req, res) => {
         indexNumber: (m.indexNumber || m.studentId || '').trim(),
         name: m.name || m.fullName || 'Student',
         phone: (m.phone || m.phoneNumber || m.phoneNo || '').trim(),
-        email: rawEmail,
+        email: rawEmail || ((m.indexNumber || m.studentId || '').trim() + '@htu.edu.gh'),
+        program: (m.program || m.department || '').trim(),
+        level: (m.level || '').trim(),
         isRegistered: true,
         role: 'voter'
       };
     });
 
     // Bulk create or upsert voters per election ID
-    await Voter.bulkCreate(bulkData, { updateOnDuplicate: ['electionId', 'tenantId', 'name', 'phone', 'email', 'isRegistered'] });
+    await Voter.bulkCreate(bulkData, { updateOnDuplicate: ['electionId', 'tenantId', 'name', 'phone', 'email', 'program', 'level', 'isRegistered'] });
 
     cache.invalidatePrefix('elections:');
 

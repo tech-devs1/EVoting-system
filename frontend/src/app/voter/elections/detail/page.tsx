@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Check, ShieldCheck, Lock, CheckCircle2, Sparkles, User, AlertCircle, Calendar, Trophy, Info, BarChart2 } from 'lucide-react';
+import { ArrowLeft, Check, ShieldCheck, Lock, CheckCircle2, Sparkles, User, AlertCircle, Calendar, Trophy, Info, BarChart2, ThumbsUp, ThumbsDown, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -55,8 +55,11 @@ function VoterElectionDetailContent() {
   const [requestLoading, setRequestLoading] = useState(false);
   const [fallbackOtp, setFallbackOtp] = useState('');
 
-  // Map of position -> selected candidateId
-  const [selections, setSelections] = useState<Record<string, string>>({});
+  // Step-by-step wizard state
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Map of position -> { candidateId, choice: 'yes' | 'no' }
+  const [selections, setSelections] = useState<Record<string, { candidateId: string; choice: 'yes' | 'no' }>>({});
 
   // Map of position -> auditTxId for positions already voted
   const [votedPositions, setVotedPositions] = useState<Record<string, { candidateId: string; auditTxId: string }>>({});
@@ -168,9 +171,9 @@ function VoterElectionDetailContent() {
   };
 
   const handleCastVoteForPosition = async (position: string) => {
-    const candidateChoice = selections[position];
-    if (!candidateChoice) {
-      alert(`Please select a candidate for ${position} before casting your vote.`);
+    const sel = selections[position];
+    if (!sel) {
+      alert(`Please make a selection for ${position} before casting your vote.`);
       return;
     }
 
@@ -182,15 +185,23 @@ function VoterElectionDetailContent() {
     try {
       const res = await apiRequest<{ status: string; message: string; data?: { verificationId: string } }>('/votes/cast', 'POST', {
         electionId,
-        candidateId: candidateChoice
+        candidateId: sel.candidateId,
+        choice: sel.choice
       });
 
       if (res.status === 'success') {
         const auditTxId = res.data?.verificationId || 'VERIFIED_' + Math.random().toString(36).substring(2, 10).toUpperCase();
         setVotedPositions(prev => ({
           ...prev,
-          [position]: { candidateId: candidateChoice, auditTxId }
+          [position]: { candidateId: sel.candidateId, auditTxId }
         }));
+        // Auto-advance to next unvoted position after a brief delay
+        setTimeout(() => {
+          const nextUnvoted = positions.findIndex((p, i) => i > currentStep && !votedPositions[p] && p !== position);
+          if (nextUnvoted >= 0) {
+            setCurrentStep(nextUnvoted);
+          }
+        }, 800);
       } else {
         alert(res.message || 'Failed to cast vote.');
       }
@@ -260,24 +271,41 @@ function VoterElectionDetailContent() {
   const votedCount = Object.keys(votedPositions).length;
   const isAllPositionsVoted = totalPositionsCount > 0 && votedCount === totalPositionsCount;
 
-  const handleCardClick = (position: string, candId: string) => {
-    if (votedPositions[position]) return; // locked
+  const handleCandidateSelect = (position: string, candId: string) => {
+    if (votedPositions[position]) return;
     setSelections(prev => {
-      if (prev[position] === candId) {
+      const current = prev[position];
+      if (current && current.candidateId === candId && current.choice === 'yes') {
         const next = { ...prev };
         delete next[position];
         return next;
       }
-      return { ...prev, [position]: candId };
+      return { ...prev, [position]: { candidateId: candId, choice: 'yes' } };
     });
+  };
+
+  const handleYesVote = (position: string, candId: string) => {
+    if (votedPositions[position]) return;
+    setSelections(prev => ({ ...prev, [position]: { candidateId: candId, choice: 'yes' } }));
+  };
+
+  const handleNoVote = (position: string, candId: string) => {
+    if (votedPositions[position]) return;
+    setSelections(prev => ({ ...prev, [position]: { candidateId: candId, choice: 'no' } }));
+  };
+
+  // Identify independent (unopposed) positions: single candidate marked as independent
+  const isIndependentPosition = (pos: string) => {
+    const cands = positionGroups[pos];
+    return cands.length === 1 && cands[0].isIndependent;
   };
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-12">
       {/* Top Breadcrumb Navigation */}
       <div>
-        <Link 
-          href="/voter/elections" 
+        <Link
+          href="/voter/elections"
           className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline mb-2"
         >
           <ArrowLeft size={14} /> Back to Eligible Elections
@@ -303,13 +331,13 @@ function VoterElectionDetailContent() {
             )}
 
             <div className="p-6">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30">
                   {election.category || 'Executive'}
                 </span>
                 <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                  election.status === 'active' 
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30' 
+                  election.status === 'active'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30'
                     : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                 }`}>
                   {election.status === 'active' ? '🟢 Active' : '🏁 Ended'}
@@ -344,7 +372,9 @@ function VoterElectionDetailContent() {
               <div>
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-1">Voting Guidelines</h4>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Ensure you are listed on the official roster. You will verify via a 6-digit access OTP to cast your vote. Once cast for a position, your choice is automatically locked.
+                  {isAllPositionsVoted
+                    ? 'You have completed voting for all positions. Your choices are securely locked.'
+                    : 'You will vote one position at a time. Unopposed candidates require a Yes or No vote. Once cast, your choice is final.'}
                 </p>
               </div>
             </div>
@@ -364,7 +394,7 @@ function VoterElectionDetailContent() {
                   <div key={pos} className={`${posIdx === positions.length - 1 ? '' : 'border-b border-slate-100 dark:border-slate-700/60 pb-5'}`}>
                     <div className="flex justify-between items-center mb-3">
                       <h4 className="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                        {pos}
+                        {pos} {isIndependentPosition(pos) && <span className="text-slate-400 normal-case">(Unopposed — Yes/No vote)</span>}
                       </h4>
                       {votedPositions[pos] && (
                         <span className="text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-900/30">
@@ -443,7 +473,7 @@ function VoterElectionDetailContent() {
                   Polls Closed
                 </div>
                 {election.showResults ? (
-                  <Link 
+                  <Link
                     href={`/voter/elections/results?id=${election.id}`}
                     className="px-8 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-2"
                   >
@@ -478,8 +508,8 @@ function VoterElectionDetailContent() {
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
                     {otpError || 'Your account is not listed on the official voter roster for this election.'}
                   </p>
-                  <button 
-                    onClick={() => setProceedToBallot(false)} 
+                  <button
+                    onClick={() => setProceedToBallot(false)}
                     className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors"
                   >
                     Return to Details
@@ -578,6 +608,32 @@ function VoterElectionDetailContent() {
                 </div>
               </div>
 
+              {/* Step indicator dots */}
+              {!isAllPositionsVoted && totalPositionsCount > 1 && (
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  {positions.map((pos, idx) => {
+                    const isVoted = !!votedPositions[pos];
+                    const isCurrent = idx === currentStep;
+                    return (
+                      <button
+                        key={pos}
+                        onClick={() => setCurrentStep(idx)}
+                        className={`w-8 h-8 rounded-full text-[10px] font-extrabold transition-all flex items-center justify-center ${
+                          isVoted
+                            ? 'bg-emerald-500 text-white cursor-pointer'
+                            : isCurrent
+                              ? 'bg-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-700 cursor-pointer'
+                              : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer'
+                        }`}
+                        title={pos}
+                      >
+                        {isVoted ? <Check size={14} /> : idx + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {isAllPositionsVoted && (
                 <div className="bg-white dark:bg-slate-800 border-2 border-emerald-500 rounded-3xl p-8 text-center shadow-lg shadow-emerald-500/10">
                   <Sparkles size={36} className="text-emerald-500 mx-auto mb-3" />
@@ -599,7 +655,7 @@ function VoterElectionDetailContent() {
                       Return to Elections List
                     </Link>
                     {election.showResults && (
-                      <Link href={`/voter/elections/results?id=${election.id}`} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5">
+                      <Link href={`/voter/elections/results?id=${election.id}`} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5">
                         <BarChart2 size={16} /> View Results
                       </Link>
                     )}
@@ -607,19 +663,25 @@ function VoterElectionDetailContent() {
                 </div>
               )}
 
-              {/* List of Positions */}
-              {positions.map((pos, posIdx) => {
+              {/* Step-by-step: One Position at a Time */}
+              {!isAllPositionsVoted && positions.length > 0 && (() => {
+                const pos = positions[currentStep];
+                if (!pos) return null;
                 const posCandidates = positionGroups[pos];
                 const isPosVoted = !!votedPositions[pos];
                 const posAudit = votedPositions[pos];
-                const selectedCandId = selections[pos];
+                const sel = selections[pos];
+                const isIndependent = isIndependentPosition(pos);
+                const soloCand = isIndependent ? posCandidates[0] : null;
 
                 return (
-                  <div key={pos} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm flex flex-col gap-5">
+                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm flex flex-col gap-5">
                     {/* Position Title & Tag */}
                     <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700/60">
                       <div>
-                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Position {posIdx + 1} of {totalPositionsCount}</span>
+                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                          Position {currentStep + 1} of {totalPositionsCount}
+                        </span>
                         <h3 className="text-base font-extrabold text-slate-900 dark:text-white mt-0.5">{pos}</h3>
                       </div>
 
@@ -627,87 +689,187 @@ function VoterElectionDetailContent() {
                         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
                           <CheckCircle2 size={14} /> Vote Logged & Locked
                         </span>
+                      ) : isIndependent ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">
+                          Unopposed — Yes/No
+                        </span>
                       ) : (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">Select 1</span>
                       )}
                     </div>
 
-                    {/* Candidate Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {posCandidates.map((cand) => {
-                        const isVotedCand = isPosVoted && posAudit.candidateId === cand.id;
-                        const isSelected = selectedCandId === cand.id || isVotedCand;
-
-                        return (
-                          <div
-                            key={cand.id}
-                            onClick={() => handleCardClick(pos, cand.id)}
-                            className={`p-4 rounded-2xl border transition-all flex items-center gap-3 relative ${
-                              isPosVoted
-                                ? isVotedCand
-                                  ? 'bg-emerald-50/60 dark:bg-emerald-950/40 border-emerald-500 shadow-sm cursor-default'
-                                  : 'bg-slate-50/50 dark:bg-slate-900/30 border-slate-200/50 dark:border-slate-800 opacity-50 cursor-default'
-                                : isSelected
-                                  ? 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-600 dark:border-blue-500 shadow-sm cursor-pointer'
-                                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer'
-                            }`}
-                          >
-                            <div className="w-14 h-14 rounded-xl bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-                              {cand.photoUrl ? (
-                                <img src={cand.photoUrl} alt={cand.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <User size={24} className="text-slate-400" />
-                              )}
-                            </div>
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 mb-1">
-                                {cand.ballotNumber && (
-                                  <span className="text-[9px] font-extrabold bg-blue-600 text-white px-1.5 py-0.5 rounded">
-                                    #{cand.ballotNumber}
-                                  </span>
-                                )}
-                                <span className="text-xs font-bold text-slate-900 dark:text-white truncate">{cand.name}</span>
-                              </div>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
-                                {cand.manifesto || 'No manifesto provided.'}
-                              </p>
-                            </div>
-
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${
-                              isVotedCand
-                                ? 'bg-emerald-600 border-emerald-600 text-white'
-                                : isSelected
-                                  ? 'bg-blue-600 border-blue-600 text-white'
-                                  : 'border-slate-300 dark:border-slate-600'
-                            }`}>
-                              {isSelected && <Check size={12} />}
-                            </div>
+                    {/* INDEPENDENT / UNOPPOSED POSITION: Yes/No Vote UI */}
+                    {isIndependent && soloCand ? (
+                      <div className="flex flex-col gap-4">
+                        {/* Candidate profile card */}
+                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/80">
+                          <div className="w-16 h-16 rounded-xl bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+                            {soloCand.photoUrl ? (
+                              <img src={soloCand.photoUrl} alt={soloCand.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <User size={28} className="text-slate-400" />
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              {soloCand.ballotNumber && (
+                                <span className="text-[9px] font-extrabold bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                                  #{soloCand.ballotNumber}
+                                </span>
+                              )}
+                              <span className="text-sm font-bold text-slate-900 dark:text-white">{soloCand.name}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3">
+                              {soloCand.manifesto || 'No manifesto provided.'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Yes / No buttons */}
+                        {isPosVoted ? (
+                          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium flex justify-between items-center border border-emerald-200 dark:border-emerald-900/30">
+                            <span>Your vote: <strong>{posAudit.candidateId === soloCand.id ? 'Yes' : 'No'}</strong> — locked.</span>
+                            <span className="font-mono text-[10px] font-bold">{posAudit.auditTxId.substring(0, 12)}...</span>
+                          </div>
+                        ) : (
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => handleYesVote(pos, soloCand.id)}
+                              disabled={castingPosition === pos}
+                              className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-extrabold text-sm transition-all ${
+                                sel?.choice === 'yes'
+                                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-300 dark:ring-emerald-700'
+                                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-2 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
+                              }`}
+                            >
+                              <ThumbsUp size={20} /> Yes
+                            </button>
+                            <button
+                              onClick={() => handleNoVote(pos, soloCand.id)}
+                              disabled={castingPosition === pos}
+                              className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-extrabold text-sm transition-all ${
+                                sel?.choice === 'no'
+                                  ? 'bg-red-600 text-white shadow-lg shadow-red-500/25 ring-2 ring-red-300 dark:ring-red-700'
+                                  : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-2 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/60'
+                              }`}
+                            >
+                              <ThumbsDown size={20} /> No
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* REGULAR POSITION: Candidate Selection Cards */
+                      <div className="flex flex-col gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {posCandidates.map((cand) => {
+                            const isVotedCand = isPosVoted && posAudit.candidateId === cand.id;
+                            const isSelected = sel?.candidateId === cand.id || isVotedCand;
+
+                            return (
+                              <div
+                                key={cand.id}
+                                onClick={() => handleCandidateSelect(pos, cand.id)}
+                                className={`p-4 rounded-2xl border transition-all flex items-center gap-3 relative ${
+                                  isPosVoted
+                                    ? isVotedCand
+                                      ? 'bg-emerald-50/60 dark:bg-emerald-950/40 border-emerald-500 shadow-sm cursor-default'
+                                      : 'bg-slate-50/50 dark:bg-slate-900/30 border-slate-200/50 dark:border-slate-800 opacity-50 cursor-default'
+                                    : isSelected
+                                      ? 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-600 dark:border-blue-500 shadow-sm cursor-pointer'
+                                      : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer'
+                                }`}
+                              >
+                                <div className="w-14 h-14 rounded-xl bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+                                  {cand.photoUrl ? (
+                                    <img src={cand.photoUrl} alt={cand.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <User size={24} className="text-slate-400" />
+                                  )}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    {cand.ballotNumber && (
+                                      <span className="text-[9px] font-extrabold bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                                        #{cand.ballotNumber}
+                                      </span>
+                                    )}
+                                    <span className="text-xs font-bold text-slate-900 dark:text-white truncate">{cand.name}</span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
+                                    {cand.manifesto || 'No manifesto provided.'}
+                                  </p>
+                                </div>
+
+                                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${
+                                  isVotedCand
+                                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                                    : isSelected
+                                      ? 'bg-blue-600 border-blue-600 text-white'
+                                      : 'border-slate-300 dark:border-slate-600'
+                                }`}>
+                                  {isSelected && <Check size={12} />}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Submit Action Panel */}
                     {isPosVoted ? (
                       <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium flex justify-between items-center border border-emerald-200 dark:border-emerald-900/30">
-                        <span>Vote cast and locked automatically.</span>
-                        <span className="font-mono text-[10px] font-bold">Receipt ID: {posAudit.auditTxId.substring(0, 12)}...</span>
+                        <span>Vote cast and locked.</span>
+                        <span className="font-mono text-[10px] font-bold">Receipt: {posAudit.auditTxId.substring(0, 12)}...</span>
                       </div>
                     ) : (
-                      <div className="flex justify-end">
+                      <div className="flex justify-between items-center">
                         <button
-                          onClick={() => handleCastVoteForPosition(pos)}
-                          disabled={!selectedCandId || castingPosition === pos}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white disabled:text-slate-400 text-xs font-bold rounded-xl transition-colors disabled:cursor-not-allowed"
+                          onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                          disabled={currentStep === 0}
+                          className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
                         >
-                          {castingPosition === pos ? 'Casting...' : `Cast Vote for ${pos}`}
+                          <ChevronLeft size={14} /> Previous
                         </button>
+                        <div className="flex items-center gap-3">
+                          {currentStep < totalPositionsCount - 1 && (
+                            <button
+                              onClick={() => {
+                                // Auto-advance to next unvoted position
+                                for (let i = currentStep + 1; i < positions.length; i++) {
+                                  if (!votedPositions[positions[i]]) {
+                                    setCurrentStep(i);
+                                    return;
+                                  }
+                                }
+                                // All after are voted, wrap to first unvoted
+                                for (let i = 0; i < positions.length; i++) {
+                                  if (!votedPositions[positions[i]]) {
+                                    setCurrentStep(i);
+                                    return;
+                                  }
+                                }
+                              }}
+                              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5"
+                            >
+                              Skip <ChevronRight size={14} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleCastVoteForPosition(pos)}
+                            disabled={!sel || castingPosition === pos}
+                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white disabled:text-slate-400 text-xs font-bold rounded-xl transition-colors disabled:cursor-not-allowed shadow-md shadow-blue-500/20"
+                          >
+                            {castingPosition === pos ? 'Casting...' : `Cast Vote`}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
                 );
-              })}
+              })()}
             </div>
           )}
         </div>

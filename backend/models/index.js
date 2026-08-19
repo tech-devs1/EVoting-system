@@ -164,6 +164,8 @@ const Voter = sequelize.define('Voter', {
   // Email is used for voter accounts and roster lookup across elections
   email: { type: DataTypes.STRING(255) },
   phone: { type: DataTypes.STRING(64) },
+  program: { type: DataTypes.STRING(255) },
+  level: { type: DataTypes.STRING(64) },
   password: { type: DataTypes.STRING(255) },
   isRegistered: { type: DataTypes.BOOLEAN, defaultValue: true },
   role: { type: DataTypes.STRING(32), defaultValue: 'voter' },

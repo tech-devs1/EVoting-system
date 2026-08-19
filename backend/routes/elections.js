@@ -13,6 +13,7 @@ router.put('/:id', verifyAuth, requireAdmin, electionController.updateElection);
 router.patch('/:id/time-window', verifyAuth, requireAdmin, electionController.updateElectionTimeWindow);
 router.patch('/:id/reactivate', verifyAuth, requireAdmin, electionController.reactivateElection);
 router.patch('/:id/status', verifyAuth, requireAdmin, electionController.updateElectionStatus);
+router.patch('/:id/extend-time', verifyAuth, requireAdmin, electionController.extendEndTime);
 router.patch('/:id/toggle-results', verifyAuth, requireAdmin, electionController.toggleResults);
 router.delete('/:id', verifyAuth, requireAdmin, electionController.deleteElection);
 router.post('/:id/voters/upload-csv', verifyAuth, requireAdmin, electionController.uploadCsv);
