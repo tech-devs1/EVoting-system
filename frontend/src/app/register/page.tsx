@@ -207,6 +207,9 @@ export default function RegisterPage() {
                   required
                 />
               </div>
+              <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium mt-1.5">
+                Use your official <strong>@htu.edu.gh</strong> student email. Other domains are not allowed.
+              </p>
             </div>
 
             <div>

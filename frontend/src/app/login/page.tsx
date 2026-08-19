@@ -171,6 +171,9 @@ export default function LoginPage() {
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                   required
                 />
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-1.5">
+                Only <strong>@htu.edu.gh</strong> student emails are accepted for voter registration.
+              </p>
               </div>
             </div>
 

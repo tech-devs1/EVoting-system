@@ -8,6 +8,17 @@ const { logFraudAlert } = require('../services/fraud');
 
 const DEFAULT_TENANT_ID = 'compssa';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
+
+// Domain restriction: only @htu.edu.gh emails may register as voters.
+// Admin / superadmin accounts already in the database are unaffected.
+const ALLOWED_EMAIL_DOMAIN = (process.env.ALLOWED_EMAIL_DOMAIN || 'htu.edu.gh').toLowerCase();
+
+/** Returns true when the email belongs to the allowed institution domain. */
+function isAllowedDomain(email) {
+  if (!email || typeof email !== 'string') return false;
+  const lower = email.trim().toLowerCase();
+  return lower.endsWith(`@${ALLOWED_EMAIL_DOMAIN}`);
+}
 const BMS_API_KEY = process.env.BMS_API_KEY || process.env.MNOTIFY_API_KEY || '';
 const BMS_SENDER_ID = process.env.BMS_SENDER_ID || 'COMPSSA';
 
@@ -208,6 +219,14 @@ exports.register = async (req, res) => {
 
     if (!studentId || !email || !password) {
       return res.status(400).json({ status: 'error', message: 'Missing required fields (studentId, email, password)' });
+    }
+
+    // Domain restriction: only institutional @htu.edu.gh emails may register
+    if (!isAllowedDomain(email)) {
+      return res.status(403).json({
+        status: 'error',
+        message: `Registration is restricted to ${ALLOWED_EMAIL_DOMAIN} email addresses. Please use your institutional email.`
+      });
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
@@ -509,6 +528,13 @@ exports.googleLogin = async (req, res) => {
     let targetTenantId = DEFAULT_TENANT_ID;
 
     if (!voter) {
+      // Domain restriction: only @htu.edu.gh may register via Google sign-in
+      if (!isAllowedDomain(email)) {
+        return res.status(403).json({
+          status: 'error',
+          message: `Registration is restricted to ${ALLOWED_EMAIL_DOMAIN} email addresses. Please use your institutional email.`
+        });
+      }
       const finalUid = `voter_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
       voter = await Voter.create({
         id: finalUid,
@@ -741,6 +767,10 @@ exports.forgotPassword = async (req, res) => {
     const email = String(rawEmail || '').trim().toLowerCase();
     if (!email) return res.status(400).json({ status: 'error', message: 'Email is required' });
 
+    // Domain restriction: block password resets for non-institutional emails
+    if (!isAllowedDomain(email)) {
+      return res.status(403).json({ status: 'error', message: 'Password reset is restricted to institutional email addresses.' });
+    }
     const voter = await Voter.findOne({ where: { email } });
     if (!voter) {
       return res.status(200).json({ status: 'success', message: 'If the email exists, a reset code was sent.' });
