@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
-import { Activity, Download, RefreshCw, Building2, Globe, Shield, ChevronDown } from 'lucide-react';
+import { Activity, Download, RefreshCw, Building2, Globe, Shield, ChevronDown, Eye, X, Terminal } from 'lucide-react';
 import DataTable, { type ColumnDef, type FilterDef } from '@/components/DataTable';
 
 interface AuditEntry {
@@ -17,6 +17,7 @@ interface AuditEntry {
   ip: string;
   timestamp: number;
   createdAt: string;
+  fullRecord?: any;
 }
 
 interface Department {
@@ -66,6 +67,7 @@ export default function SuperAdminAudit() {
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<AuditEntry | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch department list
@@ -277,6 +279,18 @@ export default function SuperAdminAudit() {
                     </span>
                   ),
                 },
+                {
+                  key: 'id',
+                  label: 'Details',
+                  render: (log: AuditEntry) => (
+                    <button
+                      onClick={() => setSelectedLog(log)}
+                      className="px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Eye size={12} /> View
+                    </button>
+                  ),
+                },
               ]}
               searchPlaceholder="Search by actor, action, or description…"
               searchKeys={['actorEmail', 'action', 'description', 'tenantName']}
@@ -309,6 +323,70 @@ export default function SuperAdminAudit() {
           </div>
         )}
       </div>
+
+      {/* Log Details Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <Terminal size={18} className="text-blue-600" /> Audit Log Event Details
+              </h3>
+              <button onClick={() => setSelectedLog(null)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+                <X size={18} className="text-slate-500" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50 flex justify-between items-center">
+                <span className="font-bold text-slate-400 uppercase text-[10px]">Log Record ID</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">{selectedLog.id}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50">
+                  <span className="block font-bold text-slate-400 uppercase text-[10px] mb-1">Actor Email</span>
+                  <span className="font-bold text-slate-900 dark:text-white truncate block">{selectedLog.actorEmail}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50">
+                  <span className="block font-bold text-slate-400 uppercase text-[10px] mb-1">Actor Role / Dept</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400 uppercase">{selectedLog.actorRole} ({selectedLog.tenantName || selectedLog.tenantId})</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50">
+                  <span className="block font-bold text-slate-400 uppercase text-[10px] mb-1">Action Code</span>
+                  <span className="font-extrabold text-slate-900 dark:text-white">{selectedLog.action}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50">
+                  <span className="block font-bold text-slate-400 uppercase text-[10px] mb-1">IP Address</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{selectedLog.ip || '127.0.0.1'}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/50">
+                <span className="block font-bold text-slate-400 uppercase text-[10px] mb-1">Event Timestamp</span>
+                <span className="font-bold text-slate-900 dark:text-white">{new Date(selectedLog.timestamp).toString()}</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-900 text-slate-200 font-mono text-[11px] overflow-x-auto max-h-40 border border-slate-800">
+                <span className="block font-bold text-blue-400 text-[10px] uppercase mb-1">Event Description & Payload</span>
+                {selectedLog.description || JSON.stringify(selectedLog.fullRecord, null, 2)}
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="w-full py-2.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-md shadow-blue-500/20 cursor-pointer"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

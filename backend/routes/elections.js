@@ -401,9 +401,9 @@ router.get('/:id/audit-records', verifyAuth, requireAdmin, async (req, res) => {
         ]
       },
       order: [['timestamp', 'DESC']],
-      limit: 50
+      limit: 100
     });
-    const votes = await VotedVoter.findAll({ where: { electionId }, order: [['timestamp', 'DESC']], limit: 50 });
+    const votes = await VotedVoter.findAll({ where: { electionId }, order: [['timestamp', 'DESC']], limit: 100 });
 
     const combined = [
       ...activityLogs.map(l => {
@@ -412,9 +412,13 @@ router.get('/:id/audit-records', verifyAuth, requireAdmin, async (req, res) => {
           id: l.id || `act_${ts}`,
           type: 'admin',
           actor: l.actorEmail || 'Admin',
+          role: l.actorRole || 'admin',
           action: l.action || 'ADMIN_ACTIVITY',
+          ip: l.ip || '127.0.0.1',
+          tenantId: l.tenantId || 'global',
           timestamp: ts,
-          details: l.description
+          details: l.description,
+          fullRecord: l.toJSON()
         };
       }),
       ...votes.map(v => {
@@ -423,10 +427,14 @@ router.get('/:id/audit-records', verifyAuth, requireAdmin, async (req, res) => {
           id: `voted_${v.id || v.voterId}`,
           type: 'voter',
           actor: v.voterId || 'Voter',
+          role: 'voter',
           action: 'VOTE_CAST',
+          ip: 'Protected',
+          tenantId: election ? election.tenantId : 'global',
           timestamp: ts,
           details: 'Ballot Cast & Cryptographically Verified',
-          hash: 'CRYPTOGRAPHICALLY_VERIFIED'
+          hash: 'CRYPTOGRAPHICALLY_VERIFIED',
+          fullRecord: v.toJSON()
         };
       })
     ].sort((a, b) => b.timestamp - a.timestamp);
