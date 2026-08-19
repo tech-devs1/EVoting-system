@@ -117,12 +117,21 @@ function PerElectionVotersContent() {
   // Download Official Voter Excel Template
   const handleDownloadSampleExcel = () => {
     const headers = ['IndexNumber', 'FullName', 'EmailAddress', 'PhoneNumber', 'Program', 'Level'];
-    const sampleData = [
-      ['0123456789', 'Kwame Mensah', 'kwame.mensah@htu.edu.gh', '+233240001122', 'Computer Science', 'Level 300'],
-      ['0123456790', 'Abena Osei', 'abena.osei@htu.edu.gh', '+233501112233', 'Electrical Engineering', 'Level 200'],
-      ['0123456791', 'Kofi Annan', 'kofi.annan@htu.edu.gh', '+233273334455', 'Business Administration', 'Level 400'],
+
+    // Sample rows with pre-configured Excel formula in EmailAddress column (Column C)
+    const rows: any[][] = [
+      headers,
+      ['0325080551', 'Kwame Mensah', { f: 'LOWER(TRIM(A2))&"@htu.edu.gh"' }, '+233240001122', 'Computer Science', 'Level 300'],
+      ['0325080552', 'Abena Osei', { f: 'LOWER(TRIM(A3))&"@htu.edu.gh"' }, '+233501112233', 'Electrical Engineering', 'Level 200'],
+      ['0325080553', 'Kofi Annan', { f: 'LOWER(TRIM(A4))&"@htu.edu.gh"' }, '+233273334455', 'Business Administration', 'Level 400'],
     ];
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
+
+    // Pre-populate formula rows up to Row 25 for convenient admin data entry
+    for (let r = 5; r <= 25; r++) {
+      rows.push(['', '', { f: `LOWER(TRIM(A${r}))&"@htu.edu.gh"` }, '', '', '']);
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Voter Roster');
     XLSX.writeFile(wb, 'htu_elect_voter_roster_template.xlsx');
