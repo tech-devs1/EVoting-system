@@ -1,4 +1,4 @@
-const { Tenant, Organization, User, Election, OnboardingRequest } = require('../models');
+const { Tenant, Organization, User, Election, Voter, OnboardingRequest } = require('../models');
 const bcrypt = require('bcryptjs');
 const cache = require('../services/cache');
 
@@ -6,17 +6,18 @@ exports.getStats = async (req, res) => {
   try {
     const cacheKey = 'superadmin:stats';
     const stats = await cache.getOrSet(cacheKey, async () => {
+      const { Voter } = require('../models');
       const totalDepartments = await Tenant.count();
-      const totalUsers = await User.count();
       const totalElections = await Election.count();
+      const totalVoters = await Voter.count();
       const totalRequests = await OnboardingRequest.count();
 
       return {
         departments: totalDepartments,
         elections: totalElections,
-        voters: totalUsers,
+        voters: totalVoters,
         totalDepartments,
-        totalUsers,
+        totalVoters,
         totalRequests
       };
     }, 15000);
@@ -33,8 +34,13 @@ exports.getDepartments = async (req, res) => {
     const cacheKey = 'superadmin:departments';
     const departments = await cache.getOrSet(cacheKey, async () => {
       const tenants = await Tenant.findAll();
-      return tenants.map(t => {
+      return Promise.all(tenants.map(async t => {
         const item = t.toJSON();
+        const secondaryAdmins = item.admins || [];
+        const [electionsCount, votersCount] = await Promise.all([
+          Election.count({ where: { tenantId: t.id } }),
+          Voter.count({ where: { tenantId: t.id } })
+        ]);
         return {
           id: item.id,
           name: item.name,
@@ -44,15 +50,160 @@ exports.getDepartments = async (req, res) => {
           status: item.status,
           createdAt: item.createdAt,
           brandColor: item.brandColor,
-          logoUrl: item.logoUrl
+          logoUrl: item.logoUrl,
+          electionsCount,
+          votersCount,
+          adminsCount: secondaryAdmins.length + 1 // primary admin + secondaries
         };
-      });
+      }));
     }, 15000);
 
     res.status(200).json({ status: 'success', data: departments });
   } catch (error) {
     console.error('Error fetching departments:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch departments' });
+  }
+};
+
+// ── Department Admin Management ───────────────────────────────────────────────
+
+exports.getDepartmentAdmins = async (req, res) => {
+  try {
+    const tenant = await Tenant.findByPk(req.params.id);
+    if (!tenant) return res.status(404).json({ status: 'error', message: 'Department not found' });
+
+    const item = tenant.toJSON();
+    const secondaryAdmins = (item.admins || []).map(a => ({
+      id: a.id,
+      name: a.name || '',
+      email: a.email || '',
+      isPrimary: false,
+      createdAt: a.createdAt || null
+    }));
+
+    const primary = {
+      id: 'primary',
+      name: `${item.name} Administrator`,
+      email: item.adminEmail || '',
+      isPrimary: true,
+      createdAt: null
+    };
+
+    res.status(200).json({ status: 'success', data: [primary, ...secondaryAdmins] });
+  } catch (error) {
+    console.error('Error fetching department admins:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch department admins' });
+  }
+};
+
+exports.addDepartmentAdmin = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ status: 'error', message: 'Name, email and password are required.' });
+    }
+
+    const tenant = await Tenant.findByPk(req.params.id);
+    if (!tenant) return res.status(404).json({ status: 'error', message: 'Department not found' });
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const secondaryAdmins = tenant.admins || [];
+    if (secondaryAdmins.some(a => a.email === normalizedEmail)) {
+      return res.status(400).json({ status: 'error', message: 'This email is already an admin for this department.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newAdmin = {
+      id: `adm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: String(name).trim(),
+      email: normalizedEmail,
+      passwordHash: hashedPassword,
+      createdAt: Date.now()
+    };
+
+    secondaryAdmins.push(newAdmin);
+    tenant.admins = secondaryAdmins;
+    await tenant.save();
+
+    // Mirror into the users table so the new admin can sign in via /auth/login.
+    await User.upsert({
+      id: `usr_admin_${tenant.id}_${newAdmin.id}`,
+      tenantId: tenant.id,
+      name: newAdmin.name,
+      email: normalizedEmail,
+      password: hashedPassword,
+      role: 'admin',
+      status: 'active',
+      isVerified: true
+    });
+
+    cache.invalidatePrefix('superadmin:');
+
+    res.status(201).json({ status: 'success', data: newAdmin, message: 'Admin added successfully.' });
+  } catch (error) {
+    console.error('Error adding department admin:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to add department admin' });
+  }
+};
+
+exports.updateDepartmentAdmin = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+    const { name, password } = req.body;
+
+    const tenant = await Tenant.findByPk(req.params.id);
+    if (!tenant) return res.status(404).json({ status: 'error', message: 'Department not found' });
+
+    const secondaryAdmins = tenant.admins || [];
+    const admin = secondaryAdmins.find(a => a.id === adminId);
+    if (!admin) return res.status(404).json({ status: 'error', message: 'Admin not found' });
+
+    if (name) admin.name = String(name).trim();
+    if (password) {
+      admin.passwordHash = await bcrypt.hash(password, 10);
+    }
+    tenant.admins = secondaryAdmins;
+    await tenant.save();
+
+    // Keep the users table in sync (password + name).
+    const user = await User.findOne({ where: { email: admin.email, tenantId: tenant.id } });
+    if (user) {
+      if (name) user.name = admin.name;
+      if (password) user.password = admin.passwordHash;
+      await user.save();
+    }
+
+    cache.invalidatePrefix('superadmin:');
+
+    res.status(200).json({ status: 'success', message: 'Admin updated successfully.' });
+  } catch (error) {
+    console.error('Error updating department admin:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update department admin' });
+  }
+};
+
+exports.removeDepartmentAdmin = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+    const tenant = await Tenant.findByPk(req.params.id);
+    if (!tenant) return res.status(404).json({ status: 'error', message: 'Department not found' });
+
+    const secondaryAdmins = tenant.admins || [];
+    const admin = secondaryAdmins.find(a => a.id === adminId);
+    if (!admin) return res.status(404).json({ status: 'error', message: 'Admin not found' });
+
+    tenant.admins = secondaryAdmins.filter(a => a.id !== adminId);
+    await tenant.save();
+
+    // Remove the mirrored users-table row (same email + tenant).
+    await User.destroy({ where: { email: admin.email, tenantId: tenant.id } });
+
+    cache.invalidatePrefix('superadmin:');
+
+    res.status(200).json({ status: 'success', message: 'Admin removed successfully.' });
+  } catch (error) {
+    console.error('Error removing department admin:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to remove department admin' });
   }
 };
 

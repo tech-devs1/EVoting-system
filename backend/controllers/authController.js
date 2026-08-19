@@ -136,6 +136,7 @@ async function generateAndSendOtp(voterRecord, email, name, phoneNumber = null) 
 
   voterRecord.accessOtp = otp;
   voterRecord.accessOtpExpiry = expiry;
+  voterRecord.otpAttempts = 0; // reset failed-attempt counter for the new code
   await voterRecord.save();
 
   let emailSent = false;
@@ -417,6 +418,37 @@ exports.login = async (req, res) => {
   }
 };
 
+/**
+ * Verify a Google/Firebase ID token server-side with Google's tokeninfo
+ * endpoint. The frontend sends the token produced by signInWithPopup;
+ * tokeninfo validates the signature and returns the token claims, and we
+ * additionally require the email to be verified. Never trust a locally
+ * decoded JWT payload — anyone can craft one.
+ */
+async function verifyGoogleIdToken(idToken) {
+  const res = await fetch(
+    `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
+    { signal: AbortSignal.timeout(10000) }
+  );
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error('Invalid identity token');
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch (e) {
+    throw new Error('Invalid identity token');
+  }
+
+  if (payload.email_verified !== 'true' && payload.email_verified !== true) {
+    throw new Error('Email is not verified on this Google account');
+  }
+
+  return payload;
+}
+
 exports.googleLogin = async (req, res) => {
   try {
     const { idToken } = req.body;
@@ -424,45 +456,34 @@ exports.googleLogin = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'ID Token is required.' });
     }
 
-    let email = null;
-    let name = 'Voter';
-
-    const parseJwtPayload = (tokenStr) => {
-      try {
-        const parts = tokenStr.split('.');
-        if (parts.length === 3) {
-          const payloadJson = Buffer.from(parts[1], 'base64').toString('utf8');
-          return JSON.parse(payloadJson);
-        }
-      } catch (e) {}
-      return null;
-    };
-
-    const parsed = parseJwtPayload(idToken);
-    if (parsed && parsed.email) {
-      email = parsed.email;
-      name = parsed.name || name;
-    } else if (idToken && idToken.includes('@')) {
-      email = idToken;
-    } else {
-      email = 'student@htu.edu.gh';
+    // Server-side verification — a forged/unsigned token is rejected here.
+    let parsed;
+    try {
+      parsed = await verifyGoogleIdToken(idToken);
+    } catch (verifyErr) {
+      console.warn('[Google Login] Token verification failed:', verifyErr.message);
+      return res.status(401).json({ status: 'error', message: 'Invalid Google identity token.' });
     }
+
+    const email = String(parsed.email || '').toLowerCase().trim();
+    const name = parsed.name || 'Voter';
 
     if (!email) {
       return res.status(400).json({ status: 'error', message: 'Failed to extract email from identity token.' });
     }
 
-    // Check Superadmin
-    if (email === 'issakasaddick14@gmail.com' || email === 'supertech@admin.com') {
-      const uid = `superadmin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    // Check Superadmin by database lookup only
+    const superAdminUser = await User.findOne({ where: { email, role: 'superadmin' } });
+    if (superAdminUser) {
+      const uid = superAdminUser.id;
       const token = jwt.sign(
-        { uid, email, role: 'superadmin', name: 'Super Administrator', tenantId: 'global' },
+        { uid, email, role: 'superadmin', name: superAdminUser.name || 'Super Administrator', tenantId: 'global' },
         JWT_SECRET,
         { expiresIn: '24h' }
       );
       return res.status(200).json({
         status: 'success',
-        data: { uid, email, role: 'superadmin', name: 'Super Administrator', tenantId: 'global' },
+        data: { uid, email, role: 'superadmin', name: superAdminUser.name || 'Super Administrator', tenantId: 'global' },
         token
       });
     }
@@ -545,17 +566,36 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and OTP are required.' });
     }
 
-    const voter = await Voter.findOne({ where: { email, accessOtp: otp } });
-    if (!voter) {
+    const voter = await Voter.findOne({ where: { email } });
+    if (!voter || !voter.accessOtp) {
       return res.status(400).json({ status: 'error', message: 'Invalid OTP code.' });
     }
 
     if (Date.now() > Number(voter.accessOtpExpiry)) {
+      voter.accessOtp = null;
+      voter.accessOtpExpiry = null;
+      voter.otpAttempts = 0;
+      await voter.save();
       return res.status(400).json({ status: 'error', message: 'OTP has expired. Please request a new one.' });
+    }
+
+    if (String(voter.accessOtp) !== String(otp).trim()) {
+      const attempts = Number(voter.otpAttempts || 0) + 1;
+      if (attempts >= 5) {
+        voter.accessOtp = null;
+        voter.accessOtpExpiry = null;
+        voter.otpAttempts = 0;
+        await voter.save();
+        return res.status(429).json({ status: 'error', message: 'Too many incorrect attempts. Please request a new code.' });
+      }
+      voter.otpAttempts = attempts;
+      await voter.save();
+      return res.status(400).json({ status: 'error', message: 'Invalid OTP code.' });
     }
 
     voter.accessOtp = null;
     voter.accessOtpExpiry = null;
+    voter.otpAttempts = 0;
     voter.isRegistered = true;
     await voter.save();
 
@@ -602,12 +642,16 @@ exports.resendOtp = async (req, res) => {
     const { otp, emailSent, smsSent } = await generateAndSendOtp(voter, voter.email, voter.name, voter.phone || null);
     const dispatchSuccess = emailSent || smsSent;
 
+    // The plaintext OTP is only ever returned when delivery failed AND we are
+    // not in production — in production the code must never leak via the API.
+    const devFallback = !dispatchSuccess && process.env.NODE_ENV !== 'production';
+
     res.status(200).json({
       status: 'success',
-      fallbackOtp: dispatchSuccess ? undefined : otp,
+      fallbackOtp: devFallback ? otp : undefined,
       message: dispatchSuccess
         ? `A new OTP has been sent to your email (${voter.email})${smsSent ? ' and SMS' : ''}.`
-        : `A new OTP was generated: ${otp}`
+        : 'A new OTP has been generated. If you did not receive it, please contact support.'
     });
   } catch (error) {
     console.error('Error resending OTP:', error);
@@ -730,12 +774,15 @@ exports.forgotPassword = async (req, res) => {
 
     const dispatchSuccess = emailSent || smsSent;
 
+    // Same rule as resend-otp: never leak the code through the API in production.
+    const devFallback = !dispatchSuccess && process.env.NODE_ENV !== 'production';
+
     res.status(200).json({
       status: 'success',
-      fallbackCode: dispatchSuccess ? undefined : resetCode,
+      fallbackCode: devFallback ? resetCode : undefined,
       message: dispatchSuccess
         ? 'If the email exists, a reset code was sent to your email/phone.'
-        : `A reset code was generated: ${resetCode}`
+        : 'If the email exists, a reset code was sent to your email/phone. If it did not arrive, please contact support.'
     });
   } catch (error) {
     console.error('Error in forgot-password:', error);

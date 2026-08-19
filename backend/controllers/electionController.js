@@ -873,6 +873,7 @@ exports.requestAccessOtp = async (req, res) => {
 
     rosterEntry.accessOtp = otp;
     rosterEntry.accessOtpExpiry = expiry;
+    rosterEntry.otpAttempts = 0;
     await rosterEntry.save();
 
     let emailSent = false;
@@ -907,12 +908,16 @@ exports.requestAccessOtp = async (req, res) => {
 
     const dispatchSuccess = emailSent || smsSent;
 
+    // The plaintext OTP is only ever returned when delivery failed AND we are
+    // not in production — in production the code must never leak via the API.
+    const devFallback = !dispatchSuccess && process.env.NODE_ENV !== 'production';
+
     res.status(200).json({
       status: 'success',
-      fallbackOtp: dispatchSuccess ? undefined : otp,
+      fallbackOtp: devFallback ? otp : undefined,
       message: dispatchSuccess
         ? 'A verification code has been dispatched.'
-        : `A verification code was generated: ${otp}`
+        : 'A verification code has been generated. If it did not arrive, please contact support.'
     });
   } catch (error) {
     console.error('Error requesting OTP:', error);
@@ -934,7 +939,6 @@ exports.verifyAccessOtp = async (req, res) => {
     const voter = await Voter.findOne({
       where: {
         electionId,
-        accessOtp: otp,
         [Op.or]: [
           { email: voterEmail },
           { studentId: voterIndex },
@@ -943,12 +947,30 @@ exports.verifyAccessOtp = async (req, res) => {
       }
     });
 
-    if (!voter) {
+    if (!voter || !voter.accessOtp) {
       return res.status(400).json({ status: 'error', message: 'Invalid verification code.' });
     }
 
     if (Date.now() > Number(voter.accessOtpExpiry)) {
+      voter.accessOtp = null;
+      voter.accessOtpExpiry = null;
+      voter.otpAttempts = 0;
+      await voter.save();
       return res.status(400).json({ status: 'error', message: 'Verification code has expired.' });
+    }
+
+    if (String(voter.accessOtp) !== String(otp).trim()) {
+      const attempts = Number(voter.otpAttempts || 0) + 1;
+      if (attempts >= 5) {
+        voter.accessOtp = null;
+        voter.accessOtpExpiry = null;
+        voter.otpAttempts = 0;
+        await voter.save();
+        return res.status(429).json({ status: 'error', message: 'Too many incorrect attempts. Please request a new code.' });
+      }
+      voter.otpAttempts = attempts;
+      await voter.save();
+      return res.status(400).json({ status: 'error', message: 'Invalid verification code.' });
     }
 
     await UnlockedElection.upsert({
@@ -960,6 +982,7 @@ exports.verifyAccessOtp = async (req, res) => {
 
     voter.accessOtp = null;
     voter.accessOtpExpiry = null;
+    voter.otpAttempts = 0;
     await voter.save();
 
     res.status(200).json({ status: 'success', message: 'Election unlocked successfully.' });

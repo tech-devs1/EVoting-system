@@ -1,4 +1,5 @@
 const { Candidate, Position, Vote, VotedVoter, sequelize } = require('../models');
+const { Op } = require('sequelize');
 const crypto = require('crypto');
 const { logActivity } = require('../services/activityLog');
 const { logFraudAlert } = require('../services/fraud');
@@ -105,12 +106,64 @@ exports.castVote = async (req, res) => {
         voterId,
         candidateId,
         position: candidate.positionTitle,
-        choice: choice || 'yes'
+        choice: choice || 'yes',
+        verificationId: voteId
       }
     });
   } catch (error) {
     if (transaction) await transaction.rollback().catch(() => {});
     console.error('Error casting vote:', error);
     res.status(500).json({ status: 'error', message: 'Failed to cast vote' });
+  }
+};
+
+/**
+ * List of election IDs the signed-in voter has already voted in.
+ * Used by the voter elections/dashboard pages to show "✓ Voted" states.
+ */
+exports.getVotedElections = async (req, res) => {
+  try {
+    const voterId = req.user.uid;
+    const rows = await VotedVoter.findAll({ where: { voterId } });
+    res.status(200).json({ status: 'success', data: rows.map(r => r.electionId) });
+  } catch (error) {
+    console.error('Error fetching voted elections:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch voted elections' });
+  }
+};
+
+/**
+ * Look up a ballot receipt (the verificationId returned by /votes/cast) and
+ * return the audit-ledger details shown on the voter verify page.
+ */
+exports.verifyVote = async (req, res) => {
+  try {
+    const voteId = String(req.params.id || '').trim();
+    if (!voteId) {
+      return res.status(400).json({ status: 'error', message: 'Verification ID is required.' });
+    }
+
+    const vote = await Vote.findByPk(voteId);
+    if (!vote) {
+      return res.status(404).json({ status: 'error', message: 'No ballot record matches this verification ID.' });
+    }
+
+    const candidate = await Candidate.findByPk(vote.candidateId);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        electionId: vote.electionId,
+        timestamp: Number(vote.timestamp) || Date.now(),
+        previousHash: vote.prevHash || '',
+        currentHash: vote.encryptedHash || '',
+        dataPayload: vote.id,
+        candidateName: candidate ? candidate.name : 'Unknown candidate',
+        position: candidate ? candidate.positionTitle : (vote.positionId || 'General')
+      }
+    });
+  } catch (error) {
+    console.error('Error verifying vote:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to verify ballot record.' });
   }
 };

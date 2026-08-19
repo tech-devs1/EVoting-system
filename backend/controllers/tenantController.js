@@ -2,10 +2,38 @@ const { Tenant, Organization, User } = require('../models');
 const bcrypt = require('bcryptjs');
 const cache = require('../services/cache');
 
+// Strip credentials before returning a tenant over the API.
+function sanitizeTenant(tenant) {
+  if (!tenant) return tenant;
+  const item = tenant.toJSON ? tenant.toJSON() : { ...tenant };
+  delete item.adminPassword;
+  delete item.mNotifyApiKey;
+  return item;
+}
+
+// Resolve which tenant a signed-in admin belongs to (used by /tenants/branding).
+async function resolveAdminTenant(req) {
+  const claimedTenant = req.user?.tenantId;
+  if (claimedTenant && claimedTenant !== 'global' && claimedTenant !== 'compssa') {
+    const direct = await Tenant.findByPk(claimedTenant);
+    if (direct) return direct;
+  }
+  if (req.user?.email) {
+    const byAdminEmail = await Tenant.findOne({ where: { adminEmail: req.user.email } });
+    if (byAdminEmail) return byAdminEmail;
+    const tenants = await Tenant.findAll();
+    for (const t of tenants) {
+      const admins = t.admins || [];
+      if (admins.some(a => a.email === req.user.email)) return t;
+    }
+  }
+  return Tenant.findOne(); // fallback: first tenant
+}
+
 exports.getTenants = async (req, res) => {
   try {
     const list = await Tenant.findAll();
-    res.status(200).json({ status: 'success', data: list });
+    res.status(200).json({ status: 'success', data: list.map(sanitizeTenant) });
   } catch (error) {
     console.error('Error fetching tenants:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch tenants' });
@@ -16,10 +44,69 @@ exports.getTenantById = async (req, res) => {
   try {
     const tenant = await Tenant.findByPk(req.params.id);
     if (!tenant) return res.status(404).json({ status: 'error', message: 'Tenant not found' });
-    res.status(200).json({ status: 'success', data: tenant });
+    res.status(200).json({ status: 'success', data: sanitizeTenant(tenant) });
   } catch (error) {
     console.error('Error fetching tenant details:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch tenant' });
+  }
+};
+
+exports.getBranding = async (req, res) => {
+  try {
+    const tenant = await resolveAdminTenant(req);
+    if (!tenant) return res.status(404).json({ status: 'error', message: 'No tenant configuration found' });
+
+    const item = tenant.toJSON();
+    res.status(200).json({
+      status: 'success',
+      data: {
+        logoUrl: item.logoUrl || '',
+        brandColor: item.brandColor || '#2563eb',
+        orgName: item.orgName || item.name || '',
+        portalTitle: item.portalTitle || `${item.name || 'HTU Elect'} Portal`,
+        supportEmail: item.supportEmail || item.adminEmail || '',
+        supportPhone: item.supportPhone || '',
+        address: item.address || '',
+        ecName: item.ecName || '',
+        ecTitle: item.ecTitle || '',
+        smsSenderId: item.mNotifySenderId || 'COMPSSA'
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching branding:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch branding' });
+  }
+};
+
+exports.updateBranding = async (req, res) => {
+  try {
+    const tenant = await resolveAdminTenant(req);
+    if (!tenant) return res.status(404).json({ status: 'error', message: 'No tenant configuration found' });
+
+    const {
+      logoUrl, brandColor, orgName, portalTitle, supportEmail,
+      supportPhone, address, ecName, ecTitle, smsSenderId
+    } = req.body;
+
+    const updates = {};
+    if (logoUrl !== undefined) updates.logoUrl = String(logoUrl);
+    if (brandColor !== undefined) updates.brandColor = String(brandColor);
+    if (orgName !== undefined) updates.orgName = String(orgName);
+    if (portalTitle !== undefined) updates.portalTitle = String(portalTitle);
+    if (supportEmail !== undefined) updates.supportEmail = String(supportEmail);
+    if (supportPhone !== undefined) updates.supportPhone = String(supportPhone);
+    if (address !== undefined) updates.address = String(address);
+    if (ecName !== undefined) updates.ecName = String(ecName);
+    if (ecTitle !== undefined) updates.ecTitle = String(ecTitle);
+    if (smsSenderId !== undefined) updates.mNotifySenderId = String(smsSenderId).slice(0, 11);
+
+    await tenant.update(updates);
+    cache.invalidatePrefix('superadmin:');
+
+    res.status(200).json({ status: 'success', message: 'Organization settings updated successfully.' });
+  } catch (error) {
+    console.error('Error updating branding:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update branding' });
   }
 };
 

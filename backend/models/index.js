@@ -5,11 +5,11 @@ const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
 
 const mysqlUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
-const host = process.env.MYSQL_HOST || '162.215.128.215';
+const host = process.env.MYSQL_HOST;
 const port = parseInt(process.env.MYSQL_PORT || '3306', 10);
-const user = process.env.MYSQL_USER || 'evotinghtuedu_issaka';
+const user = process.env.MYSQL_USER;
 const password = process.env.MYSQL_PASSWORD || '';
-const database = process.env.MYSQL_DATABASE || 'evotinghtuedu_HTUELECT';
+const database = process.env.MYSQL_DATABASE;
 
 let sequelize;
 
@@ -25,7 +25,7 @@ if (mysqlUrl) {
       idle: 10000
     }
   });
-} else {
+} else if (host && user && database) {
   console.log(`🐬 Connecting to MySQL at ${host}:${port}/${database}...`);
   sequelize = new Sequelize(database, user, password, {
     host,
@@ -39,6 +39,9 @@ if (mysqlUrl) {
       idle: 10000
     }
   });
+} else {
+  console.error('❌ No database connection configured. Set MYSQL_URL or MYSQL_HOST, MYSQL_USER, MYSQL_DATABASE environment variables.');
+  throw new Error('Database connection not configured. Set MYSQL_URL or MYSQL_HOST/MYSQL_USER/MYSQL_DATABASE environment variables.');
 }
 
 // ---------------------- DEFINING MODELS ----------------------
@@ -179,7 +182,9 @@ const Voter = sequelize.define('Voter', {
   accessOtp: { type: DataTypes.STRING(64) },
   accessOtpExpiry: { type: DataTypes.BIGINT },
   resetCode: { type: DataTypes.STRING(64) },
-  resetCodeExpiry: { type: DataTypes.BIGINT }
+  resetCodeExpiry: { type: DataTypes.BIGINT },
+  // Failed-OTP-attempt counter (brute-force protection); reset on issue/success
+  otpAttempts: { type: DataTypes.INTEGER, defaultValue: 0 }
 }, { tableName: 'voters', timestamps: true });
 
 // 8. Vote Model (Cryptographic Ballot Ledger)

@@ -1,165 +1,98 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
+// JWT_SECRET must be set in production. The fallback below is only a local-dev
+// convenience — it is public knowledge (it lives in this repo), so anyone could
+// forge tokens if a production deployment ran with it. Fail fast instead.
+const DEV_FALLBACK_SECRET = 'fallback-secret-key-for-development';
+const JWT_SECRET = process.env.JWT_SECRET || DEV_FALLBACK_SECRET;
 
-/**
- * Helper to ensure Superadmin role assignment for master email
- */
-function normalizeUserRole(user) {
-  if (!user || !user.email) return user;
-  const cleanEmail = user.email.toLowerCase().trim();
-  if (cleanEmail === 'issakasaddick14@gmail.com' || cleanEmail === 'supertech@admin.com') {
-    user.role = 'superadmin';
-  }
-  return user;
+if (process.env.NODE_ENV === 'production' && JWT_SECRET === DEV_FALLBACK_SECRET) {
+  console.error(
+    '⚠️  [Auth] Refusing to start in production: JWT_SECRET is not configured.\n' +
+    '    Set a strong JWT_SECRET in the cPanel Node.js app environment variables\n' +
+    '    (or .env) before deploying. Without it, authentication tokens can be forged.'
+  );
+  process.exit(1);
 }
 
 /**
- * Middleware to verify Firebase ID token or JWT token and attach user to request
+ * Resolve the tenant scope from the request (header > query > body > token).
+ * The frontend sends `x-tenant-id` when operating inside a tenant console.
+ */
+function resolveTenantId(req, user) {
+  const headerTenant = req.headers ? req.headers['x-tenant-id'] : null;
+  const queryTenant = req.query ? req.query.tenantId : null;
+  const bodyTenant = req.body ? req.body.tenantId : null;
+  return (
+    headerTenant ||
+    queryTenant ||
+    bodyTenant ||
+    (user && user.tenantId) ||
+    null
+  );
+}
+
+/**
+ * Middleware to verify the JWT issued by our own login endpoints and attach
+ * the user to the request. Only tokens signed with JWT_SECRET are accepted —
+ * there is deliberately no "MOCK_" bypass and no unsigned-token fallback.
  */
 async function verifyAuth(req, res, next) {
   const authHeader = req.headers.authorization;
-  console.log('[Auth Middleware] Authorization header:', authHeader ? authHeader.substring(0, 20) + '...' : 'none');
-  
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.log('[Auth Middleware] No valid Bearer token found');
     return res.status(401).json({ status: 'error', message: 'Unauthorized: No token provided' });
   }
 
-  const idToken = authHeader.split('Bearer ')[1];
-
-  async function attachTenantCollection(req) {
-    try {
-      const headersTenant = req.headers ? req.headers['x-tenant-id'] : null;
-      const queryTenant = req.query ? req.query.tenantId : null;
-      const bodyTenant = req.body ? req.body.tenantId : null;
-      const tenantId = headersTenant || queryTenant || bodyTenant || (req.user ? req.user.tenantId : null) || 'default';
-
-      const cache = require('../services/cache');
-      const { db } = require('../services/firebase');
-      const cacheKey = `tenant-coll:${tenantId}`;
-      let collectionName = await cache.get(cacheKey);
-      if (!collectionName) {
-        const orgDoc = await db.collection('organizations').doc(tenantId).get();
-        collectionName = orgDoc.exists ? 'organizations' : 'tenants';
-        await cache.set(cacheKey, collectionName, 3600 * 1000);
-      }
-      req.tenantCollection = collectionName;
-      if (req.user) {
-        req.user.tenantId = tenantId;
-        req.user.tenantCollection = collectionName;
-      }
-    } catch (e) {
-      req.tenantCollection = 'tenants';
-    }
+  const token = authHeader.split('Bearer ')[1].trim();
+  if (!token) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized: No token provided' });
   }
 
   try {
-    // In our mock environment, if token starts with MOCK_ we skip actual verification
-    if (idToken.startsWith('MOCK_')) {
-      const uid = idToken.replace('MOCK_', '');
-      let role = 'voter';
-      let email = 'mock@votetrust.ai';
-      if (uid.startsWith('superadmin_')) {
-        role = 'superadmin';
-        email = 'issakasaddick14@gmail.com';
-      } else if (uid.startsWith('admin_')) {
-        role = 'admin';
-        email = 'admin@htu.edu.gh';
-      }
-      
-      req.user = normalizeUserRole({ uid, email, role });
-      await attachTenantCollection(req);
-      return next();
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (!decoded || typeof decoded !== 'object' || !decoded.uid) {
+      throw new Error('Invalid token payload');
     }
 
-    // Verify using JWT
-    try {
-      const decoded = jwt.verify(idToken, JWT_SECRET);
-      req.user = normalizeUserRole(decoded);
-      await attachTenantCollection(req);
-      return next();
-    } catch (jwtError) {
-      const decoded = jwt.decode(idToken);
-      if (decoded && typeof decoded === 'object' && (decoded.uid || decoded.user_id || decoded.sub || decoded.email)) {
-        req.user = normalizeUserRole({
-          uid: decoded.uid || decoded.user_id || decoded.sub || decoded.email,
-          email: decoded.email || '',
-          role: decoded.role || 'voter',
-          ...decoded
-        });
-        await attachTenantCollection(req);
-        return next();
-      }
-      throw new Error('Invalid token');
-    }
+    req.user = {
+      uid: decoded.uid,
+      email: decoded.email || '',
+      role: decoded.role || 'voter',
+      name: decoded.name || '',
+      tenantId: resolveTenantId(req, decoded),
+      indexNumber: decoded.indexNumber || decoded.studentId || ''
+    };
+    return next();
   } catch (error) {
-    console.error('[Auth Middleware] Error verifying auth token:', error);
-    res.status(403).json({ status: 'error', message: 'Forbidden: Invalid token' });
+    return res.status(401).json({ status: 'error', message: 'Unauthorized: Invalid or expired token' });
   }
 }
 
 /**
- * Middleware to restrict access to admin users only
+ * Middleware to restrict access to admin users only. The role comes from the
+ * verified JWT — email strings are never used to infer privileges.
  */
 async function requireAdmin(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ status: 'error', message: 'Unauthorized: User not authenticated' });
   }
-
-  const cleanEmail = (req.user.email || '').toLowerCase().trim();
-  const isSuperAdminEmail = cleanEmail === 'issakasaddick14@gmail.com' || cleanEmail === 'supertech@admin.com';
-
-  if (req.user.role === 'admin' || req.user.role === 'superadmin' || isSuperAdminEmail || cleanEmail.includes('admin')) {
+  if (req.user.role === 'admin' || req.user.role === 'superadmin') {
     return next();
   }
-
-  // Also check if user email is listed as primary EC admin on any tenant or organization
-  try {
-    const { db } = require('../services/firebase');
-    let tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', cleanEmail).get();
-    if (tenantsSnapshot.empty) {
-      tenantsSnapshot = await db.collection('organizations').where('adminEmail', '==', cleanEmail).get();
-    }
-    if (!tenantsSnapshot.empty) {
-      req.user.role = 'admin';
-      req.user.tenantId = tenantsSnapshot.docs[0].id;
-      return next();
-    }
-
-    const adminUserSnap = await db.collectionGroup('users').where('email', '==', cleanEmail).get();
-    if (!adminUserSnap.empty) {
-      const match = adminUserSnap.docs.find(d => {
-        const r = d.data()?.role;
-        return r === 'admin' || r === 'superadmin';
-      });
-      if (match) {
-        req.user.role = match.data().role;
-        return next();
-      }
-    }
-  } catch (e) {}
-
-  res.status(403).json({ status: 'error', message: 'Forbidden: Admin access required' });
+  return res.status(403).json({ status: 'error', message: 'Forbidden: Admin access required' });
 }
 
 /**
- * Middleware to restrict access to super admin only
+ * Middleware to restrict access to super admin only.
  */
 async function requireSuperAdmin(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ status: 'error', message: 'Unauthorized: User not authenticated' });
   }
-  
-  const cleanEmail = (req.user.email || '').toLowerCase().trim();
-  const isSuperAdminEmail = cleanEmail === 'issakasaddick14@gmail.com' || cleanEmail === 'supertech@admin.com';
-
-  if (req.user.role === 'superadmin' || isSuperAdminEmail) {
-    req.user.role = 'superadmin';
+  if (req.user.role === 'superadmin') {
     return next();
   }
-
-  res.status(403).json({ status: 'error', message: 'Forbidden: Super Admin access required' });
+  return res.status(403).json({ status: 'error', message: 'Forbidden: Super Admin access required' });
 }
 
 module.exports = { verifyAuth, requireAdmin, requireSuperAdmin };
