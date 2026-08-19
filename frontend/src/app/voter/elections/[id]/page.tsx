@@ -13,6 +13,7 @@ interface Candidate {
   manifesto: string;
   photoUrl: string;
   isIndependent?: boolean;
+  ballotNumber?: number | null;
 }
 
 interface Election {
@@ -121,6 +122,15 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
   candidates.forEach(c => {
     if (!positionGroups[c.position]) positionGroups[c.position] = [];
     positionGroups[c.position].push(c);
+  });
+  // Sort each group by ballotNumber if available
+  Object.values(positionGroups).forEach(group => {
+    group.sort((a, b) => {
+      if (a.ballotNumber != null && b.ballotNumber != null) return a.ballotNumber - b.ballotNumber;
+      if (a.ballotNumber != null) return -1;
+      if (b.ballotNumber != null) return 1;
+      return 0; // maintain original order
+    });
   });
   const positions = Object.keys(positionGroups);
   const allSelected = positions.every(p => !!selections[p]);
@@ -276,6 +286,7 @@ export default function CandidateSelectionPage({ params }: { params: Promise<{ i
                     <div className="candidate-content">
                       <div className="candidate-info">
                         <h4 className="candidate-name">
+                          {cand.ballotNumber != null && <span className="badge" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontSize: '11px', padding: '2px 6px', marginRight: '6px' }}>#{cand.ballotNumber}</span>}
                           {cand.name} {isIndie && <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 'bold' }}>(Independent)</span>}
                         </h4>
                         <span className="candidate-position">{cand.position}</span>

@@ -12,10 +12,20 @@ router.use(verifyAuth, requireSuperAdmin);
 // Create a new department (tenant)
 router.post('/departments', async (req, res) => {
   try {
-    const { name, domain, adminEmail, adminPassword } = req.body;
+    const { name, domain, adminEmail, adminPassword, tenantId: providedTenantId } = req.body;
     
     if (!name || !adminEmail || !adminPassword) {
       return res.status(400).json({ status: 'error', message: 'Name, admin email, and admin password are required' });
+    }
+
+    let tenantId = `dept_${Date.now()}`;
+    if (providedTenantId) {
+      tenantId = providedTenantId.trim().toLowerCase().replace(/\s+/g, '-');
+      // Verify no other tenant has this ID
+      const existingDoc = await db.collection('tenants').doc(tenantId).get();
+      if (existingDoc.exists) {
+        return res.status(400).json({ status: 'error', message: 'A department with this Tenant ID already exists' });
+      }
     }
 
     // Check if a department with this email already exists
@@ -25,7 +35,6 @@ router.post('/departments', async (req, res) => {
     }
 
     const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
-    const tenantId = `dept_${Date.now()}`;
     const newTenant = {
       name,
       domain: domain || '',

@@ -285,9 +285,6 @@ router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
       let flaggedUsers = [];
       try {
         let flaggedSnap = await getFraudAlertsRef(req).get();
-        if (flaggedSnap.empty) {
-          flaggedSnap = await db.collection('fraud_alerts').get();
-        }
         
         const rawUsers = [];
         flaggedSnap.forEach(doc => {
@@ -698,13 +695,7 @@ router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
         .limit(100)
         .get();
 
-      if (alertsDoc.empty) {
-        alertsDoc = await db.collection('fraud_alerts')
-          .where('type', '==', 'DUPLICATE_VOTE')
-          .orderBy('timestamp', 'desc')
-          .limit(100)
-          .get();
-      }
+      // Removed global fallback
 
       if (alertsDoc.empty) return [];
 
@@ -732,13 +723,7 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
         .limit(50)
         .get();
 
-      if (alertsDoc.empty) {
-        alertsDoc = await db.collection('fraud_alerts')
-          .where('type', '==', 'UNRECOGNIZED_STUDENT')
-          .orderBy('timestamp', 'desc')
-          .limit(50)
-          .get();
-      }
+      // Removed global fallback
 
       if (alertsDoc.empty) return [];
 

@@ -43,7 +43,7 @@ export default function SuperAdminDepartments() {
   const [selectedDept, setSelectedDept] = useState<Department | null>(null);
 
   // Create form
-  const [createForm, setCreateForm] = useState({ name: '', domain: '', adminEmail: '', adminPassword: '' });
+  const [createForm, setCreateForm] = useState({ name: '', tenantId: '', domain: '', adminEmail: '', adminPassword: '' });
 
   // Edit name form
   const [editName, setEditName] = useState('');
@@ -100,7 +100,7 @@ export default function SuperAdminDepartments() {
     setSelectedDept(dept || null);
     if (type === 'edit' && dept) setEditName(dept.name);
     if (type === 'password') { setNewPassword(''); setConfirmPassword(''); }
-    if (type === 'create') setCreateForm({ name: '', domain: '', adminEmail: '', adminPassword: '' });
+    if (type === 'create') setCreateForm({ name: '', tenantId: '', domain: '', adminEmail: '', adminPassword: '' });
     if (type === 'admins' && dept) fetchAdmins(dept.id);
     setShowPassword(false);
     setShowConfirmPassword(false);
@@ -377,7 +377,11 @@ export default function SuperAdminDepartments() {
             <input type="text" className="form-input" required placeholder="e.g. Computer Science Department" value={createForm.name} onChange={e => setCreateForm({ ...createForm, name: e.target.value })} />
           </div>
           <div className="form-group">
-            <label className="form-label">Sub-Domain / Identifier (Optional)</label>
+            <label className="form-label">Tenant ID / Identifier</label>
+            <input type="text" className="form-input" required placeholder="e.g. compssa (lowercase, no spaces)" value={createForm.tenantId} onChange={e => setCreateForm({ ...createForm, tenantId: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Sub-Domain / Website (Optional)</label>
             <input type="text" className="form-input" placeholder="e.g. cs.htu.edu.gh" value={createForm.domain} onChange={e => setCreateForm({ ...createForm, domain: e.target.value })} />
           </div>
           <div className="form-group">

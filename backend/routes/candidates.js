@@ -76,7 +76,7 @@ router.get('/election/:electionId', async (req, res) => {
 router.post('/', verifyAuth, requireAdmin, async (req, res) => {
   try {
     console.log('[Add Candidate] Request body:', req.body);
-    const { name, manifesto, manifestoUrl, electionId, position, photoUrl, isIndependent } = req.body;
+    const { name, manifesto, manifestoUrl, electionId, position, ballotNumber, photoUrl, isIndependent } = req.body;
     
     if (!name || !electionId) {
       console.log('[Add Candidate] Missing required fields:', { name, electionId });
@@ -112,6 +112,7 @@ router.post('/', verifyAuth, requireAdmin, async (req, res) => {
       manifestoUrl: manifestoUrl || '',
       electionId,
       position: position || 'General',
+      ballotNumber: ballotNumber ? parseInt(ballotNumber, 10) : null,
       photoUrl: photoUrl || '',
       votes: 0, // Initial vote count
       noVotes: 0, // Initial no-vote count (for independent candidates)
