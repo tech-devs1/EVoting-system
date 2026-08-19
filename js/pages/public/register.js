@@ -76,16 +76,22 @@ function renderRegisterPage() {
         <form id="reg-form-step-3">
           <div class="form-group">
             <label class="form-label" for="reg-password">Password</label>
-            <div class="form-input-container">
+            <div class="form-input-container" style="position: relative;">
               <i data-lucide="lock" class="form-input-icon"></i>
-              <input type="password" id="reg-password" class="form-input form-input-with-icon" placeholder="••••••••••••" required>
+              <input type="password" id="reg-password" class="form-input form-input-with-icon" placeholder="••••••••••••" required style="padding-right: 40px;">
+              <button type="button" id="toggle-reg-password" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-secondary);">
+                <i data-lucide="eye"></i>
+              </button>
             </div>
           </div>
           <div class="form-group">
             <label class="form-label" for="reg-confirm">Confirm Password</label>
-            <div class="form-input-container">
+            <div class="form-input-container" style="position: relative;">
               <i data-lucide="lock" class="form-input-icon"></i>
-              <input type="password" id="reg-confirm" class="form-input form-input-with-icon" placeholder="••••••••••••" required>
+              <input type="password" id="reg-confirm" class="form-input form-input-with-icon" placeholder="••••••••••••" required style="padding-right: 40px;">
+              <button type="button" id="toggle-reg-confirm" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-secondary);">
+                <i data-lucide="eye"></i>
+              </button>
             </div>
           </div>
           <div style="display: flex; gap: var(--space-4); margin-top: var(--space-4);">
@@ -140,6 +146,26 @@ function renderRegisterPage() {
         currentStep = 2;
         updateFormContent();
       });
+      const toggleRegPassword = document.getElementById('toggle-reg-password');
+      const regPasswordInput = document.getElementById('reg-password');
+      if (toggleRegPassword && regPasswordInput) {
+        toggleRegPassword.addEventListener('click', () => {
+          const isPassword = regPasswordInput.type === 'password';
+          regPasswordInput.type = isPassword ? 'text' : 'password';
+          toggleRegPassword.innerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}"></i>`;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+      }
+      const toggleRegConfirm = document.getElementById('toggle-reg-confirm');
+      const regConfirmInput = document.getElementById('reg-confirm');
+      if (toggleRegConfirm && regConfirmInput) {
+        toggleRegConfirm.addEventListener('click', () => {
+          const isPassword = regConfirmInput.type === 'password';
+          regConfirmInput.type = isPassword ? 'text' : 'password';
+          toggleRegConfirm.innerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}"></i>`;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+      }
     }
   }
 

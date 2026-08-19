@@ -35,9 +35,12 @@ function renderLoginPage() {
 
           <div class="form-group">
             <label class="form-label" for="login-password">Password</label>
-            <div class="form-input-container">
+            <div class="form-input-container" style="position: relative;">
               <i data-lucide="lock" class="form-input-icon"></i>
-              <input type="password" id="login-password" class="form-input form-input-with-icon" placeholder="••••••••••••" required value="password123">
+              <input type="password" id="login-password" class="form-input form-input-with-icon" placeholder="••••••••••••" required value="password123" style="padding-right: 40px;">
+              <button type="button" id="toggle-login-password" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-secondary);">
+                <i data-lucide="eye"></i>
+              </button>
             </div>
           </div>
 
@@ -80,6 +83,17 @@ function renderLoginPage() {
     window.appStore.save();
     window.location.hash = '#/voter/dashboard';
   });
+
+  const toggleLoginPassword = document.getElementById('toggle-login-password');
+  const loginPasswordInput = document.getElementById('login-password');
+  if (toggleLoginPassword && loginPasswordInput) {
+    toggleLoginPassword.addEventListener('click', () => {
+      const isPassword = loginPasswordInput.type === 'password';
+      loginPasswordInput.type = isPassword ? 'text' : 'password';
+      toggleLoginPassword.innerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}"></i>`;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+  }
 
   document.getElementById('university-login-btn').addEventListener('click', () => {
     window.appStore.state.currentUser = 'voter';

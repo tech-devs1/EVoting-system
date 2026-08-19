@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
-import { Building2, Plus, AlertCircle, Shield, MoreVertical, Pencil, KeyRound, Trash2, Users, UserPlus, X, ExternalLink } from 'lucide-react';
+import { Building2, Plus, AlertCircle, Shield, MoreVertical, Pencil, KeyRound, Trash2, Users, UserPlus, X, ExternalLink, Eye, EyeOff } from 'lucide-react';
 
 interface Department {
   id: string;
@@ -54,6 +54,8 @@ export default function SuperAdminDepartments() {
 
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Admin management state
   const [deptAdmins, setDeptAdmins] = useState<DeptAdmin[]>([]);
@@ -100,6 +102,8 @@ export default function SuperAdminDepartments() {
     if (type === 'password') { setNewPassword(''); setConfirmPassword(''); }
     if (type === 'create') setCreateForm({ name: '', domain: '', adminEmail: '', adminPassword: '' });
     if (type === 'admins' && dept) fetchAdmins(dept.id);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setModalType(type);
   };
 
@@ -382,7 +386,12 @@ export default function SuperAdminDepartments() {
           </div>
           <div className="form-group">
             <label className="form-label">Admin Initial Password</label>
-            <input type="password" className="form-input" required placeholder="Enter secure password" value={createForm.adminPassword} onChange={e => setCreateForm({ ...createForm, adminPassword: e.target.value })} />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input type={showPassword ? "text" : "password"} className="form-input" required placeholder="Enter secure password" value={createForm.adminPassword} onChange={e => setCreateForm({ ...createForm, adminPassword: e.target.value })} style={{ width: '100%', paddingRight: '40px' }} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
         </>,
         'Provision Tenant'
@@ -409,11 +418,21 @@ export default function SuperAdminDepartments() {
           </p>
           <div className="form-group">
             <label className="form-label">New Password</label>
-            <input type="password" className="form-input" required placeholder="Enter new password (min 6 chars)" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input type={showPassword ? "text" : "password"} className="form-input" required placeholder="Enter new password (min 6 chars)" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ width: '100%', paddingRight: '40px' }} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
           <div className="form-group">
             <label className="form-label">Confirm New Password</label>
-            <input type="password" className="form-input" required placeholder="Repeat password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input type={showConfirmPassword ? "text" : "password"} className="form-input" required placeholder="Repeat password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={{ width: '100%', paddingRight: '40px' }} />
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
         </>,
         'Update Password'
@@ -464,7 +483,12 @@ export default function SuperAdminDepartments() {
                       {editingAdminId === admin.id ? (
                         <form onSubmit={handleEditAdmin} style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                           <input type="text" className="form-input" placeholder="Name" value={editAdminForm.name} onChange={e => setEditAdminForm({ ...editAdminForm, name: e.target.value })} style={{ flex: 1, minWidth: '120px' }} />
-                          <input type="password" className="form-input" placeholder="New password (optional)" value={editAdminForm.password} onChange={e => setEditAdminForm({ ...editAdminForm, password: e.target.value })} style={{ flex: 1, minWidth: '120px' }} />
+                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: '120px' }}>
+                            <input type={showPassword ? "text" : "password"} className="form-input" placeholder="New password (optional)" value={editAdminForm.password} onChange={e => setEditAdminForm({ ...editAdminForm, password: e.target.value })} style={{ width: '100%', paddingRight: '30px' }} />
+                            <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '8px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                          </div>
                           <button type="submit" className="btn btn-primary btn-sm" disabled={formLoading}>{formLoading ? '...' : 'Save'}</button>
                           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingAdminId(null)}>Cancel</button>
                         </form>
@@ -512,7 +536,12 @@ export default function SuperAdminDepartments() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                     <input type="text" className="form-input" required placeholder="Admin Name" value={addAdminForm.name} onChange={e => setAddAdminForm({ ...addAdminForm, name: e.target.value })} />
                     <input type="email" className="form-input" required placeholder="Admin Email" value={addAdminForm.email} onChange={e => setAddAdminForm({ ...addAdminForm, email: e.target.value })} />
-                    <input type="password" className="form-input" required placeholder="Password (min 6 chars)" value={addAdminForm.password} onChange={e => setAddAdminForm({ ...addAdminForm, password: e.target.value })} />
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input type={showPassword ? "text" : "password"} className="form-input" required placeholder="Password (min 6 chars)" value={addAdminForm.password} onChange={e => setAddAdminForm({ ...addAdminForm, password: e.target.value })} style={{ width: '100%', paddingRight: '40px' }} />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                     <button type="submit" className="btn btn-primary" disabled={formLoading} style={{ alignSelf: 'flex-end' }}>
                       {formLoading ? 'Adding...' : 'Add Admin'}
                     </button>
