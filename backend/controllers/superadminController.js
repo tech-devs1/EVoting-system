@@ -517,3 +517,81 @@ exports.downloadAuditPDF = async (req, res) => {
     if (!res.headersSent) res.status(500).send('Failed to generate audit PDF');
   }
 };
+
+// ─── User Management ──────────────────────────────────────────────────────────
+
+exports.getUsers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'name', 'email', 'phone', 'role', 'tenantId', 'status', 'isVerified', 'createdAt', 'updatedAt'],
+      order: [['createdAt', 'DESC']]
+    });
+    res.status(200).json({ status: 'success', data: users });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch users.' });
+  }
+};
+
+exports.updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, phone, role, status } = req.body;
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: 'User not found.' });
+    }
+
+    // Prevent superadmin from demoting themselves
+    if (user.role === 'superadmin' && role && role !== 'superadmin') {
+      return res.status(403).json({ status: 'error', message: 'Cannot change the role of a superadmin account.' });
+    }
+
+    const updates = {};
+    if (name !== undefined) updates.name = name.trim();
+    if (email !== undefined) updates.email = email.trim().toLowerCase();
+    if (phone !== undefined) updates.phone = phone.trim();
+    if (role !== undefined) updates.role = role;
+    if (status !== undefined) updates.status = status;
+
+    await user.update(updates);
+
+    cache.invalidatePrefix('users:');
+
+    res.status(200).json({ status: 'success', data: user });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update user.' });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: 'User not found.' });
+    }
+
+    // Prevent deleting superadmin
+    if (user.role === 'superadmin') {
+      return res.status(403).json({ status: 'error', message: 'Cannot delete a superadmin account.' });
+    }
+
+    // Prevent self-deletion
+    if (user.id === req.user.uid || user.email === req.user.email) {
+      return res.status(403).json({ status: 'error', message: 'Cannot delete your own account.' });
+    }
+
+    await user.destroy();
+
+    cache.invalidatePrefix('users:');
+
+    res.status(200).json({ status: 'success', message: 'User deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to delete user.' });
+  }
+};

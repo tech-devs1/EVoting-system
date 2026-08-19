@@ -99,6 +99,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
   const navLinks = [
     { label: 'Overview', href: '/superadmin/dashboard', icon: LayoutDashboard },
+    { label: 'User Management', href: '/superadmin/users', icon: UserCheck },
     { label: 'Departments & Orgs', href: '/superadmin/departments', icon: Building2 },
     { label: 'System Audit Logs', href: '/superadmin/audit', icon: Activity }
   ];
@@ -112,6 +113,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   // Native-app style bottom tabs (mobile only).
   const mobileTabs = [
     { label: 'Overview', href: '/superadmin/dashboard', icon: LayoutDashboard },
+    { label: 'Users', href: '/superadmin/users', icon: UserCheck },
     { label: 'Departments', href: '/superadmin/departments', icon: Building2 },
     { label: 'Audit Logs', href: '/superadmin/audit', icon: Activity },
   ];

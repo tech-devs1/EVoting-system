@@ -28,4 +28,9 @@ router.get('/audit', auth, superadminController.getAuditLogs);
 router.get('/audit/pdf', auth, superadminController.downloadAuditPDF);
 router.get('/audit/pdf/:tenantId', auth, superadminController.downloadAuditPDF);
 
+// User Management
+router.get('/users', auth, superadminController.getUsers);
+router.patch('/users/:id', auth, superadminController.updateUser);
+router.delete('/users/:id', auth, superadminController.deleteUser);
+
 module.exports = router;
