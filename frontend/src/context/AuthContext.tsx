@@ -19,8 +19,8 @@ interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   login: (email: string, password?: string, role?: 'voter' | 'admin' | 'superadmin') => Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>;
+  googleLogin: (studentId: string, googleCredential?: string, accessToken?: string) => Promise<void>;
   requestOtp: (studentId: string, googleCredential?: string) => Promise<{ otpRequired?: boolean; email?: string; fallbackOtp?: string }>;
-
   verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
 }
@@ -158,6 +158,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const googleLogin = async (studentId: string, googleCredential?: string, accessToken?: string): Promise<void> => {
+    setLoading(true);
+    try {
+      const res = await apiRequest<{ status: string; data: UserProfile; token: string; message?: string }>('/auth/google-login', 'POST', {
+        studentId,
+        googleCredential,
+        accessToken
+      });
+      if (res.status === 'success' && res.token) {
+        localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);
+        localStorage.setItem('COMPSSA_user', JSON.stringify(res.data));
+        if (res.data?.tenantId) {
+          localStorage.setItem('COMPSSA_tenantId', res.data.tenantId);
+        }
+        setUser(res.data);
+        router.push('/voter/dashboard');
+      } else {
+        throw new Error(res.message || 'Google login failed.');
+      }
+    } catch (error: any) {
+      console.error('Google login error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('COMPSSA_token');
     localStorage.removeItem('COMPSSA_user');
@@ -166,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, requestOtp, verifyOtp, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, googleLogin, requestOtp, verifyOtp, logout }}>
       {children}
     </AuthContext.Provider>
   );

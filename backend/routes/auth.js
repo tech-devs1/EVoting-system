@@ -268,14 +268,17 @@ router.post('/verify-student', async (req, res) => {
   }
 });
 
-// Request OTP for voter login (supports optional Google verification)
-router.post('/request-otp', async (req, res) => {
+// Google Sign-In for Voter direct login (No OTP)
+router.post('/google-login', async (req, res) => {
   try {
-    const { studentId, googleCredential } = req.body;
+    const { studentId, googleCredential, accessToken } = req.body;
     const tenantId = getTenantId(req);
 
     if (!studentId) {
       return res.status(400).json({ status: 'error', message: 'Student ID is required' });
+    }
+    if (!googleCredential && !accessToken) {
+      return res.status(400).json({ status: 'error', message: 'Google authentication credential is required' });
     }
 
     const studentDocRef = db.collection('users').doc(tenantId).collection('voter_rolls').doc(studentId);
@@ -286,53 +289,106 @@ router.post('/request-otp', async (req, res) => {
     }
 
     const studentData = studentDoc.data();
+    let emailFromGoogle = null;
 
-    // Verify Google ID token if provided
-    if (googleCredential) {
+    if (googleCredential && typeof googleCredential === 'string' && googleCredential.startsWith('MOCK_GOOGLE_')) {
+      emailFromGoogle = googleCredential.replace('MOCK_GOOGLE_', '').trim();
+    } else if (googleCredential) {
       try {
-        let emailFromGoogle;
-        if (googleCredential.startsWith('MOCK_GOOGLE_')) {
-          emailFromGoogle = googleCredential.replace('MOCK_GOOGLE_', '');
+        const { OAuth2Client } = require('google-auth-library');
+        const client = new OAuth2Client();
+        const ticket = await client.verifyIdToken({
+          idToken: googleCredential,
+          audience: process.env.GOOGLE_CLIENT_ID
+        });
+        const payload = ticket.getPayload();
+        emailFromGoogle = payload.email;
+      } catch (idErr) {
+        // Fallback: verify via Google tokeninfo endpoint
+        try {
+          const fetch = global.fetch || require('node-fetch');
+          const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${googleCredential}`);
+          if (tokenInfoRes.ok) {
+            const tokenInfo = await tokenInfoRes.json();
+            emailFromGoogle = tokenInfo.email;
+          } else {
+            throw new Error('Google tokeninfo rejected ID token');
+          }
+        } catch (fetchErr) {
+          console.error('Failed to verify Google ID token:', idErr, fetchErr);
+          return res.status(401).json({ status: 'error', message: 'Could not verify Google ID token.' });
+        }
+      }
+    } else if (accessToken) {
+      try {
+        const fetch = global.fetch || require('node-fetch');
+        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (userInfoRes.ok) {
+          const userInfo = await userInfoRes.json();
+          emailFromGoogle = userInfo.email;
         } else {
-          const { OAuth2Client } = require('google-auth-library');
-          const client = new OAuth2Client();
-          const ticket = await client.verifyIdToken({
-              idToken: googleCredential,
-              audience: process.env.GOOGLE_CLIENT_ID
-          });
-          const payload = ticket.getPayload();
-          emailFromGoogle = payload.email;
+          return res.status(401).json({ status: 'error', message: 'Failed to retrieve Google user profile from access token.' });
         }
-
-        if (!emailFromGoogle) {
-          return res.status(400).json({ status: 'error', message: 'Could not retrieve email from Google Account.' });
-        }
-
-        if (emailFromGoogle.trim().toLowerCase() !== studentData.email.trim().toLowerCase()) {
-          return res.status(403).json({ 
-            status: 'error', 
-            message: `Authentication failed. The Google account (${emailFromGoogle}) does not match your registered institutional email (${studentData.email}).` 
-          });
-        }
-      } catch (authErr) {
-        console.error('Google verification failed:', authErr);
-        return res.status(401).json({ status: 'error', message: 'Google authentication verification failed: ' + authErr.message });
+      } catch (accessErr) {
+        console.error('Failed to fetch Google userinfo:', accessErr);
+        return res.status(401).json({ status: 'error', message: 'Google access token verification failed.' });
       }
     }
 
-    // Generate and send OTP via email
-    const { otp, emailSent } = await generateAndSendOtp(studentDocRef, studentData.email, studentData.name);
-    
+    if (!emailFromGoogle) {
+      return res.status(400).json({ status: 'error', message: 'Could not retrieve email from selected Google Account.' });
+    }
+
+    // Verify that the email from Google matches the registered student email
+    if (emailFromGoogle.trim().toLowerCase() !== studentData.email.trim().toLowerCase()) {
+      return res.status(403).json({
+        status: 'error',
+        message: `Account mismatch: You selected '${emailFromGoogle}', but this index number requires your registered student email '${studentData.email}'. Please select the matching Google account on your device.`
+      });
+    }
+
+    // Successful match! Mark as registered and issue JWT session token
+    await studentDocRef.update({
+      isRegistered: true,
+      lastLoginAt: Date.now()
+    });
+
+    const token = jwt.sign(
+      { uid: studentDoc.id, email: studentData.email, role: 'voter', name: studentData.name, tenantId },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    try {
+      await logActivity({
+        tenantId,
+        actorEmail: studentData.email,
+        actorRole: 'voter',
+        action: 'VOTER_LOGIN_GOOGLE',
+        description: `Student ${studentData.name} (${studentData.email}) logged in with Google authentication`,
+        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+        status: 'success'
+      });
+    } catch (_) {}
+
     return res.status(200).json({
       status: 'success',
-      email: studentData.email,
-      fallbackOtp: emailSent ? undefined : otp, // For offline/demo mode
-      message: 'Verification code (OTP) sent to your email.'
+      token,
+      data: {
+        uid: studentDoc.id,
+        email: studentData.email,
+        role: 'voter',
+        name: studentData.name,
+        tenantId,
+        faceImage: studentData.faceImage || ''
+      }
     });
 
   } catch (error) {
-    console.error('Error requesting OTP:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to send OTP.' });
+    console.error('Error in Google login:', error);
+    res.status(500).json({ status: 'error', message: 'Google login failed: ' + error.message });
   }
 });
 
