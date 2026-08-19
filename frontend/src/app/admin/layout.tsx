@@ -211,6 +211,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Roster & CSV Upload', href: `/admin/elections/voters?electionId=${electionId}`, icon: Users },
     { label: 'Broadcast Messages', href: `/admin/elections/messages?electionId=${electionId}`, icon: Send },
     { label: 'Live Results', href: `/admin/elections/results?electionId=${electionId}`, icon: BarChart3 },
+    { label: 'Analytics & Reports', href: `/admin/elections/analytics?electionId=${electionId}`, icon: FileText },
     { label: 'Election System Audit', href: `/admin/elections/audit?electionId=${electionId}`, icon: History },
   ] : defaultNavLinks;
 

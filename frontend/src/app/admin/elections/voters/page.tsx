@@ -16,7 +16,10 @@ import {
   Check, 
   Clock, 
   FileText, 
-  Download 
+  Download,
+  UserPlus,
+  Pencil,
+  X
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import DataTable, { type ColumnDef, type FilterDef } from '@/components/DataTable';
@@ -45,6 +48,71 @@ function PerElectionVotersContent() {
   const [csvStats, setCsvStats] = useState({ total: 0, valid: 0, duplicates: 0, invalid: 0 });
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Add/Edit Voter State
+  const [showModal, setShowModal] = useState(false);
+  const [editingVoter, setEditingVoter] = useState<Voter | null>(null);
+  const [form, setForm] = useState({ studentId: '', name: '', email: '', phone: '', program: '', level: '' });
+  const [formLoading, setFormLoading] = useState(false);
+  const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const openAddModal = () => {
+    setEditingVoter(null);
+    setForm({ studentId: '', name: '', email: '', phone: '', program: '', level: '' });
+    setFormMessage(null);
+    setShowModal(true);
+  };
+
+  const openEditModal = (voter: Voter) => {
+    setEditingVoter(voter);
+    setForm({
+      studentId: voter.studentId || '',
+      name: voter.name || '',
+      email: voter.email || '',
+      phone: voter.phone || '',
+      program: (voter as any).program || '',
+      level: (voter as any).level || ''
+    });
+    setFormMessage(null);
+    setShowModal(true);
+  };
+
+  const handleSubmitVoter = async () => {
+    if (!form.studentId.trim() || !form.name.trim()) {
+      setFormMessage({ type: 'error', text: 'Index number and name are required.' });
+      return;
+    }
+    setFormLoading(true);
+    setFormMessage(null);
+    try {
+      if (editingVoter) {
+        await apiRequest(`/elections/${electionId}/voters/${editingVoter.id}`, 'PATCH', {
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          program: form.program,
+          level: form.level
+        });
+        setFormMessage({ type: 'success', text: 'Voter updated successfully.' });
+      } else {
+        await apiRequest(`/elections/${electionId}/voters`, 'POST', {
+          studentId: form.studentId,
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          program: form.program,
+          level: form.level
+        });
+        setFormMessage({ type: 'success', text: 'Voter added successfully.' });
+      }
+      fetchRosterVoters();
+      setTimeout(() => setShowModal(false), 1200);
+    } catch (err: any) {
+      setFormMessage({ type: 'error', text: err.message || 'Failed to save voter.' });
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
   // Download Official Voter Excel Template
   const handleDownloadSampleExcel = () => {
@@ -215,20 +283,38 @@ function PerElectionVotersContent() {
     }
   };
 
-  const voterFilters: FilterDef[] = [{
-    key: 'hasVoted',
-    label: 'All Status',
-    options: [
-      { value: 'true', label: 'Voted' },
-      { value: 'false', label: 'Pending' },
-    ],
-  }];
+  // Derive dynamic filter options from the voter data
+  const uniquePrograms = [...new Set(voters.map(v => (v as any).program || '').filter(Boolean))].sort();
+  const uniqueLevels = [...new Set(voters.map(v => (v as any).level || '').filter(Boolean))].sort();
+
+  const voterFilters: FilterDef[] = [
+    {
+      key: 'hasVoted',
+      label: 'All Status',
+      options: [
+        { value: 'true', label: 'Voted' },
+        { value: 'false', label: 'Pending' },
+      ],
+    },
+    ...(uniquePrograms.length > 0 ? [{
+      key: 'program',
+      label: 'All Programs',
+      options: uniquePrograms.map(p => ({ value: p, label: p })),
+    }] : []),
+    ...(uniqueLevels.length > 0 ? [{
+      key: 'level',
+      label: 'All Levels',
+      options: uniqueLevels.map(l => ({ value: l, label: l })),
+    }] : []),
+  ];
 
   const voterColumns: ColumnDef<Voter>[] = [
     { key: 'studentId', label: 'Index Number', render: (v) => <span className="font-mono font-bold text-slate-900 dark:text-white">{v.studentId}</span> },
     { key: 'name', label: 'Full Name', render: (v) => <span className="font-bold text-slate-900 dark:text-white">{v.name}</span> },
     { key: 'email', label: 'Email Address', render: (v) => <span className="text-slate-600 dark:text-slate-300">{v.email}</span> },
     { key: 'phone', label: 'Phone', render: (v) => <span className="text-slate-500 dark:text-slate-400">{v.phone || 'N/A'}</span> },
+    { key: 'program', label: 'Program', render: (v) => <span className="text-slate-600 dark:text-slate-300">{(v as any).program || 'N/A'}</span> },
+    { key: 'level', label: 'Level', render: (v) => <span className="text-slate-500 dark:text-slate-400">{(v as any).level || 'N/A'}</span> },
     {
       key: 'hasVoted',
       label: 'Status',
@@ -238,6 +324,18 @@ function PerElectionVotersContent() {
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30"><Check size={12} /> Ballot Cast</span>
       ) : (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30"><Clock size={12} /> Pending</span>
+      ),
+    },
+    {
+      key: 'id',
+      label: 'Actions',
+      render: (v) => (
+        <button
+          onClick={() => openEditModal(v)}
+          className="px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors flex items-center gap-1"
+        >
+          <Pencil size={12} /> Edit
+        </button>
       ),
     },
   ];
@@ -351,6 +449,12 @@ function PerElectionVotersContent() {
               <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Eligible Voters Directory</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Total Roster: {voters.length} voters</p>
             </div>
+            <button
+              onClick={openAddModal}
+              className="px-3.5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 transition-colors flex items-center gap-1.5"
+            >
+              <UserPlus size={14} /> Add Voter
+            </button>
             <Link
               href={`/admin/elections/messages?electionId=${electionId}`}
               className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-colors flex items-center gap-1.5"
@@ -367,14 +471,124 @@ function PerElectionVotersContent() {
           <DataTable
             data={voters}
             columns={voterColumns}
-            searchPlaceholder="Search by name, index, or email…"
-            searchKeys={['studentId', 'name', 'email']}
+            searchPlaceholder="Search by name, index, email, program…"
+            searchKeys={['studentId', 'name', 'email', 'phone', 'program', 'level']}
+            dateField="createdAt"
             filters={voterFilters}
             emptyMessage="No voters found for this election."
             pageSize={10}
           />
         )}
       </div>
+
+      {/* Add/Edit Voter Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                {editingVoter ? <Pencil size={18} className="text-blue-600" /> : <UserPlus size={18} className="text-emerald-600" />}
+                {editingVoter ? 'Edit Voter Details' : 'Add New Voter'}
+              </h3>
+              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <X size={18} className="text-slate-500" />
+              </button>
+            </div>
+
+            {formMessage && (
+              <div className={`p-3 rounded-xl text-xs font-semibold mb-4 ${
+                formMessage.type === 'success'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30'
+                  : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30'
+              }`}>
+                {formMessage.text}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Index / Student Number *</label>
+                <input
+                  type="text"
+                  value={form.studentId}
+                  onChange={e => setForm({ ...form, studentId: e.target.value })}
+                  disabled={!!editingVoter}
+                  placeholder="e.g. 0123456789"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Kwame Mensah"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Email Address</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  placeholder="Auto-assigned if left blank"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
+                <input
+                  type="text"
+                  value={form.phone}
+                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                  placeholder="e.g. +233240001122"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Program</label>
+                  <input
+                    type="text"
+                    value={form.program}
+                    onChange={e => setForm({ ...form, program: e.target.value })}
+                    placeholder="e.g. Computer Science"
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Level</label>
+                  <input
+                    type="text"
+                    value={form.level}
+                    onChange={e => setForm({ ...form, level: e.target.value })}
+                    placeholder="e.g. Level 300"
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setShowModal(false)}
+                className="flex-1 px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitVoter}
+                disabled={formLoading || !form.studentId.trim() || !form.name.trim()}
+                className="flex-1 px-4 py-2.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white shadow-md shadow-blue-500/20 transition-colors"
+              >
+                {formLoading ? 'Saving...' : editingVoter ? 'Update Voter' : 'Add Voter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

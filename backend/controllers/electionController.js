@@ -1080,6 +1080,99 @@ exports.getVoters = async (req, res) => {
   }
 };
 
+exports.addVoter = async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const tenantId = req.user?.tenantId || DEFAULT_TENANT_ID;
+    const { studentId, name, email, phone, program, level } = req.body;
+
+    if (!studentId || !studentId.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Index/Student number is required.' });
+    }
+    if (!name || !name.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Full name is required.' });
+    }
+
+    const election = await Election.findByPk(electionId);
+    if (!election) return res.status(404).json({ status: 'error', message: 'Election not found.' });
+
+    const cleanIndex = studentId.trim();
+    const cleanEmail = (email || '').trim().toLowerCase() || (cleanIndex.toLowerCase() + '@htu.edu.gh');
+
+    // Check for duplicate within this election
+    const existing = await Voter.findOne({ where: { electionId, studentId: cleanIndex } });
+    if (existing) {
+      return res.status(409).json({ status: 'error', message: `Voter with index ${cleanIndex} already exists in this election.` });
+    }
+
+    const docId = `vtr_${cleanIndex.replace(/[^a-zA-Z0-9]/g, '_')}_${electionId}`;
+    const voter = await Voter.create({
+      id: docId,
+      tenantId,
+      electionId,
+      studentId: cleanIndex,
+      indexNumber: cleanIndex,
+      name: name.trim(),
+      email: cleanEmail,
+      phone: (phone || '').trim(),
+      program: (program || '').trim(),
+      level: (level || '').trim(),
+      isRegistered: true,
+      role: 'voter'
+    });
+
+    cache.invalidatePrefix('elections:');
+    await logActivity({
+      tenantId,
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'VOTER_ADDED_MANUALLY',
+      description: `Manually added voter ${cleanIndex} (${name.trim()}) to election: ${electionId}`
+    });
+
+    res.status(201).json({ status: 'success', data: voter });
+  } catch (error) {
+    console.error('Error adding voter:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to add voter.' });
+  }
+};
+
+exports.updateVoter = async (req, res) => {
+  try {
+    const electionId = req.params.id;
+    const voterId = req.params.voterId;
+    const { name, email, phone, program, level } = req.body;
+
+    const voter = await Voter.findOne({ where: { id: voterId, electionId } });
+    if (!voter) {
+      return res.status(404).json({ status: 'error', message: 'Voter not found in this election.' });
+    }
+
+    const updates = {};
+    if (name !== undefined) updates.name = name.trim();
+    if (email !== undefined) updates.email = email.trim().toLowerCase();
+    if (phone !== undefined) updates.phone = phone.trim();
+    if (program !== undefined) updates.program = program.trim();
+    if (level !== undefined) updates.level = level.trim();
+
+    await voter.update(updates);
+
+    cache.invalidatePrefix('elections:');
+    await logActivity({
+      tenantId: req.user?.tenantId || DEFAULT_TENANT_ID,
+      actorEmail: req.user.email,
+      actorRole: 'admin',
+      action: 'VOTER_UPDATED',
+      description: `Updated voter details for ${voter.studentId} in election: ${electionId}`
+    });
+
+    res.status(200).json({ status: 'success', data: voter });
+  } catch (error) {
+    console.error('Error updating voter:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update voter.' });
+  }
+};
+
 exports.getPositions = async (req, res) => {
   try {
     const electionId = req.params.id;

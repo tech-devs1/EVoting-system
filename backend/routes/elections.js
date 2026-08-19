@@ -20,6 +20,8 @@ router.post('/:id/voters/upload-csv', verifyAuth, requireAdmin, electionControll
 router.get('/:id/access-status', verifyAuth, electionController.getAccessStatus);
 router.post('/:id/request-access-otp', verifyAuth, electionController.requestAccessOtp);
 router.post('/:id/verify-access-otp', verifyAuth, electionController.verifyAccessOtp);
+router.post('/:id/voters', verifyAuth, requireAdmin, electionController.addVoter);
+router.patch('/:id/voters/:voterId', verifyAuth, requireAdmin, electionController.updateVoter);
 router.get('/:id/voters', verifyAuth, requireAdmin, electionController.getVoters);
 router.get('/:id/positions', verifyAuth, electionController.getPositions);
 router.post('/:id/positions', verifyAuth, requireAdmin, electionController.createPosition);

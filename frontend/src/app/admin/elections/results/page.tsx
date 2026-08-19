@@ -13,7 +13,8 @@ import {
   Users, 
   RefreshCw, 
   CheckCircle2, 
-  BarChart3 
+  BarChart3,
+  EyeOff 
 } from 'lucide-react';
 
 interface Candidate {
@@ -150,56 +151,33 @@ function PerElectionResultsContent() {
             </p>
           </div>
 
-          {election && election.status !== 'ended' && election.status !== 'completed' && (
-            <div className="w-full mt-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-semibold">
-              ⏳ Election polls are still active. Final results will be available once the polling period ends.
-            </div>
-          )}
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Auto-Refresh:</span>
-            <select
-              value={autoRefreshInterval}
-              onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold mr-2"
-            >
-              <option value={0}>Off</option>
-              <option value={15}>15s</option>
-              <option value={30}>30s</option>
-              <option value={60}>60s</option>
-            </select>
 
-            <button
-              onClick={handleManualSync}
-              disabled={syncing}
-              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
-            >
-              <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
-              {syncing ? 'Syncing...' : 'Sync Live Tally'}
-            </button>
 
-            <button
-              onClick={handleDownloadPDF}
-              disabled={pdfLoading}
-              className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-colors flex items-center gap-1.5"
-            >
-              <Download size={16} /> {pdfLoading ? 'Generating PDF...' : 'Download Results PDF'}
-            </button>
-          </div>
         </div>
       </div>
 
-      {message && (
-        <div className={`p-4 rounded-xl text-xs font-semibold ${
-          message.type === 'success' 
-            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30' 
-            : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30'
-        }`}>
-          {message.text}
+      {/* Election still active — block all results content */}
+      {election && election.status !== 'ended' && election.status !== 'completed' ? (
+        <div className="bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/30 rounded-3xl p-12 text-center">
+          <EyeOff size={48} className="text-amber-500 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Results Locked</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-2">
+            Election polls are still active. Results will be visible once the polling period ends and the election status is finalized.
+          </p>
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
+            ⏳ Current status: <span className="uppercase">{election.status}</span>
+          </p>
+          <button
+            onClick={handleDownloadPDF}
+            disabled={pdfLoading}
+            className="mt-6 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors shadow-md shadow-blue-500/20 flex items-center gap-1.5 mx-auto"
+          >
+            <Download size={16} /> {pdfLoading ? 'Generating...' : 'Download PDF Report'}
+          </button>
         </div>
-      )}
-
-      {/* Summary KPI Bar */}
+      ) : (
+      <>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl flex items-center justify-between shadow-sm">
           <div>
@@ -314,6 +292,8 @@ function PerElectionResultsContent() {
             );
           })}
         </div>
+      )}
+      </>
       )}
     </div>
   );
