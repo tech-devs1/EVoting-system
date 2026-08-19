@@ -37,6 +37,12 @@ router.post('/departments', async (req, res) => {
 
     await db.collection('tenants').doc(tenantId).set(newTenant);
 
+    // Initialize a 'users' collection (table) for the tenant with a placeholder setup document
+    await db.collection('tenants').doc(tenantId).collection('users').doc('_setup').set({
+      initializedAt: Date.now(),
+      description: 'This collection stores users tied to this tenant.'
+    });
+
     res.status(201).json({ 
       status: 'success', 
       message: 'Department created successfully',
