@@ -336,7 +336,7 @@ export default function LoadingScreen() {
               textShadow: '0 4px 12px rgba(0,0,0,0.2)',
             }}
           >
-            COMPSSA <span style={{ color: '#60a5fa' }}>✓</span>
+            Woezor <span style={{ color: '#60a5fa' }}>✓</span>
           </h1>
         </motion.div>
 

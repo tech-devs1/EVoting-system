@@ -121,10 +121,17 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setError('');
     setLoading(true);
+
+    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const hasRealGoogleAuth = typeof window !== 'undefined'
+      && !!(window as any).google?.accounts?.id
+      && !!googleClientId;
+
     try {
-      if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
+      if (hasRealGoogleAuth) {
+        // Real Google Sign-In flow
         (window as any).google.accounts.id.initialize({
-          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          client_id: googleClientId,
           callback: async (response: any) => {
             try {
               const result = await requestOtp(studentId, response.credential);
@@ -140,19 +147,25 @@ export default function LoginPage() {
             }
           }
         });
-        (window as any).google.accounts.id.prompt();
+        // Handle prompt dismissal
+        (window as any).google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
+            setLoading(false);
+            setError('Google Sign-In was dismissed. Please try again or use OTP.');
+          }
+        });
       } else {
-        // Mock Google Sign-In for development
+        // No NEXT_PUBLIC_GOOGLE_CLIENT_ID configured — use mock token flow
         const result = await requestOtp(studentId, `MOCK_GOOGLE_${studentEmail}`);
         if (result?.otpRequired && result.email) {
           setOtpEmail(result.email);
           setFallbackOtp(result.fallbackOtp || '');
           setStep('otp');
         }
+        setLoading(false);
       }
     } catch (err: any) {
       setError(err.message || 'Google Sign-In failed.');
-    } finally {
       setLoading(false);
     }
   };
