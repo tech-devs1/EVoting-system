@@ -150,12 +150,23 @@ export default function VoterDashboard() {
         }
 
         let newTotalVotes = 0;
-        const storedVotes = localStorage.getItem('COMPSSA_voter_votes');
-        if (storedVotes) {
-          const parsed = JSON.parse(storedVotes);
-          newTotalVotes = parsed.length;
-          setTotalVotes(newTotalVotes);
+        try {
+          const userVotesRes = await apiRequest<{ status: string; data: any[] }>('/votes/user-votes');
+          if (userVotesRes.status === 'success' && Array.isArray(userVotesRes.data)) {
+            newTotalVotes = userVotesRes.data.length;
+          }
+        } catch (_) {}
+
+        if (newTotalVotes === 0) {
+          const storedVotes = localStorage.getItem('COMPSSA_voter_votes');
+          if (storedVotes) {
+            try {
+              const parsed = JSON.parse(storedVotes);
+              newTotalVotes = parsed.length;
+            } catch (_) {}
+          }
         }
+        setTotalVotes(newTotalVotes);
 
         try {
           await set('voter_dashboard_cache', {
@@ -295,43 +306,39 @@ export default function VoterDashboard() {
                   return (
                     <div key={el.id} className="mobile-app-card flex items-center gap-3 md:gap-4 hover:shadow-md transition-all">
                       {/* Icon tile */}
-                      <div className={`w-11 h-11 md:w-12 md:h-12 shrink-0 rounded-2xl flex items-center justify-center ${
-                        hasVoted
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
-                          : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
-                      }`}>
-                        {hasVoted ? <Award size={20} /> : <Vote size={20} />}
-                      </div>
+                      <Link href={`/voter/elections/detail?id=${el.id}`} className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                        <div className={`w-11 h-11 md:w-12 md:h-12 shrink-0 rounded-2xl flex items-center justify-center ${
+                          hasVoted
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                        }`}>
+                          {hasVoted ? <Award size={20} /> : <Vote size={20} />}
+                        </div>
 
-                      {/* Title + meta */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">{el.title}</h4>
-                          {hasVoted ? (
-                            <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md font-bold shrink-0">✓ Voted</span>
-                          ) : (
-                            <span className="text-[10px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md font-bold shrink-0">Active</span>
-                          )}
+                        {/* Title + meta */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">{el.title}</h4>
+                            {hasVoted ? (
+                              <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md font-bold shrink-0">✓ Voted</span>
+                            ) : (
+                              <span className="text-[10px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md font-bold shrink-0">Active</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                            <CalendarClock size={12} className="shrink-0" />
+                            <CountdownTimer endsAt={el.endDate} />
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                          <CalendarClock size={12} className="shrink-0" />
-                          <CountdownTimer endsAt={el.endDate} />
-                        </div>
-                      </div>
+                      </Link>
 
                       {/* Action */}
-                      {hasVoted ? (
-                        <span className="shrink-0 text-[11px] text-slate-400 dark:text-slate-500 font-bold">
-                          Done
-                        </span>
-                      ) : (
-                        <Link
-                          href={`/voter/elections/detail?id=${el.id}`}
-                          className="shrink-0 flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400"
-                        >
-                          Vote <ChevronRight size={14} />
-                        </Link>
-                      )}
+                      <Link
+                        href={`/voter/elections/detail?id=${el.id}`}
+                        className="shrink-0 flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 transition-colors"
+                      >
+                        {hasVoted ? 'Details' : 'Vote'} <ChevronRight size={14} />
+                      </Link>
                     </div>
                   );
                 })}
@@ -345,16 +352,21 @@ export default function VoterDashboard() {
               <h3 className="text-sm md:text-base font-bold text-slate-950 dark:text-white tracking-tight mb-4">Upcoming Elections</h3>
               <div className="flex flex-col gap-3 md:gap-4">
                 {upcomingElections.map(el => (
-                  <div key={el.id} className="mobile-app-card flex flex-col gap-3 shadow-sm">
+                  <Link key={el.id} href={`/voter/elections/detail?id=${el.id}`} className="mobile-app-card flex flex-col gap-3 shadow-sm hover:shadow-md transition-all">
                     <div className="flex justify-between items-center gap-4">
                       <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">{el.title}</h4>
                       <span className="text-[10px] bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-md font-bold border border-amber-200 dark:border-amber-900/30">Upcoming</span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{el.description}</p>
-                    <div className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 font-medium">
-                      <Clock size={12} /> Starts {new Date(el.startDate).toLocaleDateString()}
+                    <div className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center justify-between font-medium pt-1">
+                      <span className="flex items-center gap-1.5">
+                        <Clock size={12} /> Starts {new Date(el.startDate).toLocaleDateString()}
+                      </span>
+                      <span className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-0.5">
+                        Details <ChevronRight size={12} />
+                      </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -371,9 +383,14 @@ export default function VoterDashboard() {
                       <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-1">{el.title}</h4>
                       <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block">Ended</span>
                     </div>
-                    <Link href={`/voter/elections/results?id=${el.id}`} className="px-3.5 py-2 text-xs rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">
-                      View Results
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/voter/elections/detail?id=${el.id}`} className="px-3 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 transition-colors">
+                        Details
+                      </Link>
+                      <Link href={`/voter/elections/results?id=${el.id}`} className="px-3.5 py-1.5 text-xs rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">
+                        View Results
+                      </Link>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -107,7 +107,7 @@ async function runTests() {
   try {
     const res = await testRoute('/api/auth/login', 'POST', {
       email: 'issakasaddick14@gmail.com',
-      password: 'any_password'
+      password: '@Chancellor1'
     });
     assert(res.status === 200 && res.json.data.role === 'superadmin' && !!res.json.token, 'POST /api/auth/login authenticates Superadmin');
   } catch (err) {
