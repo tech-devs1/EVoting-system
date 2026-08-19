@@ -520,6 +520,48 @@ exports.downloadAuditPDF = async (req, res) => {
 
 // ─── User Management ──────────────────────────────────────────────────────────
 
+exports.createUser = async (req, res) => {
+  try {
+    const { name, email, password, phone, role, tenantId, studentId, indexNo } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ status: 'error', message: 'Name, email, and password are required.' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const existingUser = await User.findOne({ where: { email: cleanEmail } });
+    if (existingUser) {
+      return res.status(409).json({ status: 'error', message: 'A user account with this email address already exists.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+    const newUser = await User.create({
+      id: userId,
+      tenantId: tenantId || 'global',
+      name: String(name).trim(),
+      email: cleanEmail,
+      phone: phone ? String(phone).trim() : null,
+      password: hashedPassword,
+      role: role || 'voter',
+      studentId: studentId ? String(studentId).trim() : null,
+      indexNo: indexNo ? String(indexNo).trim() : (studentId ? String(studentId).trim() : null),
+      status: 'active',
+      isVerified: true
+    });
+
+    cache.invalidatePrefix('users:');
+
+    const result = newUser.toJSON();
+    delete result.password;
+
+    res.status(201).json({ status: 'success', data: result, message: 'User account created successfully.' });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to create user account.' });
+  }
+};
+
 exports.getUsers = async (req, res) => {
   try {
     const users = await User.findAll({

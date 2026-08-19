@@ -30,6 +30,7 @@ router.get('/audit/pdf/:tenantId', auth, superadminController.downloadAuditPDF);
 
 // User Management
 router.get('/users', auth, superadminController.getUsers);
+router.post('/users', auth, superadminController.createUser);
 router.patch('/users/:id', auth, superadminController.updateUser);
 router.delete('/users/:id', auth, superadminController.deleteUser);
 
