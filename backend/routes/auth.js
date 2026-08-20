@@ -88,7 +88,7 @@ async function sendOtpViaBMS(phoneNumber, otp) {
   const payload = {
     recipient: [formattedPhone],
     sender: BMS_SENDER_ID,
-    message: `Your COMPSSA verification code is ${otp}. It expires in 10 minutes. Do not share this code.`,
+    message: `Your VoteHTU verification code is ${otp}. It expires in 10 minutes. Do not share this code.`,
     is_schedule: false
   };
 

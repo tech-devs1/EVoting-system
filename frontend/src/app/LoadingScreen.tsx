@@ -480,7 +480,7 @@ export default function LoadingScreen() {
           letterSpacing: '2px', fontFamily: 'var(--font-display), sans-serif', marginBottom: '2rem',
         }}
       >
-        COMPSSA <span style={{ color: '#2563eb' }}>✓</span>
+        VoteHTU <span style={{ color: '#2563eb' }}>✓</span>
       </motion.div>
 
       <div style={{ width: '250px', height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>

@@ -140,7 +140,7 @@ export default function LoginPage() {
     }
   };
 
-  const selectedDeptName = departments.find(d => d.id === selectedTenant)?.name || 'VoteTrust';
+  const selectedDeptName = departments.find(d => d.id === selectedTenant)?.name;
 
   return (
     <div className="auth-container animate-page-enter">

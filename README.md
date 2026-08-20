@@ -185,7 +185,7 @@ The frontend will run at **http://localhost:3000**
 ---
 
 ## 🌐 Live App
-The live app is available at: [compssa.vercel.app](https://compssa.vercel.app)
+The live app is available at: [votehtu.vercel.app](https://votehtu.vercel.app)
 
 ---
 
@@ -209,14 +209,14 @@ COMPSSA is a **Progressive Web App (PWA)** — it can be installed on any device
    - Tap the **Share button** (□↑) at the bottom of Safari
    - Scroll down and tap **"Add to Home Screen"**
    - Tap **"Add"** to confirm
-4. The COMPSSA icon appears on your home screen
+4. The VoteHTU icon appears on your home screen
 
 ### Desktop (Chrome / Edge)
 
 1. Open the live app in Chrome or Edge
 2. Look for the **install icon (⊕)** in the right side of the address bar
 3. Click it and confirm installation
-4. COMPSSA opens as a standalone app window
+4. VoteHTU opens as a standalone app window
 
 ---
 

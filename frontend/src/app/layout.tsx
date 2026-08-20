@@ -29,14 +29,14 @@ import LoadingScreen from "./LoadingScreen";
 import ServiceWorkerRegistrar from "./ServiceWorkerRegistrar";
 
 export const metadata: Metadata = {
-  title: "COMPSSA ✓ - Secure Digital Elections & Cryptographic Verification",
+  title: "VoteHTU ✓ - Secure Digital Elections & Cryptographic Verification",
   description: "Secure, digital, and end-to-end verifiable e-voting for organizations. Audit-trail verified elections using SHA-256 with real-time AI security diagnostics.",
   manifest: "/manifest.json",
   themeColor: "#2563eb",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "COMPSSA",
+    title: "VoteHTU",
   },
 };
 
