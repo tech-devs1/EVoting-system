@@ -190,21 +190,41 @@ router.post('/verify-student', async (req, res) => {
     // 1. Check if the identifier is an Admin email
     const isAdminEmail = cleanIdentifier.includes('@');
     if (isAdminEmail) {
-      let isGlobalAdmin = cleanIdentifier === 'supertech@admin.com' || cleanIdentifier === 'admin@htu.edu.gh';
+      const lowerIdentifier = cleanIdentifier.toLowerCase();
+      let isGlobalAdmin = lowerIdentifier === 'supertech@admin.com' || lowerIdentifier === 'admin@htu.edu.gh';
       let isTenantAdmin = false;
 
-      // Check tenant primary admin
+      // Check tenant primary admin for selected department
       const tenantDoc = await db.collection('tenants').doc(tenantId).get();
       if (tenantDoc.exists) {
         const tenantData = tenantDoc.data();
-        if (tenantData.adminEmail && tenantData.adminEmail.trim().toLowerCase() === cleanIdentifier.toLowerCase()) {
+        if (tenantData.adminEmail && tenantData.adminEmail.trim().toLowerCase() === lowerIdentifier) {
           isTenantAdmin = true;
         }
         // Check secondary admins
         if (tenantData.admins && Array.isArray(tenantData.admins)) {
-          const matched = tenantData.admins.find(a => a.email.trim().toLowerCase() === cleanIdentifier.toLowerCase());
+          const matched = tenantData.admins.find(a => a.email && a.email.trim().toLowerCase() === lowerIdentifier);
           if (matched) {
             isTenantAdmin = true;
+          }
+        }
+      }
+
+      // If not matched on selected tenant, search across all created tenants
+      if (!isTenantAdmin && !isGlobalAdmin) {
+        const allTenantsSnap = await db.collection('tenants').get();
+        for (const tDoc of allTenantsSnap.docs) {
+          const tData = tDoc.data();
+          if (tData.adminEmail && tData.adminEmail.trim().toLowerCase() === lowerIdentifier) {
+            isTenantAdmin = true;
+            break;
+          }
+          if (tData.admins && Array.isArray(tData.admins)) {
+            const matched = tData.admins.find(a => a.email && a.email.trim().toLowerCase() === lowerIdentifier);
+            if (matched) {
+              isTenantAdmin = true;
+              break;
+            }
           }
         }
       }
@@ -435,19 +455,41 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Email and password are required.' });
     }
 
-    // 1. Check COMPSSA (default_tenant) legacy fallback admin
-    if (email === 'admin@htu.edu.gh') {
-      if (password === 'admin080') {
-        const uid = `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    // 1. Check SuperAdmin
+    if (cleanEmail === 'supertech@admin.com') {
+      if (cleanPassword === 'udiosuper') {
+        const uid = `superadmin_${cleanEmail}`;
         const token = jwt.sign(
-          { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
+          { uid, email: cleanEmail, role: 'superadmin', name: 'Super Administrator' },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+        return res.status(200).json({
+          status: 'success',
+          data: { uid, email: cleanEmail, role: 'superadmin', name: 'Super Administrator' },
+          token
+        });
+      } else {
+        return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
+      }
+    }
+
+    // 2. Check COMPSSA (default_tenant) legacy fallback admin
+    if (cleanEmail === 'admin@htu.edu.gh') {
+      if (cleanPassword === 'admin080') {
+        const uid = `admin_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const token = jwt.sign(
+          { uid, email: cleanEmail, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
           JWT_SECRET,
           { expiresIn: '24h' }
         );
         await logActivity({
           tenantId: DEFAULT_TENANT_ID,
           tenantName: 'COMPSSA',
-          actorEmail: email,
+          actorEmail: cleanEmail,
           actorRole: 'admin',
           action: 'ADMIN_LOGIN',
           description: 'COMPSSA Administrator logged into the admin dashboard',
@@ -456,84 +498,146 @@ router.post('/login', async (req, res) => {
         });
         return res.status(200).json({
           status: 'success',
-          data: { uid, email, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
+          data: { uid, email: cleanEmail, role: 'admin', name: 'COMPSSA Administrator', tenantId: DEFAULT_TENANT_ID },
           token
         });
       } else {
-        return res.status(401).json({ status: 'error', message: 'Invalid credentials.' });
+        return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
       }
     }
 
-    // 2. Check other tenants for department admin
-    const tenantsSnapshot = await db.collection('tenants').where('adminEmail', '==', email).get();
-    if (!tenantsSnapshot.empty) {
-      const tenantDoc = tenantsSnapshot.docs[0];
-      const tenantData = tenantDoc.data();
-
-      if (tenantData.adminPassword) {
-        const isMatch = await bcrypt.compare(password, tenantData.adminPassword);
-        if (isMatch) {
-          const uid = `admin_${tenantDoc.id}`;
-          const token = jwt.sign(
-            { uid, email, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
-            JWT_SECRET,
-            { expiresIn: '24h' }
-          );
-          await logActivity({
-            tenantId: tenantDoc.id,
-            tenantName: tenantData.name,
-            actorEmail: email,
-            actorRole: 'admin',
-            action: 'ADMIN_LOGIN',
-            description: `${tenantData.name} Administrator logged into the admin dashboard`,
-            ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-            status: 'success'
-          });
-          return res.status(200).json({
-            status: 'success',
-            data: { uid, email, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
-            token
-          });
+    // Helper: Safely compare password (supports bcrypt hash and plain text)
+    const verifyPassword = async (plainInput, storedHash, docRefToUpgrade) => {
+      if (!storedHash) return false;
+      let isMatch = false;
+      try {
+        if (typeof storedHash === 'string' && (storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$') || storedHash.startsWith('$2y$'))) {
+          isMatch = await bcrypt.compare(plainInput, storedHash);
+        } else {
+          isMatch = (plainInput === storedHash);
+          if (isMatch && docRefToUpgrade) {
+            const newHashed = await bcrypt.hash(plainInput, 10);
+            await docRefToUpgrade.update({ adminPassword: newHashed }).catch(() => {});
+          }
         }
+      } catch (err) {
+        isMatch = (plainInput === storedHash);
       }
-      return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
-    }
+      return isMatch;
+    };
 
-    // 2b. Check secondary admins across all tenants
-    const allTenantsForAdminCheck = await db.collection('tenants').get();
-    for (const tDoc of allTenantsForAdminCheck.docs) {
-      const tData = tDoc.data();
-      if (tData.admins && Array.isArray(tData.admins)) {
-        const matchedAdmin = tData.admins.find(a => a.email === email);
-        if (matchedAdmin) {
-          const isAdminMatch = await bcrypt.compare(password, matchedAdmin.passwordHash);
-          if (isAdminMatch) {
-            const uid = `admin_${tDoc.id}_${matchedAdmin.id}`;
+    // 3. Check specific tenant if provided
+    const tenantId = getTenantId(req);
+    if (tenantId && tenantId !== DEFAULT_TENANT_ID) {
+      const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+      if (tenantDoc.exists) {
+        const tenantData = tenantDoc.data();
+        // Check primary admin
+        if (tenantData.adminEmail && tenantData.adminEmail.trim().toLowerCase() === cleanEmail) {
+          const isMatch = await verifyPassword(cleanPassword, tenantData.adminPassword, tenantDoc.ref);
+          if (isMatch) {
+            const uid = `admin_${tenantDoc.id}`;
             const token = jwt.sign(
-              { uid, email, role: 'admin', name: matchedAdmin.name || `${tData.name} Admin`, tenantId: tDoc.id },
+              { uid, email: cleanEmail, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
               JWT_SECRET,
               { expiresIn: '24h' }
             );
             await logActivity({
-              tenantId: tDoc.id,
-              tenantName: tData.name,
-              actorEmail: email,
+              tenantId: tenantDoc.id,
+              tenantName: tenantData.name,
+              actorEmail: cleanEmail,
               actorRole: 'admin',
               action: 'ADMIN_LOGIN',
-              description: `${matchedAdmin.name || 'Admin'} logged into the ${tData.name} admin dashboard`,
+              description: `${tenantData.name} Administrator logged into the admin dashboard`,
               ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
               status: 'success'
             });
             return res.status(200).json({
               status: 'success',
-              data: { uid, email, role: 'admin', name: matchedAdmin.name || `${tData.name} Admin`, tenantId: tDoc.id },
+              data: { uid, email: cleanEmail, role: 'admin', name: `${tenantData.name} Administrator`, tenantId: tenantDoc.id },
               token
             });
           }
-          return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials.' });
+        }
+        // Check secondary admins
+        if (tenantData.admins && Array.isArray(tenantData.admins)) {
+          const matchedAdmin = tenantData.admins.find(a => a.email && a.email.trim().toLowerCase() === cleanEmail);
+          if (matchedAdmin) {
+            const isMatch = await verifyPassword(cleanPassword, matchedAdmin.passwordHash || matchedAdmin.password);
+            if (isMatch) {
+              const uid = `admin_${tenantDoc.id}_${matchedAdmin.id}`;
+              const token = jwt.sign(
+                { uid, email: cleanEmail, role: 'admin', name: matchedAdmin.name || `${tenantData.name} Admin`, tenantId: tenantDoc.id },
+                JWT_SECRET,
+                { expiresIn: '24h' }
+              );
+              return res.status(200).json({
+                status: 'success',
+                data: { uid, email: cleanEmail, role: 'admin', name: matchedAdmin.name || `${tenantData.name} Admin`, tenantId: tenantDoc.id },
+                token
+              });
+            }
+          }
         }
       }
     }
+
+    // 4. Check all tenants across database case-insensitively
+    const allTenantsSnapshot = await db.collection('tenants').get();
+    for (const tDoc of allTenantsSnapshot.docs) {
+      const tData = tDoc.data();
+      
+      // Primary admin match
+      if (tData.adminEmail && tData.adminEmail.trim().toLowerCase() === cleanEmail) {
+        const isMatch = await verifyPassword(cleanPassword, tData.adminPassword, tDoc.ref);
+        if (isMatch) {
+          const uid = `admin_${tDoc.id}`;
+          const token = jwt.sign(
+            { uid, email: cleanEmail, role: 'admin', name: `${tData.name} Administrator`, tenantId: tDoc.id },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+          );
+          await logActivity({
+            tenantId: tDoc.id,
+            tenantName: tData.name,
+            actorEmail: cleanEmail,
+            actorRole: 'admin',
+            action: 'ADMIN_LOGIN',
+            description: `${tData.name} Administrator logged into the admin dashboard`,
+            ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+            status: 'success'
+          });
+          return res.status(200).json({
+            status: 'success',
+            data: { uid, email: cleanEmail, role: 'admin', name: `${tData.name} Administrator`, tenantId: tDoc.id },
+            token
+          });
+        }
+      }
+
+      // Secondary admins match
+      if (tData.admins && Array.isArray(tData.admins)) {
+        const matchedAdmin = tData.admins.find(a => a.email && a.email.trim().toLowerCase() === cleanEmail);
+        if (matchedAdmin) {
+          const isMatch = await verifyPassword(cleanPassword, matchedAdmin.passwordHash || matchedAdmin.password);
+          if (isMatch) {
+            const uid = `admin_${tDoc.id}_${matchedAdmin.id}`;
+            const token = jwt.sign(
+              { uid, email: cleanEmail, role: 'admin', name: matchedAdmin.name || `${tData.name} Admin`, tenantId: tDoc.id },
+              JWT_SECRET,
+              { expiresIn: '24h' }
+            );
+            return res.status(200).json({
+              status: 'success',
+              data: { uid, email: cleanEmail, role: 'admin', name: matchedAdmin.name || `${tData.name} Admin`, tenantId: tDoc.id },
+              token
+            });
+          }
+        }
+      }
+    }
+
+    return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials. Please check your password.' });
 
     // 3. Iterate through all tenants to find the voter
     const allTenantsSnapshot = await db.collection('tenants').get();
