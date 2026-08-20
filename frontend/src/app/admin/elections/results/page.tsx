@@ -236,17 +236,23 @@ function PerElectionResultsContent() {
                 <div className="flex flex-col gap-3">
                   {sortedCandidates.map((cand, idx) => {
                     const votes = cand.votes || 0;
-                    const positionTotal = candidateList.reduce((sum, c) => sum + (c.votes || 0), 0);
+                    const noVotes = cand.noVotes || 0;
+                    const positionTotal = candidateList.reduce((sum, c) => sum + (c.votes || 0) + (c.noVotes || 0), 0);
                     const pct = positionTotal > 0 ? Math.round((votes / positionTotal) * 100) : 0;
+                    const noPct = positionTotal > 0 ? Math.round((noVotes / positionTotal) * 100) : 0;
                     const isLeader = idx === 0 && votes > 0;
+                    const isSingleCandidate = sortedCandidates.length === 1;
+                    const isRejected = isSingleCandidate && noVotes > votes;
 
                     return (
                       <div 
                         key={cand.id} 
                         className={`p-4 rounded-2xl border flex flex-col gap-3 transition-colors ${
-                          isLeader 
-                            ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-300 dark:border-amber-900/40' 
-                            : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-700/80'
+                          isLeader && !isRejected
+                            ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-300 dark:border-amber-900/40'
+                            : isRejected
+                              ? 'bg-red-50/40 dark:bg-red-950/20 border-red-300 dark:border-red-900/40'
+                              : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-700/80'
                         }`}
                       >
                         <div className="flex justify-between items-center">
@@ -262,9 +268,14 @@ function PerElectionResultsContent() {
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="font-extrabold text-sm text-slate-900 dark:text-white">{cand.name}</span>
-                                {isLeader && (
+                                {isLeader && !isRejected && (
                                   <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
                                     🏆 LEADER
+                                  </span>
+                                )}
+                                {isRejected && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800">
+                                    ❌ REJECTED
                                   </span>
                                 )}
                               </div>
@@ -277,13 +288,33 @@ function PerElectionResultsContent() {
                           </div>
                         </div>
 
-                        {/* Animated Vote Progress Bar */}
-                        <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${isLeader ? 'bg-amber-500' : 'bg-blue-600'}`} 
-                            style={{ width: `${pct}%` }} 
-                          />
-                        </div>
+                        {isSingleCandidate ? (
+                          <>
+                            {/* Yes votes bar */}
+                            <div className="flex justify-between items-center text-[11px]">
+                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">✅ Yes</span>
+                              <span className="font-bold text-emerald-700 dark:text-emerald-300">{votes} votes ({pct}%)</span>
+                            </div>
+                            <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full transition-all duration-500 bg-emerald-500" style={{ width: `${pct}%` }} />
+                            </div>
+                            {/* No votes bar */}
+                            <div className="flex justify-between items-center text-[11px]">
+                              <span className="font-semibold text-red-600 dark:text-red-400">❌ No</span>
+                              <span className="font-bold text-red-700 dark:text-red-300">{noVotes} votes ({noPct}%)</span>
+                            </div>
+                            <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full transition-all duration-500 bg-red-500" style={{ width: `${noPct}%` }} />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${isLeader ? 'bg-amber-500' : 'bg-blue-600'}`} 
+                              style={{ width: `${pct}%` }} 
+                            />
+                          </div>
+                        )}
                       </div>
                     );
                   })}

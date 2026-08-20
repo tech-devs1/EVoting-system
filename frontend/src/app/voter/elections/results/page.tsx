@@ -179,34 +179,72 @@ function PositionChart({
       {/* Candidate Breakdown & Progress Bars */}
       <div className="border-t border-slate-100 dark:border-slate-700/60 pt-4 flex flex-col gap-4">
         {sorted.map((cand, idx) => {
-          const pct = positionTotal > 0 ? Math.round(((cand.votes || 0) / positionTotal) * 100) : 0;
+          const isSingleCandidate = sorted.length === 1;
+          const yesVotes = cand.votes || 0;
+          const noVotes = cand.noVotes || 0;
+          const pct = positionTotal > 0 ? Math.round((yesVotes / positionTotal) * 100) : 0;
+          const noPct = positionTotal > 0 ? Math.round((noVotes / positionTotal) * 100) : 0;
           const color = COLORS[(colorOffset + idx) % COLORS.length];
-          const isWinner = idx === 0 && !isTied && positionTotal > 0;
+          const isWinner = idx === 0 && !isTied && positionTotal > 0 && !isIndependentTied;
           const isCandTied = isTied && (cand.votes || 0) === topVotes;
+          const isRejected = isSingleCandidate && noVotes > yesVotes;
 
           return (
-            <div key={cand.id} className="flex flex-col gap-1.5">
+            <div key={cand.id} className="flex flex-col gap-2">
               <div className="flex justify-between items-center text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: color }}>
                     {idx + 1}
                   </span>
-                  <span className={`font-bold text-slate-900 dark:text-white ${isWinner ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                  <span className={`font-bold text-slate-900 dark:text-white ${isWinner && !isRejected ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                     {cand.ballotNumber ? `No. ${cand.ballotNumber} - ` : ''}{cand.name}
                   </span>
-                  {isWinner && <Trophy size={14} className="text-amber-500" />}
+                  {isWinner && !isRejected && <Trophy size={14} className="text-amber-500" />}
+                  {isRejected && <XCircle size={14} className="text-red-500" />}
                   {isCandTied && <span className="text-amber-500 font-bold">⚖</span>}
                 </div>
-                <span className="font-bold text-slate-700 dark:text-slate-300">
-                  {(cand.votes || 0).toLocaleString()} votes · <span className="text-slate-500">{pct}%</span>
-                </span>
               </div>
-              <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div 
-                  className="h-full rounded-full transition-all duration-500" 
-                  style={{ width: `${pct}%`, backgroundColor: color }} 
-                />
-              </div>
+
+              {isSingleCandidate ? (
+                <>
+                  {/* Yes votes */}
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✅ Yes
+                    </span>
+                    <span className="font-bold text-emerald-700 dark:text-emerald-300">
+                      {yesVotes.toLocaleString()} votes · <span className="text-slate-500">{pct}%</span>
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500 bg-emerald-500" style={{ width: `${pct}%` }} />
+                  </div>
+
+                  {/* No votes */}
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="flex items-center gap-1.5 font-semibold text-red-600 dark:text-red-400">
+                      ❌ No
+                    </span>
+                    <span className="font-bold text-red-700 dark:text-red-300">
+                      {noVotes.toLocaleString()} votes · <span className="text-slate-500">{noPct}%</span>
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500 bg-red-500" style={{ width: `${noPct}%` }} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                      {yesVotes.toLocaleString()} votes · <span className="text-slate-500">{pct}%</span>
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                  </div>
+                </>
+              )}
             </div>
           );
         })}
