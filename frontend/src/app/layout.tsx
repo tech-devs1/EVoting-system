@@ -50,7 +50,6 @@ export default function RootLayout({
       <body>
         <ServiceWorkerRegistrar />
         <AuthProvider>
-          <LoadingScreen />
           {children}
         </AuthProvider>
       </body>

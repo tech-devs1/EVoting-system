@@ -207,7 +207,7 @@ export default function LoginPage() {
                       borderColor: !selectedTenant ? 'rgba(239, 68, 68, 0.4)' : undefined
                     }}
                   >
-                    <option value="" disabled>Choose your department</option>
+                    <option>Choose your department</option>
                     {departments.map((dept) => (
                       <option key={dept.id} value={dept.id}>{dept.name}</option>
                     ))}
