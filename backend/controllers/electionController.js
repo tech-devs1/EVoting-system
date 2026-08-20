@@ -160,7 +160,7 @@ function computeElectionStatus(election) {
   } else if (now >= startTime && now <= endTime) {
     return 'active';
   } else {
-    return 'completed';
+    return 'ended';
   }
 }
 

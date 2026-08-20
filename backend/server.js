@@ -41,7 +41,7 @@ function runElectionScheduler() {
         } else if (now >= startTime && now <= endTime) {
           targetStatus = 'active';
         } else {
-          targetStatus = 'completed';
+          targetStatus = 'ended';
         }
 
         if (election.status !== targetStatus) {

@@ -353,7 +353,7 @@ function PerElectionDashboardContent() {
               </h2>
               {election.status === 'active' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">🟢 LIVE NOW</span>}
               {election.status === 'scheduled' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-900/30">⏰ SCHEDULED</span>}
-              {election.status === 'ended' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">🏁 CLOSED</span>}
+              {(election.status === 'ended' || election.status === 'completed') && <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">🏁 CLOSED</span>}
               {election.status === 'draft' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">📝 DRAFT</span>}
             </div>
 
