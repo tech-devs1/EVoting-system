@@ -191,6 +191,7 @@ CREATE TABLE IF NOT EXISTS voted_voters (
 CREATE TABLE IF NOT EXISTS activity_logs (
   id VARCHAR(128) PRIMARY KEY,
   tenantId VARCHAR(128) NOT NULL,
+  electionId VARCHAR(128) NULL,
   actorEmail VARCHAR(255) NULL,
   actorRole VARCHAR(64) NULL,
   action VARCHAR(128) NOT NULL,
@@ -198,6 +199,7 @@ CREATE TABLE IF NOT EXISTS activity_logs (
   ip VARCHAR(64) NULL,
   timestamp BIGINT NOT NULL,
   INDEX idx_log_tenant (tenantId),
+  INDEX idx_log_election (electionId),
   INDEX idx_log_timestamp (timestamp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

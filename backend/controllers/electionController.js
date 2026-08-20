@@ -412,6 +412,7 @@ exports.createElection = async (req, res) => {
 
     await logActivity({
       tenantId,
+      electionId: newElection.id,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'ELECTION_CREATE',
@@ -510,6 +511,7 @@ exports.updateElection = async (req, res) => {
 
     await logActivity({
       tenantId: getTenantId(req),
+      electionId,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'ELECTION_UPDATE',
@@ -561,6 +563,7 @@ exports.updateElectionTimeWindow = async (req, res) => {
 
     await logActivity({
       tenantId: getTenantId(req),
+      electionId: req.params.id,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'ELECTION_TIME_WINDOW_UPDATE',
@@ -608,6 +611,7 @@ exports.reactivateElection = async (req, res) => {
 
     await logActivity({
       tenantId: getTenantId(req),
+      electionId: req.params.id,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'ELECTION_REACTIVATE',
@@ -638,6 +642,7 @@ exports.updateElectionStatus = async (req, res) => {
 
     await logActivity({
       tenantId: getTenantId(req),
+      electionId: req.params.id,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'ELECTION_STATUS_UPDATE',
@@ -669,6 +674,7 @@ exports.toggleResults = async (req, res) => {
 
     await logActivity({
       tenantId: getTenantId(req),
+      electionId: req.params.id,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'ELECTION_TOGGLE_RESULTS',
@@ -696,6 +702,7 @@ exports.deleteElection = async (req, res) => {
 
     await logActivity({
       tenantId: getTenantId(req),
+      electionId,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'ELECTION_DELETE',
@@ -746,6 +753,7 @@ exports.extendEndTime = async (req, res) => {
 
     await logActivity({
       tenantId: getTenantId(req),
+      electionId: election.id,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'ELECTION_EXTEND_TIME',
@@ -808,6 +816,7 @@ exports.uploadCsv = async (req, res) => {
 
     await logActivity({
       tenantId,
+      electionId,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'ELECTION_CSV_UPLOAD',
@@ -1127,6 +1136,7 @@ exports.addVoter = async (req, res) => {
     cache.invalidatePrefix('elections:');
     await logActivity({
       tenantId,
+      electionId,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'VOTER_ADDED_MANUALLY',
@@ -1163,6 +1173,7 @@ exports.updateVoter = async (req, res) => {
     cache.invalidatePrefix('elections:');
     await logActivity({
       tenantId: req.user?.tenantId || DEFAULT_TENANT_ID,
+      electionId,
       actorEmail: req.user.email,
       actorRole: 'admin',
       action: 'VOTER_UPDATED',
@@ -1427,6 +1438,7 @@ exports.sendInvitations = async (req, res) => {
 
     await logActivity({
       tenantId,
+      electionId,
       actorEmail: req.user?.email || 'admin@htu.edu.gh',
       actorRole: 'admin',
       action: 'ELECTION_SEND_INVITATIONS',
@@ -1593,6 +1605,7 @@ exports.sendBroadcastMessage = async (req, res) => {
 
     await logActivity({
       tenantId,
+      electionId,
       actorEmail: senderEmail,
       actorRole: 'admin',
       action: 'BROADCAST_MESSAGE_SENT',

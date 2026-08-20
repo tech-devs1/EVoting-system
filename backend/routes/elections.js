@@ -401,9 +401,9 @@ router.get('/:id/audit-records', verifyAuth, requireAdmin, async (req, res) => {
     const activityLogs = await ActivityLog.findAll({
       where: {
         [Op.or]: [
+          { electionId },
           { description: { [Op.like]: `%${electionId}%` } },
-          ...(electionTitle ? [{ description: { [Op.like]: `%${electionTitle}%` } }] : []),
-          { tenantId: electionTenantId }
+          ...(electionTitle ? [{ description: { [Op.like]: `%${electionTitle}%` } }] : [])
         ]
       },
       order: [['timestamp', 'DESC']],
@@ -422,6 +422,7 @@ router.get('/:id/audit-records', verifyAuth, requireAdmin, async (req, res) => {
           action: l.action || 'ADMIN_ACTIVITY',
           ip: l.ip || '127.0.0.1',
           tenantId: l.tenantId || 'global',
+          electionId: l.electionId || electionId,
           timestamp: ts,
           details: l.description,
           fullRecord: l.toJSON()
@@ -437,6 +438,7 @@ router.get('/:id/audit-records', verifyAuth, requireAdmin, async (req, res) => {
           action: 'VOTE_CAST',
           ip: 'Protected',
           tenantId: election ? election.tenantId : 'global',
+          electionId: v.electionId || electionId,
           timestamp: ts,
           details: 'Ballot Cast & Cryptographically Verified',
           hash: 'CRYPTOGRAPHICALLY_VERIFIED',
