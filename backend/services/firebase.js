@@ -203,17 +203,20 @@ const db = firestoreDb || new MockFirestore();
 // Multi-Tenant Migration Constant
 const DEFAULT_TENANT_ID = 'compssa';
 
-// Build an admin-like object so middleware can call admin.auth().verifyIdToken()
-let adminAuth = null;
-try {
-  const { getAuth } = require('firebase-admin/auth');
-  adminAuth = getAuth();
-} catch (e) {
-  console.warn('firebase-admin/auth not available:', e.message);
-}
-
 const admin = {
-  auth: () => adminAuth || { verifyIdToken: () => Promise.reject(new Error('Firebase Auth not initialized')) }
+  auth: () => {
+    try {
+      if (getApps().length > 0) {
+        const { getAuth } = require('firebase-admin/auth');
+        return getAuth();
+      }
+    } catch (e) {
+      console.warn('firebase-admin/auth not available:', e.message);
+    }
+    return {
+      verifyIdToken: () => Promise.reject(new Error('Firebase Auth not initialized'))
+    };
+  }
 };
 
 module.exports = { db, DEFAULT_TENANT_ID, admin };

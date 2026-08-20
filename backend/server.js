@@ -4,8 +4,12 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const { migrateDefaultTenant } = require('./services/migrateDefaultTenant');
-migrateDefaultTenant();
+try {
+  const { migrateDefaultTenant } = require('./services/migrateDefaultTenant');
+  migrateDefaultTenant().catch(err => console.warn('[Migration] Warning during startup migration:', err.message));
+} catch (migErr) {
+  console.warn('[Migration] Could not initiate startup migration:', migErr.message);
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,22 +18,30 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/elections', require('./routes/elections'));
-app.use('/api/candidates', require('./routes/candidates'));
-app.use('/api/votes', require('./routes/votes'));
-app.use('/api/admin', require('./routes/admin'));
-app.use('/api/superadmin', require('./routes/superadmin'));
-app.use('/api/imagekit', require('./routes/imagekit'));
+const authRouter = require('./routes/auth');
+const electionsRouter = require('./routes/elections');
+const candidatesRouter = require('./routes/candidates');
+const votesRouter = require('./routes/votes');
+const adminRouter = require('./routes/admin');
+const superadminRouter = require('./routes/superadmin');
+const imagekitRouter = require('./routes/imagekit');
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
+// Support both /api/* and /* for maximum compatibility across Vercel and local dev
+app.use(['/api/auth', '/auth'], authRouter);
+app.use(['/api/elections', '/elections'], electionsRouter);
+app.use(['/api/candidates', '/candidates'], candidatesRouter);
+app.use(['/api/votes', '/votes'], votesRouter);
+app.use(['/api/admin', '/admin'], adminRouter);
+app.use(['/api/superadmin', '/superadmin'], superadminRouter);
+app.use(['/api/imagekit', '/imagekit'], imagekitRouter);
+
+// Health check endpoint (support both /api/health and /health)
+app.get(['/api/health', '/health'], (req, res) => {
   res.status(200).json({ status: 'success', message: 'VoteTrust AI Backend is running', timestamp: new Date() });
 });
 
 // Diagnostic status endpoint to debug Vercel environment variables directly
-app.get('/api/status', (req, res) => {
+app.get(['/api/status', '/status'], (req, res) => {
   const hasProjId = !!process.env.FIREBASE_PROJECT_ID;
   const hasEmail = !!process.env.FIREBASE_CLIENT_EMAIL;
   const hasKey = !!process.env.FIREBASE_PRIVATE_KEY;
@@ -48,8 +60,8 @@ app.get('/api/status', (req, res) => {
 
 // Basic Error Handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+  console.error('[Unhandled Server Error]', err);
+  res.status(500).json({ status: 'error', message: err.message || 'Internal Server Error' });
 });
 
 if (process.env.NODE_ENV !== 'production') {
