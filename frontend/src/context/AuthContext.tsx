@@ -19,7 +19,7 @@ interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   login: (email: string, password?: string, role?: 'voter' | 'admin' | 'superadmin') => Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }>;
-  googleLogin: (studentId: string, googleCredential?: string, accessToken?: string) => Promise<void>;
+  googleLogin: (studentId: string, googleCredential?: string, accessToken?: string, googleEmail?: string) => Promise<void>;
   requestOtp: (studentId: string, googleCredential?: string) => Promise<{ otpRequired?: boolean; email?: string; fallbackOtp?: string }>;
   verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
@@ -158,13 +158,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const googleLogin = async (studentId: string, googleCredential?: string, accessToken?: string): Promise<void> => {
+  const googleLogin = async (studentId: string, googleCredential?: string, accessToken?: string, googleEmail?: string): Promise<void> => {
     setLoading(true);
     try {
       const res = await apiRequest<{ status: string; data: UserProfile; token: string; message?: string }>('/auth/google-login', 'POST', {
         studentId,
         googleCredential,
-        accessToken
+        accessToken,
+        googleEmail
       });
       if (res.status === 'success' && res.token) {
         localStorage.setItem('COMPSSA_token', `Bearer ${res.token}`);

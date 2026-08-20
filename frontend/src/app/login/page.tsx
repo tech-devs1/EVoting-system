@@ -104,9 +104,10 @@ export default function LoginPage() {
       
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
+      const userEmail = result.user.email || undefined;
       
       // Backend validates that the chosen Google account matches the student's email
-      await googleLogin(studentId, idToken, undefined);
+      await googleLogin(studentId, idToken, undefined, userEmail);
     } catch (err: any) {
       console.error('Google sign-in error:', err);
       if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
