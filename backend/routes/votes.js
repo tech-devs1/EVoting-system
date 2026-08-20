@@ -45,10 +45,98 @@ router.get('/voted-elections', verifyAuth, async (req, res) => {
   }
 });
 
+// Helper: Resolve voter email and name from session or Firestore
+async function getVoterInfo(req, voterId) {
+  let email = req.user?.email;
+  let name = req.user?.name;
+  if (!email || email === 'voter' || !name) {
+    try {
+      const tenantId = getTenantId(req);
+      const studentDoc = await db.collection('users').doc(tenantId).collection('voter_rolls').doc(voterId).get();
+      if (studentDoc.exists) {
+        const d = studentDoc.data();
+        email = email || d.email;
+        name = name || d.name;
+      }
+    } catch (_) {}
+  }
+  return { email: email || '', name: name || 'Student Voter' };
+}
+
+// Helper: Send vote confirmation email via EmailJS REST API
+async function sendVoteConfirmationViaEmailJS({ email, name, electionTitle, votesSummary, verificationId, timestamp }) {
+  const serviceId = process.env.EMAILJS_SERVICE_ID;
+  const templateId = process.env.EMAILJS_TEMPLATE_ID;
+  const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
+
+  if (!serviceId || !templateId || !publicKey) {
+    console.warn('[EmailJS Warning] Missing EmailJS env variables (EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY). Ballot confirmation not sent to', email);
+    return false;
+  }
+
+  if (!email) {
+    console.warn('[EmailJS Warning] No recipient email available for voter confirmation.');
+    return false;
+  }
+
+  const formattedDate = new Date(timestamp || Date.now()).toLocaleString('en-US', {
+    dateStyle: 'full',
+    timeStyle: 'medium',
+    timeZone: 'UTC'
+  });
+
+  const payload = {
+    service_id: serviceId,
+    template_id: templateId,
+    user_id: publicKey,
+    accessToken: privateKey,
+    template_params: {
+      to_name: name || 'Voter',
+      to_email: email,
+      user_email: email,
+      student_name: name || 'Voter',
+      student_email: email,
+      election_title: electionTitle,
+      election_name: electionTitle,
+      vote_details: votesSummary,
+      details: votesSummary,
+      candidates_voted: votesSummary,
+      candidates: votesSummary,
+      timestamp: formattedDate,
+      date: formattedDate,
+      time: formattedDate,
+      verification_id: verificationId,
+      receipt_id: verificationId,
+      message: `Dear ${name || 'Voter'},\n\nYour ballot has been successfully cast and registered in the tamper-proof ledger for "${electionTitle}".\n\nVote Breakdown:\n${votesSummary}\n\nTimestamp: ${formattedDate}\nVerification ID: ${verificationId}\n\nThank you for participating in the electoral process.`
+    }
+  };
+
+  try {
+    const fetch = global.fetch || require('node-fetch');
+    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('[EmailJS Vote Confirmation Error]:', errText);
+      return false;
+    }
+    console.log('[EmailJS] Vote confirmation email sent successfully to', email);
+    return true;
+  } catch (err) {
+    console.error('[EmailJS Vote Confirmation Failure]:', err.message || err);
+    return false;
+  }
+}
+
 // Cast a vote (ATOMIC TRANSACTION & HIGH CONCURRENCY READY) - CACHE INVALIDATING
 router.post('/cast', verifyAuth, async (req, res) => {
   try {
-    let { electionId, candidateId, choice } = req.body;
+    let { electionId, candidateId, choice, skipEmail } = req.body;
     const voterId = req.user.uid;
 
     if (candidateId && (candidateId.endsWith(':yes') || candidateId.endsWith(':no'))) {
@@ -64,7 +152,6 @@ router.post('/cast', verifyAuth, async (req, res) => {
     }
 
     // 1. Check if election is active and within valid time window
-    // (We get this from Cache to avoid reading elections document every single time a vote is cast!)
     const election = await cache.getOrSet(`elections:detail:${electionId}`, async () => {
       const doc = await getElectionsRef(req).doc(electionId).get();
       if (!doc.exists) {
@@ -92,8 +179,10 @@ router.post('/cast', verifyAuth, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Invalid candidate for this election' });
     }
 
-    const position = candidateDoc.data().position || 'General';
-    const candidateName = candidateDoc.data().name || '';
+    const candidateData = candidateDoc.data();
+    const position = candidateData.position || 'General';
+    const candidateName = candidateData.name || '';
+    const ballotNo = candidateData.ballotNumber ? ` (Ballot #${candidateData.ballotNumber})` : '';
     const positionKey = position.toLowerCase().replace(/[^a-z0-9]/g, '_');
     const votedRef = getVotedVotersRef(req).doc(`${electionId}_${voterId}_${positionKey}`);
 
@@ -160,6 +249,23 @@ router.post('/cast', verifyAuth, async (req, res) => {
       meta: { electionId, electionTitle: election.title || '' }
     });
 
+    // Send confirmation email via EmailJS if not skipping for a batch
+    if (!skipEmail) {
+      const voterInfo = await getVoterInfo(req, voterId);
+      if (voterInfo.email) {
+        const choiceLabel = choice ? ` [Choice: ${choice.toUpperCase()}]` : '';
+        const singleVoteSummary = `• ${position}: ${candidateName}${ballotNo}${choiceLabel}`;
+        sendVoteConfirmationViaEmailJS({
+          email: voterInfo.email,
+          name: voterInfo.name,
+          electionTitle: election.title || 'Election',
+          votesSummary: singleVoteSummary,
+          verificationId: auditTxId,
+          timestamp: Date.now()
+        }).catch(err => console.error('[EmailJS] Single vote confirmation error:', err));
+      }
+    }
+
     res.status(200).json({ 
       status: 'success', 
       message: 'Vote cast successfully',
@@ -182,6 +288,49 @@ router.post('/cast', verifyAuth, async (req, res) => {
 
     console.error('[Cast Vote] Error casting vote:', error);
     res.status(500).json({ status: 'error', message: `Failed to cast vote: ${error.message}` });
+  }
+});
+
+// Explicit endpoint to send a full multi-category ballot confirmation email via EmailJS
+router.post('/send-confirmation', verifyAuth, async (req, res) => {
+  try {
+    const { electionId, candidates, verificationId, timestamp } = req.body;
+    const voterId = req.user.uid;
+
+    if (!electionId) {
+      return res.status(400).json({ status: 'error', message: 'Election ID is required.' });
+    }
+
+    const electionDoc = await getElectionsRef(req).doc(electionId).get();
+    const electionTitle = electionDoc.exists ? (electionDoc.data().title || 'Election') : 'Election';
+
+    const voterInfo = await getVoterInfo(req, voterId);
+    if (!voterInfo.email) {
+      return res.status(400).json({ status: 'error', message: 'Voter email not found.' });
+    }
+
+    let votesSummary = 'No candidate details recorded.';
+    if (Array.isArray(candidates) && candidates.length > 0) {
+      votesSummary = candidates.map(c => {
+        const choiceStr = c.choice ? ` [Choice: ${c.choice.toUpperCase()}]` : '';
+        const ballotStr = c.ballotNumber ? ` (Ballot #${c.ballotNumber})` : '';
+        return `• ${c.position || 'General'}: ${c.name || 'Candidate'}${ballotStr}${choiceStr}`;
+      }).join('\n');
+    }
+
+    await sendVoteConfirmationViaEmailJS({
+      email: voterInfo.email,
+      name: voterInfo.name,
+      electionTitle,
+      votesSummary,
+      verificationId: verificationId || 'verified',
+      timestamp: timestamp || Date.now()
+    });
+
+    res.status(200).json({ status: 'success', message: 'Confirmation email sent successfully.' });
+  } catch (error) {
+    console.error('Error sending vote confirmation email:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to send confirmation email' });
   }
 });
 

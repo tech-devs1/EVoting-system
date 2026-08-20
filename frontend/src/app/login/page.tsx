@@ -37,11 +37,11 @@ export default function LoginPage() {
         const res = await apiRequest<{ status: string; data: { id: string; name: string }[] }>('/auth/departments');
         if (res.status === 'success') {
           setDepartments(res.data);
-          if (res.data.length > 0) {
-            const stored = localStorage.getItem('COMPSSA_tenantId');
-            const defaultDept = res.data.find(d => d.id === stored) || res.data[0];
-            setSelectedTenant(defaultDept.id);
-            localStorage.setItem('COMPSSA_tenantId', defaultDept.id);
+          const stored = localStorage.getItem('COMPSSA_tenantId');
+          if (stored && res.data.some(d => d.id === stored)) {
+            setSelectedTenant(stored);
+          } else {
+            setSelectedTenant('');
           }
         }
       } catch (err) {
@@ -53,14 +53,16 @@ export default function LoginPage() {
 
   const handleTenantChange = (tenantId: string) => {
     setSelectedTenant(tenantId);
-    localStorage.setItem('COMPSSA_tenantId', tenantId);
+    if (tenantId) {
+      localStorage.setItem('COMPSSA_tenantId', tenantId);
+    }
   };
 
   // ── Step 1: Verify Identifier (Index Number or Admin Email) ──
   const handleIdentifierSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!identifier) { setError('Index Number or Email Address is required'); return; }
-    if (!selectedTenant) { setError('Please select a department'); return; }
+    if (!selectedTenant) { setError('Please choose your department before proceeding.'); return; }
+    if (!identifier.trim()) { setError('Index Number or Email Address is required'); return; }
 
     setError('');
     setLoading(true);
@@ -189,8 +191,8 @@ export default function LoginPage() {
         {step === 'identifier' && (
           <form onSubmit={handleIdentifierSubmit}>
             {departments.length > 0 && (
-              <div className="form-group">
-                <label className="form-label" htmlFor="dept-select">Department / School</label>
+              <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+                <label className="form-label" htmlFor="dept-select">Department / Faculty</label>
                 <div className="form-input-container">
                   <Building2 size={18} className="form-input-icon" />
                   <select
@@ -199,26 +201,44 @@ export default function LoginPage() {
                     required
                     value={selectedTenant}
                     onChange={(e) => handleTenantChange(e.target.value)}
-                    style={{ appearance: 'auto', paddingRight: '24px' }}
+                    style={{
+                      appearance: 'auto',
+                      paddingRight: '24px',
+                      borderColor: !selectedTenant ? 'rgba(239, 68, 68, 0.4)' : undefined
+                    }}
                   >
-                    <option value="" disabled>Select your department...</option>
+                    <option value="" disabled>Choose your department</option>
                     {departments.map((dept) => (
                       <option key={dept.id} value={dept.id}>{dept.name}</option>
                     ))}
                   </select>
                 </div>
+                {/* Notification in red to choose the right department */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  marginTop: '6px',
+                  color: '#dc2626',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  lineHeight: '1.3'
+                }}>
+                  <AlertCircle size={14} style={{ color: '#dc2626', flexShrink: 0 }} />
+                  <span>Please choose your right department before proceeding.</span>
+                </div>
               </div>
             )}
 
             <div className="form-group">
-              <label className="form-label" htmlFor="login-id">Student Index Number or Admin Email</label>
+              <label className="form-label" htmlFor="login-id">Student Index Number</label>
               <div className="form-input-container">
                 <Mail size={18} className="form-input-icon" />
                 <input
                   type="text"
                   id="login-id"
                   className="form-input form-input-with-icon"
-                  placeholder="e.g. 0324080516 or admin@htu.edu.gh"
+                  placeholder="e.g. 032.... or .....@htu.edu.gh"
                   required
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
@@ -226,7 +246,7 @@ export default function LoginPage() {
                 />
               </div>
               <p style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', lineHeight: '1.4' }}>
-                * Students: Enter your school index number (e.g. 0324080516).
+                * Students: Enter your school index number (e.g. 032....).
               </p>
             </div>
 

@@ -110,7 +110,8 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
           data: { verificationId: string } 
         }>('/votes/cast', 'POST', {
           electionId,
-          candidateId: cand.selectedId || cand.id
+          candidateId: cand.selectedId || cand.id,
+          skipEmail: true
         })
       );
 
@@ -118,6 +119,24 @@ function VoteConfirmationPageContent({ electionId }: { electionId: string }) {
       
       // Grab verification ID from the first cast response as representative or store all
       const verificationId = responses[0]?.data?.verificationId || 'verified';
+      const voteTimestamp = Date.now();
+
+      // Dispatch comprehensive confirmation email via EmailJS with all vote details
+      try {
+        await apiRequest('/votes/send-confirmation', 'POST', {
+          electionId,
+          candidates: candidates.map(c => ({
+            position: c.position,
+            name: c.name,
+            choice: c.choice,
+            ballotNumber: (c as any).ballotNumber
+          })),
+          verificationId,
+          timestamp: voteTimestamp
+        });
+      } catch (emailErr) {
+        console.warn('Could not dispatch confirmation email:', emailErr);
+      }
 
       // Save to local storage voter votes history
       if (typeof window !== 'undefined') {
