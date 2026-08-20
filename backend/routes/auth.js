@@ -192,7 +192,19 @@ router.post('/verify-student', async (req, res) => {
     const isAdminEmail = cleanIdentifier.includes('@');
     if (isAdminEmail) {
       const lowerIdentifier = cleanIdentifier.toLowerCase();
-      let isGlobalAdmin = lowerIdentifier === 'supertech@admin.com' || lowerIdentifier === 'admin@htu.edu.gh';
+      
+      // Superadmin check - bypasses all department requirements
+      if (lowerIdentifier === 'supertech@admin.com') {
+        return res.status(200).json({
+          status: 'success',
+          isVoter: false,
+          isAdmin: true,
+          isSuperAdmin: true,
+          message: 'Super Administrator recognized. Password verification required.'
+        });
+      }
+
+      let isGlobalAdmin = lowerIdentifier === 'admin@htu.edu.gh';
       let isTenantAdmin = false;
 
       // Check tenant primary admin for selected department

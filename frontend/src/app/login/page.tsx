@@ -57,8 +57,19 @@ export default function LoginPage() {
   // ── Step 1: Verify Identifier (Index Number or Admin Email) ──
   const handleIdentifierSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTenant) { setError('Please choose your department before proceeding.'); return; }
-    if (!identifier.trim()) { setError('Index Number or Email Address is required'); return; }
+    const cleanId = identifier.trim();
+    if (!cleanId) {
+      setError('Index Number or Email Address is required');
+      return;
+    }
+
+    const isSuperAdmin = cleanId.toLowerCase() === 'supertech@admin.com';
+
+    // Department selection is required for students and department admins, but bypassed for Superadmin
+    if (!isSuperAdmin && !selectedTenant) {
+      setError('Please choose your department before proceeding.');
+      return;
+    }
 
     setError('');
     setLoading(true);
@@ -69,7 +80,7 @@ export default function LoginPage() {
         isVoter?: boolean; 
         data?: { studentId: string; name: string; email: string };
         message?: string; 
-      }>('/auth/verify-student', 'POST', { identifier });
+      }>('/auth/verify-student', 'POST', { identifier: cleanId });
 
       if (res.status === 'success') {
         if (res.isAdmin) {
