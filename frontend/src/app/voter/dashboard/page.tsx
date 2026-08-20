@@ -23,7 +23,7 @@ interface Election {
   description: string;
   startDate: string;
   endDate: string;
-  status: 'draft' | 'scheduled' | 'active' | 'completed';
+  status: 'draft' | 'scheduled' | 'active' | 'ended' | 'completed';
   createdBy?: string;
   showResults?: boolean;
 }

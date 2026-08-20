@@ -173,7 +173,7 @@ exports.getElections = async (req, res) => {
     const list = await Election.findAll({ where });
     const dbUpdates = [];
 
-    const result = list.map(e => {
+    const result = await Promise.all(list.map(async (e) => {
       const item = e.toJSON();
       const currentComputedStatus = computeElectionStatus(item);
 
@@ -181,8 +181,18 @@ exports.getElections = async (req, res) => {
         dbUpdates.push(e.update({ status: currentComputedStatus }));
       }
 
-      return { ...item, status: currentComputedStatus };
-    });
+      const totalVoters = await Voter.count({ where: { electionId: item.id } });
+      const totalVotesCast = await VotedVoter.count({ where: { electionId: item.id } });
+
+      return {
+        ...item,
+        status: currentComputedStatus,
+        totalVoters,
+        voterCount: totalVoters,
+        totalVotesCast,
+        totalVotes: totalVotesCast
+      };
+    }));
 
     if (dbUpdates.length > 0) {
       Promise.all(dbUpdates)
@@ -250,9 +260,16 @@ exports.getEligibleElections = async (req, res) => {
           }
         });
 
+        const totalVoters = await Voter.count({ where: { electionId: election.id } });
+        const totalVotesCast = await VotedVoter.count({ where: { electionId: election.id } });
+
         eligibleElections.push({
           ...item,
           status: updatedStatus,
+          totalVoters,
+          voterCount: totalVoters,
+          totalVotesCast,
+          totalVotes: totalVotesCast,
           hasVoted: !!voted
         });
       }
@@ -299,7 +316,9 @@ exports.getElectionById = async (req, res) => {
         ...item,
         status: updatedStatus,
         totalVoters,
+        voterCount: totalVoters,
         totalVotesCast,
+        totalVotes: totalVotesCast,
         candidateCount,
         positionCount
       };
@@ -362,7 +381,9 @@ exports.getElectionResults = async (req, res) => {
         election: {
           ...item,
           totalVoters,
-          totalVotesCast
+          voterCount: totalVoters,
+          totalVotesCast,
+          totalVotes: totalVotesCast
         },
         candidates: sortedCands.map(c => ({ ...c, position: c.positionTitle })),
         totalVotes: totalVotesCast
@@ -1082,9 +1103,11 @@ exports.getVoters = async (req, res) => {
         name: item.name || 'Student Voter',
         email: item.email || 'N/A',
         phone: item.phone || 'N/A',
-        program: item.program || '',
-        level: item.level || '',
+        phoneNumber: item.phone || 'N/A',
+        program: item.program || item.department || '',
+        programme: item.program || item.department || '',
         department: item.program || item.department || '',
+        level: item.level || '',
         isRegistered: true,
         hasVoted
       };

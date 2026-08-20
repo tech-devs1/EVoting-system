@@ -121,7 +121,7 @@ function AnalyticsContent() {
 
   // Derived data
   const positions = useMemo(() => [...new Set(candidates.map(c => c.position || c.positionTitle || 'General'))], [candidates]);
-  const uniquePrograms = useMemo(() => [...new Set(voters.map(v => v.program || '').filter(Boolean))].sort(), [voters]);
+  const uniquePrograms = useMemo(() => [...new Set(voters.map(v => v.program || (v as any).department || (v as any).programme || '').filter(Boolean))].sort(), [voters]);
   const uniqueLevels = useMemo(() => [...new Set(voters.map(v => v.level || '').filter(Boolean))].sort(), [voters]);
 
   // Filtered candidates
@@ -139,9 +139,14 @@ function AnalyticsContent() {
     return result;
   }, [voters, programFilter, levelFilter]);
 
-  // KPIs
-  const totalVoters = filteredVoters.length;
-  const totalVotesCast = filteredVoters.filter(v => v.hasVoted).length;
+  // KPIs with fallback to election metadata if voter array is not yet loaded
+  const voterCount = filteredVoters.length > 0 ? filteredVoters.length : (election?.totalVoters || (election as any)?.voterCount || 0);
+  const votedCount = filteredVoters.length > 0
+    ? filteredVoters.filter(v => v.hasVoted).length
+    : (election?.totalVotesCast || (election as any)?.totalVotes || 0);
+
+  const totalVoters = voterCount;
+  const totalVotesCast = votedCount;
   const turnout = totalVoters > 0 ? Math.round((totalVotesCast / totalVoters) * 100) : 0;
   const totalPositions = positions.length;
   const totalCandidates = filteredCandidates.length;
@@ -151,7 +156,7 @@ function AnalyticsContent() {
   const turnoutByProgram = useMemo(() => {
     const map: Record<string, { total: number; voted: number }> = {};
     filteredVoters.forEach(v => {
-      const prog = v.program || 'Unknown';
+      const prog = v.program || (v as any).department || (v as any).programme || 'General';
       if (!map[prog]) map[prog] = { total: 0, voted: 0 };
       map[prog].total++;
       if (v.hasVoted) map[prog].voted++;
