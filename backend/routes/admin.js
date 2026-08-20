@@ -917,24 +917,6 @@ router.get('/live-votes', verifyAuth, requireAdmin, async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Failed to fetch live votes' });
   }
 });
-      const topCandidates = [];
-      candidatesDoc.forEach(doc => {
-        const data = doc.data();
-        topCandidates.push({
-          name: data.name,
-          votes: data.votes || 0
-        });
-      });
-
-      return { liveVotesCount, topCandidates };
-    }, 5000); // Cache 5s for live data
-
-    res.status(200).json({ status: 'success', data: liveData });
-  } catch (error) {
-    console.error('[Admin Live Votes] Error fetching live votes:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to fetch live votes' });
-  }
-});
 
 // Clear all voter database records, upload history, and voted records (excluding admins)
 router.post('/voters/clear', verifyAuth, requireAdmin, async (req, res) => {
