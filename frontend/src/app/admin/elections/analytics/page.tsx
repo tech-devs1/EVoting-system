@@ -430,19 +430,19 @@ function AnalyticsContent() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Total Voters', value: totalVoters, icon: Users, color: 'blue' },
-          { label: 'Votes Cast', value: totalVotesCast, icon: Vote, color: 'emerald' },
-          { label: 'Turnout', value: `${turnout}%`, icon: TrendingUp, color: turnout >= 50 ? 'emerald' : 'amber' },
-          { label: 'Positions', value: totalPositions, icon: PieChart, color: 'purple' },
-          { label: 'Candidates', value: totalCandidates, icon: Activity, color: 'pink' },
-          { label: 'Alerts', value: fraudCount, icon: AlertTriangle, color: fraudCount > 0 ? 'red' : 'slate' },
+          { label: 'Total Voters', value: totalVoters, icon: Users, iconBg: 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400' },
+          { label: 'Votes Cast', value: totalVotesCast, icon: Vote, iconBg: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' },
+          { label: 'Turnout', value: `${turnout}%`, icon: TrendingUp, iconBg: turnout >= 50 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' },
+          { label: 'Positions', value: totalPositions, icon: PieChart, iconBg: 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400' },
+          { label: 'Candidates', value: totalCandidates, icon: Activity, iconBg: 'bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400' },
+          { label: 'Alerts', value: fraudCount, icon: AlertTriangle, iconBg: fraudCount > 0 ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400' : 'bg-slate-50 dark:bg-slate-950/40 text-slate-600 dark:text-slate-400' },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl flex items-center justify-between shadow-sm">
             <div>
               <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">{kpi.label}</span>
               <span className="text-xl font-extrabold text-slate-900 dark:text-white">{kpi.value}</span>
             </div>
-            <div className={`p-2.5 bg-${kpi.color}-50 dark:bg-${kpi.color}-950/40 text-${kpi.color}-600 dark:text-${kpi.color}-400 rounded-xl`}>
+            <div className={`p-2.5 rounded-xl ${kpi.iconBg}`}>
               <kpi.icon size={20} />
             </div>
           </div>
