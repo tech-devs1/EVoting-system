@@ -10,12 +10,12 @@
  *   if (isEnded(election)) { ... }
  */
 
-export interface ElectionLike {
+export type ElectionLike = {
   status?: string;
   startDate?: string | null;
   endDate?: string | null;
-  [key: string]: unknown;
-}
+  [key: string]: any;
+};
 
 /**
  * Parse a date string as UTC.
