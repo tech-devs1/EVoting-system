@@ -156,15 +156,19 @@ async function generateAndSendOtp(userDocRef, email, name, phoneNumber = null) {
   return { otp, emailSent, smsSent };
 }
 
-// Public: list active departments for registration/login dropdown
+// Public: list active departments (tenants created by superadmin) for registration/login dropdown
 router.get('/departments', async (req, res) => {
   try {
-    const snapshot = await db.collection('tenants').where('status', '==', 'active').get();
+    const snapshot = await db.collection('tenants').get();
     const departments = [];
     snapshot.forEach(doc => {
       const data = doc.data();
-      departments.push({ id: doc.id, name: data.name });
+      if (data && data.name && (data.status === 'active' || !data.status)) {
+        departments.push({ id: doc.id, name: data.name });
+      }
     });
+    // Sort alphabetically by name
+    departments.sort((a, b) => a.name.localeCompare(b.name));
     res.status(200).json({ status: 'success', data: departments });
   } catch (error) {
     console.error('Error fetching departments:', error);

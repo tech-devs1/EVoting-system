@@ -36,16 +36,12 @@ export default function LoginPage() {
       try {
         const res = await apiRequest<{ status: string; data: { id: string; name: string }[] }>('/auth/departments');
         if (res.status === 'success') {
-          setDepartments(res.data);
-          const stored = localStorage.getItem('COMPSSA_tenantId');
-          if (stored && res.data.some(d => d.id === stored)) {
-            setSelectedTenant(stored);
-          } else {
-            setSelectedTenant('');
-          }
+          setDepartments(res.data || []);
+          setSelectedTenant('');
         }
       } catch (err) {
         console.error('Failed to load departments', err);
+        setDepartments([]);
       }
     }
     loadDepts();
@@ -207,7 +203,7 @@ export default function LoginPage() {
                       borderColor: !selectedTenant ? 'rgba(239, 68, 68, 0.4)' : undefined
                     }}
                   >
-                    <option>Choose your department</option>
+                    <option value="" disabled>Choose your department</option>
                     {departments.map((dept) => (
                       <option key={dept.id} value={dept.id}>{dept.name}</option>
                     ))}
