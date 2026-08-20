@@ -12,7 +12,7 @@ interface Election {
   description: string;
   startDate: string;
   endDate: string;
-  status: 'draft' | 'scheduled' | 'active' | 'completed';
+  status: 'draft' | 'scheduled' | 'active' | 'ended' | 'completed';
   category?: string;
   hasVoted?: boolean;
   showResults?: boolean;
@@ -25,7 +25,7 @@ function CountdownTimer({ endsAt, status }: { endsAt: string; status: string }) 
 
   useEffect(() => {
     if (status !== 'active') {
-      setTimeLeft(status === 'completed' ? 'Ended' : 'Not started');
+      setTimeLeft(status === 'ended' || status === 'completed' ? 'Ended' : 'Not started');
       return;
     }
 
@@ -71,7 +71,7 @@ export default function VoterElectionsPage() {
   const [filteredList, setFilteredList] = useState<Election[]>([]);
   const [votedElectionIds, setVotedElectionIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'active' | 'draft' | 'completed'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'active' | 'draft' | 'ended' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function VoterElectionsPage() {
 
   const mapStatusLabel = (status: string) => {
     if (status === 'draft' || status === 'scheduled') return 'upcoming';
-    if (status === 'completed') return 'closed';
+    if (status === 'ended' || status === 'completed') return 'closed';
     return status;
   };
 

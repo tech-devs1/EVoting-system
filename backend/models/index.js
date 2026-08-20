@@ -182,7 +182,10 @@ const Voter = sequelize.define('Voter', {
   phone: { type: DataTypes.STRING(64) },
   program: { type: DataTypes.STRING(255) },
   level: { type: DataTypes.STRING(64) },
-  role: { type: DataTypes.STRING(32), defaultValue: 'voter' }
+  role: { type: DataTypes.STRING(32), defaultValue: 'voter' },
+  accessOtp: { type: DataTypes.STRING(64) },
+  accessOtpExpiry: { type: DataTypes.BIGINT },
+  otpAttempts: { type: DataTypes.INTEGER, defaultValue: 0 }
 }, { tableName: 'voters', timestamps: true });
 
 // 8. Vote Model (Cryptographic Ballot Ledger)
