@@ -6,11 +6,29 @@ import { auth } from './firebase';
 const API_BASE_URL = '/api';
 
 export async function getAuthHeaders(): Promise<HeadersInit> {
+  // 1. Check local storage token first (holds Admin and Superadmin JWTs)
+  const localToken = typeof window !== 'undefined' ? localStorage.getItem('COMPSSA_token') : null;
+  const localUserStr = typeof window !== 'undefined' ? localStorage.getItem('COMPSSA_user') : null;
+
+  if (localToken && localUserStr) {
+    try {
+      const parsedUser = JSON.parse(localUserStr);
+      if (parsedUser.role === 'admin' || parsedUser.role === 'superadmin') {
+        return {
+          'Authorization': localToken.startsWith('Bearer ') ? localToken : `Bearer ${localToken}`,
+          'Content-Type': 'application/json',
+        };
+      }
+    } catch (e) {
+      // ignore JSON parse error
+    }
+  }
+
+  // 2. Check Firebase ID Token (for voters)
   const user = auth.currentUser;
   if (user) {
     try {
       const token = await user.getIdToken();
-      console.log('[API] Using Firebase token');
       return {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -20,17 +38,14 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
     }
   }
 
-  // Fallback to local storage mock token if user is signed in but no Firebase auth token exists
-  const localToken = typeof window !== 'undefined' ? localStorage.getItem('COMPSSA_token') : null;
+  // 3. Fallback to local token
   if (localToken) {
-    console.log('[API] Using local token:', localToken.substring(0, 30) + '...');
     return {
       'Authorization': localToken.startsWith('Bearer ') ? localToken : `Bearer ${localToken}`,
       'Content-Type': 'application/json',
     };
   }
 
-  console.log('[API] No token found');
   return {
     'Content-Type': 'application/json',
   };

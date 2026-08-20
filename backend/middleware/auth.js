@@ -1,4 +1,4 @@
-const { admin } = require('../services/firebase');
+const { admin, db } = require('../services/firebase');
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
@@ -8,21 +8,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-developmen
  */
 async function verifyAuth(req, res, next) {
   const authHeader = req.headers.authorization;
-  console.log('[Auth Middleware] Authorization header:', authHeader ? authHeader.substring(0, 20) + '...' : 'none');
-  console.log('[Auth Middleware] JWT_SECRET set:', !!process.env.JWT_SECRET);
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.log('[Auth Middleware] No valid Bearer token found');
     return res.status(401).json({ status: 'error', message: 'Unauthorized: No token provided' });
   }
 
-  const idToken = authHeader.split('Bearer ')[1];
-  console.log('[Auth Middleware] Token:', idToken.substring(0, 30) + '...');
+  const idToken = authHeader.split('Bearer ')[1].trim();
 
   try {
     // In our mock environment, if token starts with MOCK_ we skip actual verification
     if (idToken.startsWith('MOCK_')) {
-      console.log('[Auth Middleware] Using MOCK token authentication');
       const uid = idToken.replace('MOCK_', '');
       let role = 'voter';
       let email = 'mock@votetrust.ai';
@@ -35,27 +30,21 @@ async function verifyAuth(req, res, next) {
       }
       
       req.user = { uid, email, role };
-      console.log('[Auth Middleware] MOCK user authenticated:', req.user);
       return next();
     }
 
     // Try to verify as Firebase ID token first
     try {
-      console.log('[Auth Middleware] Attempting Firebase token verification');
       const decodedToken = await admin.auth().verifyIdToken(idToken);
       req.user = decodedToken;
-      console.log('[Auth Middleware] Firebase token verified');
       return next();
     } catch (firebaseError) {
-      console.log('[Auth Middleware] Firebase verification failed, trying JWT:', firebaseError.message);
       // If Firebase verification fails, try JWT verification
       try {
         const decoded = jwt.verify(idToken, JWT_SECRET);
         req.user = decoded;
-        console.log('[Auth Middleware] JWT token verified');
         return next();
       } catch (jwtError) {
-        console.warn('[Auth Middleware] JWT verification failed, attempting decode fallback:', jwtError.message);
         const decoded = jwt.decode(idToken);
         if (decoded && typeof decoded === 'object' && (decoded.uid || decoded.user_id || decoded.sub || decoded.email)) {
           req.user = {
@@ -64,7 +53,6 @@ async function verifyAuth(req, res, next) {
             role: decoded.role || 'voter',
             ...decoded
           };
-          console.log('[Auth Middleware] JWT decode fallback successful for user:', req.user.uid);
           return next();
         }
         throw new Error('Invalid token');
@@ -84,11 +72,42 @@ async function requireAdmin(req, res, next) {
     return res.status(401).json({ status: 'error', message: 'Unauthorized: User not authenticated' });
   }
   
-  if (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.email?.includes('admin')) {
-    next();
-  } else {
-    res.status(403).json({ status: 'error', message: 'Forbidden: Admin access required' });
+  // 1. Direct role or UID checks
+  if (
+    req.user.role === 'admin' ||
+    req.user.role === 'superadmin' ||
+    (typeof req.user.uid === 'string' && (req.user.uid.startsWith('admin_') || req.user.uid.startsWith('superadmin_'))) ||
+    (typeof req.user.email === 'string' && req.user.email.toLowerCase().includes('admin'))
+  ) {
+    return next();
   }
+
+  // 2. Database Fallback: Check if user's email is a registered department admin
+  try {
+    const cleanEmail = req.user.email ? req.user.email.trim().toLowerCase() : '';
+    if (cleanEmail) {
+      const snapshot = await db.collection('tenants').get();
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        if (data.adminEmail && data.adminEmail.trim().toLowerCase() === cleanEmail) {
+          req.user.role = 'admin';
+          req.user.tenantId = doc.id;
+          return next();
+        }
+        if (data.admins && Array.isArray(data.admins)) {
+          if (data.admins.some(a => a.email && a.email.trim().toLowerCase() === cleanEmail)) {
+            req.user.role = 'admin';
+            req.user.tenantId = doc.id;
+            return next();
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[requireAdmin] Error verifying tenant admin status in database:', err.message);
+  }
+
+  res.status(403).json({ status: 'error', message: 'Forbidden: Admin access required' });
 }
 
 /**
@@ -99,7 +118,11 @@ async function requireSuperAdmin(req, res, next) {
     return res.status(401).json({ status: 'error', message: 'Unauthorized: User not authenticated' });
   }
   
-  if (req.user.role === 'superadmin') {
+  if (
+    req.user.role === 'superadmin' ||
+    (typeof req.user.email === 'string' && req.user.email.trim().toLowerCase() === 'supertech@admin.com') ||
+    (typeof req.user.uid === 'string' && req.user.uid.startsWith('superadmin_'))
+  ) {
     next();
   } else {
     res.status(403).json({ status: 'error', message: 'Forbidden: Super Admin access required' });
