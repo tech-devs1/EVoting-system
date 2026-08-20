@@ -43,9 +43,11 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const headers = await getAuthHeaders();
   
-  // Inject default tenant ID for multi-tenant VaaS transition
-  const tenantId = typeof window !== 'undefined' ? localStorage.getItem('COMPSSA_tenantId') || 'default_tenant' : 'default_tenant';
-  (headers as any)['x-tenant-id'] = tenantId;
+  // Inject tenant ID if non-empty
+  const storedTenant = typeof window !== 'undefined' ? localStorage.getItem('COMPSSA_tenantId') : null;
+  if (storedTenant && storedTenant.trim()) {
+    (headers as any)['x-tenant-id'] = storedTenant.trim();
+  }
 
   const options: RequestInit = {
     method,

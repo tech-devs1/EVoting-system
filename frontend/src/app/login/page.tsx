@@ -237,7 +237,7 @@ export default function LoginPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="login-id">Student Index Number</label>
+              <label className="form-label" htmlFor="login-id">Index Number/email</label>
               <div className="form-input-container">
                 <Mail size={18} className="form-input-icon" />
                 <input
@@ -252,7 +252,7 @@ export default function LoginPage() {
                 />
               </div>
               <p style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', lineHeight: '1.4' }}>
-                * Students: Enter your school index number (e.g. 032....).
+                * Students: Enter your index number/email (e.g. 032....).
               </p>
             </div>
 

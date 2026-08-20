@@ -4,7 +4,15 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
 
-const getTenantId = (req) => req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
+const getTenantId = (req) => {
+  const h = req.headers['x-tenant-id'];
+  if (h && typeof h === 'string' && h.trim()) return h.trim();
+  const q = req.query?.tenantId;
+  if (q && typeof q === 'string' && q.trim()) return q.trim();
+  const b = req.body?.tenantId;
+  if (b && typeof b === 'string' && b.trim()) return b.trim();
+  return DEFAULT_TENANT_ID || 'compssa';
+};
 const { verifyAuth } = require('../middleware/auth');
 const { logFraudAlert } = require('../services/fraud');
 const { logActivity } = require('../services/activityLog');
