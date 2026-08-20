@@ -9,6 +9,7 @@ const getTenantId = (req) => {
   if (q && typeof q === 'string' && q.trim()) return q.trim();
   const b = req.body?.tenantId;
   if (b && typeof b === 'string' && b.trim()) return b.trim();
+  if (req.user?.tenantId && typeof req.user.tenantId === 'string' && req.user.tenantId.trim()) return req.user.tenantId.trim();
   return DEFAULT_TENANT_ID || 'compssa';
 };
 const getElectionsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('elections');
@@ -27,7 +28,8 @@ const { logActivity } = require('../services/activityLog');
 // Get Dashboard Analytics - OPTIMIZED WITH AGGREGATIONS + CACHE
 router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const dashboardData = await cache.getOrSet('admin:dashboard', async () => {
+    const tenantId = getTenantId(req);
+    const dashboardData = await cache.getOrSet(`admin:dashboard:${tenantId}`, async () => {
       // 1. Get active elections
       const activeElectionsSnapForQuery = await getElectionsRef(req).where('status', '==', 'active').get();
       const activeElectionIds = [];
@@ -35,12 +37,19 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
         activeElectionIds.push(doc.id);
       });
 
-      // 2. Server-side aggregations for total counts (~1 Read per collection)
-      const electionsCountSnap = await getElectionsRef(req).count().get();
-      const votersCountSnap = await getUsersRef(req).where('isRegistered', '==', true).count().get();
-      
-      const totalElections = electionsCountSnap.data().count;
-      const totalVoters = votersCountSnap.data().count;
+      // 2. Server-side aggregations / reads for total counts
+      let totalElections = 0;
+      let totalVoters = 0;
+      try {
+        const [electionsSnap, votersSnap] = await Promise.all([
+          getElectionsRef(req).get(),
+          getUsersRef(req).where('isRegistered', '==', true).get()
+        ]);
+        totalElections = electionsSnap.size;
+        totalVoters = votersSnap.size;
+      } catch (cntErr) {
+        console.warn('[Dashboard] Counts failed:', cntErr.message);
+      }
 
       let totalVotesCast = 0;
       let uniqueVotersCount = 0;
@@ -54,11 +63,12 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
 
       if (targetElectionIds.length > 0) {
         try {
-          const votesCountSnap = await getVotesRef(req).where('electionId', 'in', targetElectionIds.slice(0, 30)).count().get();
-          totalVotesCast = votesCountSnap.data().count;
-
-          const uniqueVotersSnap = await getVotedVotersRef(req).where('electionId', 'in', targetElectionIds.slice(0, 30)).count().get();
-          uniqueVotersCount = uniqueVotersSnap.data().count;
+          const [votesSnap, votersSnap] = await Promise.all([
+            getVotesRef(req).where('electionId', 'in', targetElectionIds.slice(0, 30)).get(),
+            getVotedVotersRef(req).where('electionId', 'in', targetElectionIds.slice(0, 30)).get()
+          ]);
+          totalVotesCast = votesSnap.size;
+          uniqueVotersCount = votersSnap.size;
         } catch (err) {
           console.warn('[Dashboard] Error querying votes/voted_voters:', err.message);
         }
@@ -79,7 +89,6 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
           });
           totalVotesCast = candTotal;
           if (uniqueVotersCount === 0) {
-            // Unique voters = max votes in any single category
             const maxPosVotes = Math.max(0, ...Object.values(posTotals));
             uniqueVotersCount = maxPosVotes;
           }
@@ -89,15 +98,15 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
       }
 
       // 3. Fetch election statuses cleanly
-      const completedElectionsSnap = await getElectionsRef(req).where('status', '==', 'completed').count().get();
+      const completedElectionsSnap = await getElectionsRef(req).where('status', '==', 'completed').get();
       const activeElectionsCount = activeElectionIds.length;
-      const completedElectionsCount = completedElectionsSnap.data().count;
+      const completedElectionsCount = completedElectionsSnap.size;
 
-      // 4. Count non-admin students using count aggregation (1 Read)
-      const totalStudentsSnap = await getUsersRef(req).where('role', '!=', 'admin').count().get();
-      const totalStudents = totalStudentsSnap.data().count;
+      // 4. Count non-admin students
+      const totalStudentsSnap = await getUsersRef(req).get();
+      const totalStudents = totalStudentsSnap.docs.filter(d => d.data().role !== 'admin').length;
 
-      // 5. Fetch top 10 candidates for chart (10 Reads)
+      // 5. Fetch top 10 candidates for chart
       const candidatesDoc = await getCandidatesRef(req).orderBy('votes', 'desc').limit(10).get();
       const topCandidates = [];
       candidatesDoc.forEach(doc => {
@@ -129,15 +138,16 @@ router.get('/dashboard', verifyAuth, requireAdmin, async (req, res) => {
 });
 
 // COMBINED endpoint: Dashboard KPIs + Election Results + Flagged Users in ONE call
-// Replaces 3+ separate API calls with a single round-trip
 router.get('/dashboard-full', verifyAuth, requireAdmin, async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     const skipCache = req.query.nocache === 'true';
     if (skipCache) {
+      cache.invalidate(`admin:dashboard-full:${tenantId}`);
       cache.invalidate('admin:dashboard-full');
     }
 
-    const fullData = await cache.getOrSet('admin:dashboard-full', async () => {
+    const fullData = await cache.getOrSet(`admin:dashboard-full:${tenantId}`, async () => {
       // --- KPIs ---
       let activeElectionIds = [];
       try {
@@ -587,14 +597,20 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
       skipped
     });
 
-    // Invalidate report cache since voter data changed
+    // Invalidate report and upload caches since voter data changed
+    const tenantId = getTenantId(req);
+    cache.invalidate(`admin:uploads:${tenantId}`);
+    cache.invalidate('admin:uploads');
+    cache.invalidate(`admin:report:${tenantId}`);
     cache.invalidate('admin:report');
+    cache.invalidate(`admin:analytics:${tenantId}`);
     cache.invalidate('admin:analytics');
+    cache.invalidate(`admin:dashboard:${tenantId}`);
     cache.invalidate('admin:dashboard');
+    cache.invalidate(`admin:dashboard-full:${tenantId}`);
     cache.invalidate('admin:dashboard-full');
 
     // Log activity
-    const tenantId = getTenantId(req);
     await logActivity({
       tenantId,
       actorEmail: req.user?.email || 'admin',
@@ -617,17 +633,47 @@ router.post('/voters/bulk', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Get voter upload history
+// Get voter upload history with resilient synthesis
 router.get('/voters/uploads', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const uploads = await cache.getOrSet('admin:uploads', async () => {
-      const snapshot = await getUploadsRef(req).orderBy('timestamp', 'desc').get();
+    const tenantId = getTenantId(req);
+    const uploads = await cache.getOrSet(`admin:uploads:${tenantId}`, async () => {
+      let snapshot;
+      try {
+        snapshot = await getUploadsRef(req).orderBy('timestamp', 'desc').get();
+      } catch (orderErr) {
+        console.warn('[Uploads] orderBy failed, fetching raw collection:', orderErr.message);
+        snapshot = await getUploadsRef(req).get();
+      }
+
       const results = [];
       snapshot.forEach(doc => {
          results.push({ id: doc.id, ...doc.data() });
       });
+
+      // Sort by timestamp desc in memory
+      results.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      // Fallback: If no upload file record exists, but student rolls exist, synthesize roster entry
+      if (results.length === 0) {
+        try {
+          const votersSnap = await getUsersRef(req).get();
+          if (!votersSnap.empty) {
+            results.push({
+              id: 'primary_roster',
+              filename: 'Primary Voter Database Roster',
+              timestamp: Date.now(),
+              added: votersSnap.size,
+              skipped: 0
+            });
+          }
+        } catch (vErr) {
+          console.warn('[Uploads] Fallback roster check failed:', vErr.message);
+        }
+      }
+
       return results;
-    }, 15000); // Cache 15s
+    }, 5000); // 5s cache
 
     res.status(200).json({ status: 'success', data: uploads });
   } catch (error) {
@@ -636,102 +682,73 @@ router.get('/voters/uploads', verifyAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Delete an upload and all associated voters, and clear flagged users
-router.delete('/voters/uploads/:uploadId', verifyAuth, requireAdmin, async (req, res) => {
+// Get all enrolled voters/students for the current department
+router.get('/voters', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const { uploadId } = req.params;
+    const { search, limit: queryLimit, page: queryPage } = req.query;
+    const snapshot = await getUsersRef(req).get();
+    let voters = [];
+    
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      voters.push({
+        id: doc.id,
+        name: data.name || 'N/A',
+        studentId: data.studentId || doc.id,
+        email: data.email || '',
+        programme: data.programme || '',
+        level: data.level || '',
+        phone: data.phone || '',
+        isRegistered: !!data.isRegistered,
+        uploadId: data.uploadId || '',
+        createdAt: data.createdAt || null
+      });
+    });
 
-    // 1. Delete associated voters
-    const votersSnapshot = await getUsersRef(req).where('uploadId', '==', uploadId).get();
-    if (!votersSnapshot.empty) {
-      const docs = votersSnapshot.docs;
-      const chunkSize = 400;
-      for (let i = 0; i < docs.length; i += chunkSize) {
-        const chunk = docs.slice(i, i + chunkSize);
-        const batch = db.batch();
-        chunk.forEach(doc => {
-          batch.delete(doc.ref);
-        });
-        await batch.commit();
-      }
+    if (search && typeof search === 'string' && search.trim()) {
+      const q = search.trim().toLowerCase();
+      voters = voters.filter(v => 
+        (v.name && v.name.toLowerCase().includes(q)) ||
+        (v.studentId && v.studentId.toLowerCase().includes(q)) ||
+        (v.email && v.email.toLowerCase().includes(q)) ||
+        (v.programme && v.programme.toLowerCase().includes(q)) ||
+        (v.level && v.level.toLowerCase().includes(q))
+      );
     }
 
-    // 2. Clear flagged users (UNRECOGNIZED_STUDENT fraud alerts)
-    const fraudSnapshot = await getFraudAlertsRef(req).where('type', '==', 'UNRECOGNIZED_STUDENT').get();
-    if (!fraudSnapshot.empty) {
-      const docs = fraudSnapshot.docs;
-      const chunkSize = 400;
-      for (let i = 0; i < docs.length; i += chunkSize) {
-        const chunk = docs.slice(i, i + chunkSize);
-        const batch = db.batch();
-        chunk.forEach(doc => {
-          batch.delete(doc.ref);
-        });
-        await batch.commit();
-      }
-    }
+    // Sort by name ascending
+    voters.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-    // 3. Delete the upload document itself
-    await getUploadsRef(req).doc(uploadId).delete();
-
-    // Invalidate caches
-    cache.invalidate('admin:uploads');
-    cache.invalidate('admin:report');
-    cache.invalidate('admin:analytics');
-    cache.invalidate('admin:dashboard');
-    cache.invalidate('admin:dashboard-full');
-    cache.invalidate('admin:flagged-users');
-    cache.invalidate('admin:fraud-alerts');
+    const total = voters.length;
+    const limit = parseInt(queryLimit, 10) || 50;
+    const page = parseInt(queryPage, 10) || 1;
+    const paginated = voters.slice((page - 1) * limit, page * limit);
 
     res.status(200).json({
       status: 'success',
-      message: `Upload, ${votersSnapshot.size} associated voter records, and ${fraudSnapshot.size} flagged users cleared successfully.`
+      data: {
+        voters: paginated,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit) || 1
+      }
     });
   } catch (error) {
-    console.error('Error deleting upload and flagged users:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to delete upload and linked records' });
-  }
-});
-
-// Get Fraud Alerts - OPTIMIZED: Use Firestore .where() filter instead of reading ALL docs
-router.get('/fraud-alerts', verifyAuth, requireAdmin, async (req, res) => {
-  try {
-    const alerts = await cache.getOrSet('admin:fraud-alerts', async () => {
-      let alertsDoc = await getFraudAlertsRef(req)
-        .where('type', '==', 'DUPLICATE_VOTE')
-        .orderBy('timestamp', 'desc')
-        .limit(100)
-        .get();
-
-      // Removed global fallback
-
-      if (alertsDoc.empty) return [];
-
-      const results = [];
-      alertsDoc.forEach(doc => {
-        results.push({ id: doc.id, ...doc.data() });
-      });
-      return results;
-    }, 15000);
-
-    res.status(200).json({ status: 'success', data: alerts });
-  } catch (error) {
-    console.error('Error fetching fraud alerts:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to fetch fraud alerts' });
+    console.error('Error fetching voters list:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch voters' });
   }
 });
 
 // Get Flagged Users - OPTIMIZED: Use Firestore .where() filter instead of reading ALL docs
 router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const flagged = await cache.getOrSet('admin:flagged-users', async () => {
+    const tenantId = getTenantId(req);
+    const flagged = await cache.getOrSet(`admin:flagged-users:${tenantId}`, async () => {
       let alertsDoc = await getFraudAlertsRef(req)
         .where('type', '==', 'UNRECOGNIZED_STUDENT')
         .orderBy('timestamp', 'desc')
         .limit(50)
         .get();
-
-      // Removed global fallback
 
       if (alertsDoc.empty) return [];
 
@@ -761,7 +778,8 @@ router.get('/flagged-users', verifyAuth, requireAdmin, async (req, res) => {
 // Get Analytics Data
 router.get('/analytics', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const analyticsData = await cache.getOrSet('admin:analytics', async () => {
+    const tenantId = getTenantId(req);
+    const analyticsData = await cache.getOrSet(`admin:analytics:${tenantId}`, async () => {
       // 1. Fetch total users
       const usersSnap = await getUsersRef(req).get();
       let totalVoters = 0;
@@ -871,13 +889,34 @@ router.get('/export/:format', verifyAuth, requireAdmin, async (req, res) => {
 // Live votes count endpoint - OPTIMIZED WITH AGGREGATIONS + CACHE
 router.get('/live-votes', verifyAuth, requireAdmin, async (req, res) => {
   try {
-    const liveData = await cache.getOrSet('admin:live-votes', async () => {
-      // 1. Fast count aggregation (~1 Read instead of reading every vote doc)
-      const votesCountSnap = await getVotesRef(req).count().get();
-      const liveVotesCount = votesCountSnap.data().count;
+    const tenantId = getTenantId(req);
+    const liveData = await cache.getOrSet(`admin:live-votes:${tenantId}`, async () => {
+      const votesSnap = await getVotesRef(req).get();
+      const liveVotesCount = votesSnap.size;
       
-      // 2. Fetch top candidates (10 Reads)
+      // Fetch top candidates
       const candidatesDoc = await getCandidatesRef(req).orderBy('votes', 'desc').limit(10).get();
+      const topCandidates = [];
+      candidatesDoc.forEach(doc => {
+        const data = doc.data();
+        topCandidates.push({
+          name: data.name,
+          votes: data.votes || 0
+        });
+      });
+
+      return {
+        liveVotesCount,
+        topCandidates
+      };
+    }, 5000);
+
+    res.status(200).json({ status: 'success', data: liveData });
+  } catch (error) {
+    console.error('Error fetching live votes data:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch live votes' });
+  }
+});
       const topCandidates = [];
       candidatesDoc.forEach(doc => {
         const data = doc.data();

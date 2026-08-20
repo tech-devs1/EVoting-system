@@ -2,9 +2,19 @@ const express = require('express');
 const router = express.Router();
 const { db, DEFAULT_TENANT_ID } = require('../services/firebase');
 
+const getTenantId = (req) => {
+  const h = req.headers['x-tenant-id'];
+  if (h && typeof h === 'string' && h.trim()) return h.trim();
+  const q = req.query?.tenantId;
+  if (q && typeof q === 'string' && q.trim()) return q.trim();
+  const b = req.body?.tenantId;
+  if (b && typeof b === 'string' && b.trim()) return b.trim();
+  if (req.user?.tenantId && typeof req.user.tenantId === 'string' && req.user.tenantId.trim()) return req.user.tenantId.trim();
+  return DEFAULT_TENANT_ID || 'compssa';
+};
+
 const getElectionsRef = (req) => {
-  const tenantId = req.headers['x-tenant-id'] || req.query.tenantId || req.body.tenantId || DEFAULT_TENANT_ID;
-  return db.collection('tenants').doc(tenantId).collection('elections');
+  return db.collection('tenants').doc(getTenantId(req)).collection('elections');
 };
 const { verifyAuth, requireAdmin } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
@@ -14,7 +24,8 @@ const cache = require('../services/cache');
 router.get('/', async (req, res) => {
   try {
     const { status } = req.query;
-    const cacheKey = `elections:list:${status || 'all'}`;
+    const tenantId = getTenantId(req);
+    const cacheKey = `elections:list:${tenantId}:${status || 'all'}`;
 
     const elections = await cache.getOrSet(cacheKey, async () => {
       const electionsRef = getElectionsRef(req);

@@ -9,6 +9,7 @@ const getTenantId = (req) => {
   if (q && typeof q === 'string' && q.trim()) return q.trim();
   const b = req.body?.tenantId;
   if (b && typeof b === 'string' && b.trim()) return b.trim();
+  if (req.user?.tenantId && typeof req.user.tenantId === 'string' && req.user.tenantId.trim()) return req.user.tenantId.trim();
   return DEFAULT_TENANT_ID || 'compssa';
 };
 const getElectionsRef = (req) => db.collection('tenants').doc(getTenantId(req)).collection('elections');
