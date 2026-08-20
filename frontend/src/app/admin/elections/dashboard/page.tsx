@@ -330,6 +330,10 @@ function PerElectionDashboardContent() {
     new Date(election.endDate).getTime() <= Date.now()
   ) : false;
 
+  const isElectionActive = election ? (
+    election.status === 'active' && !isElectionEnded
+  ) : false;
+
   const turnout = (election.totalVoters && election.totalVoters > 0)
     ? Math.min(100, Math.round(((election.totalVotesCast || 0) / election.totalVoters) * 100))
     : 0;
@@ -369,7 +373,9 @@ function PerElectionDashboardContent() {
           <div className="flex items-center gap-2 flex-wrap">
             <button 
               onClick={() => setIsEditModalOpen(true)} 
-              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+              disabled={isElectionActive}
+              title={isElectionActive ? 'Editing is disabled while the poll is live' : undefined}
+              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
             >
               <Edit size={14} /> Edit Election Details
             </button>
@@ -394,22 +400,26 @@ function PerElectionDashboardContent() {
               </div>
             )}
             <button 
-              disabled={actionLoading} 
+              disabled={actionLoading || isElectionActive} 
               onClick={openInviteModal} 
-              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+              title={isElectionActive ? 'Invitations cannot be sent while the poll is live' : undefined}
+              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
             >
               <Mail size={14} /> Send Invitations
             </button>
             <button 
-              disabled={actionLoading || pdfLoading} 
+              disabled={actionLoading || pdfLoading || isElectionActive} 
               onClick={handleDownloadPDF} 
-              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+              title={isElectionActive ? 'Results PDF is available after the poll ends' : undefined}
+              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
             >
               <Download size={14} /> Download Results PDF
             </button>
             <button 
               onClick={handleExportAudit} 
-              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+              disabled={isElectionActive}
+              title={isElectionActive ? 'Audit export is available after the poll ends' : undefined}
+              className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
             >
               <Download size={14} /> Audit Ledger CSV
             </button>
@@ -449,8 +459,9 @@ function PerElectionDashboardContent() {
 
         <button
           onClick={handleTogglePublishResults}
-          disabled={actionLoading}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 transition-colors flex items-center gap-1.5 ${
+          disabled={actionLoading || isElectionActive}
+          title={isElectionActive ? 'Results visibility can only be changed after the poll ends' : undefined}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
             election.showResults
               ? 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
               : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20'

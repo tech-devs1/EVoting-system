@@ -2,6 +2,27 @@ const { Election, Candidate, Voter, VotedVoter, Vote, Tenant, Position } = requi
 const { Op } = require('sequelize');
 const PDFDocument = require('pdfkit');
 
+// Shared helper: compute dynamic election status based on current time
+function computeElectionStatus(election) {
+  if (!election) return 'draft';
+  if (election.status === 'draft') {
+    if (election.startDate && election.endDate) {
+      const now = Date.now();
+      const startTime = new Date(election.startDate).getTime();
+      const endTime = new Date(election.endDate).getTime();
+      if (now < startTime) return 'scheduled';
+      if (now >= startTime && now <= endTime) return 'active';
+    }
+    return 'draft';
+  }
+  const now = Date.now();
+  const startTime = election.startDate ? new Date(election.startDate).getTime() : 0;
+  const endTime = election.endDate ? new Date(election.endDate).getTime() : Infinity;
+  if (now < startTime) return 'scheduled';
+  if (now >= startTime && now <= endTime) return 'active';
+  return 'ended';
+}
+
 exports.getDashboardStats = async (req, res) => {
   try {
     const tenantId = req.user.tenantId;
@@ -39,7 +60,7 @@ exports.getDashboardFullStats = async (req, res) => {
     const electionIds = elections.map(e => e.id);
 
     const totalElections = elections.length;
-    const activeElectionsCount = elections.filter(e => e.status === 'active').length;
+    const activeElectionsCount = elections.filter(e => computeElectionStatus(e.toJSON()) === 'active').length;
     const totalCandidates = await Candidate.count({ where: { electionId: { [Op.in]: electionIds } } });
     const totalVoters = await Voter.count({ where: { tenantId } });
     const totalVotesCast = await VotedVoter.count({ where: { electionId: { [Op.in]: electionIds } } });
@@ -52,9 +73,14 @@ exports.getDashboardFullStats = async (req, res) => {
       const votesCount = await VotedVoter.count({ where: { electionId: el.id } });
       const votersCount = await Voter.count({ where: { electionId: el.id } });
 
+      const computedStatus = computeElectionStatus(elItem);
+      if (elItem.status !== 'draft' && elItem.status !== computedStatus) {
+        el.update({ status: computedStatus }).catch(() => {});
+      }
       electionResults.push({
         election: {
           ...elItem,
+          status: computedStatus,
           totalVoters: votersCount,
           voterCount: votersCount,
           totalVotesCast: votesCount

@@ -191,7 +191,7 @@ export default function AdminReportsPage() {
                 flexWrap: 'wrap',
                 gap: '1.5rem',
                 borderLeft: `4px solid ${
-                  election.status === 'completed' ? '#10B981' : election.status === 'active' ? '#3B82F6' : '#94A3B8'
+                  election.status === 'ended' || election.status === 'completed' ? '#10B981' : election.status === 'active' ? '#3B82F6' : '#94A3B8'
                 }`
               }}
             >
@@ -202,7 +202,7 @@ export default function AdminReportsPage() {
                   </h3>
                   <span
                     className={`badge ${
-                      election.status === 'completed'
+                      election.status === 'ended' || election.status === 'completed'
                         ? 'badge-success'
                         : election.status === 'active'
                         ? 'badge-primary'

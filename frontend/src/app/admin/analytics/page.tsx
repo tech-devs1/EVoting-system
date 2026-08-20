@@ -141,7 +141,7 @@ export default function AdminAnalyticsPage() {
                   <td>{row.cast > 0 ? row.cast.toLocaleString() : '—'}</td>
                   <td style={{ fontWeight: 'bold', color: 'var(--color-success)' }}>{row.rate}</td>
                   <td>
-                    <span className={`badge ${row.status === 'active' ? 'badge-success' : row.status === 'completed' ? 'badge-info' : 'badge-warning'}`}>
+                    <span className={`badge ${row.status === 'active' ? 'badge-success' : row.status === 'ended' || row.status === 'completed' ? 'badge-info' : 'badge-warning'}`}>
                       {row.status}
                     </span>
                   </td>
