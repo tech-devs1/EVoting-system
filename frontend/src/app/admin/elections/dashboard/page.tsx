@@ -136,9 +136,6 @@ function PerElectionDashboardContent() {
           title: editTitle,
           description: editDescription,
           category: editCategory,
-          startDate: editStartDate,
-          endDate: editEndDate,
-          status: editStatus,
           showResults: editShowResults,
           previewImageUrl: editPreviewImageUrl
         }
@@ -621,11 +618,9 @@ function PerElectionDashboardContent() {
 
             <div>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                Election Status
+                Election Status (computed automatically)
               </label>
-              <select
-                value={editStatus}
-                onChange={(e) => setEditStatus(e.target.value)}
+              <div
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
@@ -634,27 +629,31 @@ function PerElectionDashboardContent() {
                   backgroundColor: 'var(--bg-input)',
                   color: 'var(--text-primary)',
                   fontSize: '0.9rem',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  opacity: 0.7
                 }}
               >
-                <option value="draft">Draft (Setup Phase)</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="active">Active (Voting Open)</option>
-                <option value="ended">Ended (Voting Closed)</option>
-              </select>
+                {(() => {
+                  const effStatus = election ? getEffectiveStatus(election) : editStatus;
+                  const labels: Record<string, string> = {
+                    draft: 'Draft (Setup Phase)',
+                    scheduled: 'Scheduled',
+                    active: 'Active (Voting Open)',
+                    ended: 'Ended (Voting Closed)',
+                    completed: 'Ended (Voting Closed)'
+                  };
+                  return labels[effStatus] || effStatus;
+                })()}
+              </div>
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                Poll Opening Date & Time *
+                Poll Opening Date & Time
               </label>
-              <input
-                type="datetime-local"
-                required
-                value={editStartDate}
-                onChange={(e) => setEditStartDate(e.target.value)}
+              <div
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
@@ -663,20 +662,19 @@ function PerElectionDashboardContent() {
                   backgroundColor: 'var(--bg-input)',
                   color: 'var(--text-primary)',
                   fontSize: '0.9rem',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  opacity: 0.7
                 }}
-              />
+              >
+                {election?.startDate ? new Date(election.startDate).toLocaleString() : 'Not set'}
+              </div>
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                Poll Closing Date & Time *
+                Poll Closing Date & Time
               </label>
-              <input
-                type="datetime-local"
-                required
-                value={editEndDate}
-                onChange={(e) => setEditEndDate(e.target.value)}
+              <div
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
@@ -685,10 +683,16 @@ function PerElectionDashboardContent() {
                   backgroundColor: 'var(--bg-input)',
                   color: 'var(--text-primary)',
                   fontSize: '0.9rem',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  opacity: 0.7
                 }}
-              />
+              >
+                {election?.endDate ? new Date(election.endDate).toLocaleString() : 'Not set'}
+              </div>
             </div>
+          </div>
+          <div style={{ backgroundColor: '#EFF6FF', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #BFDBFE', color: '#1E40AF', fontSize: '0.8rem' }}>
+            ℹ️ Poll dates and status are managed automatically by the system schedule. To change them, delete this election and create a new one.
           </div>
 
           <div>
