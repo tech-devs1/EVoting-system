@@ -219,6 +219,7 @@ const VotedVoter = sequelize.define('VotedVoter', {
 const ActivityLog = sequelize.define('ActivityLog', {
   id: { type: DataTypes.STRING(128), primaryKey: true },
   tenantId: { type: DataTypes.STRING(128), allowNull: false },
+  electionId: { type: DataTypes.STRING(128) },
   actorEmail: { type: DataTypes.STRING(255) },
   actorRole: { type: DataTypes.STRING(64) },
   action: { type: DataTypes.STRING(128), allowNull: false },

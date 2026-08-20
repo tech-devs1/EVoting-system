@@ -139,7 +139,18 @@ async function sendOtpViaBMS(phoneNumber, otp) {
 
 // Helper to compute dynamic election status based on current time
 function computeElectionStatus(election) {
-  if (!election || election.status === 'draft') return election?.status || 'draft';
+  if (!election) return 'draft';
+  if (election.status === 'draft') {
+    // Draft elections with dates set: auto-transition based on schedule
+    if (election.startDate && election.endDate) {
+      const now = Date.now();
+      const startTime = new Date(election.startDate).getTime();
+      const endTime = new Date(election.endDate).getTime();
+      if (now < startTime) return 'scheduled';
+      if (now >= startTime && now <= endTime) return 'active';
+    }
+    return 'draft';
+  }
   const now = Date.now();
   const startTime = election.startDate ? new Date(election.startDate).getTime() : 0;
   const endTime = election.endDate ? new Date(election.endDate).getTime() : Infinity;

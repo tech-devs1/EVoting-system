@@ -22,13 +22,21 @@ function runElectionScheduler() {
       let updatedAny = false;
 
       for (const election of elections) {
-        if (election.status === 'draft') continue;
-
         const startTime = election.startDate ? new Date(election.startDate).getTime() : 0;
         const endTime = election.endDate ? new Date(election.endDate).getTime() : Infinity;
 
         let targetStatus = election.status;
-        if (now < startTime) {
+
+        if (election.status === 'draft') {
+          // Draft elections with dates set: auto-transition to scheduled when startDate is set
+          if (election.startDate && election.endDate) {
+            if (now < startTime) {
+              targetStatus = 'scheduled';
+            } else if (now >= startTime && now <= endTime) {
+              targetStatus = 'active';
+            }
+          }
+        } else if (now < startTime) {
           targetStatus = 'scheduled';
         } else if (now >= startTime && now <= endTime) {
           targetStatus = 'active';

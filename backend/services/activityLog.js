@@ -1,12 +1,13 @@
 const { ActivityLog } = require('../models');
 
-async function logActivity({ tenantId, actorEmail, actorRole, action, description, ip, status = 'success' }) {
+async function logActivity({ tenantId, electionId, actorEmail, actorRole, action, description, ip, status = 'success' }) {
   try {
     const id = `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const logDesc = typeof description === 'object' ? JSON.stringify(description) : (description || action);
     await ActivityLog.create({
       id,
       tenantId: tenantId || 'global',
+      electionId: electionId || null,
       actorEmail: actorEmail || 'unknown@htu.edu.gh',
       actorRole: actorRole || 'system',
       action,
