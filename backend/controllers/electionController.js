@@ -1,11 +1,56 @@
 const { Op } = require('sequelize');
-const { Election, Position, Candidate, Voter, Vote, VotedVoter, Tenant, UnlockedElection, ActivityLog, BroadcastLog } = require('../models');
+const { Election, Position, Candidate, Voter, Vote, VotedVoter, Tenant, UnlockedElection, ActivityLog, BroadcastLog, User } = require('../models');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
 const cache = require('../services/cache');
 const { logActivity } = require('../services/activityLog');
 const { sendOtpViaEmail, sendEmailNotification } = require('../services/emailService');
+
+/**
+ * Find a voter roster entry for a given election and user info.
+ * Tries email first (most reliable), then indexNumber/studentId.
+ * Returns the roster entry or null.
+ */
+async function findRosterEntry(electionId, user) {
+  const voterEmail = (user.email || '').toLowerCase().trim();
+  const voterIndex = (user.indexNumber || user.studentId || user.uid || '').toLowerCase().trim();
+
+  const conditions = [];
+  if (voterEmail && voterEmail.includes('@')) {
+    conditions.push({ email: voterEmail });
+  }
+  if (voterIndex) {
+    conditions.push({ studentId: voterIndex });
+    conditions.push({ indexNumber: voterIndex });
+  }
+
+  if (conditions.length === 0) return null;
+
+  return await Voter.findOne({
+    where: {
+      electionId,
+      [Op.or]: conditions
+    }
+  });
+}
+
+/**
+ * Find a User record by matching email, studentId, or indexNo.
+ * Used to resolve voterId for hasVoted checks.
+ */
+async function findUserByEmailOrIndex(email, indexNumber) {
+  const conditions = [];
+  if (email && email.includes('@')) {
+    conditions.push({ email: email.toLowerCase().trim() });
+  }
+  if (indexNumber) {
+    conditions.push({ studentId: indexNumber });
+    conditions.push({ indexNo: indexNumber });
+  }
+  if (conditions.length === 0) return null;
+  return await User.findOne({ where: { [Op.or]: conditions } });
+}
 
 const DEFAULT_TENANT_ID = 'compssa';
 const BMS_API_KEY = process.env.BMS_API_KEY || process.env.MNOTIFY_API_KEY || '';
@@ -228,17 +273,8 @@ exports.getEligibleElections = async (req, res) => {
       let isEligible = isAdmin;
 
       if (!isEligible) {
-        // Voter must be on election voter roster
-        const voterMatch = await Voter.findOne({
-          where: {
-            electionId: election.id,
-            [Op.or]: [
-              { email: voterEmail },
-              { studentId: voterIndex },
-              { indexNumber: voterIndex }
-            ]
-          }
-        });
+        // Use the robust helper to find the roster entry
+        const voterMatch = await findRosterEntry(election.id, req.user);
         if (voterMatch) {
           isEligible = true;
         }
@@ -874,19 +910,7 @@ exports.getAccessStatus = async (req, res) => {
       return res.status(200).json({ status: 'success', data: { unlocked: true } });
     }
 
-    const voterEmail = (req.user.email || '').toLowerCase().trim();
-    const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
-
-    const rosterEntry = await Voter.findOne({
-      where: {
-        electionId,
-        [Op.or]: [
-          { email: voterEmail },
-          { studentId: voterIndex },
-          { indexNumber: voterIndex }
-        ]
-      }
-    });
+    const rosterEntry = await findRosterEntry(electionId, req.user);
 
     if (!rosterEntry) {
       return res.status(200).json({
@@ -940,19 +964,7 @@ exports.requestAccessOtp = async (req, res) => {
       });
     }
 
-    const voterEmail = (req.user.email || '').toLowerCase().trim();
-    const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
-
-    let rosterEntry = await Voter.findOne({
-      where: {
-        electionId,
-        [Op.or]: [
-          { email: voterEmail },
-          { studentId: voterIndex },
-          { indexNumber: voterIndex }
-        ]
-      }
-    });
+    let rosterEntry = await findRosterEntry(electionId, req.user);
 
     if (!rosterEntry) {
       return res.status(403).json({
@@ -1026,19 +1038,7 @@ exports.verifyAccessOtp = async (req, res) => {
 
     if (!otp) return res.status(400).json({ status: 'error', message: 'Verification code is required.' });
 
-    const voterEmail = (req.user.email || '').toLowerCase().trim();
-    const voterIndex = (req.user.indexNumber || req.user.studentId || voterId || '').toLowerCase().trim();
-
-    const voter = await Voter.findOne({
-      where: {
-        electionId,
-        [Op.or]: [
-          { email: voterEmail },
-          { studentId: voterIndex },
-          { indexNumber: voterIndex }
-        ]
-      }
-    });
+    const voter = await findRosterEntry(electionId, req.user);
 
     if (!voter || !voter.accessOtp) {
       return res.status(400).json({ status: 'error', message: 'Invalid verification code.' });
@@ -1090,12 +1090,54 @@ exports.getVoters = async (req, res) => {
     const electionId = req.params.id;
     const list = await Voter.findAll({ where: { electionId } });
     const votesCast = await VotedVoter.findAll({ where: { electionId } });
-    const votedIdSet = new Set(votesCast.map(v => v.voterId.toLowerCase()));
+    const votedIdSet = new Set(votesCast.map(v => (v.voterId || '').toLowerCase()));
+
+    // Build a map from email/studentId → User.id so we can match VotedVoter records
+    const emailToUserIds = new Set();
+    const indexToUserIds = new Set();
+    for (const v of list) {
+      const item = v.toJSON ? v.toJSON() : v;
+      const email = (item.email || '').toLowerCase().trim();
+      const idx = (item.studentId || item.indexNumber || '').toLowerCase().trim();
+      if (email) emailToUserIds.add(email);
+      if (idx) indexToUserIds.add(idx);
+    }
+
+    // Fetch all User records that match any of these emails or indices
+    const allUserConditions = [];
+    if (emailToUserIds.size > 0) {
+      allUserConditions.push({ email: { [Op.in]: Array.from(emailToUserIds) } });
+    }
+    if (indexToUserIds.size > 0) {
+      allUserConditions.push({ studentId: { [Op.in]: Array.from(indexToUserIds) } });
+      allUserConditions.push({ indexNo: { [Op.in]: Array.from(indexToUserIds) } });
+    }
+    let userIdByEmail = new Map();
+    let userIdByIndex = new Map();
+    if (allUserConditions.length > 0) {
+      const users = await User.findAll({ where: { [Op.or]: allUserConditions } });
+      for (const u of users) {
+        const ud = u.toJSON ? u.toJSON() : u;
+        if (ud.email) userIdByEmail.set(ud.email.toLowerCase().trim(), ud.id);
+        if (ud.studentId) userIdByIndex.set(ud.studentId.toLowerCase().trim(), ud.id);
+        if (ud.indexNo) userIdByIndex.set(ud.indexNo.toLowerCase().trim(), ud.id);
+      }
+    }
 
     const result = list.map(v => {
-      const item = v.toJSON();
+      const item = v.toJSON ? v.toJSON() : v;
       const studentId = item.studentId || item.indexNumber || item.id;
-      const hasVoted = votedIdSet.has(studentId.toLowerCase()) || votedIdSet.has(item.id.toLowerCase());
+      const email = (item.email || '').toLowerCase().trim();
+      const idx = studentId.toLowerCase();
+
+      // Resolve User.id for this roster entry
+      const resolvedUserId = userIdByEmail.get(email) || userIdByIndex.get(idx) || '';
+
+      const hasVoted =
+        (resolvedUserId && votedIdSet.has(resolvedUserId.toLowerCase())) ||
+        votedIdSet.has(email) ||
+        votedIdSet.has(idx);
+
       return {
         id: item.id,
         studentId,
@@ -1160,6 +1202,46 @@ exports.addVoter = async (req, res) => {
       isRegistered: true,
       role: 'voter'
     });
+
+    // Ensure a User record exists so the voter can register/login immediately
+    try {
+      const existingUser = await User.findOne({
+        where: {
+          [Op.or]: [
+            { email: cleanEmail },
+            { studentId: cleanIndex },
+            { indexNo: cleanIndex }
+          ]
+        }
+      });
+      if (!existingUser) {
+        const userId = `usr_${cleanIndex.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        await User.create({
+          id: userId,
+          tenantId,
+          name: name.trim(),
+          email: cleanEmail,
+          phone: (phone || '').trim(),
+          role: 'voter',
+          studentId: cleanIndex,
+          indexNo: cleanIndex,
+          status: 'active',
+          isVerified: false
+        });
+      } else {
+        // Update existing user's roster-linked fields if missing
+        const updates = {};
+        if (!existingUser.studentId) updates.studentId = cleanIndex;
+        if (!existingUser.indexNo) updates.indexNo = cleanIndex;
+        if (!existingUser.tenantId) updates.tenantId = tenantId;
+        if (Object.keys(updates).length > 0) {
+          await existingUser.update(updates);
+        }
+      }
+    } catch (userErr) {
+      console.error('[addVoter] Failed to ensure User record:', userErr.message);
+      // Non-fatal — roster entry was still created
+    }
 
     cache.invalidatePrefix('elections:');
     await logActivity({
