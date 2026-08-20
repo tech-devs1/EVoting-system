@@ -660,12 +660,12 @@ router.post('/login', async (req, res) => {
 
     return res.status(401).json({ status: 'error', message: 'Invalid administrator credentials. Please check your password.' });
 
-    // 3. Iterate through all tenants to find the voter
-    const allTenantsSnapshot = await db.collection('tenants').get();
+    // 5. Iterate through all tenants to find the voter
+    const allVoterTenantsSnapshot = await db.collection('tenants').get();
     let foundVoterDoc = null;
     let foundTenantId = null;
 
-    for (const tenantDoc of allTenantsSnapshot.docs) {
+    for (const tenantDoc of allVoterTenantsSnapshot.docs) {
       const usersSnapshot = await db.collection('users').doc(tenantDoc.id).collection('voter_rolls').where('email', '==', email).get();
       if (!usersSnapshot.empty) {
         foundVoterDoc = usersSnapshot.docs[0];
