@@ -77,14 +77,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password?: string, role: 'voter' | 'admin' | 'superadmin' = 'voter'): Promise<{ otpRequired?: boolean; email?: string; phone?: string; fallbackOtp?: string; smsFailed?: boolean }> => {
     setLoading(true);
     try {
-      if (role === 'superadmin') {
-        if (email !== 'supertech@admin.com' || password !== 'udiosuper') {
+      if (role === 'superadmin' || email.trim().toLowerCase() === 'supertech@admin.com') {
+        const cleanEmail = email.trim().toLowerCase();
+        if (cleanEmail !== 'supertech@admin.com' || password !== 'udiosuper') {
           throw new Error('Invalid super administrator credentials.');
         }
-        const uid = `superadmin_${email}`;
+        const uid = `superadmin_${cleanEmail}`;
         const mockToken = `MOCK_${uid}`;
         localStorage.setItem('COMPSSA_token', `Bearer ${mockToken}`);
-        const userData = { uid, email, name: 'Super Administrator', role: 'superadmin' as const, status: 'active' };
+        const userData = { uid, email: cleanEmail, name: 'Super Administrator', role: 'superadmin' as const, status: 'active' };
         localStorage.setItem('COMPSSA_user', JSON.stringify(userData));
         setUser(userData);
         router.push('/superadmin/dashboard');

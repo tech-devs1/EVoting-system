@@ -65,8 +65,15 @@ export default function LoginPage() {
 
     const isSuperAdmin = cleanId.toLowerCase() === 'supertech@admin.com';
 
-    // Department selection is required for students and department admins, but bypassed for Superadmin
-    if (!isSuperAdmin && !selectedTenant) {
+    // Instant bypass for Superadmin (no network dependency, goes straight to password)
+    if (isSuperAdmin) {
+      setError('');
+      setStep('admin-password');
+      return;
+    }
+
+    // Department selection is required for students and department admins
+    if (!selectedTenant) {
       setError('Please choose your department before proceeding.');
       return;
     }
@@ -119,13 +126,7 @@ export default function LoginPage() {
       await googleLogin(studentId, idToken, undefined, userEmail);
     } catch (err: any) {
       console.error('Google sign-in error:', err);
-      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-        setError('Google Sign-In popup was closed before completing.');
-      } else if (err.code === 'auth/popup-blocked') {
-        setError('Google Sign-In popup was blocked by your browser. Please allow popups for this site.');
-      } else {
-        setError(err.message || 'Google Sign-In failed.');
-      }
+      setError(err.message || 'Google authentication failed. Please select your official institutional email.');
     } finally {
       setLoading(false);
     }
@@ -137,11 +138,12 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
+      const cleanEmail = identifier.trim().toLowerCase();
       let role: 'voter' | 'admin' | 'superadmin' = 'admin';
-      if (identifier.trim().toLowerCase() === 'supertech@admin.com') {
+      if (cleanEmail === 'supertech@admin.com') {
         role = 'superadmin';
       }
-      await login(identifier.trim(), password, role);
+      await login(cleanEmail, password, role);
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please check your password.');
     } finally {
