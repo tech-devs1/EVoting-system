@@ -331,20 +331,23 @@ router.get('/:id/results/pdf', verifyAuth, requireAdmin, async (req, res) => {
 router.get('/:id/export-audit', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
-    const { ActivityLog, VotedVoter, Election, Op } = require('../models');
+    const { ActivityLog, VotedVoter, Election, sequelize } = require('../models');
+    const { Op } = require('sequelize');
 
     const election = await Election.findByPk(electionId);
     const electionTitle = election ? election.title : '';
+    const electionTenantId = election ? election.tenantId : 'global';
 
     const activityLogs = await ActivityLog.findAll({
       where: {
         [Op.or]: [
           { description: { [Op.like]: `%${electionId}%` } },
-          ...(electionTitle ? [{ description: { [Op.like]: `%${electionTitle}%` } }] : [])
+          ...(electionTitle ? [{ description: { [Op.like]: `%${electionTitle}%` } }] : []),
+          { tenantId: electionTenantId }
         ]
       },
       order: [['timestamp', 'DESC']],
-      limit: 100
+      limit: 200
     });
     const votes = await VotedVoter.findAll({ where: { electionId }, order: [['timestamp', 'DESC']] });
 
@@ -388,16 +391,19 @@ router.get('/:id/export-audit', verifyAuth, requireAdmin, async (req, res) => {
 router.get('/:id/audit-records', verifyAuth, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.id;
-    const { ActivityLog, VotedVoter, Election, Op } = require('../models');
+    const { ActivityLog, VotedVoter, Election } = require('../models');
+    const { Op } = require('sequelize');
 
     const election = await Election.findByPk(electionId);
     const electionTitle = election ? election.title : '';
+    const electionTenantId = election ? election.tenantId : 'global';
 
     const activityLogs = await ActivityLog.findAll({
       where: {
         [Op.or]: [
           { description: { [Op.like]: `%${electionId}%` } },
-          ...(electionTitle ? [{ description: { [Op.like]: `%${electionTitle}%` } }] : [])
+          ...(electionTitle ? [{ description: { [Op.like]: `%${electionTitle}%` } }] : []),
+          { tenantId: electionTenantId }
         ]
       },
       order: [['timestamp', 'DESC']],
