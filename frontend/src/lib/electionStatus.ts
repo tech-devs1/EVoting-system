@@ -18,18 +18,33 @@ export type ElectionLike = {
 };
 
 /**
- * Parse a date string as UTC.
- * If the string has no timezone info, append 'Z' to force UTC parsing.
+ * Parse a date string as UTC, matching backend logic.
+ *
+ * Handles:
+ * 1. ISO with timezone (ends with Z or +/-HH:MM) — parse as-is
+ * 2. ISO without timezone (e.g. "2026-08-20T11:20:00") — append Z
+ * 3. Locale format (e.g. "8/19/2026, 9:23:00 PM") — parse in local tz, adjust to UTC
  */
 function parseDateUTC(dateStr: string | null | undefined): number {
   if (!dateStr) return NaN;
   const s = String(dateStr).trim();
-  // Already has timezone info
+
+  // Already has timezone info — parse as-is
   if (s.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(s) || /[+-]\d{4}$/.test(s)) {
     return new Date(s).getTime();
   }
-  // No timezone — treat as UTC
-  return new Date(s + 'Z').getTime();
+
+  // ISO format without timezone (e.g. "2026-08-20T11:20:00") — append Z to force UTC
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) {
+    return new Date(s + 'Z').getTime();
+  }
+
+  // Locale format (e.g. "8/19/2026, 9:23:00 PM")
+  // Date.parse() parses in local timezone, then we adjust to UTC
+  const localMs = Date.parse(s);
+  if (isNaN(localMs)) return NaN;
+  const d = new Date(localMs);
+  return localMs - d.getTimezoneOffset() * 60 * 1000;
 }
 
 /**
