@@ -83,12 +83,9 @@ exports.castVote = async (req, res) => {
     });
 
     // Update candidate tally atomically
-    if (candidate.isIndependent) {
-      if (choice === 'no') {
-        candidate.noVotes = (candidate.noVotes || 0) + 1;
-      } else {
-        candidate.votes = (candidate.votes || 0) + 1;
-      }
+    // Handle Yes/No votes: if choice is 'no', increment noVotes; otherwise increment votes
+    if (choice === 'no') {
+      candidate.noVotes = (candidate.noVotes || 0) + 1;
     } else {
       candidate.votes = (candidate.votes || 0) + 1;
     }

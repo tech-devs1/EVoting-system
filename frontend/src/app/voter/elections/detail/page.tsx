@@ -327,10 +327,10 @@ function VoterElectionDetailContent() {
     setSelections(prev => ({ ...prev, [position]: { candidateId: candId, choice: 'no' } }));
   };
 
-  // Identify independent (unopposed) positions: single candidate marked as independent
+  // Identify unopposed positions: any position with exactly one candidate
   const isIndependentPosition = (pos: string) => {
-    const cands = positionGroups[pos];
-    return cands.length === 1 && cands[0].isIndependent;
+    const cands = positionGroups[pos] || [];
+    return cands.length === 1;
   };
 
   return (
