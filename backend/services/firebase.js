@@ -201,7 +201,19 @@ class MockFirestore {
 const db = firestoreDb || new MockFirestore();
 
 // Multi-Tenant Migration Constant
-// During the migration, all non-tenant specific API requests will hit the compssa tenant
 const DEFAULT_TENANT_ID = 'compssa';
 
-module.exports = { db, DEFAULT_TENANT_ID };
+// Build an admin-like object so middleware can call admin.auth().verifyIdToken()
+let adminAuth = null;
+try {
+  const { getAuth } = require('firebase-admin/auth');
+  adminAuth = getAuth();
+} catch (e) {
+  console.warn('firebase-admin/auth not available:', e.message);
+}
+
+const admin = {
+  auth: () => adminAuth || { verifyIdToken: () => Promise.reject(new Error('Firebase Auth not initialized')) }
+};
+
+module.exports = { db, DEFAULT_TENANT_ID, admin };
