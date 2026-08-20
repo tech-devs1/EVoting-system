@@ -1,27 +1,7 @@
 const { Election, Candidate, Voter, VotedVoter, Vote, Tenant, Position } = require('../models');
 const { Op } = require('sequelize');
 const PDFDocument = require('pdfkit');
-
-// Shared helper: compute dynamic election status based on current time
-function computeElectionStatus(election) {
-  if (!election) return 'draft';
-  if (election.status === 'draft') {
-    if (election.startDate && election.endDate) {
-      const now = Date.now();
-      const startTime = new Date(election.startDate).getTime();
-      const endTime = new Date(election.endDate).getTime();
-      if (now < startTime) return 'scheduled';
-      if (now >= startTime && now <= endTime) return 'active';
-    }
-    return 'draft';
-  }
-  const now = Date.now();
-  const startTime = election.startDate ? new Date(election.startDate).getTime() : 0;
-  const endTime = election.endDate ? new Date(election.endDate).getTime() : Infinity;
-  if (now < startTime) return 'scheduled';
-  if (now >= startTime && now <= endTime) return 'active';
-  return 'ended';
-}
+const { computeElectionStatus } = require('../services/electionStatus');
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -220,7 +200,7 @@ exports.exportAnalytics = async (req, res) => {
       const cast = await VotedVoter.count({ where: { electionId: el.id } });
       rows.push({
         election: el.title,
-        status: el.status,
+        status: computeElectionStatus(el.toJSON()),
         totalVoters: total,
         votesCast: cast,
         turnout: total > 0 ? ((cast / total) * 100).toFixed(2) + '%' : '0%'

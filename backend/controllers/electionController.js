@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { Election, Position, Candidate, Voter, Vote, VotedVoter, Tenant, UnlockedElection, ActivityLog, BroadcastLog, User } = require('../models');
+const { computeElectionStatus } = require('../services/electionStatus');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
@@ -182,32 +183,7 @@ async function sendOtpViaBMS(phoneNumber, otp) {
   }
 }
 
-// Helper to compute dynamic election status based on current time
-function computeElectionStatus(election) {
-  if (!election) return 'draft';
-  if (election.status === 'draft') {
-    // Draft elections with dates set: auto-transition based on schedule
-    if (election.startDate && election.endDate) {
-      const now = Date.now();
-      const startTime = new Date(election.startDate).getTime();
-      const endTime = new Date(election.endDate).getTime();
-      if (now < startTime) return 'scheduled';
-      if (now >= startTime && now <= endTime) return 'active';
-    }
-    return 'draft';
-  }
-  const now = Date.now();
-  const startTime = election.startDate ? new Date(election.startDate).getTime() : 0;
-  const endTime = election.endDate ? new Date(election.endDate).getTime() : Infinity;
-
-  if (now < startTime) {
-    return 'scheduled';
-  } else if (now >= startTime && now <= endTime) {
-    return 'active';
-  } else {
-    return 'ended';
-  }
-}
+// computeElectionStatus imported from ../services/electionStatus
 
 exports.getElections = async (req, res) => {
   try {
@@ -218,26 +194,27 @@ exports.getElections = async (req, res) => {
     const list = await Election.findAll({ where });
     const dbUpdates = [];
 
-    const result = await Promise.all(list.map(async (e) => {
+    const result = [];
+    for (const e of list) {
       const item = e.toJSON();
-      const currentComputedStatus = computeElectionStatus(item);
+      const computedStatus = computeElectionStatus(item);
 
-      if (e.status !== 'draft' && e.status !== currentComputedStatus) {
-        dbUpdates.push(e.update({ status: currentComputedStatus }));
+      if (item.status !== 'draft' && item.status !== computedStatus) {
+        dbUpdates.push(e.update({ status: computedStatus }));
       }
 
       const totalVoters = await Voter.count({ where: { electionId: item.id } });
       const totalVotesCast = await VotedVoter.count({ where: { electionId: item.id } });
 
-      return {
+      result.push({
         ...item,
-        status: currentComputedStatus,
+        status: computedStatus,
         totalVoters,
         voterCount: totalVoters,
         totalVotesCast,
         totalVotes: totalVotesCast
-      };
-    }));
+      });
+    }
 
     if (dbUpdates.length > 0) {
       Promise.all(dbUpdates)
@@ -1392,13 +1369,14 @@ exports.getReport = async (req, res) => {
 
       const totalVotersCount = await Voter.count({ where: { electionId } });
 
+      const computedStatus = computeElectionStatus(election.toJSON());
       return {
         election: {
           title: election.title,
           description: election.description,
           startDate: new Date(election.startDate).toLocaleString(),
           endDate: new Date(election.endDate).toLocaleString(),
-          status: election.status,
+          status: computedStatus,
           category: election.category,
           department: election.department,
           createdAt: new Date(election.createdAt).toLocaleString()

@@ -10,6 +10,7 @@ dotenv.config();
 
 const { syncDatabase, Election } = require('./models');
 const cache = require('./services/cache');
+const { computeElectionStatus } = require('./services/electionStatus');
 
 syncDatabase().catch(err => console.warn('[Database Sync Warning]:', err?.message || err));
 
@@ -17,32 +18,12 @@ syncDatabase().catch(err => console.warn('[Database Sync Warning]:', err?.messag
 function runElectionScheduler() {
   setInterval(async () => {
     try {
-      const now = Date.now();
       const elections = await Election.findAll();
       let updatedAny = false;
 
       for (const election of elections) {
-        const startTime = election.startDate ? new Date(election.startDate).getTime() : 0;
-        const endTime = election.endDate ? new Date(election.endDate).getTime() : Infinity;
-
-        let targetStatus = election.status;
-
-        if (election.status === 'draft') {
-          // Draft elections with dates set: auto-transition to scheduled when startDate is set
-          if (election.startDate && election.endDate) {
-            if (now < startTime) {
-              targetStatus = 'scheduled';
-            } else if (now >= startTime && now <= endTime) {
-              targetStatus = 'active';
-            }
-          }
-        } else if (now < startTime) {
-          targetStatus = 'scheduled';
-        } else if (now >= startTime && now <= endTime) {
-          targetStatus = 'active';
-        } else {
-          targetStatus = 'ended';
-        }
+        const item = election.toJSON();
+        const targetStatus = computeElectionStatus(item);
 
         if (election.status !== targetStatus) {
           await election.update({ status: targetStatus });
