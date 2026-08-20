@@ -196,7 +196,7 @@ export default function LoginPage() {
 
         {/* STEP 1: Select Department + Enter Index / Email */}
         {step === 'identifier' && (
-          <form onSubmit={handleIdentifierSubmit}>
+          <form onSubmit={handleIdentifierSubmit} noValidate>
             <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
               <label className="form-label" htmlFor="dept-select">Department / Faculty</label>
               <div className="form-input-container">
@@ -204,13 +204,12 @@ export default function LoginPage() {
                 <select
                   id="dept-select"
                   className="form-input form-input-with-icon"
-                  required
                   value={selectedTenant}
                   onChange={(e) => handleTenantChange(e.target.value)}
                   style={{
                     appearance: 'auto',
                     paddingRight: '24px',
-                    borderColor: !selectedTenant ? 'rgba(239, 68, 68, 0.4)' : undefined
+                    borderColor: !selectedTenant && identifier.trim().toLowerCase() !== 'supertech@admin.com' ? 'rgba(239, 68, 68, 0.4)' : undefined
                   }}
                 >
                   <option value="" disabled>Choose your department</option>
@@ -219,20 +218,22 @@ export default function LoginPage() {
                   ))}
                 </select>
               </div>
-              {/* Notification in red to choose the right department */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                marginTop: '6px',
-                color: '#dc2626',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                lineHeight: '1.3'
-              }}>
-                <AlertCircle size={14} style={{ color: '#dc2626', flexShrink: 0 }} />
-                <span>Please choose your right department before proceeding.</span>
-              </div>
+              {/* Notification in red to choose the right department (hidden for superadmin) */}
+              {identifier.trim().toLowerCase() !== 'supertech@admin.com' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  marginTop: '6px',
+                  color: '#dc2626',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  lineHeight: '1.3'
+                }}>
+                  <AlertCircle size={14} style={{ color: '#dc2626', flexShrink: 0 }} />
+                  <span>Please choose your right department before proceeding.</span>
+                </div>
+              )}
             </div>
 
             <div className="form-group">
