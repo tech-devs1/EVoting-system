@@ -162,9 +162,10 @@ router.get('/departments', async (req, res) => {
     const snapshot = await db.collection('tenants').get();
     const departments = [];
     snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data && data.name && (data.status === 'active' || !data.status)) {
-        departments.push({ id: doc.id, name: data.name });
+      const data = doc.data() || {};
+      if (data.status !== 'inactive' && data.status !== 'suspended') {
+        const name = data.name || data.title || doc.id.toUpperCase();
+        departments.push({ id: doc.id, name });
       }
     });
     // Sort alphabetically by name
