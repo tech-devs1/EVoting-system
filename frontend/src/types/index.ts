@@ -40,7 +40,7 @@ export interface Election {
   description?: string;
   startDate?: string;
   endDate?: string;
-  status: 'draft' | 'active' | 'completed';
+  status: 'draft' | 'scheduled' | 'active' | 'ended' | 'completed';
   showResults?: boolean;
   allowMultiplePositions?: boolean;
   createdAt?: number;

@@ -493,14 +493,12 @@ exports.updateElection = async (req, res) => {
     const targetStartMs = new Date(targetStart).getTime();
     const targetEndMs = new Date(targetEnd).getTime();
 
-    if (election.status !== 'draft') {
-      if (now < targetStartMs) {
-        updateFields.status = 'scheduled';
-      } else if (now >= targetStartMs && now <= targetEndMs) {
-        updateFields.status = 'active';
-      } else {
-        updateFields.status = 'completed';
-      }
+    if (now < targetStartMs) {
+      updateFields.status = 'scheduled';
+    } else if (now >= targetStartMs && now <= targetEndMs) {
+      updateFields.status = 'active';
+    } else {
+      updateFields.status = 'ended';
     }
 
     await election.update(updateFields);
@@ -547,13 +545,20 @@ exports.updateElectionTimeWindow = async (req, res) => {
           message: 'Cannot reduce the end time of an ongoing election. You may only extend it.'
         });
       }
+      // When extending an active election, keep it active (don't recompute status)
       await election.update({ endDate });
     } else {
-      const updateData = { startDate, endDate };
       const now = Date.now();
+      const updateData = { startDate, endDate };
+      // Always recompute status based on the new time window
+      const newStartTime = new Date(startDate).getTime();
       const newEndTime = new Date(endDate).getTime();
-      if (election.status === 'completed' && newEndTime > now) {
+      if (now < newStartTime) {
+        updateData.status = 'scheduled';
+      } else if (now >= newStartTime && now <= newEndTime) {
         updateData.status = 'active';
+      } else {
+        updateData.status = 'ended';
       }
       await election.update(updateData);
     }
@@ -593,8 +598,8 @@ exports.reactivateElection = async (req, res) => {
     if (!election) {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
-    if (election.status !== 'completed') {
-      return res.status(400).json({ status: 'error', message: 'Only completed elections can be reactivated' });
+    if (election.status !== 'completed' && election.status !== 'ended') {
+      return res.status(400).json({ status: 'error', message: 'Only completed/ended elections can be reactivated' });
     }
 
     const nowISO = new Date().toISOString();
@@ -628,7 +633,7 @@ exports.reactivateElection = async (req, res) => {
 exports.updateElectionStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    if (!['draft', 'active', 'ended', 'completed'].includes(status)) {
+    if (!['draft', 'scheduled', 'active', 'ended'].includes(status)) {
       return res.status(400).json({ status: 'error', message: 'Invalid status' });
     }
 

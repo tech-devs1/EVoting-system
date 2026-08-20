@@ -114,7 +114,11 @@ export default function VoterElectionsPage() {
     let result = elections;
 
     if (selectedFilter !== 'all') {
-      result = result.filter(el => el.status === selectedFilter || (selectedFilter === 'draft' && el.status === 'scheduled'));
+      result = result.filter(el => {
+        if (selectedFilter === 'draft') return el.status === 'draft' || el.status === 'scheduled';
+        if (selectedFilter === 'completed') return isEnded(el.status);
+        return el.status === selectedFilter;
+      });
     }
 
     if (searchQuery.trim() !== '') {
@@ -133,6 +137,8 @@ export default function VoterElectionsPage() {
     if (status === 'ended' || status === 'completed') return 'closed';
     return status;
   };
+
+  const isEnded = (status: string) => status === 'ended' || status === 'completed';
 
   return (
     <div className="flex flex-col gap-6">
@@ -241,7 +247,7 @@ export default function VoterElectionsPage() {
                         )}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold capitalize ${
                           el.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30' :
-                          el.status === 'completed' ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30' :
+                          isEnded(el.status) ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30' :
                           'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30'
                         }`}>
                           {statusLabel}
@@ -257,7 +263,7 @@ export default function VoterElectionsPage() {
                       <Link href={`/voter/elections/detail?id=${el.id}`} className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-bold transition-colors">
                         Details
                       </Link>
-                      {el.status === 'completed' && el.showResults && (
+                      {isEnded(el.status) && el.showResults && (
                         <Link href={`/voter/elections/results?id=${el.id}`} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
                           Results
                         </Link>
