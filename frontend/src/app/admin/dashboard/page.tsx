@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
 import { hardNavigate } from '@/lib/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { getEffectiveStatus } from '@/lib/electionStatus';
 import DashboardSkeleton from '@/components/DashboardSkeleton';
 import { 
   Plus, 
@@ -301,13 +302,15 @@ export default function OrganizationElectionHub() {
 
   // Filtered elections
   const filteredElections = elections.filter(e => {
-    const matchesStatus = filterStatus === 'all' || e.status === filterStatus;
+    const effStatus = getEffectiveStatus(e);
+    const matchesStatus = filterStatus === 'all' || effStatus === filterStatus;
     const matchesSearch = e.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           (e.category && e.category.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesStatus && matchesSearch;
   });
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (election: any) => {
+    const status = getEffectiveStatus(election);
     switch (status) {
       case 'active':
         return <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><span className="pulse-dot"></span> LIVE NOW</span>;
@@ -642,7 +645,7 @@ export default function OrganizationElectionHub() {
                     }}>
                       {election.category || 'Executive'}
                     </span>
-                    {getStatusBadge(election.status)}
+                    {getStatusBadge(election)}
                   </div>
 
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#0F172A', lineHeight: 1.3 }}>

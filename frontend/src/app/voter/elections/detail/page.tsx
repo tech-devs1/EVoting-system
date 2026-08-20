@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { getEffectiveStatus, isEnded, isActive } from '@/lib/electionStatus';
 import { ArrowLeft, Check, ShieldCheck, Lock, CheckCircle2, Sparkles, User, AlertCircle, Calendar, Trophy, Info, BarChart2, ThumbsUp, ThumbsDown, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface Candidate {
@@ -367,13 +368,18 @@ function VoterElectionDetailContent() {
                 <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30">
                   {election.category || 'Executive'}
                 </span>
-                <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                  election.status === 'active'
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                }`}>
-                  {election.status === 'active' ? '🟢 Active' : '🏁 Ended'}
-                </span>
+                {(() => {
+                  const effStatus = getEffectiveStatus(election);
+                  return (
+                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                      effStatus === 'active'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                    }`}>
+                      {effStatus === 'active' ? '🟢 Active' : '🏁 Ended'}
+                    </span>
+                  );
+                })()}
                 {votedCount > 0 && (
                   <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
                     ✓ {votedCount}/{totalPositionsCount} Positions Voted
@@ -482,7 +488,7 @@ function VoterElectionDetailContent() {
 
           {/* Action CTA Trigger */}
           <div className="flex flex-col items-center gap-4 mt-2 w-full">
-            {election.status === 'active' ? (
+            {!isEnded(election) ? (
               <div className="flex flex-col items-center gap-3 w-full">
                 <button
                   onClick={() => setProceedToBallot(true)}

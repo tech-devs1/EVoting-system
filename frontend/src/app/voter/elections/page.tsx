@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest, apiRequestCached } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { getEffectiveStatus, isEnded as checkEnded } from '@/lib/electionStatus';
 import { Search, FolderOpen, Clock, Lock, ArrowLeft, ChevronRight } from 'lucide-react';
 
 interface Election {
@@ -115,9 +116,10 @@ export default function VoterElectionsPage() {
 
     if (selectedFilter !== 'all') {
       result = result.filter(el => {
-        if (selectedFilter === 'draft') return el.status === 'draft' || el.status === 'scheduled';
-        if (selectedFilter === 'completed') return isEnded(el.status);
-        return el.status === selectedFilter;
+        const effStatus = getEffectiveStatus(el);
+        if (selectedFilter === 'draft') return effStatus === 'draft' || effStatus === 'scheduled';
+        if (selectedFilter === 'completed') return effStatus === 'ended' || effStatus === 'completed';
+        return effStatus === selectedFilter;
       });
     }
 
@@ -216,7 +218,8 @@ export default function VoterElectionsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredList.map(el => {
-            const statusLabel = mapStatusLabel(el.status);
+            const effStatus = getEffectiveStatus(el);
+            const statusLabel = mapStatusLabel(effStatus);
             const hasVoted = votedElectionIds.includes(el.id);
 
             return (
@@ -246,8 +249,8 @@ export default function VoterElectionsPage() {
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">✓ Voted</span>
                         )}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold capitalize ${
-                          el.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30' :
-                          isEnded(el.status) ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30' :
+                          effStatus === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30' :
+                          isEnded(effStatus) ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30' :
                           'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30'
                         }`}>
                           {statusLabel}
@@ -258,12 +261,12 @@ export default function VoterElectionsPage() {
                   </div>
 
                   <div className="pt-4 border-t border-slate-100 dark:border-slate-700/60 flex justify-between items-center mt-auto">
-                    <CountdownTimer endsAt={el.endDate} status={el.status} />
+                    <CountdownTimer endsAt={el.endDate} status={effStatus} />
                     <div className="flex items-center gap-2">
                       <Link href={`/voter/elections/detail?id=${el.id}`} className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-bold transition-colors">
                         Details
                       </Link>
-                      {isEnded(el.status) && el.showResults && (
+                      {isEnded(effStatus) && el.showResults && (
                         <Link href={`/voter/elections/results?id=${el.id}`} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
                           Results
                         </Link>

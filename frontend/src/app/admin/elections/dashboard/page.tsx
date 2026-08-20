@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
+import { getEffectiveStatus, isEnded as checkEnded } from '@/lib/electionStatus';
 import { 
   ArrowLeft, 
   Play, 
@@ -324,15 +325,9 @@ function PerElectionDashboardContent() {
     );
   }
 
-  const isElectionEnded = election ? (
-    election.status === 'ended' ||
-    election.status === 'completed' ||
-    new Date(election.endDate).getTime() <= Date.now()
-  ) : false;
-
-  const isElectionActive = election ? (
-    election.status === 'active' && !isElectionEnded
-  ) : false;
+  const isElectionEnded = election ? checkEnded(election) : false;
+  const effStatus = election ? getEffectiveStatus(election) : 'draft';
+  const isElectionActive = election ? (effStatus === 'active') : false;
 
   const turnout = (election.totalVoters && election.totalVoters > 0)
     ? Math.min(100, Math.round(((election.totalVotesCast || 0) / election.totalVoters) * 100))
@@ -356,9 +351,9 @@ function PerElectionDashboardContent() {
                 {election.title}
               </h2>
               {isElectionActive && <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">🟢 LIVE NOW</span>}
-              {election.status === 'scheduled' && !isElectionEnded && <span className="px-3 py-1 rounded-full text-xs font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-900/30">⏰ SCHEDULED</span>}
+              {effStatus === 'scheduled' && !isElectionEnded && <span className="px-3 py-1 rounded-full text-xs font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-900/30">⏰ SCHEDULED</span>}
               {isElectionEnded && <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">🏁 CLOSED</span>}
-              {election.status === 'draft' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">📝 DRAFT</span>}
+              {effStatus === 'draft' && <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">📝 DRAFT</span>}
             </div>
 
             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">

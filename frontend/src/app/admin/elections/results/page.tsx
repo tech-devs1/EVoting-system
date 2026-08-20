@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
+import { getEffectiveStatus } from '@/lib/electionStatus';
 import { 
   ArrowLeft, 
   Send, 
@@ -158,7 +159,7 @@ function PerElectionResultsContent() {
       </div>
 
       {/* Election still active — block all results content */}
-      {election && election.status !== 'ended' && election.status !== 'completed' ? (
+      {election && getEffectiveStatus(election) !== 'ended' ? (
         <div className="bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/30 rounded-3xl p-12 text-center">
           <EyeOff size={48} className="text-amber-500 mx-auto mb-4" />
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Results & PDF Download Locked</h3>
@@ -166,7 +167,7 @@ function PerElectionResultsContent() {
             Election polls are currently active. Full candidate results and PDF exports will unlock automatically when polling ends.
           </p>
           <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mb-4">
-            ⏳ Current status: <span className="uppercase font-bold">{election.status}</span>
+            ⏳ Current status: <span className="uppercase font-bold">{getEffectiveStatus(election)}</span>
           </p>
           <button
             disabled={true}

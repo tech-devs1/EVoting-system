@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { apiRequest, getAuthHeaders } from '@/lib/api';
+import { getEffectiveStatus } from '@/lib/electionStatus';
 import {
   ArrowLeft, BarChart3, Users, Vote, TrendingUp, Download,
   Filter, Calendar, CheckCircle2, Clock, AlertTriangle,
@@ -281,7 +282,8 @@ function AnalyticsContent() {
     );
   }
 
-  const isOngoing = election && election.status !== 'ended' && election.status !== 'completed';
+  const effStatus = election ? getEffectiveStatus(election) : 'draft';
+  const isOngoing = election && effStatus !== 'ended';
 
   if (isOngoing) {
     return (
@@ -306,7 +308,7 @@ function AnalyticsContent() {
             This election poll is currently active ({election?.title}). Deep analytical queries and PDF report exports will be unlocked when the polls close.
           </p>
           <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mb-4">
-            ⏳ Current status: <span className="uppercase font-bold">{election?.status}</span>
+            ⏳ Current status: <span className="uppercase font-bold">{effStatus}</span>
           </p>
           <button
             disabled={true}

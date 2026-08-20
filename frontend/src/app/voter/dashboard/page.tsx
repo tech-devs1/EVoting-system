@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api';
+import { getEffectiveStatus } from '@/lib/electionStatus';
 import { get, set } from 'idb-keyval';
 import DashboardSkeleton from '@/components/DashboardSkeleton';
 import { 
@@ -126,8 +127,8 @@ export default function VoterDashboard() {
         let newVotedIds: string[] = [];
         if (res.status === 'success' && Array.isArray(res.data)) {
           const allElections = res.data;
-          newElections = allElections.filter(el => el.status === 'active');
-          newUpcoming = allElections.filter(el => el.status === 'draft' || el.status === 'scheduled');
+          newElections = allElections.filter(el => getEffectiveStatus(el) === 'active');
+          newUpcoming = allElections.filter(el => { const s = getEffectiveStatus(el); return s === 'draft' || s === 'scheduled'; });
           newPublished = allElections.filter(el => el.showResults === true);
           
           setElections(newElections);

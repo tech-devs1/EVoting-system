@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
+import { getEffectiveStatus } from '@/lib/electionStatus';
 import { ArrowLeft, Trophy, EyeOff, XCircle } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -281,7 +282,7 @@ function VoterResultsContent() {
     );
   }
 
-  if (!election.showResults || (election.status !== 'ended' && election.status !== 'completed')) {
+  if (!election.showResults || getEffectiveStatus(election) !== 'ended') {
     return (
       <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 max-w-lg mx-auto">
         <EyeOff size={48} className="text-amber-500 mx-auto mb-4" />

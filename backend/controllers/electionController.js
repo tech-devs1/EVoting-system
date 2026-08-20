@@ -302,40 +302,37 @@ exports.getEligibleElections = async (req, res) => {
 exports.getElectionById = async (req, res) => {
   try {
     const electionId = req.params.id;
-    const cacheKey = `elections:detail:${electionId}`;
 
-    const election = await cache.getOrSet(cacheKey, async () => {
-      const electionRecord = await Election.findByPk(electionId);
-      if (!electionRecord) {
-        throw new Error('NOT_FOUND');
-      }
+    const electionRecord = await Election.findByPk(electionId);
+    if (!electionRecord) {
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
 
-      const item = electionRecord.toJSON();
-      const updatedStatus = computeElectionStatus(item);
+    const item = electionRecord.toJSON();
+    const updatedStatus = computeElectionStatus(item);
 
-      if (item.status !== 'draft' && item.status !== updatedStatus) {
-        await electionRecord.update({ status: updatedStatus });
-        cache.invalidatePrefix('elections:');
-        cache.invalidatePrefix('admin:');
-      }
+    if (item.status !== 'draft' && item.status !== updatedStatus) {
+      await electionRecord.update({ status: updatedStatus });
+      cache.invalidatePrefix('elections:');
+      cache.invalidatePrefix('admin:');
+    }
 
-      // Compute stats
-      const totalVoters = await Voter.count({ where: { electionId } });
-      const totalVotesCast = await VotedVoter.count({ where: { electionId } });
-      const candidateCount = await Candidate.count({ where: { electionId } });
-      const positionCount = await Position.count({ where: { electionId } });
+    // Compute stats
+    const totalVoters = await Voter.count({ where: { electionId } });
+    const totalVotesCast = await VotedVoter.count({ where: { electionId } });
+    const candidateCount = await Candidate.count({ where: { electionId } });
+    const positionCount = await Position.count({ where: { electionId } });
 
-      return {
-        ...item,
-        status: updatedStatus,
-        totalVoters,
-        voterCount: totalVoters,
-        totalVotesCast,
-        totalVotes: totalVotesCast,
-        candidateCount,
-        positionCount
-      };
-    }, 5000);
+    const election = {
+      ...item,
+      status: updatedStatus,
+      totalVoters,
+      voterCount: totalVoters,
+      totalVotesCast,
+      totalVotes: totalVotesCast,
+      candidateCount,
+      positionCount
+    };
 
     res.status(200).json({ status: 'success', data: election });
   } catch (error) {
