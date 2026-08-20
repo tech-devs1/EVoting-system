@@ -379,6 +379,14 @@ exports.getElectionResults = async (req, res) => {
     }
 
     const item = electionRecord.toJSON();
+    const updatedStatus = computeElectionStatus(item);
+    if (item.status !== 'draft' && item.status !== updatedStatus) {
+      await electionRecord.update({ status: updatedStatus });
+      cache.invalidatePrefix('elections:');
+      cache.invalidatePrefix('admin:');
+    }
+    item.status = updatedStatus;
+
     const candidates = await Candidate.findAll({ where: { electionId } });
 
     const sortedCands = candidates.map(c => c.toJSON()).sort((a, b) => {

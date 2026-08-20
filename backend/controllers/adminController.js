@@ -116,7 +116,11 @@ exports.getDashboardFullStats = async (req, res) => {
           topCandidates
         },
         electionResults,
-        elections: elections.map(e => e.toJSON()),
+        elections: elections.map(e => {
+          const el = e.toJSON();
+          const computedStatus = computeElectionStatus(el);
+          return { ...el, status: computedStatus };
+        }),
         flaggedUsers: []
       }
     });
@@ -150,7 +154,7 @@ exports.getAnalytics = async (req, res) => {
         total,
         cast,
         rate: total > 0 ? ((cast / total) * 100).toFixed(1) + '%' : '0%',
-        status: el.status
+        status: computeElectionStatus(el.toJSON())
       });
     }
 
