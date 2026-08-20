@@ -8,8 +8,52 @@ const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config();
 
-const { syncDatabase } = require('./models');
+const { syncDatabase, Election } = require('./models');
+const cache = require('./services/cache');
+
 syncDatabase().catch(err => console.warn('[Database Sync Warning]:', err?.message || err));
+
+// Background Scheduler: Periodically check and update election statuses (every 30s)
+function runElectionScheduler() {
+  setInterval(async () => {
+    try {
+      const now = Date.now();
+      const elections = await Election.findAll();
+      let updatedAny = false;
+
+      for (const election of elections) {
+        if (election.status === 'draft') continue;
+
+        const startTime = election.startDate ? new Date(election.startDate).getTime() : 0;
+        const endTime = election.endDate ? new Date(election.endDate).getTime() : Infinity;
+
+        let targetStatus = election.status;
+        if (now < startTime) {
+          targetStatus = 'scheduled';
+        } else if (now >= startTime && now <= endTime) {
+          targetStatus = 'active';
+        } else {
+          targetStatus = 'completed';
+        }
+
+        if (election.status !== targetStatus) {
+          await election.update({ status: targetStatus });
+          updatedAny = true;
+          console.log(`[Election Scheduler] Auto-updated election "${election.title}" (${election.id}) status to "${targetStatus}".`);
+        }
+      }
+
+      if (updatedAny) {
+        cache.invalidatePrefix('elections:');
+        cache.invalidatePrefix('admin:');
+      }
+    } catch (err) {
+      console.error('[Election Scheduler Error]:', err.message);
+    }
+  }, 30000);
+}
+
+runElectionScheduler();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
