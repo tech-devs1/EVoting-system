@@ -1,6 +1,7 @@
-const { Candidate, Position, Vote, VotedVoter, sequelize } = require('../models');
+const { Candidate, Position, Vote, VotedVoter, Election, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const crypto = require('crypto');
+const { computeElectionStatus } = require('../services/electionStatus');
 const { logActivity } = require('../services/activityLog');
 const { logFraudAlert } = require('../services/fraud');
 const cache = require('../services/cache');
@@ -17,6 +18,21 @@ exports.castVote = async (req, res) => {
 
     // Wrap double voting and tally updates inside a direct ACID SQL Transaction
     transaction = await sequelize.transaction();
+
+    const election = await Election.findByPk(electionId, { transaction });
+    if (!election) {
+      await transaction.rollback();
+      return res.status(404).json({ status: 'error', message: 'Election not found' });
+    }
+
+    const computedStatus = computeElectionStatus(election.toJSON ? election.toJSON() : election);
+    if (computedStatus !== 'active') {
+      await transaction.rollback();
+      return res.status(400).json({
+        status: 'error',
+        message: computedStatus === 'ended' ? `Voting for "${election.title}" has ended.` : `Voting for "${election.title}" is not active.`
+      });
+    }
 
     const candidate = await Candidate.findByPk(candidateId, { transaction });
     if (!candidate) {
