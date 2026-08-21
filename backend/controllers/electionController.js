@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
 const { Election, Position, Candidate, Voter, Vote, VotedVoter, Tenant, UnlockedElection, ActivityLog, BroadcastLog, User } = require('../models');
-const { computeElectionStatus } = require('../services/electionStatus');
+const { computeElectionStatus, parseDateUTC } = require('../services/electionStatus');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
@@ -476,8 +476,8 @@ exports.updateElection = async (req, res) => {
     }
 
     const now = Date.now();
-    const currentStartMs = new Date(election.startDate).getTime();
-    const currentEndMs = new Date(election.endDate).getTime();
+    const currentStartMs = parseDateUTC(election.startDate);
+    const currentEndMs = parseDateUTC(election.endDate);
     const hasStarted = now >= currentStartMs;
     const hasEnded = now > currentEndMs;
 
@@ -496,14 +496,14 @@ exports.updateElection = async (req, res) => {
       if (endDate !== undefined) updateFields.endDate = endDate;
     } else if (!hasEnded) {
       // Election is currently ongoing — Admin CANNOT change startDate, and can only extend endDate
-      if (startDate !== undefined && new Date(startDate).getTime() !== currentStartMs) {
+      if (startDate !== undefined && parseDateUTC(startDate) !== currentStartMs) {
         return res.status(400).json({
           status: 'error',
           message: 'An election that has already started cannot have its start date modified.'
         });
       }
       if (endDate !== undefined) {
-        const newEndMs = new Date(endDate).getTime();
+        const newEndMs = parseDateUTC(endDate);
         if (newEndMs <= now) {
           return res.status(400).json({
             status: 'error',
@@ -515,7 +515,7 @@ exports.updateElection = async (req, res) => {
     } else {
       // Election has ended — Admin can extend the end date to reactivate the poll
       if (endDate !== undefined) {
-        const newEndMs = new Date(endDate).getTime();
+        const newEndMs = parseDateUTC(endDate);
         if (newEndMs <= now) {
           return res.status(400).json({
             status: 'error',
@@ -529,8 +529,8 @@ exports.updateElection = async (req, res) => {
     // Automatically recompute status based on updated time window
     const targetStart = updateFields.startDate || election.startDate;
     const targetEnd = updateFields.endDate || election.endDate;
-    const targetStartMs = new Date(targetStart).getTime();
-    const targetEndMs = new Date(targetEnd).getTime();
+    const targetStartMs = parseDateUTC(targetStart);
+    const targetEndMs = parseDateUTC(targetEnd);
 
     if (now < targetStartMs) {
       updateFields.status = 'scheduled';
@@ -574,10 +574,10 @@ exports.updateElectionTimeWindow = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'Election not found' });
     }
 
-    const isActive = election.status === 'active';
+    const isActive = computeElectionStatus(election.toJSON ? election.toJSON() : election) === 'active';
     if (isActive) {
-      const currentEndDate = new Date(election.endDate).getTime();
-      const newEndDate = new Date(endDate).getTime();
+      const currentEndDate = parseDateUTC(election.endDate);
+      const newEndDate = parseDateUTC(endDate);
       if (newEndDate < currentEndDate) {
         return res.status(400).json({
           status: 'error',
@@ -590,8 +590,8 @@ exports.updateElectionTimeWindow = async (req, res) => {
       const now = Date.now();
       const updateData = { startDate, endDate };
       // Always recompute status based on the new time window
-      const newStartTime = new Date(startDate).getTime();
-      const newEndTime = new Date(endDate).getTime();
+      const newStartTime = parseDateUTC(startDate);
+      const newEndTime = parseDateUTC(endDate);
       if (now < newStartTime) {
         updateData.status = 'scheduled';
       } else if (now >= newStartTime && now <= newEndTime) {
@@ -628,7 +628,7 @@ exports.reactivateElection = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'A new endDate is required to reactivate' });
     }
 
-    const newEndDate = new Date(endDate).getTime();
+    const newEndDate = parseDateUTC(endDate);
     if (isNaN(newEndDate) || newEndDate <= Date.now()) {
       return res.status(400).json({ status: 'error', message: 'The new end date must be in the future' });
     }
@@ -775,7 +775,7 @@ exports.extendEndTime = async (req, res) => {
     const election = await Election.findByPk(req.params.id);
     if (!election) return res.status(404).json({ status: 'error', message: 'Election not found' });
 
-    const newEndMs = new Date(newEndDate).getTime();
+    const newEndMs = parseDateUTC(newEndDate);
     if (isNaN(newEndMs)) {
       return res.status(400).json({ status: 'error', message: 'Invalid date format for newEndDate.' });
     }
@@ -928,18 +928,23 @@ exports.requestAccessOtp = async (req, res) => {
     const election = await Election.findByPk(electionId);
     if (!election) return res.status(404).json({ status: 'error', message: 'Election not found.' });
 
-    const now = Date.now();
-    const startTime = new Date(election.startDate).getTime();
-    const endTime = new Date(election.endDate).getTime();
+    const computedStatus = computeElectionStatus(election.toJSON ? election.toJSON() : election);
 
-    if (now < startTime) {
+    if (computedStatus === 'draft') {
+      return res.status(400).json({
+        status: 'error',
+        message: `Voting for "${election.title}" is in draft status and not open for voting.`
+      });
+    }
+
+    if (computedStatus === 'scheduled') {
       return res.status(400).json({
         status: 'error',
         message: `Voting for "${election.title}" has not opened yet.`
       });
     }
 
-    if (now > endTime) {
+    if (computedStatus === 'ended') {
       return res.status(400).json({
         status: 'error',
         message: `Voting for "${election.title}" has ended.`
